@@ -557,7 +557,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         if (userIsAMigratedUser) {
             LOG.info("Processing migrated user");
-            return userMigrationService.processMigratedUser(userCredentials, request.getPassword());
+            return userMigrationService.loginAndMigratePartiallyMigratedUser(
+                    userCredentials, request.getPassword());
         } else {
             return authenticationService.login(userCredentials, request.getPassword());
         }

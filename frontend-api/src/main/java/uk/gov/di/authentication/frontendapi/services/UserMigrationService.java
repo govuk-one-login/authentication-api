@@ -30,7 +30,8 @@ public class UserMigrationService {
         return Objects.nonNull(legacySubjectId) && Objects.isNull(userCredentials.getPassword());
     }
 
-    public boolean processMigratedUser(UserCredentials userCredentials, String inputPassword) {
+    public boolean loginAndMigratePartiallyMigratedUser(
+            UserCredentials userCredentials, String inputPassword) {
         Optional<String> passwordPepper = configurationService.getPasswordPepper();
         char[] passwordChar =
                 passwordPepper.map(t -> inputPassword + t).orElse(inputPassword).toCharArray();

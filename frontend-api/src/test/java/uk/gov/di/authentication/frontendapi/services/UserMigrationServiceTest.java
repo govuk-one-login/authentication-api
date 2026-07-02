@@ -70,7 +70,8 @@ class UserMigrationServiceTest {
         when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL)).thenReturn(credentials);
 
         assertTrue(
-                userMigrationService.processMigratedUser(credentials, LEGACY_PASSWORD_DECRYPTED));
+                userMigrationService.loginAndMigratePartiallyMigratedUser(
+                        credentials, LEGACY_PASSWORD_DECRYPTED));
         verify(authenticationService).migrateLegacyPassword(TEST_EMAIL, LEGACY_PASSWORD_DECRYPTED);
     }
 
@@ -79,7 +80,9 @@ class UserMigrationServiceTest {
         var credentials = generateUserCredentials("sign-in-password", LEGACY_PASSWORD_ENCRYPTED);
 
         when(authenticationService.getUserCredentialsFromEmail(TEST_EMAIL)).thenReturn(credentials);
-        assertFalse(userMigrationService.processMigratedUser(credentials, "wrong-password"));
+        assertFalse(
+                userMigrationService.loginAndMigratePartiallyMigratedUser(
+                        credentials, "wrong-password"));
     }
 
     private UserCredentials generateUserCredentials(String newPassword, String migratedPassword) {

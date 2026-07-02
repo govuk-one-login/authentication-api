@@ -739,7 +739,7 @@ class LoginHandlerTest {
         UserCredentials applicableUserCredentials =
                 usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         applicableUserCredentials.withPassword(null);
-        when(userMigrationService.processMigratedUser(
+        when(userMigrationService.loginAndMigratePartiallyMigratedUser(
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
         usingValidAuthSession();
@@ -991,7 +991,7 @@ class LoginHandlerTest {
 
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
 
-        when(userMigrationService.processMigratedUser(
+        when(userMigrationService.loginAndMigratePartiallyMigratedUser(
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(false);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
