@@ -12,6 +12,7 @@ signing_profiles = "AMCJWKSFunction=\"SigningProfile_bdzyxbYzrSD8\" ADJWKSFuncti
 
 [authdev1.deploy.parameters]
 stack_name = "authdev1-api"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev1-api-pipeline-githubartifactsourcebucket-nzhdk5isnl7b"
 region = "eu-west-2"
@@ -23,6 +24,7 @@ signing_profiles = "AMCJWKSFunction=\"SigningProfile_bdzyxbYzrSD8\" ADJWKSFuncti
 
 [authdev2.deploy.parameters]
 stack_name = "authdev2-api"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev2-api-pipeline-githubartifactsourcebucket-ppkafuj1qi9o"
 region = "eu-west-2"
@@ -56,6 +58,7 @@ signing_profiles = "DeleteSyntheticsUserFunction=\"SigningProfile_bdzyxbYzrSD8\"
 
 [authdev1utils.deploy.parameters]
 stack_name = "authdev1-utils"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev1-utils-pipeline-githubartifactsourcebucket-j4wxvzocetsq"
 region = "eu-west-2"
@@ -67,6 +70,7 @@ signing_profiles = "DeleteSyntheticsUserFunction=\"SigningProfile_bdzyxbYzrSD8\"
 
 [authdev2utils.deploy.parameters]
 stack_name = "authdev2-utils"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev2-utils-pipeline-githubartifactsourcebucket-mg2orcgnpjww"
 region = "eu-west-2"
@@ -100,6 +104,7 @@ signing_profiles = "NotificationHandlerFunction=\"SigningProfile_bdzyxbYzrSD8\" 
 
 [authdev1am.deploy.parameters]
 stack_name = "authdev1-am-api"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev1-account-manageme-githubartifactsourcebuck-c4guwyroibhk"
 region = "eu-west-2"
@@ -111,6 +116,7 @@ signing_profiles = "NotificationHandlerFunction=\"SigningProfile_bdzyxbYzrSD8\" 
 
 [authdev2am.deploy.parameters]
 stack_name = "authdev2-am-api"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev2-account-manageme-githubartifactsourcebuck-b8sym4cc2ie6"
 region = "eu-west-2"
@@ -144,6 +150,7 @@ signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\" Ac
 
 [authdev1stubs.deploy.parameters]
 stack_name = "authdev1-auth-stubs-api"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev1-stubs-api-pipeli-githubartifactsourcebuck-xlolw1disgt2"
 region = "eu-west-2"
@@ -155,6 +162,7 @@ signing_profiles = "TicfCriStubLambdaFunction=\"SigningProfile_bdzyxbYzrSD8\" Ac
 
 [authdev2stubs.deploy.parameters]
 stack_name = "authdev2-auth-stubs-api"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev2-stubs-api-pipeli-githubartifactsourcebuck-cmwzheigfq2c"
 region = "eu-west-2"
@@ -188,6 +196,7 @@ signing_profiles = "PasskeysCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" Passk
 
 [authdev1ad.deploy.parameters]
 stack_name = "authdev1-act-data-api"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev1-account-data-api-githubartifactsourcebuck-bbpqsqopgpcu"
 region = "eu-west-2"
@@ -199,6 +208,7 @@ signing_profiles = "PasskeysCreateFunction=\"SigningProfile_bdzyxbYzrSD8\" Passk
 
 [authdev2ad.deploy.parameters]
 stack_name = "authdev2-act-data-api"
+express = true
 resolve_s3 = false
 s3_bucket = "authdev2-account-data-api-githubartifactsourcebuck-t6zozyodqxba"
 region = "eu-west-2"
