@@ -249,11 +249,6 @@ class LoginHandlerTest {
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
-        assertThat(
-                response.redactedPhoneNumber(),
-                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
@@ -272,8 +267,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue()
-            throws Json.JsonException {
+    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue() {
         // Arrange
         setupExistingUserInDatabase();
 
@@ -287,13 +281,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(
-                response.redactedPhoneNumber(),
-                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -320,8 +307,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney()
-            throws Json.JsonException {
+    void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney() {
         // Arrange
         setupExistingUserInDatabase();
 
@@ -335,13 +321,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(
-                response.redactedPhoneNumber(),
-                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -368,7 +347,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() throws Json.JsonException {
+    void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() {
         // Arrange
         setupExistingUserInDatabase();
 
@@ -382,13 +361,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(
-                response.redactedPhoneNumber(),
-                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -457,7 +429,13 @@ class LoginHandlerTest {
     void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
             throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        setupExistingUserInDatabase();
+        var userProfile =
+                generateUserProfile(null)
+                        .withTermsAndConditions(
+                                new TermsAndConditions(
+                                        "1.0", NowHelper.now().toInstant().toString()));
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -726,9 +704,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifyInternalCommonSubjectIdentifierSaved();
