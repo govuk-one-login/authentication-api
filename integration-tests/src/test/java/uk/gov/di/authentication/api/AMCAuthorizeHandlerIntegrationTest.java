@@ -153,6 +153,7 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         authSessionStore.addClientIdToSession(sessionId, "test-client");
         authSessionStore.addRpSectorIdentifierHostToSession(sessionId, "test.com");
+        authSessionStore.addHasVerifiedWithPasswordAndMfaToSession(sessionId, true, true);
 
         userStore.signUp(USER_EMAIL, "password", new Subject("test-subject-id"));
     }
@@ -255,6 +256,27 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 """
                 {
                     "journeyType": "SFAD"
+                    }
+                """;
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+    }
+
+    @Test
+    void shouldReturn400WhenAttemptingToCreatePasskeyWithSessionNotFullyVerified() {
+        handler = new AMCAuthorizeHandler();
+        authSessionStore.addHasVerifiedWithPasswordAndMfaToSession(sessionId, true, false);
+
+        var requestBody =
+                """
+                {
+                    "journeyType": "PASSKEY_CREATE"
                     }
                 """;
 

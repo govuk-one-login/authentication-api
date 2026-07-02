@@ -146,7 +146,8 @@ public enum ErrorResponse {
             1208, "Failed to get journey outcome from AMC authorization"),
     AMC_JOURNEY_OUTCOME_UNEXPECTED_ERROR(1209, "Unexpected error calling AMC journey outcome"),
     AMC_JWKS_RETRIEVAL_ERROR(1210, "Failed to retrieve AMC public encryption key"),
-    AMC_STATE_MISMATCH(1211, "State returned from AMC does not match expected state");
+    AMC_STATE_MISMATCH(1211, "State returned from AMC does not match expected state"),
+    AMC_AUTHORIZE_ACTION_NOT_PERMITTED(1212, "Not permitted to perform authorize action");
 
     private int code;
 

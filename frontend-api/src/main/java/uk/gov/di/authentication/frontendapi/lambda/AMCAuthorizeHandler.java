@@ -19,6 +19,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizationUrlAndCoo
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
 import uk.gov.di.authentication.frontendapi.entity.amc.TransportJWTConfig;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
@@ -42,6 +43,7 @@ import uk.gov.di.authentication.shared.services.DynamoAmcStateService;
 import uk.gov.di.authentication.shared.services.JwtService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.MalformedURLException;
 import java.time.Clock;
@@ -54,7 +56,9 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.AMC_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AMC_AUTHORISATION_REQUESTED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AMC_FAILURE_REQUESTING_AUTHORISATION;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -64,6 +68,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
     private final JWKSource<SecurityContext> jwkSource;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     private static final Logger LOG = LogManager.getLogger(AMCAuthorizeHandler.class);
     private final DynamoAmcStateService dynamoAmcStateService;
@@ -94,6 +99,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.dynamoAmcStateService = new DynamoAmcStateService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     public AMCAuthorizeHandler(
@@ -104,7 +110,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             JWKSource<SecurityContext> jwkSource,
             DynamoAmcStateService amcStateService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 AMCAuthorizeRequest.class,
                 configurationService,
@@ -115,6 +122,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.dynamoAmcStateService = amcStateService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     @SuppressWarnings("java:S1185")
@@ -138,8 +146,20 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         .orElse(null);
 
         if (userProfile == null) {
+            reportFailureRequestingAuthorisation("UserNotFound", request);
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+        }
+
+        reportAuthorizationRequested(userContext, input, request);
+
+        if (!actionIsPermitted(request.amcJourneyType(), authSessionItem)) {
+            LOG.warn(
+                    "AMC authorize with journey type {} is not permitted",
+                    request.amcJourneyType());
+            reportFailureRequestingAuthorisation("PasskeyCreateNotPermitted", request);
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED);
         }
 
         List<AccessTokenConfig> accessTokenConfigsForJourneyType =
@@ -171,10 +191,11 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                                     }
                                 });
 
-        reportAuthorizationRequested(userContext, input, request);
-
         return result.fold(
-                AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,
+                failure -> {
+                    reportFailureRequestingAuthorisation(failure.getValue(), request);
+                    return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(failure);
+                },
                 success -> {
                     try {
                         return generateApiGatewayProxyResponse(
@@ -229,6 +250,16 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         cloudwatchMetricsService.incrementCounter(AMC_AUTHORISATION_REQUESTED, dimensions);
     }
 
+    private void reportFailureRequestingAuthorisation(
+            String failureReason, AMCAuthorizeRequest request) {
+        var dimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(AMC_JOURNEY_TYPE.getValue(), request.amcJourneyType().name()),
+                        Map.entry(FAILURE_REASON.getValue(), failureReason));
+        cloudwatchMetricsService.incrementCounter(AMC_FAILURE_REQUESTING_AUTHORISATION, dimensions);
+    }
+
     private Result<AMCFailureReason, RSAKey> getAMCPublicEncryptionKey() {
         LOG.info("Retrieving RSA encryption JWK from AMC JWKS endpoint for auth -> AMC encryption");
         try {
@@ -249,5 +280,12 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             LOG.error("Could not retrieve JWKS", e);
             return Result.failure(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
         }
+    }
+
+    private boolean actionIsPermitted(AMCJourneyType journeyType, AuthSessionItem sessionItem) {
+        if (journeyType.equals(AMCJourneyType.PASSKEY_CREATE)) {
+            return permissionDecisionManager.canSetupPasskey(sessionItem);
+        }
+        return true;
     }
 }

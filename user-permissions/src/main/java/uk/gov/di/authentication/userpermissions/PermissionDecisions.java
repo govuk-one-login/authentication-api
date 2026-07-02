@@ -126,4 +126,12 @@ public interface PermissionDecisions {
      * @return A Result containing either a Decision or a DecisionError
      */
     boolean canIssueAuthCode(AuthSessionItem authSession);
+
+    /**
+     * Checks if the user has passed the required checks in order to set up a passkey.
+     *
+     * @param authSession The user's current session
+     * @return A Result containing either a Decision or a DecisionError
+     */
+    boolean canSetupPasskey(AuthSessionItem authSession);
 }
