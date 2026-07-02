@@ -8,7 +8,7 @@ import uk.gov.di.accountmanagement.services.AwsSnsClient;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
-import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -39,13 +39,13 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
                 new AwsSnsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getLegacyAccountDeletionTopicArn());
-        var auditService = new AuditService(configurationService);
+        var structuredAuditService = new StructuredAuditService(configurationService);
         var dynamoDeleteService = new DynamoDeleteService(configurationService);
         var accountDeletionService =
                 new AccountDeletionService(
                         authenticationService,
                         emailSqsClient,
-                        auditService,
+                        structuredAuditService,
                         configurationService,
                         dynamoDeleteService);
         this.manualAccountDeletionService =
