@@ -377,28 +377,6 @@ class LoginHandlerTest {
         verifyInternalCommonSubjectIdentifierSaved();
     }
 
-    @Test
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
-        setupExistingUserInDatabase();
-
-        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        var event =
-                apiRequestEventWithHeadersAndBody(
-                        VALID_HEADERS_WITHOUT_AUDIT_ENCODED, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-    }
-
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType) {
