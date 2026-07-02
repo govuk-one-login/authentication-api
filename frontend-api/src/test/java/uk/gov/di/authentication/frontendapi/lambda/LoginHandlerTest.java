@@ -1079,7 +1079,6 @@ class LoginHandlerTest {
     @Test
     void shouldDeleteEmailAndPasswordAuthenticationAttemptCountsWhenUserLogsInSuccessfully() {
         setupExistingUserInDatabase();
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
