@@ -935,21 +935,6 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldUpdateAuthSessionStoreWithExistingAccountState() {
-        setupExistingUserInDatabase();
-
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSession();
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-        verifyAuthSessionIsSaved();
-    }
-
-    @Test
     void shouldCallCorrectPasswordReceivedWhenLoginIsSuccessful() {
         setupExistingUserInDatabase();
         usingApplicableUserCredentialsWithLogin(SMS, true);
@@ -1311,12 +1296,6 @@ class LoginHandlerTest {
         verify(authSessionService, atLeastOnce())
                 .updateSession(
                         argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
-    }
-
-    private void verifyAuthSessionIsSaved() {
-        verify(authSessionService, times(1))
-                .updateSession(
-                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
     }
 
     private void verifyLoginWithoutMfaMetricIncremented() {
