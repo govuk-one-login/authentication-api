@@ -1366,106 +1366,6 @@ class LoginHandlerTest {
                 permissionContextCaptor.getValue().e164FormattedPhoneNumber());
     }
 
-    private void usingValidAuthSessionWithAchievedCredentialStrength(
-            CredentialTrustLevel credentialTrustLevel) {
-        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(
-                credentialTrustLevel, CredentialTrustLevel.MEDIUM_LEVEL);
-    }
-
-    private void usingValidAuthSessionWithRequestedCredentialStrength(
-            CredentialTrustLevel credentialTrustLevel) {
-        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(null, credentialTrustLevel);
-    }
-
-    private void usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(
-            CredentialTrustLevel achievedCredentialStrength,
-            CredentialTrustLevel requestedCredentialStrength) {
-        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(
-                        Optional.of(
-                                new AuthSessionItem()
-                                        .withSessionId(SESSION_ID)
-                                        .withEmailAddress(EMAIL)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                        .withClientId(CLIENT_ID.getValue())
-                                        .withAchievedCredentialStrength(achievedCredentialStrength)
-                                        .withRequestedCredentialStrength(
-                                                requestedCredentialStrength)
-                                        .withClientName(CLIENT_NAME)
-                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
-    }
-
-    private void usingValidAuthSessionInSmokeTest() {
-        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(
-                        Optional.of(
-                                new AuthSessionItem()
-                                        .withSessionId(SESSION_ID)
-                                        .withEmailAddress(EMAIL)
-                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
-                                        .withClientId(CLIENT_ID.getValue())
-                                        .withRequestedCredentialStrength(MEDIUM_LEVEL)
-                                        .withIsSmokeTest(true)
-                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
-    }
-
-    private void usingValidAuthSession() {
-        usingValidAuthSessionWithAchievedCredentialStrength(null);
-    }
-
-    private void usingInvalidAuthSession() {
-        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
-                .thenReturn(Optional.empty());
-    }
-
-    private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
-        UserCredentials applicableUserCredentials =
-                mfaMethodType.equals(SMS) ? userCredentials : userCredentialsAuthApp;
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(applicableUserCredentials);
-        return applicableUserCredentials;
-    }
-
-    private UserCredentials usingApplicableUserCredentialsWithLogin(
-            MFAMethodType mfaMethodType, boolean loginSuccessful) {
-        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
-        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
-                .thenReturn(loginSuccessful);
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(
-                        Result.success(
-                                List.of(
-                                        mfaMethodType.equals(AUTH_APP)
-                                                ? DEFAULT_AUTH_APP_MFA_METHOD
-                                                : DEFAULT_SMS_MFA_METHOD)));
-        return applicableUserCredentials;
-    }
-
-    private UserProfile generateUserProfile(String legacySubjectId) {
-        return new UserProfile()
-                .withEmail(EMAIL)
-                .withEmailVerified(true)
-                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(new Subject().getValue())
-                .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
-                .withLegacySubjectID(legacySubjectId)
-                .withTermsAndConditions(
-                        new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
-    }
-
-    private void verifyInternalCommonSubjectIdentifierSaved() {
-        verify(authSessionService, atLeastOnce())
-                .updateSession(
-                        argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
-    }
-
-    private void verifyAuthSessionIsSaved() {
-        verify(authSessionService, times(1))
-                .updateSession(
-                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
-    }
-
     @Test
     void shouldSetIsPartiallyCreatedAccountTrueWhenMfaMethodNotVerified() {
         var userProfile =
@@ -1598,5 +1498,105 @@ class LoginHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
+    }
+
+    private void usingValidAuthSessionWithAchievedCredentialStrength(
+            CredentialTrustLevel credentialTrustLevel) {
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(
+                credentialTrustLevel, CredentialTrustLevel.MEDIUM_LEVEL);
+    }
+
+    private void usingValidAuthSessionWithRequestedCredentialStrength(
+            CredentialTrustLevel credentialTrustLevel) {
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(null, credentialTrustLevel);
+    }
+
+    private void usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(
+            CredentialTrustLevel achievedCredentialStrength,
+            CredentialTrustLevel requestedCredentialStrength) {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthSessionItem()
+                                        .withSessionId(SESSION_ID)
+                                        .withEmailAddress(EMAIL)
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withClientId(CLIENT_ID.getValue())
+                                        .withAchievedCredentialStrength(achievedCredentialStrength)
+                                        .withRequestedCredentialStrength(
+                                                requestedCredentialStrength)
+                                        .withClientName(CLIENT_NAME)
+                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
+    }
+
+    private void usingValidAuthSessionInSmokeTest() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthSessionItem()
+                                        .withSessionId(SESSION_ID)
+                                        .withEmailAddress(EMAIL)
+                                        .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                                        .withClientId(CLIENT_ID.getValue())
+                                        .withRequestedCredentialStrength(MEDIUM_LEVEL)
+                                        .withIsSmokeTest(true)
+                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
+    }
+
+    private void usingValidAuthSession() {
+        usingValidAuthSessionWithAchievedCredentialStrength(null);
+    }
+
+    private void usingInvalidAuthSession() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.empty());
+    }
+
+    private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
+        UserCredentials applicableUserCredentials =
+                mfaMethodType.equals(SMS) ? userCredentials : userCredentialsAuthApp;
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(applicableUserCredentials);
+        return applicableUserCredentials;
+    }
+
+    private UserCredentials usingApplicableUserCredentialsWithLogin(
+            MFAMethodType mfaMethodType, boolean loginSuccessful) {
+        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
+        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(loginSuccessful);
+        when(mfaMethodsService.getMfaMethods(EMAIL))
+                .thenReturn(
+                        Result.success(
+                                List.of(
+                                        mfaMethodType.equals(AUTH_APP)
+                                                ? DEFAULT_AUTH_APP_MFA_METHOD
+                                                : DEFAULT_SMS_MFA_METHOD)));
+        return applicableUserCredentials;
+    }
+
+    private UserProfile generateUserProfile(String legacySubjectId) {
+        return new UserProfile()
+                .withEmail(EMAIL)
+                .withEmailVerified(true)
+                .withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)
+                .withPhoneNumberVerified(true)
+                .withPublicSubjectID(new Subject().getValue())
+                .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
+                .withLegacySubjectID(legacySubjectId)
+                .withTermsAndConditions(
+                        new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
+    }
+
+    private void verifyInternalCommonSubjectIdentifierSaved() {
+        verify(authSessionService, atLeastOnce())
+                .updateSession(
+                        argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
+    }
+
+    private void verifyAuthSessionIsSaved() {
+        verify(authSessionService, times(1))
+                .updateSession(
+                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
     }
 }
