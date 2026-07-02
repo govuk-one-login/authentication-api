@@ -151,6 +151,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
 
+        reportAuthorizationRequested(userContext, input, request);
+
         if (!actionIsPermitted(request.amcJourneyType(), authSessionItem)) {
             LOG.warn(
                     "AMC authorize with journey type {} is not permitted",
@@ -188,8 +190,6 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                                                 AMCFailureReason.JWKS_RETRIEVAL_ERROR);
                                     }
                                 });
-
-        reportAuthorizationRequested(userContext, input, request);
 
         return result.fold(
                 failure -> {

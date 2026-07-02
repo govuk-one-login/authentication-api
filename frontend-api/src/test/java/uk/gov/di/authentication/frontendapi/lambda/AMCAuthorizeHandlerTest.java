@@ -56,6 +56,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
@@ -304,6 +305,11 @@ class AMCAuthorizeHandlerTest {
                     result.getBody()
                             .contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
             verifyFailureGettingAuthorisationMetricEmitted("UserNotFound", AMCJourneyType.SFAD);
+            verify(auditService, never())
+                    .submitAuditEvent(
+                            eq(AUTH_AMC_AUTHORISATION_REQUESTED),
+                            any(),
+                            any(AuditService.MetadataPair[].class));
         }
 
         @Test
@@ -322,6 +328,11 @@ class AMCAuthorizeHandlerTest {
                     result.getBody()
                             .contains(
                                     ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED.getMessage()));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_AMC_AUTHORISATION_REQUESTED),
+                            any(),
+                            any(AuditService.MetadataPair[].class));
             verifyFailureGettingAuthorisationMetricEmitted(
                     "PasskeyCreateNotPermitted", AMCJourneyType.PASSKEY_CREATE);
         }
