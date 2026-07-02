@@ -30,10 +30,6 @@ public class CodeStorageService {
     private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
     private static final String MULTIPLE_INCORRECT_PASSWORDS_PREFIX =
             "multiple-incorrect-passwords:";
-    private static final String MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX =
-            "multiple-incorrect-reauth-email:";
-    private static final String MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX =
-            "multiple-incorrect-passwords-reauth:";
 
     private static final String VERIFY_CHANGE_HOW_GET_SECURITY_CODES_KEY_PREFIX =
             "change-how-get-security-codes";
@@ -98,36 +94,6 @@ public class CodeStorageService {
 
     public void deleteIncorrectPasswordCount(String email) {
         deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
-    }
-
-    public void increaseIncorrectEmailCount(String email) {
-        increaseCount(
-                email,
-                MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX,
-                configurationService.getLockoutCountTTL());
-    }
-
-    public int getIncorrectEmailCount(String email) {
-        return getCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
-    }
-
-    public void deleteIncorrectEmailCount(String email) {
-        deleteCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
-    }
-
-    public void increaseIncorrectPasswordCountReauthJourney(String email) {
-        increaseCount(
-                email,
-                MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX,
-                configurationService.getLockoutCountTTL());
-    }
-
-    public int getIncorrectPasswordCountReauthJourney(String email) {
-        return getCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
-    }
-
-    public void deleteIncorrectPasswordCountReauthJourney(String email) {
-        deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
     }
 
     public void saveBlockedForEmail(String email, String prefix, long codeBlockedTime) {

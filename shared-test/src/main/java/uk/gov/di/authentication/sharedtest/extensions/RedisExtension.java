@@ -47,18 +47,6 @@ public class RedisExtension
         redis.saveWithExpiry(prefix + sessionId, objectMapper.writeValueAsString(state), 3600);
     }
 
-    public void incrementPasswordCount(String email) {
-        codeStorageService.increaseIncorrectPasswordCount(email);
-    }
-
-    public void incrementPasswordCountReauthJourney(String email) {
-        codeStorageService.increaseIncorrectPasswordCountReauthJourney(email);
-    }
-
-    public void incrementEmailCount(String email) {
-        codeStorageService.increaseIncorrectEmailCount(email);
-    }
-
     public String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
         codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
