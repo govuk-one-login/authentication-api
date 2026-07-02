@@ -201,7 +201,7 @@ public class TokenHandler
         try {
             authCodeExchangeDataMaybe = orchAuthCodeService.getExchangeDataForCode(authCode);
         } catch (Exception e) {
-            LOG.error(
+            LOG.warn(
                     "Failed to retrieve authorisation code from orch auth code DynamoDB store. Error: {}",
                     e.getMessage());
             return generateApiGatewayProxyResponse(500, INTERNAL_SERVER_ERROR);

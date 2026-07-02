@@ -10,6 +10,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.UpdateItemEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
@@ -62,6 +63,10 @@ public class BaseDynamoService<T> {
 
     public void update(T item) {
         dynamoTable.updateItem(item);
+    }
+
+    public void update(UpdateItemEnhancedRequest<T> updateItemRequest) {
+        dynamoTable.updateItem(updateItemRequest);
     }
 
     public void put(T item) {
