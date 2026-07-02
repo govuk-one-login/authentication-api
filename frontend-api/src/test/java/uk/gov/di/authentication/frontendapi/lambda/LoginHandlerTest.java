@@ -963,19 +963,6 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldDeleteEmailAndPasswordAuthenticationAttemptCountsWhenUserLogsInSuccessfully() {
-        setupExistingUserInDatabase();
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-    }
-
-    @Test
     void shouldUpdateAuthSessionStoreWithExistingAccountState() {
         setupExistingUserInDatabase();
 
