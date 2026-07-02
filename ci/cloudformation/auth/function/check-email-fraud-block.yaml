@@ -66,13 +66,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
-      Tags:
-        EnforceLambdaDeploymentOrder:
-          !If [
-            EnforceLambdaDeploymentOrder,
-            !Ref VerifyMfaCodeFunctionAliasactive,
-            "",
-          ]
 
   CheckEmailFraudBlockFunctionAliasPermission:
     Type: AWS::Lambda::Permission

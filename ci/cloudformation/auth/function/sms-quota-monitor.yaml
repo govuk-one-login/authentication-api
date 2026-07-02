@@ -32,13 +32,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
-      Tags:
-        EnforceLambdaDeploymentOrder:
-          !If [
-            EnforceLambdaDeploymentOrder,
-            !Ref TicfCriFunctionAliasactive,
-            "",
-          ]
 
   SmsQuotaMonitorFunctionAliasPermission:
     Type: AWS::Lambda::Permission

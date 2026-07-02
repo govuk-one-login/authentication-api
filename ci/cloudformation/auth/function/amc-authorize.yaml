@@ -126,8 +126,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
-      Tags:
-        EnforceLambdaDeploymentOrder: ""
 
   AMCAuthorizeFunctionAliasPermission:
     Type: AWS::Lambda::Permission
