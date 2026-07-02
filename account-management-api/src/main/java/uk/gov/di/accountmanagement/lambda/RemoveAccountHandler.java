@@ -14,6 +14,7 @@ import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
@@ -21,7 +22,6 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -44,7 +44,7 @@ public class RemoveAccountHandler
 
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
-    private final AuditService auditService;
+    private final StructuredAuditService structuredAuditService;
     private final ConfigurationService configurationService;
     private final DynamoDeleteService dynamoDeleteService;
     private final AccountDeletionService accountDeletionService;
@@ -53,13 +53,13 @@ public class RemoveAccountHandler
     public RemoveAccountHandler(
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
-            AuditService auditService,
+            StructuredAuditService structuredAuditService,
             ConfigurationService configurationService,
             DynamoDeleteService dynamoDeleteService,
             AccountDeletionService accountDeletionService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
-        this.auditService = auditService;
+        this.structuredAuditService = structuredAuditService;
         this.configurationService = configurationService;
         this.dynamoDeleteService = dynamoDeleteService;
         this.accountDeletionService = accountDeletionService;
@@ -72,14 +72,14 @@ public class RemoveAccountHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.auditService = new AuditService(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
         this.configurationService = configurationService;
         this.dynamoDeleteService = new DynamoDeleteService(configurationService);
         this.accountDeletionService =
                 new AccountDeletionService(
                         authenticationService,
                         sqsClient,
-                        auditService,
+                        structuredAuditService,
                         configurationService,
                         dynamoDeleteService);
     }

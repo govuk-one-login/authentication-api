@@ -7,6 +7,8 @@ import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -15,26 +17,23 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.time.Clock;
 import java.util.Optional;
 
-import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_AUTH;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AccountDeletionService {
     private static final Logger LOG = LogManager.getLogger(AccountDeletionService.class);
 
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
-    private final AuditService auditService;
+    private final StructuredAuditService structuredAuditService;
     private final ConfigurationService configurationService;
     private final DynamoDeleteService dynamoDeleteService;
     private final Json objectMapper = SerializationService.getInstance();
@@ -42,12 +41,12 @@ public class AccountDeletionService {
     public AccountDeletionService(
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
-            AuditService auditService,
+            StructuredAuditService structuredAuditService,
             ConfigurationService configurationService,
             DynamoDeleteService dynamoDeleteService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
-        this.auditService = auditService;
+        this.structuredAuditService = structuredAuditService;
         this.configurationService = configurationService;
         this.dynamoDeleteService = dynamoDeleteService;
     }
@@ -94,8 +93,8 @@ public class AccountDeletionService {
             }
         }
 
-        String persistentSessionID = AuditService.UNKNOWN;
-        String ipAddress = AuditService.UNKNOWN;
+        String persistentSessionID = StructuredAuditService.UNKNOWN;
+        String ipAddress = StructuredAuditService.UNKNOWN;
         if (input.isPresent()) {
             persistentSessionID =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
@@ -109,21 +108,23 @@ public class AccountDeletionService {
                                     n ->
                                             n.getRequestContext()
                                                     .getAuthorizer()
-                                                    .getOrDefault("clientId", AuditService.UNKNOWN)
+                                                    .getOrDefault(
+                                                            "clientId",
+                                                            StructuredAuditService.UNKNOWN)
                                                     .toString())
-                            .orElse(AuditService.UNKNOWN);
+                            .orElse(StructuredAuditService.UNKNOWN);
             var clientSessionId =
                     input.map(
                                     n ->
                                             ClientSessionIdHelper.extractSessionIdFromHeaders(
                                                     n.getHeaders()))
-                            .orElse(AuditService.UNKNOWN);
+                            .orElse(StructuredAuditService.UNKNOWN);
             var sessionId =
                     input.map(
                                     n ->
                                             RequestHeaderHelper.getHeaderValueOrElse(
                                                     n.getHeaders(), SESSION_ID_HEADER, ""))
-                            .orElse(AuditService.UNKNOWN);
+                            .orElse(StructuredAuditService.UNKNOWN);
             var auditContext =
                     new AuditContext(
                             clientId,
@@ -135,11 +136,14 @@ public class AccountDeletionService {
                             userProfile.getPhoneNumber(),
                             persistentSessionID,
                             txmaAuditEncoded);
-            auditService.submitAuditEvent(
-                    AUTH_DELETE_ACCOUNT,
-                    auditContext,
-                    AUDIT_EVENT_COMPONENT_ID_AUTH,
-                    pair("account_deletion_reason", reason));
+            var auditEvent =
+                    AuthDeleteAccount.create(
+                            auditContext,
+                            userProfile.getPublicSubjectID(),
+                            userProfile.getLegacySubjectID(),
+                            reason.name(),
+                            Clock.systemUTC());
+            structuredAuditService.submitAuditEvent(auditEvent);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }

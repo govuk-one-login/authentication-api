@@ -10,6 +10,7 @@ import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -17,7 +18,6 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -54,7 +54,8 @@ class RemoveAccountHandlerTest {
     private final Context context = mock(Context.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
-    private final AuditService auditService = mock(AuditService.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoDeleteService dynamoDeleteService = mock(DynamoDeleteService.class);
     private final AccountDeletionService accountDeletionService =
@@ -66,7 +67,7 @@ class RemoveAccountHandlerTest {
                 new RemoveAccountHandler(
                         authenticationService,
                         sqsClient,
-                        auditService,
+                        structuredAuditService,
                         configurationService,
                         dynamoDeleteService,
                         accountDeletionService);
@@ -114,7 +115,7 @@ class RemoveAccountHandlerTest {
                 .removeAccount(
                         Optional.of(event),
                         userProfile,
-                        AuditService.UNKNOWN,
+                        StructuredAuditService.UNKNOWN,
                         AccountDeletionReason.USER_INITIATED);
     }
 
@@ -139,7 +140,7 @@ class RemoveAccountHandlerTest {
 
         assertThat(expectedException.getMessage(), equalTo("Invalid Principal in request"));
         verifyNoInteractions(sqsClient);
-        verifyNoInteractions(auditService);
+        verifyNoInteractions(structuredAuditService);
     }
 
     @Test
@@ -150,7 +151,7 @@ class RemoveAccountHandlerTest {
         var result = handler.handleRequest(event, context);
 
         verifyNoInteractions(dynamoDeleteService);
-        verifyNoInteractions(auditService);
+        verifyNoInteractions(structuredAuditService);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
     }
