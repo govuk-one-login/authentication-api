@@ -323,7 +323,15 @@ class AMCAuthorizeHandlerTest {
                     result.getBody()
                             .contains(
                                     ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED.getMessage()));
-            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
+            var expectedDimensions =
+                    Map.ofEntries(
+                            Map.entry("Environment", ENV),
+                            Map.entry("AMCJourneyType", AMCJourneyType.PASSKEY_CREATE.name()),
+                            Map.entry("FailureReason", "PasskeyCreateNotPermitted"));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AMC_FAILURE_REQUESTING_AUTHORISATION,
+                            expectedDimensions);
         }
 
         @Test

@@ -56,7 +56,9 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.AMC_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AMC_AUTHORISATION_REQUESTED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AMC_FAILURE_REQUESTING_AUTHORISATION;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -152,6 +154,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             LOG.warn(
                     "AMC authorize with journey type {} is not permitted",
                     request.amcJourneyType());
+            reportFailureRequestingAuthorisation(
+                    "PasskeyCreateNotPermitted", request.amcJourneyType());
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED);
         }
@@ -241,6 +245,16 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
                         Map.entry(AMC_JOURNEY_TYPE.getValue(), request.amcJourneyType().name()));
         cloudwatchMetricsService.incrementCounter(AMC_AUTHORISATION_REQUESTED, dimensions);
+    }
+
+    private void reportFailureRequestingAuthorisation(
+            String failureReason, AMCJourneyType journeyType) {
+        var dimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(AMC_JOURNEY_TYPE.getValue(), journeyType.name()),
+                        Map.entry(FAILURE_REASON.getValue(), failureReason));
+        cloudwatchMetricsService.incrementCounter(AMC_FAILURE_REQUESTING_AUTHORISATION, dimensions);
     }
 
     private Result<AMCFailureReason, RSAKey> getAMCPublicEncryptionKey() {
