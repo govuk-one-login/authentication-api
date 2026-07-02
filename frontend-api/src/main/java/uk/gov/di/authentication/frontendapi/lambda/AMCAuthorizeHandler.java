@@ -146,6 +146,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                         .orElse(null);
 
         if (userProfile == null) {
+            reportFailureRequestingAuthorisation("UserNotFound", request);
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
@@ -154,8 +155,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             LOG.warn(
                     "AMC authorize with journey type {} is not permitted",
                     request.amcJourneyType());
-            reportFailureRequestingAuthorisation(
-                    "PasskeyCreateNotPermitted", request.amcJourneyType());
+            reportFailureRequestingAuthorisation("PasskeyCreateNotPermitted", request);
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED);
         }
@@ -192,7 +192,10 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         reportAuthorizationRequested(userContext, input, request);
 
         return result.fold(
-                AMCFailureHttpMapper::toApiGatewayProxyErrorResponse,
+                failure -> {
+                    reportFailureRequestingAuthorisation(failure.getValue(), request);
+                    return AMCFailureHttpMapper.toApiGatewayProxyErrorResponse(failure);
+                },
                 success -> {
                     try {
                         return generateApiGatewayProxyResponse(
@@ -248,11 +251,11 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
     }
 
     private void reportFailureRequestingAuthorisation(
-            String failureReason, AMCJourneyType journeyType) {
+            String failureReason, AMCAuthorizeRequest request) {
         var dimensions =
                 Map.ofEntries(
                         Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
-                        Map.entry(AMC_JOURNEY_TYPE.getValue(), journeyType.name()),
+                        Map.entry(AMC_JOURNEY_TYPE.getValue(), request.amcJourneyType().name()),
                         Map.entry(FAILURE_REASON.getValue(), failureReason));
         cloudwatchMetricsService.incrementCounter(AMC_FAILURE_REQUESTING_AUTHORISATION, dimensions);
     }

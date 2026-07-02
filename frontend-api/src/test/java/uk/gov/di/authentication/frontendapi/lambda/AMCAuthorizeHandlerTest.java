@@ -304,7 +304,7 @@ class AMCAuthorizeHandlerTest {
             assertTrue(
                     result.getBody()
                             .contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
-            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
+            verifyFailureGettingAuthorisationMetricEmitted("UserNotFound", AMCJourneyType.SFAD);
         }
 
         @Test
@@ -323,15 +323,8 @@ class AMCAuthorizeHandlerTest {
                     result.getBody()
                             .contains(
                                     ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED.getMessage()));
-            var expectedDimensions =
-                    Map.ofEntries(
-                            Map.entry("Environment", ENV),
-                            Map.entry("AMCJourneyType", AMCJourneyType.PASSKEY_CREATE.name()),
-                            Map.entry("FailureReason", "PasskeyCreateNotPermitted"));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.AMC_FAILURE_REQUESTING_AUTHORISATION,
-                            expectedDimensions);
+            verifyFailureGettingAuthorisationMetricEmitted(
+                    "PasskeyCreateNotPermitted", AMCJourneyType.PASSKEY_CREATE);
         }
 
         @Test
@@ -353,7 +346,8 @@ class AMCAuthorizeHandlerTest {
             assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
             verify(auditService, never())
                     .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
-            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
+            verifyFailureGettingAuthorisationMetricEmitted(
+                    AMCFailureReason.JWKS_RETRIEVAL_ERROR.getValue(), AMCJourneyType.SFAD);
         }
 
         @Test
@@ -373,7 +367,8 @@ class AMCAuthorizeHandlerTest {
             assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
             verify(auditService, never())
                     .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
-            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
+            verifyFailureGettingAuthorisationMetricEmitted(
+                    AMCFailureReason.JWKS_RETRIEVAL_ERROR.getValue(), AMCJourneyType.SFAD);
         }
 
         @ParameterizedTest
@@ -405,7 +400,20 @@ class AMCAuthorizeHandlerTest {
             assertTrue(result.getBody().contains(expectedError.getMessage()));
             verify(auditService, never())
                     .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
-            verify(cloudwatchMetricsService, never()).incrementCounter(anyString(), anyMap());
+            verifyFailureGettingAuthorisationMetricEmitted(
+                    failureReason.getValue(), AMCJourneyType.SFAD);
         }
+    }
+
+    private void verifyFailureGettingAuthorisationMetricEmitted(
+            String expectedFailureReason, AMCJourneyType expectedJourneyType) {
+        var expectedDimensions =
+                Map.of(
+                        "AMCJourneyType", expectedJourneyType.name(),
+                        "Environment", ENV,
+                        "FailureReason", expectedFailureReason);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        CloudwatchMetrics.AMC_FAILURE_REQUESTING_AUTHORISATION, expectedDimensions);
     }
 }
