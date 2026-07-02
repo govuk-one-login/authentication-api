@@ -198,7 +198,7 @@ Resources:
       AlarmName: !Sub
         - ${Env}-pending-phone-check-old-message-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      AlarmDescription: !Sub "A message over 60 seconds old exists which indicates they may not be processed quickly enough or are stuck (pending-phone-check-old-message-alarm in account ${AWS::AccountId}). Runbook: https://govukverify.atlassian.net/wiki/x/OChukQE"
+      AlarmDescription: !Sub "A message over 5 minutes old exists which indicates they may not be processed quickly enough or are stuck (pending-phone-check-old-message-alarm in account ${AWS::AccountId}). Runbook: https://govukverify.atlassian.net/wiki/x/OChukQE"
       Namespace: AWS/SQS
       Dimensions:
         - Name: QueueName
@@ -208,7 +208,7 @@ Resources:
       Statistic: Maximum
       Period: 60
       EvaluationPeriods: 1
-      Threshold: 60
+      Threshold: 300
       AlarmActions: !If
         - UseAlarmActions
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
@@ -220,7 +220,7 @@ Resources:
       AlarmName: !Sub
         - ${Env}-pending-phone-check-dlq-has-messages-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      AlarmDescription: !Sub "1 or more messages have appeared on a DLQ that need manual processing (pending-phone-check-dlq-has-messages-alarm in account ${AWS::AccountId}). Runbook: https://govukverify.atlassian.net/wiki/x/OChukQE"
+      AlarmDescription: !Sub "100 or more messages have appeared on a DLQ that need manual processing (pending-phone-check-dlq-has-messages-alarm in account ${AWS::AccountId}). Runbook: https://govukverify.atlassian.net/wiki/x/OChukQE"
       Namespace: AWS/SQS
       Dimensions:
         - Name: QueueName
@@ -230,7 +230,7 @@ Resources:
       Statistic: Average
       Period: 300
       EvaluationPeriods: 1
-      Threshold: 1
+      Threshold: 100
       AlarmActions: !If
         - UseAlarmActions
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
