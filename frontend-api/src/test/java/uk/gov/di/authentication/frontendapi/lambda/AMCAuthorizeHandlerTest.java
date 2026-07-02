@@ -56,7 +56,6 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
@@ -344,8 +343,11 @@ class AMCAuthorizeHandlerTest {
                     AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
             assertEquals(httpResponse.statusCode(), result.getStatusCode());
             assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_AMC_AUTHORISATION_REQUESTED),
+                            any(),
+                            any(AuditService.MetadataPair[].class));
             verifyFailureGettingAuthorisationMetricEmitted(
                     AMCFailureReason.JWKS_RETRIEVAL_ERROR.getValue(), AMCJourneyType.SFAD);
         }
@@ -365,8 +367,11 @@ class AMCAuthorizeHandlerTest {
                     AMCFailureHttpMapper.toHttpResponse(AMCFailureReason.JWKS_RETRIEVAL_ERROR);
             assertEquals(httpResponse.statusCode(), result.getStatusCode());
             assertTrue(result.getBody().contains(httpResponse.errorResponse().getMessage()));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_AMC_AUTHORISATION_REQUESTED),
+                            any(),
+                            any(AuditService.MetadataPair[].class));
             verifyFailureGettingAuthorisationMetricEmitted(
                     AMCFailureReason.JWKS_RETRIEVAL_ERROR.getValue(), AMCJourneyType.SFAD);
         }
@@ -398,8 +403,11 @@ class AMCAuthorizeHandlerTest {
 
             assertEquals(expectedHttpResponse.statusCode(), result.getStatusCode());
             assertTrue(result.getBody().contains(expectedError.getMessage()));
-            verify(auditService, never())
-                    .submitAuditEvent(eq(AUTH_AMC_AUTHORISATION_REQUESTED), any());
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_AMC_AUTHORISATION_REQUESTED),
+                            any(),
+                            any(AuditService.MetadataPair[].class));
             verifyFailureGettingAuthorisationMetricEmitted(
                     failureReason.getValue(), AMCJourneyType.SFAD);
         }
