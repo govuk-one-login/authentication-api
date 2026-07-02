@@ -190,6 +190,13 @@ class LoginHandlerTest {
                     .withSubjectId(AuditService.UNKNOWN)
                     .withPhoneNumber(AuditService.UNKNOWN);
 
+    private final Decision aTemporarilyLockedOutDecision =
+            new Decision.TemporarilyLockedOut(
+                    ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                    configurationService.getMaxPasswordRetries(),
+                    Instant.now().plusSeconds(900),
+                    true);
+
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
 
@@ -697,14 +704,7 @@ class LoginHandlerTest {
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
-                .thenReturn(
-                        Result.success(
-                                new Decision.TemporarilyLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        maxRetriesAllowed,
-                                        Instant.now().plusSeconds(900),
-                                        true)));
+                .thenReturn(Result.success(aTemporarilyLockedOutDecision));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
 
@@ -733,14 +733,7 @@ class LoginHandlerTest {
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
-                .thenReturn(
-                        Result.success(
-                                new Decision.TemporarilyLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        maxRetriesAllowed,
-                                        Instant.now().plusSeconds(900),
-                                        false)));
+                .thenReturn(Result.success(aTemporarilyLockedOutDecision));
 
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, false);
@@ -769,15 +762,7 @@ class LoginHandlerTest {
     void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
         setupExistingUserInDatabase();
         when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(
-                        Result.success(
-                                new Decision.TemporarilyLockedOut(
-                                        ForbiddenReason
-                                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                        MAX_ALLOWED_PASSWORD_RETRIES,
-                                        Instant.now()
-                                                .plus(15, java.time.temporal.ChronoUnit.MINUTES),
-                                        false)));
+                .thenReturn(Result.success(aTemporarilyLockedOutDecision));
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -1198,18 +1183,14 @@ class LoginHandlerTest {
 
         if (expectedError == ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS) {
             when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.TemporarilyLockedOut(null, 0, null, false)));
+                    .thenReturn(Result.success(aTemporarilyLockedOutDecision));
             when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
                     .thenReturn(Result.success(new Decision.Permitted(0)));
         } else {
             when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
                     .thenReturn(Result.success(new Decision.Permitted(0)));
             when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.TemporarilyLockedOut(null, 0, null, false)));
+                    .thenReturn(Result.success(aTemporarilyLockedOutDecision));
         }
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
