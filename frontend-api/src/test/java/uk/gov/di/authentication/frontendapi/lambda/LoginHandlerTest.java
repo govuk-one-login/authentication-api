@@ -617,7 +617,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetries() {
+    void shouldReturn400AndEmitLockedOutAuditEventWhenPermissionDecisionManagerReturnsTemporarilyLockedOut() {
         var userProfile = setupExistingUserInDatabase();
 
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
@@ -673,34 +673,6 @@ class LoginHandlerTest {
                                 "incorrectPasswordCount",
                                 configurationService.getMaxPasswordRetries()),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
-
-        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
-    }
-
-    @Test
-    void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
-        setupExistingUserInDatabase();
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(aTemporarilyLockedOutDecision));
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()),
-                        pair(
-                                "number_of_attempts_user_allowed_to_login",
-                                configurationService.getMaxPasswordRetries()));
 
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
