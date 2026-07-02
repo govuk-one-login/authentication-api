@@ -233,18 +233,14 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
-        // Arrange
         setupExistingUserInDatabase();
-
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        // Act
         var result = handler.handleRequest(event, context);
 
-        // Assert
         assertThat(result, hasStatus(200));
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
@@ -268,18 +264,14 @@ class LoginHandlerTest {
 
     @Test
     void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue() {
-        // Arrange
         setupExistingUserInDatabase();
-
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        // Act
         var result = handler.handleRequest(event, context);
 
-        // Assert
         assertThat(result, hasStatus(200));
 
         verify(auditService)
@@ -308,18 +300,14 @@ class LoginHandlerTest {
 
     @Test
     void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney() {
-        // Arrange
         setupExistingUserInDatabase();
-
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(MEDIUM_LEVEL, LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        // Act
         var result = handler.handleRequest(event, context);
 
-        // Assert
         assertThat(result, hasStatus(200));
 
         verify(auditService)
@@ -348,18 +336,14 @@ class LoginHandlerTest {
 
     @Test
     void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() {
-        // Arrange
         setupExistingUserInDatabase();
-
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(LOW_LEVEL, LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        // Act
         var result = handler.handleRequest(event, context);
 
-        // Assert
         assertThat(result, hasStatus(200));
 
         verify(auditService)
@@ -620,7 +604,6 @@ class LoginHandlerTest {
     void shouldReturnCorrectMfaMethodsFromMfaMethodsService(
             boolean migrated, List<MFAMethod> mfaMethods, LoginResponse expectedResponse)
             throws Json.JsonException {
-        // Arrange
         var defaultMfa =
                 mfaMethods.stream()
                         .filter(mfaMethod -> DEFAULT.name().equals(mfaMethod.getPriority()))
@@ -651,11 +634,9 @@ class LoginHandlerTest {
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
-        // Act
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        // Assert
         assertThat(result, hasStatus(200));
 
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
@@ -1097,19 +1078,15 @@ class LoginHandlerTest {
 
     @Test
     void shouldDeleteEmailAndPasswordAuthenticationAttemptCountsWhenUserLogsInSuccessfully() {
-        // Arrange
         setupExistingUserInDatabase();
         when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        // Act
         var result = handler.handleRequest(event, context);
 
-        // Assert
         assertThat(result, hasStatus(200));
     }
 
@@ -1130,17 +1107,14 @@ class LoginHandlerTest {
 
     @Test
     void shouldCallCorrectPasswordReceivedWhenLoginIsSuccessful() {
-        // Arrange
         setupExistingUserInDatabase();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
-        // Act
         var result = handler.handleRequest(event, context);
 
-        // Assert
         assertThat(result, hasStatus(200));
         verify(userActionsManager)
                 .correctPasswordReceived(any(), argThat(pc -> pc.authSessionItem() != null));
