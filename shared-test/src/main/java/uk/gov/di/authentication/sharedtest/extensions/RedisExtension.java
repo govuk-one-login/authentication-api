@@ -38,10 +38,6 @@ public class RedisExtension
         this.codeStorageService = new CodeStorageService(configurationService);
     }
 
-    public void addStateToRedis(State state, String sessionId) throws Json.JsonException {
-        addStateToRedis("state:", state, sessionId);
-    }
-
     public void addStateToRedis(String prefix, State state, String sessionId)
             throws Json.JsonException {
         redis.saveWithExpiry(prefix + sessionId, objectMapper.writeValueAsString(state), 3600);
@@ -95,14 +91,6 @@ public class RedisExtension
 
     public void increaseMfaCodeAttemptsCount(String email) {
         codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email);
-    }
-
-    public void addToRedis(String key, String value, Long expiry) {
-        redis.saveWithExpiry(key, value, expiry);
-    }
-
-    public String getFromRedis(String key) {
-        return redis.getValue(key);
     }
 
     public void flushData() {
