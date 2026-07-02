@@ -239,7 +239,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
+    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() {
         setupExistingUserInDatabase();
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
@@ -249,8 +249,6 @@ class LoginHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
         verify(auditService)
                 .submitAuditEvent(
