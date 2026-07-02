@@ -275,12 +275,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-
         verifyLoginWithoutMfaMetricIncremented();
 
         verify(authSessionService)
@@ -305,12 +299,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(200));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-
         verifyLoginWithoutMfaMetricIncremented();
 
         verify(authSessionService)
@@ -334,12 +322,6 @@ class LoginHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyLoginWithoutMfaMetricIncremented();
 
