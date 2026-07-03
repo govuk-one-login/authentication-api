@@ -224,25 +224,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
-            verify(auditService, times(1))
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    ENCODED_DEVICE_DETAILS),
-                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
-                            pair("incorrect_email_attempt_count", 0),
-                            pair("incorrect_password_attempt_count", 5),
-                            pair("incorrect_otp_code_attempt_count", 0),
-                            pair("failure-reason", "incorrect_password"));
-
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    FAILURE_REASON.getValue(),
-                                    "incorrect_password"));
+            verifyReauthFailedReported(0, 5, 0, "incorrect_password");
 
             verify(auditService)
                     .submitAuditEvent(
@@ -314,6 +296,12 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                 .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
                     };
 
+            var detailedCounts =
+                    Map.of(
+                            ENTER_EMAIL, expectedEmailAttemptCount,
+                            ENTER_PASSWORD, expectedPasswordAttemptCount,
+                            ENTER_MFA_CODE, expectedOtpAttemptCount);
+
             when(permissionDecisionManager.canReceivePassword(any(), any()))
                     .thenReturn(
                             Result.success(
@@ -322,10 +310,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                             MAX_ALLOWED_RETRIES,
                                             Instant.now().plusSeconds(900),
                                             false,
-                                            Map.of(
-                                                    ENTER_EMAIL, expectedEmailAttemptCount,
-                                                    ENTER_PASSWORD, expectedPasswordAttemptCount,
-                                                    ENTER_MFA_CODE, expectedOtpAttemptCount),
+                                            detailedCounts,
                                             java.util.List.of(countType))));
 
             setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
@@ -340,24 +325,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
-            verify(auditService, times(1))
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    ENCODED_DEVICE_DETAILS),
-                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
-                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
-                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
-                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
-                            pair("failure-reason", expectedFailureReason));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    FAILURE_REASON.getValue(),
-                                    expectedFailureReason));
+            verifyReauthFailedReported(detailedCounts, expectedFailureReason);
         }
     }
 
@@ -418,24 +386,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
-            verify(auditService, times(1))
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    ENCODED_DEVICE_DETAILS),
-                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
-                            pair("incorrect_email_attempt_count", expectedEmailAttemptCount),
-                            pair("incorrect_password_attempt_count", expectedPasswordAttemptCount),
-                            pair("incorrect_otp_code_attempt_count", expectedOtpAttemptCount),
-                            pair("failure-reason", expectedFailureReason));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    FAILURE_REASON.getValue(),
-                                    expectedFailureReason));
+            verifyReauthFailedReported(detailedCounts, expectedFailureReason);
         }
     }
 
@@ -476,24 +427,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
-            verify(auditService, times(1))
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    ENCODED_DEVICE_DETAILS),
-                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
-                            pair("incorrect_email_attempt_count", 0),
-                            pair("incorrect_password_attempt_count", MAX_ALLOWED_RETRIES),
-                            pair("incorrect_otp_code_attempt_count", 0),
-                            pair("failure-reason", "incorrect_password"));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                            Map.of(
-                                    ENVIRONMENT.getValue(),
-                                    configurationService.getEnvironment(),
-                                    FAILURE_REASON.getValue(),
-                                    "incorrect_password"));
+            verifyReauthFailedReported(0, MAX_ALLOWED_RETRIES, 0, "incorrect_password");
         }
     }
 
@@ -560,5 +494,36 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             case ENTER_MFA_CODE -> when(configurationService.getCodeMaxRetries())
                     .thenReturn(retriesAllowed);
         }
+    }
+
+    private void verifyReauthFailedReported(
+            int expectedEmailAttempts,
+            int expectedPasswordAttemps,
+            int expectedMfaAttempts,
+            String expectedFailureReason) {
+        verify(auditService, times(1))
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
+                        pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                        pair("incorrect_email_attempt_count", expectedEmailAttempts),
+                        pair("incorrect_password_attempt_count", expectedPasswordAttemps),
+                        pair("incorrect_otp_code_attempt_count", expectedMfaAttempts),
+                        pair("failure-reason", expectedFailureReason));
+        var expectedDimensions =
+                Map.ofEntries(
+                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                        Map.entry(FAILURE_REASON.getValue(), expectedFailureReason));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(CloudwatchMetrics.REAUTH_FAILED.getValue(), expectedDimensions);
+    }
+
+    private void verifyReauthFailedReported(
+            Map<CountType, Integer> detailedCounts, String expectedFailureReason) {
+        verifyReauthFailedReported(
+                detailedCounts.get(ENTER_EMAIL),
+                detailedCounts.get(ENTER_PASSWORD),
+                detailedCounts.get(ENTER_MFA_CODE),
+                expectedFailureReason);
     }
 }
