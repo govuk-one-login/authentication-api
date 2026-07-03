@@ -957,18 +957,21 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @MethodSource("validMfaMethods")
-    void shouldNotCheckForMFACodeBlocksIfUserDoesNotHaveAnMFA(MFAMethodType mfaMethodType) {
+    void shouldNotCheckForMFACodeBlocksOnA1FAJourney(MFAMethodType mfaMethodType) {
         setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
+
+        // These should not affect the result of a low level journey
+        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
+                .thenReturn(Result.success(aTemporarilyLockedOutDecision));
+        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
+                .thenReturn(Result.success(aTemporarilyLockedOutDecision));
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        verify(permissionDecisionManager, never()).canSendSmsOtpNotification(any(), any());
-        verify(permissionDecisionManager, never()).canVerifyMfaOtp(any(), any());
     }
 
     private static Stream<Arguments> validMfaMethodsWithExpectedBlock() {
