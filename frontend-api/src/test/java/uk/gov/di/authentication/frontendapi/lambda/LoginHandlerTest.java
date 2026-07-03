@@ -309,40 +309,25 @@ class LoginHandlerTest {
                         pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
     }
 
-    @Test
-    void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
-            throws Json.JsonException {
-        when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        var userProfile =
-                generateUserProfile(null)
-                        .withTermsAndConditions(
-                                new TermsAndConditions(
-                                        "1.0", NowHelper.now().toInstant().toString()));
-        setupUserInDatabase(EMAIL, userProfile);
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(false));
+    private static Stream<Arguments> usingSmokeTestClientToExpectedTAndCsAccepted() {
+        return Stream.of(Arguments.of(false, false), Arguments.of(true, true));
     }
 
-    @Test
-    void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
+    @ParameterizedTest
+    @MethodSource("usingSmokeTestClientToExpectedTAndCsAccepted")
+    void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted(
+            boolean usingSmokeTestClient, boolean expectedTAndCsAccepted)
+            throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        var userProfile =
-                generateUserProfile(null)
-                        .withTermsAndConditions(
-                                new TermsAndConditions(
-                                        "1.0", NowHelper.now().toInstant().toString()));
+        var userTAndCs = new TermsAndConditions("1.0", NowHelper.now().toInstant().toString());
+        var userProfile = generateUserProfile(null).withTermsAndConditions(userTAndCs);
         setupUserInDatabase(EMAIL, userProfile);
+        if (usingSmokeTestClient) {
+            usingValidAuthSessionInSmokeTest();
+        } else {
+            usingValidAuthSession();
+        }
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionInSmokeTest();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -351,7 +336,7 @@ class LoginHandlerTest {
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(expectedTAndCsAccepted));
     }
 
     @Test
