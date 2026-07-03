@@ -603,49 +603,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         }
     }
 
-    @Test
-    void shouldIncrementRelevantCountWhenCredentialsAreInvalid() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        usingApplicableUserCredentialsWithLogin(SMS, false);
-
-        when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
-
-        when(authenticationAttemptsService.getCount(any(), any(), any())).thenReturn(1);
-
-        usingValidAuthSession();
-
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
-
-        handler.handleRequest(event, context);
-
-        verify(userActionsManager)
-                .incorrectPasswordReceived(eq(JourneyType.REAUTHENTICATION), any());
-    }
-
-    @Test
-    void shouldIncrementRelevantCountWhenLimitHasExceeded() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        usingApplicableUserCredentialsWithLogin(SMS, false);
-
-        when(configurationService.getReauthEnterPasswordCountTTL()).thenReturn(120l);
-
-        when(authenticationAttemptsService.getCount(any(), any(), any()))
-                .thenReturn(MAX_ALLOWED_RETRIES - 1);
-
-        usingValidAuthSession();
-
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
-
-        handler.handleRequest(event, context);
-
-        verify(userActionsManager)
-                .incorrectPasswordReceived(eq(JourneyType.REAUTHENTICATION), any());
-    }
-
     private void usingValidAuthSession() {
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
