@@ -259,6 +259,10 @@ public class TokenService {
     }
 
     public AccessToken generateStorageToken(Subject internalPairwiseSubject) {
+        return generateStorageToken(internalPairwiseSubject, configService.getIPVAudience());
+    }
+
+    public AccessToken generateStorageToken(Subject internalPairwiseSubject, String audience) {
 
         LOG.info("Generating storage token");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
@@ -266,10 +270,7 @@ public class TokenService {
 
         LOG.info("Storage token being created with JWTID: {}", jwtID);
 
-        List<String> aud =
-                List.of(
-                        configService.getCredentialStoreURI().toString(),
-                        configService.getIPVAudience());
+        List<String> aud = List.of(configService.getCredentialStoreURI().toString(), audience);
 
         JWTClaimsSet.Builder claimSetBuilder =
                 new JWTClaimsSet.Builder()

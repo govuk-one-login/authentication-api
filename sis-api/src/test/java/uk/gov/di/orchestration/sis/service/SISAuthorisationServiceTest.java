@@ -22,6 +22,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
+import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.net.URL;
@@ -53,6 +54,7 @@ class SISAuthorisationServiceTest {
     private static final Instant NOW = Instant.parse("2026-06-29T15:00:00Z");
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final TokenService tokenService = mock(TokenService.class);
     private final JwksCacheService jwksCacheService = mock(JwksCacheService.class);
     private final OrchJwtService orchJwtService = mock(OrchJwtService.class);
     private SISAuthorisationService authorisationService;
@@ -80,6 +82,7 @@ class SISAuthorisationServiceTest {
         authorisationService =
                 new SISAuthorisationService(
                         configurationService,
+                        tokenService,
                         jwksCacheService,
                         orchJwtService,
                         new NowHelper.NowClock(Clock.fixed(NOW, ZoneOffset.UTC)));
