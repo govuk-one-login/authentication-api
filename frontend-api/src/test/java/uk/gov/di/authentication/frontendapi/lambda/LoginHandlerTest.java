@@ -349,7 +349,12 @@ class LoginHandlerTest {
     void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
             throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        setupExistingUserInDatabase(EMAIL);
+        var userProfile =
+                generateUserProfile(null)
+                        .withTermsAndConditions(
+                                new TermsAndConditions(
+                                        "1.0", NowHelper.now().toInstant().toString()));
+        setupUserInDatabase(EMAIL, userProfile);
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -361,6 +366,28 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
         assertThat(response.latestTermsAndConditionsAccepted(), equalTo(false));
+    }
+
+    @Test
+    void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
+        when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
+        var userProfile =
+                generateUserProfile(null)
+                        .withTermsAndConditions(
+                                new TermsAndConditions(
+                                        "1.0", NowHelper.now().toInstant().toString()));
+        setupUserInDatabase(EMAIL, userProfile);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionInSmokeTest();
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+
+        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
     }
 
     @Test
@@ -906,23 +933,6 @@ class LoginHandlerTest {
                         withMessageContaining(
                                 "No default mfa method found for user. Is user migrated: unknown, user MFA method count: 1, MFA method priority-type pairs: (BACKUP,SMS).")));
         verifyInternalCommonSubjectIdentifierSaved();
-    }
-
-    @Test
-    void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
-        when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        setupExistingUserInDatabase(EMAIL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionInSmokeTest();
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
     }
 
     @Test
