@@ -6,6 +6,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -1107,95 +1108,86 @@ class LoginHandlerTest {
         verify(authSessionService).updateSession(argThat(s -> !s.getIsPartiallyCreatedAccount()));
     }
 
-    @Test
-    void shouldRehashPasswordWhenFlagEnabledAndParamsDiffer() {
-        setupExistingUserInDatabase(EMAIL);
-        when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
-        when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(32768);
-        when(configurationService.getArgon2Iterations()).thenReturn(2);
-        when(configurationService.getArgon2Parallelism()).thenReturn(1);
-        var userCredentials =
-                new UserCredentials()
-                        .withEmail(EMAIL)
-                        .withPassword(
-                                "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw");
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
-        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
-                .thenReturn(true);
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(Result.success(List.of(DEFAULT_SMS_MFA_METHOD)));
-        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+    @Nested
+    class PasswordRehashing {
+        @Test
+        void shouldRehashPasswordWhenFlagEnabledAndParamsDiffer() {
+            when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
 
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        handler.handleRequest(event, context);
+            when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(32768);
+            when(configurationService.getArgon2Iterations()).thenReturn(2);
+            when(configurationService.getArgon2Parallelism()).thenReturn(1);
+            var password = "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw";
+            setupUserWhoCanSuccessfullyLoginWithPassword(password);
 
-        verify(authenticationService).updatePassword(EMAIL, CommonTestVariables.PASSWORD);
-    }
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+            handler.handleRequest(event, context);
 
-    @Test
-    void shouldNotRehashPasswordWhenFlagDisabled() {
-        setupExistingUserInDatabase(EMAIL);
-        when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(false);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+            verify(authenticationService).updatePassword(EMAIL, CommonTestVariables.PASSWORD);
+        }
 
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        handler.handleRequest(event, context);
+        @Test
+        void shouldNotRehashPasswordWhenFlagEnabledButParamsMatch() {
+            when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
 
-        verify(authenticationService, never()).updatePassword(anyString(), anyString());
-    }
+            when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(15360);
+            when(configurationService.getArgon2Iterations()).thenReturn(2);
+            when(configurationService.getArgon2Parallelism()).thenReturn(1);
+            var password = "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw";
+            setupUserWhoCanSuccessfullyLoginWithPassword(password);
 
-    @Test
-    void shouldNotRehashPasswordWhenFlagEnabledButParamsMatch() {
-        setupExistingUserInDatabase(EMAIL);
-        when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
-        when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(15360);
-        when(configurationService.getArgon2Iterations()).thenReturn(2);
-        when(configurationService.getArgon2Parallelism()).thenReturn(1);
-        var userCredentials =
-                new UserCredentials()
-                        .withEmail(EMAIL)
-                        .withPassword(
-                                "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw");
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
-        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
-                .thenReturn(true);
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(Result.success(List.of(DEFAULT_SMS_MFA_METHOD)));
-        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+            handler.handleRequest(event, context);
 
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        handler.handleRequest(event, context);
+            verify(authenticationService, never()).updatePassword(anyString(), anyString());
+        }
 
-        verify(authenticationService, never()).updatePassword(anyString(), anyString());
-    }
+        @Test
+        void shouldStillLoginSuccessfullyWhenRehashThrowsException() {
+            when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
 
-    @Test
-    void shouldStillLoginSuccessfullyWhenRehashThrowsException() {
-        setupExistingUserInDatabase(EMAIL);
-        when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
-        when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(32768);
-        when(configurationService.getArgon2Iterations()).thenReturn(2);
-        when(configurationService.getArgon2Parallelism()).thenReturn(1);
-        var userCredentials =
-                new UserCredentials()
-                        .withEmail(EMAIL)
-                        .withPassword(
-                                "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw");
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
-        when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
-                .thenReturn(true);
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(Result.success(List.of(DEFAULT_SMS_MFA_METHOD)));
-        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
-        doThrow(new RuntimeException("DynamoDB error"))
-                .when(authenticationService)
-                .updatePassword(anyString(), anyString());
+            when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(32768);
+            when(configurationService.getArgon2Iterations()).thenReturn(2);
+            when(configurationService.getArgon2Parallelism()).thenReturn(1);
+            var password = "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw";
+            setupUserWhoCanSuccessfullyLoginWithPassword(password);
 
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        var result = handler.handleRequest(event, context);
+            doThrow(new RuntimeException("DynamoDB error"))
+                    .when(authenticationService)
+                    .updatePassword(anyString(), anyString());
 
-        assertThat(result, hasStatus(200));
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
+        }
+
+        @Test
+        void shouldNotRehashPasswordWhenFlagDisabled() {
+            when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(false);
+
+            usingApplicableUserCredentialsWithLogin(SMS, true);
+
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+            handler.handleRequest(event, context);
+
+            verify(authenticationService, never()).updatePassword(anyString(), anyString());
+        }
+
+        private void setupUserWhoCanSuccessfullyLoginWithPassword(String password) {
+            setupExistingUserInDatabase(EMAIL);
+            when(mfaMethodsService.getMfaMethods(EMAIL))
+                    .thenReturn(Result.success(List.of(DEFAULT_SMS_MFA_METHOD)));
+            usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+            var userCredentials = new UserCredentials().withEmail(EMAIL).withPassword(password);
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(userCredentials);
+            when(authenticationService.login(eq(userCredentials), anyString())).thenReturn(true);
+        }
     }
 
     private void usingValidAuthSessionWithAchievedCredentialStrength(
