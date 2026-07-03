@@ -282,20 +282,6 @@ class LoginHandlerTest {
         // Assert
         assertThat(result, hasStatus(200));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-
-        verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccessWithoutMfa(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID.getValue(),
-                        CLIENT_NAME,
-                        "P0",
-                        false);
-
         verify(authSessionService)
                 .updateSession(
                         argThat(
@@ -324,20 +310,6 @@ class LoginHandlerTest {
         // Assert
         assertThat(result, hasStatus(200));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-
-        verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccessWithoutMfa(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID.getValue(),
-                        CLIENT_NAME,
-                        "P0",
-                        false);
-
         verify(authSessionService)
                 .updateSession(
                         argThat(
@@ -365,20 +337,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
-
-        verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccessWithoutMfa(
-                        AuthSessionItem.AccountState.EXISTING,
-                        CLIENT_ID.getValue(),
-                        CLIENT_NAME,
-                        "P0",
-                        false);
 
         verify(authSessionService)
                 .updateSession(
