@@ -44,7 +44,6 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -76,6 +75,7 @@ import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.cont
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.userpermissions.entity.ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
 
 class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
@@ -200,14 +200,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             when(permissionDecisionManager.canReceivePassword(any(), any()))
                     .thenReturn(
                             Result.success(
-                                    new Decision.ReauthLockedOut(
-                                            ForbiddenReason
-                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                            0,
-                                            Instant.now().plusSeconds(900),
-                                            false,
-                                            detailedCounts,
-                                            List.of(ENTER_PASSWORD))));
+                                    reauthLockedOutDecision(
+                                            EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                            detailedCounts)));
 
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, true);
@@ -242,14 +237,9 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
                     .thenReturn(
                             Result.success(
-                                    new Decision.ReauthLockedOut(
-                                            ForbiddenReason
-                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                            MAX_ALLOWED_RETRIES,
-                                            Instant.now().plusSeconds(900),
-                                            false,
-                                            detailedCounts,
-                                            java.util.List.of(ENTER_PASSWORD))));
+                                    reauthLockedOutDecision(
+                                            EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                            detailedCounts)));
 
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, false);
@@ -347,5 +337,16 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                 detailedCounts.get(ENTER_PASSWORD),
                 detailedCounts.get(ENTER_MFA_CODE),
                 expectedFailureReason);
+    }
+
+    private Decision reauthLockedOutDecision(
+            ForbiddenReason reason, Map<CountType, Integer> detailedCounts) {
+        return new Decision.ReauthLockedOut(
+                reason,
+                MAX_ALLOWED_RETRIES,
+                Instant.now().plusSeconds(900),
+                false,
+                detailedCounts,
+                java.util.List.of(ENTER_EMAIL));
     }
 }
