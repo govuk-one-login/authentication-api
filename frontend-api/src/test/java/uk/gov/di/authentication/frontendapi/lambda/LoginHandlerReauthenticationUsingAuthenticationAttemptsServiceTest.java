@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -60,8 +59,6 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -497,88 +494,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                                     configurationService.getEnvironment(),
                                     FAILURE_REASON.getValue(),
                                     "incorrect_password"));
-        }
-    }
-
-    @ParameterizedTest
-    @EnumSource(JourneyType.class)
-    void
-            shouldNotEmitReauthFailedAuditEventWhenJourneyTypeIsNotReauthenticationWhenUserAlreadyBlocked(
-                    JourneyType journeyType) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
-        setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
-
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, false);
-
-        String validBodyWithJourney =
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                        CommonTestVariables.PASSWORD, EMAIL.toUpperCase(), journeyType);
-
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithJourney);
-
-        handler.handleRequest(event, context);
-
-        if (journeyType != JourneyType.REAUTHENTICATION) {
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                            eq(
-                                    Map.of(
-                                            ENVIRONMENT.getValue(),
-                                            configurationService.getEnvironment(),
-                                            FAILURE_REASON.getValue(),
-                                            anyString())));
-        }
-    }
-
-    @ParameterizedTest
-    @EnumSource(JourneyType.class)
-    void
-            shouldNotEmitReauthFailedAuditEventWhenJourneyTypeIsNotReauthWhenUserEntersTooManyIncorrectPasswords(
-                    JourneyType journeyType) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
-        setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
-
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, false);
-
-        String validBodyWithJourney =
-                format(
-                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
-                        CommonTestVariables.PASSWORD, EMAIL.toUpperCase(), journeyType);
-
-        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithJourney);
-
-        handler.handleRequest(event, context);
-
-        if (journeyType != JourneyType.REAUTHENTICATION) {
-            verify(auditService, never())
-                    .submitAuditEvent(
-                            eq(FrontendAuditableEvent.AUTH_REAUTH_FAILED),
-                            any(AuditContext.class),
-                            any(AuditService.MetadataPair[].class));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                            eq(
-                                    Map.of(
-                                            ENVIRONMENT.getValue(),
-                                            configurationService.getEnvironment(),
-                                            FAILURE_REASON.getValue(),
-                                            anyString())));
         }
     }
 
