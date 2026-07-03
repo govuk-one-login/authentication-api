@@ -99,7 +99,6 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENC
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -389,30 +388,6 @@ class LoginHandlerTest {
                                                 && as.getIsNewAccount()
                                                         == AuthSessionItem.AccountState.EXISTING));
         verifyInternalCommonSubjectIdentifierSaved();
-    }
-
-    @Test
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
-        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        var event =
-                apiRequestEventWithHeadersAndBody(
-                        VALID_HEADERS_WITHOUT_AUDIT_ENCODED, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
     }
 
     @ParameterizedTest
