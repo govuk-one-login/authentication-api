@@ -238,10 +238,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
@@ -270,10 +267,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
@@ -295,10 +289,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(MEDIUM_LEVEL, LOW_LEVEL);
 
@@ -320,10 +311,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(LOW_LEVEL, LOW_LEVEL);
 
@@ -346,9 +334,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -366,9 +352,7 @@ class LoginHandlerTest {
     void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
             throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -394,7 +378,7 @@ class LoginHandlerTest {
                         true,
                         PriorityIdentifier.DEFAULT,
                         "another-mfa-id");
-        var userProfile = generateUserProfile(null);
+        setupExistingUserInDatabase(EMAIL);
         var userCredentials =
                 new UserCredentials()
                         .withEmail(EMAIL)
@@ -402,8 +386,6 @@ class LoginHandlerTest {
                         .setMfaMethod(mfaMethod);
         when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
@@ -463,6 +445,7 @@ class LoginHandlerTest {
                         .withMfaMethodsMigrated(true)
                         .withPhoneNumber(null)
                         .withPhoneNumberVerified(false);
+        setupUserInDatabase(EMAIL, userProfile);
         var migratedUserCredentials =
                 new UserCredentials()
                         .withEmail(EMAIL)
@@ -471,8 +454,6 @@ class LoginHandlerTest {
 
         when(authenticationService.login(migratedUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(migratedUserCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
@@ -570,6 +551,7 @@ class LoginHandlerTest {
                                         ? defaultMfa.get().getDestination()
                                         : null)
                         .withPhoneNumberVerified(hasPhoneNumberDefaultMfaMethod && !migrated);
+        setupUserInDatabase(EMAIL, testUserProfile);
         var testUserCredentials =
                 new UserCredentials()
                         .withEmail(EMAIL)
@@ -578,8 +560,6 @@ class LoginHandlerTest {
 
         when(authenticationService.login(testUserCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(testUserProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(testUserCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(mfaMethods));
@@ -598,9 +578,7 @@ class LoginHandlerTest {
     void shouldReturn200IfLoginIsSuccessfulButPasswordWasCommonPassword()
             throws Json.JsonException {
         when(commonPasswordsService.isCommonPassword(anyString())).thenReturn(true);
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -624,8 +602,7 @@ class LoginHandlerTest {
     void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully() {
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupUserInDatabase(EMAIL, userProfile);
         UserCredentials applicableUserCredentials =
                 usingApplicableUserCredentialsWithLogin(AUTH_APP, false);
         applicableUserCredentials.withPassword(null);
@@ -645,10 +622,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetries() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
+        var userProfile = setupExistingUserInDatabase(EMAIL);
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
@@ -677,9 +651,7 @@ class LoginHandlerTest {
     @Test
     void
             shouldReturnErrorNotLockUserAccountAndRetainCountsOutAfterMaxNumberOfIncorrectPasswordsPresentedDuringReauthJourney() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        var userProfile = setupExistingUserInDatabase(EMAIL);
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
@@ -710,9 +682,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(aTemporarilyLockedOutDecision));
         usingValidAuthSession();
@@ -741,9 +711,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn500WhenPermissionDecisionManagerFails() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
         usingValidAuthSession();
@@ -760,9 +728,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(AUTH_APP);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_MFA_METHOD)));
@@ -783,9 +749,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn401IfUserHasInvalidCredentials() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, false);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)))
@@ -813,9 +777,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void shouldIncrementRelevantCountWhenCredentialsAreInvalid(boolean isReauthJourney) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, false);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
@@ -837,8 +799,7 @@ class LoginHandlerTest {
     void shouldReturn401IfMigratedUserHasInvalidCredentials() {
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupUserInDatabase(EMAIL, userProfile);
 
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(AUTH_APP);
 
@@ -918,9 +879,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn500IfFailedToGetMfaMethods() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -938,9 +897,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn500IfFailedToConvertMfaMethodsForResponse() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -972,17 +929,15 @@ class LoginHandlerTest {
                         CommonTestVariables.UK_MOBILE_NUMBER,
                         PriorityIdentifier.BACKUP,
                         "some-mfa-id");
-        var userProfile = generateUserProfile(null);
+        setupExistingUserInDatabase(EMAIL);
         var userCredentials =
                 new UserCredentials()
                         .withEmail(EMAIL)
                         .withPassword(CommonTestVariables.PASSWORD)
                         .setMfaMethod(mfaMethod);
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
         when(authenticationService.login(userCredentials, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of(mfaMethod)));
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
@@ -1004,9 +959,7 @@ class LoginHandlerTest {
     @Test
     void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionInSmokeTest();
 
@@ -1025,9 +978,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldCallCorrectPasswordReceivedWhenLoginIsSuccessful() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSession();
 
@@ -1047,9 +998,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @MethodSource("validMfaMethods")
     void shouldCheckForMFACodeBlocks(MFAMethodType mfaMethodType) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -1070,9 +1019,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @MethodSource("validMfaMethods")
     void shouldNotCheckForMFACodeBlocksIfUserDoesNotHaveAnMFA(MFAMethodType mfaMethodType) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
 
@@ -1117,9 +1064,7 @@ class LoginHandlerTest {
     @MethodSource("validMfaMethodsWithExpectedBlock")
     void shouldReturn400ErrorWhenUserHasAnMFACodeBlock(
             MFAMethodType mfaMethodType, String blockKeyPrefix, ErrorResponse expectedError) {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
@@ -1144,9 +1089,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn400ErrorWhenUserIsIndefinitelyLockedOutFromSendingSmsOtp() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
 
@@ -1177,12 +1120,11 @@ class LoginHandlerTest {
     void shouldSetIsPartiallyCreatedAccountTrueWhenMfaMethodNotVerified() {
         var userProfile =
                 generateUserProfile(null).withPhoneNumberVerified(false).withPhoneNumber(null);
+        setupUserInDatabase(EMAIL, userProfile);
         var userCredentialsNoMfa =
                 new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
         when(authenticationService.login(userCredentialsNoMfa, CommonTestVariables.PASSWORD))
                 .thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(userCredentialsNoMfa);
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
@@ -1196,9 +1138,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldSetIsPartiallyCreatedAccountFalseWhenMfaMethodVerified() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
 
@@ -1210,9 +1150,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldRehashPasswordWhenFlagEnabledAndParamsDiffer() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
         when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(32768);
         when(configurationService.getArgon2Iterations()).thenReturn(2);
@@ -1237,9 +1175,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldNotRehashPasswordWhenFlagDisabled() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(false);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
@@ -1252,9 +1188,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldNotRehashPasswordWhenFlagEnabledButParamsMatch() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
         when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(15360);
         when(configurationService.getArgon2Iterations()).thenReturn(2);
@@ -1279,9 +1213,7 @@ class LoginHandlerTest {
 
     @Test
     void shouldStillLoginSuccessfullyWhenRehashThrowsException() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        setupExistingUserInDatabase(EMAIL);
         when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
         when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(32768);
         when(configurationService.getArgon2Iterations()).thenReturn(2);
@@ -1399,5 +1331,16 @@ class LoginHandlerTest {
         verify(authSessionService, atLeastOnce())
                 .updateSession(
                         argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
+    }
+
+    private UserProfile setupExistingUserInDatabase(String email) {
+        var userProfile = generateUserProfile(null);
+        setupUserInDatabase(email, userProfile);
+        return userProfile;
+    }
+
+    private void setupUserInDatabase(String email, UserProfile userProfile) {
+        when(authenticationService.getUserProfileByEmailMaybe(email))
+                .thenReturn(Optional.of(userProfile));
     }
 }
