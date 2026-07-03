@@ -504,8 +504,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void
-            shouldReturnErrorNotLockUserAccountAndRetainCountsOutAfterMaxNumberOfIncorrectPasswordsPresentedDuringReauthJourney() {
+    void shouldReturn400IfUserEntersInvalidCredentialsThatLockThemOut() {
         var userProfile = setupExistingUserInDatabase(EMAIL);
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
         when(permissionDecisionManager.canReceivePassword(any(), any()))
@@ -536,7 +535,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
+    void shouldReturn400IfUserIsAlreadyLockedOutEvenIfCredentialsAreValid() {
         setupExistingUserInDatabase(EMAIL);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(aTemporarilyLockedOutDecision));
@@ -563,22 +562,6 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldReturn500WhenPermissionDecisionManagerFails() {
-        setupExistingUserInDatabase(EMAIL);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(500));
-        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
-    }
-
-    @Test
     void shouldReturn401IfUserHasInvalidCredentials() {
         setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, false);
@@ -601,6 +584,22 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.INVALID_LOGIN_CREDS));
+        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
+    }
+
+    @Test
+    void shouldReturn500WhenPermissionDecisionManagerFails() {
+        setupExistingUserInDatabase(EMAIL);
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.failure(DecisionError.STORAGE_SERVICE_ERROR));
+        usingValidAuthSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(500));
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
