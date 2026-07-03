@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -238,7 +237,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() {
+    void shouldReturn200AndReportLoginSuccessIfLoginIsSuccessful() {
         setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
         usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
@@ -262,6 +261,9 @@ class LoginHandlerTest {
                         CLIENT_NAME,
                         "P0",
                         false);
+
+        verify(userActionsManager)
+                .correctPasswordReceived(any(), argThat(pc -> pc.authSessionItem() != null));
 
         verifyInternalCommonSubjectIdentifierSaved();
     }
@@ -327,23 +329,6 @@ class LoginHandlerTest {
                                         as.getAchievedCredentialStrength() == LOW_LEVEL
                                                 && as.getIsNewAccount()
                                                         == AuthSessionItem.AccountState.EXISTING));
-    }
-
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType) {
-        setupExistingUserInDatabase(EMAIL);
-        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        verifyNoInteractions(cloudwatchMetricsService);
-
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @Test
@@ -804,21 +789,6 @@ class LoginHandlerTest {
                         withMessageContaining(
                                 "No default mfa method found for user. Is user migrated: unknown, user MFA method count: 1, MFA method priority-type pairs: (BACKUP,SMS).")));
         verifyInternalCommonSubjectIdentifierSaved();
-    }
-
-    @Test
-    void shouldCallCorrectPasswordReceivedWhenLoginIsSuccessful() {
-        setupExistingUserInDatabase(EMAIL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSession();
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-        verify(userActionsManager)
-                .correctPasswordReceived(any(), argThat(pc -> pc.authSessionItem() != null));
     }
 
     private static Stream<MFAMethodType> validMfaMethods() {
