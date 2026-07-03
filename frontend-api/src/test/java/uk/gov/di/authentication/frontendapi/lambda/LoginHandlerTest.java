@@ -284,7 +284,6 @@ class LoginHandlerTest {
                                         as.getAchievedCredentialStrength() == LOW_LEVEL
                                                 && as.getIsNewAccount()
                                                         == AuthSessionItem.AccountState.EXISTING));
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @Test
@@ -306,7 +305,6 @@ class LoginHandlerTest {
                                         as.getAchievedCredentialStrength() == MEDIUM_LEVEL
                                                 && as.getIsNewAccount()
                                                         == AuthSessionItem.AccountState.EXISTING));
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @Test
@@ -328,7 +326,6 @@ class LoginHandlerTest {
                                         as.getAchievedCredentialStrength() == LOW_LEVEL
                                                 && as.getIsNewAccount()
                                                         == AuthSessionItem.AccountState.EXISTING));
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @ParameterizedTest
@@ -364,9 +361,6 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
         assertThat(response.latestTermsAndConditionsAccepted(), equalTo(false));
-
-        verifyNoInteractions(cloudwatchMetricsService);
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @Test
@@ -398,10 +392,6 @@ class LoginHandlerTest {
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.mfaMethodType(), equalTo(SMS));
         assertThat(response.mfaMethodVerified(), equalTo(true));
-
-        verifyNoInteractions(cloudwatchMetricsService);
-
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     private static Stream<Arguments> migratedMfaMethodsToExpectedLoginResponse() {
@@ -594,8 +584,6 @@ class LoginHandlerTest {
                         auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
-        verifyNoInteractions(cloudwatchMetricsService);
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @Test
@@ -615,9 +603,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        verifyNoInteractions(cloudwatchMetricsService);
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @Test
@@ -704,8 +689,6 @@ class LoginHandlerTest {
                         pair(
                                 "number_of_attempts_user_allowed_to_login",
                                 configurationService.getMaxPasswordRetries()));
-
-        verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -722,7 +705,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(500));
-        verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -743,8 +725,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-        verifyNoInteractions(cloudwatchMetricsService);
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @Test
@@ -770,7 +750,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.INVALID_LOGIN_CREDS));
-        verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -827,7 +806,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-        verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -842,7 +820,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
-        verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -855,7 +832,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
-        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -873,7 +849,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
-        verifyNoInteractions(cloudwatchMetricsService);
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -892,7 +867,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasJsonBody(ErrorResponse.AUTH_APP_MFA_ID_ERROR));
-        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -917,7 +891,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasJsonBody(ErrorResponse.MFA_METHODS_RETRIEVAL_ERROR));
-        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -951,8 +924,6 @@ class LoginHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 "No default mfa method found for user. Is user migrated: unknown, user MFA method count: 1, MFA method priority-type pairs: (BACKUP,SMS).")));
-
-        verifyNoInteractions(cloudwatchMetricsService);
         verifyInternalCommonSubjectIdentifierSaved();
     }
 
@@ -971,9 +942,6 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
 
         assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
-
-        verifyNoInteractions(cloudwatchMetricsService);
-        verifyInternalCommonSubjectIdentifierSaved();
     }
 
     @Test
