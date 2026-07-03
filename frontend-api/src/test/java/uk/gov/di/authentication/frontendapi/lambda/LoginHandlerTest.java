@@ -367,16 +367,15 @@ class LoginHandlerTest {
         verifyInternalCommonSubjectIdentifierSaved();
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted(
-            MFAMethodType mfaMethodType) throws Json.JsonException {
+    @Test
+    void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
+            throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -603,16 +602,15 @@ class LoginHandlerTest {
         assertEquals(expectedResponse, response);
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessfulButPasswordWasCommonPassword(MFAMethodType mfaMethodType)
+    @Test
+    void shouldReturn200IfLoginIsSuccessfulButPasswordWasCommonPassword()
             throws Json.JsonException {
         when(commonPasswordsService.isCommonPassword(anyString())).thenReturn(true);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -630,16 +628,14 @@ class LoginHandlerTest {
         verifyInternalCommonSubjectIdentifierSaved();
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully(MFAMethodType mfaMethodType)
-            throws Json.JsonException {
+    @Test
+    void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully() {
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         UserCredentials applicableUserCredentials =
-                usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+                usingApplicableUserCredentialsWithLogin(AUTH_APP, false);
         applicableUserCredentials.withPassword(null);
         when(userMigrationService.processMigratedUser(
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
@@ -655,10 +651,8 @@ class LoginHandlerTest {
         verifyInternalCommonSubjectIdentifierSaved();
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetries(
-            MFAMethodType mfaMethodType) {
+    @Test
+    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetries() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -675,7 +669,7 @@ class LoginHandlerTest {
                                         Instant.now().plusSeconds(900),
                                         true)));
         usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+        usingApplicableUserCredentialsWithLogin(SMS, false);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -695,11 +689,9 @@ class LoginHandlerTest {
                         pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
+    @Test
     void
-            shouldReturnErrorNotLockUserAccountAndRetainCountsOutAfterMaxNumberOfIncorrectPasswordsPresentedDuringReauthJourney(
-                    MFAMethodType mfaMethodType) {
+            shouldReturnErrorNotLockUserAccountAndRetainCountsOutAfterMaxNumberOfIncorrectPasswordsPresentedDuringReauthJourney() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -716,7 +708,7 @@ class LoginHandlerTest {
                                         false)));
 
         usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+        usingApplicableUserCredentialsWithLogin(AUTH_APP, false);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
@@ -738,10 +730,8 @@ class LoginHandlerTest {
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession(
-            MFAMethodType mfaMethodType) {
+    @Test
+    void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -756,7 +746,7 @@ class LoginHandlerTest {
                                                 .plus(15, java.time.temporal.ChronoUnit.MINUTES),
                                         false)));
         usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -798,20 +788,14 @@ class LoginHandlerTest {
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin(MFAMethodType mfaMethodType) {
+    @Test
+    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
+        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(AUTH_APP);
         when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(
-                        Result.success(
-                                List.of(
-                                        mfaMethodType.equals(AUTH_APP)
-                                                ? DEFAULT_AUTH_APP_MFA_METHOD
-                                                : DEFAULT_SMS_MFA_METHOD)));
+                .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_MFA_METHOD)));
         usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
@@ -827,13 +811,12 @@ class LoginHandlerTest {
         verifyInternalCommonSubjectIdentifierSaved();
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn401IfUserHasInvalidCredentials(MFAMethodType mfaMethodType) {
+    @Test
+    void shouldReturn401IfUserHasInvalidCredentials() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+        usingApplicableUserCredentialsWithLogin(SMS, false);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)))
                 .thenReturn(Result.success(new Decision.Permitted(1)));
@@ -880,15 +863,14 @@ class LoginHandlerTest {
                 .incorrectPasswordReceived(eq(expectedJourneyType), any());
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn401IfMigratedUserHasInvalidCredentials(MFAMethodType mfaMethodType) {
+    @Test
+    void shouldReturn401IfMigratedUserHasInvalidCredentials() {
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
+        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(AUTH_APP);
 
         when(userMigrationService.processMigratedUser(
                         applicableUserCredentials, CommonTestVariables.PASSWORD))
