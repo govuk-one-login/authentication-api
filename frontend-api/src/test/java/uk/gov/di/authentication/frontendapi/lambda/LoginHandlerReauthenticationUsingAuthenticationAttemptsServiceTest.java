@@ -9,8 +9,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
@@ -93,16 +91,17 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .setMfaMethod(AUTH_APP_MFA_METHOD);
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
-    private static final String TEST_RP_PAIRWISE_ID = "test-rp-pairwise-id";
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final String TEST_RP_PAIRWISE_ID =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT_ID.getValue(), SECTOR_IDENTIFIER_HOST, SALT);
     private static final MFAMethod AUTH_APP_MFA_METHOD =
             new MFAMethod()
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
     private final Context context = mock(Context.class);
-    private final Subject subject = mock(Subject.class);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
@@ -181,78 +180,64 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
     @Test
     void shouldReturn400AndReportReauthFailureWhenUserAlreadyLockedOut() {
-        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
-                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
-            UserProfile userProfile = generateUserProfile(null);
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
-            clientSubjectHelperMockedStatic
-                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
-                    .thenReturn(subject);
-            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
 
-            var detailedCounts =
-                    Map.of(
-                            ENTER_EMAIL, 1,
-                            ENTER_PASSWORD, 2,
-                            ENTER_MFA_CODE, 3);
+        var detailedCounts =
+                Map.of(
+                        ENTER_EMAIL, 1,
+                        ENTER_PASSWORD, 2,
+                        ENTER_MFA_CODE, 3);
 
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    reauthLockedOutDecision(
-                                            EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                            detailedCounts)));
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(
+                        Result.success(
+                                reauthLockedOutDecision(
+                                        EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        detailedCounts)));
 
-            usingValidAuthSession();
-            usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
 
-            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
-            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
-            verifyReauthFailedReported(
-                    detailedCounts, ReauthFailureReasons.INCORRECT_PASSWORD.getValue());
-        }
+        verifyReauthFailedReported(
+                detailedCounts, ReauthFailureReasons.INCORRECT_PASSWORD.getValue());
     }
 
     @Test
     void shouldReturn400AndReportReauthFailureWhenUserEntersIncorrectCredentialsAndGetsLockedOut() {
-        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
-                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
-            UserProfile userProfile = generateUserProfile(null);
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
-            clientSubjectHelperMockedStatic
-                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
-                    .thenReturn(subject);
-            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
 
-            var detailedCounts = Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
+        var detailedCounts = Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
 
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
-                    .thenReturn(
-                            Result.success(
-                                    reauthLockedOutDecision(
-                                            EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                            detailedCounts)));
+        when(permissionDecisionManager.canReceivePassword(any(), any()))
+                .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
+                .thenReturn(
+                        Result.success(
+                                reauthLockedOutDecision(
+                                        EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                                        detailedCounts)));
 
-            usingValidAuthSession();
-            usingApplicableUserCredentialsWithLogin(SMS, false);
+        usingValidAuthSession();
+        usingApplicableUserCredentialsWithLogin(SMS, false);
 
-            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+        var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
 
-            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
-            verifyReauthFailedReported(0, MAX_ALLOWED_RETRIES, 0, "incorrect_password");
-        }
+        verifyReauthFailedReported(0, MAX_ALLOWED_RETRIES, 0, "incorrect_password");
     }
 
     private void usingValidAuthSession() {
