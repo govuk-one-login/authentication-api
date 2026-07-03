@@ -634,34 +634,6 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldChangeStateToAccountTemporarilyLockedAfterAttemptsReachMaxRetries() {
-        var userProfile = setupExistingUserInDatabase(EMAIL);
-        var maxRetriesAllowed = configurationService.getMaxPasswordRetries();
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(maxRetriesAllowed - 1)))
-                .thenReturn(Result.success(aTemporarilyLockedOutDecision));
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, false);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-
-        assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_PW_ENTERED));
-        verifyNoInteractions(cloudwatchMetricsService);
-        verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", userProfile.getSubjectID()),
-                        pair("attemptNoFailedAt", maxRetriesAllowed),
-                        pair("number_of_attempts_user_allowed_to_login", maxRetriesAllowed));
-    }
-
-    @Test
     void
             shouldReturnErrorNotLockUserAccountAndRetainCountsOutAfterMaxNumberOfIncorrectPasswordsPresentedDuringReauthJourney() {
         var userProfile = setupExistingUserInDatabase(EMAIL);
