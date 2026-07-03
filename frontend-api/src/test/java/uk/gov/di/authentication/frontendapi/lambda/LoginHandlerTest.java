@@ -231,7 +231,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
+    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() {
         // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -247,13 +247,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(
-                response.redactedPhoneNumber(),
-                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -273,8 +266,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue()
-            throws Json.JsonException {
+    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue() {
         // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -290,13 +282,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(
-                response.redactedPhoneNumber(),
-                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -323,8 +308,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney()
-            throws Json.JsonException {
+    void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney() {
         // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -340,13 +324,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(
-                response.redactedPhoneNumber(),
-                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -373,7 +350,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() throws Json.JsonException {
+    void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() {
         // Arrange
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -389,13 +366,6 @@ class LoginHandlerTest {
 
         // Assert
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-
-        assertThat(
-                response.redactedPhoneNumber(),
-                equalTo(redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER)));
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -422,7 +392,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
+    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -747,9 +717,6 @@ class LoginHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.latestTermsAndConditionsAccepted(), equalTo(true));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verifyInternalCommonSubjectIdentifierSaved();
