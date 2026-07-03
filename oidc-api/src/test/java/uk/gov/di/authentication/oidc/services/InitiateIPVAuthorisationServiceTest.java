@@ -1,22 +1,6 @@
 package uk.gov.di.authentication.oidc.services;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.nimbusds.jose.EncryptionMethod;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWEAlgorithm;
-import com.nimbusds.jose.JWEHeader;
-import com.nimbusds.jose.JWEObject;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.Payload;
-import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.crypto.RSAEncrypter;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
-import com.nimbusds.jwt.EncryptedJWT;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -47,7 +31,6 @@ import uk.gov.di.orchestration.shared.services.TokenService;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +52,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.utils.JwtUtils.createDummyJwt;
 
 public class InitiateIPVAuthorisationServiceTest {
     private static final String CLIENT_SESSION_ID = "client-session-v1";
@@ -172,8 +156,8 @@ public class InitiateIPVAuthorisationServiceTest {
     }
 
     @Test
-    void shouldReturn302AndRedirectURIWithClaims() throws JOSEException, ParseException {
-        var encryptedJWT = createEncryptedJWT();
+    void shouldReturn302AndRedirectURIWithClaims() throws Exception {
+        var encryptedJWT = createDummyJwt();
         var authRequest = createAuthenticationRequest(claimsSetRequest);
         when(authorisationService.constructRequestJWT(
                         any(State.class),
@@ -270,36 +254,6 @@ public class InitiateIPVAuthorisationServiceTest {
         assertEquals(
                 claimsSetRequestWithStorageTokenClaim.toJSONString(),
                 actualClaimsSetRequest.getValue().toJSONString());
-    }
-
-    private EncryptedJWT createEncryptedJWT() throws JOSEException, ParseException {
-        var ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID("key-id")
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        var ecdsaSigner = new ECDSASigner(ecSigningKey);
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .claim("redirect_uri", "REDIRECT_URI")
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("client_id", "CLIENT_ID")
-                        .claim("govuk_signin_journey_id", CLIENT_SESSION_ID)
-                        .issuer("CLIENT_ID")
-                        .build();
-        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
-        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
-        signedJWT.sign(ecdsaSigner);
-        var rsaEncryptionKey =
-                new RSAKeyGenerator(2048).keyID("encrytion-key-id").generate().toRSAPublicKey();
-        var jweObject =
-                new JWEObject(
-                        new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
-                                .contentType("JWT")
-                                .build(),
-                        new Payload(signedJWT));
-        jweObject.encrypt(new RSAEncrypter(rsaEncryptionKey));
-        return EncryptedJWT.parse(jweObject.serialize());
     }
 
     private UserInfo generateUserInfo() throws com.nimbusds.oauth2.sdk.ParseException {
