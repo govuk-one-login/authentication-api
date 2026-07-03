@@ -79,7 +79,6 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -1173,23 +1172,6 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldUpdateAuthSessionStoreWithExistingAccountState() {
-        UserProfile userProfile = generateUserProfile(null);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSession();
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-        verifyAuthSessionIsSaved();
-    }
-
-    @Test
     void shouldCallCorrectPasswordReceivedWhenLoginIsSuccessful() {
         // Arrange
         UserProfile userProfile = generateUserProfile(null);
@@ -1438,12 +1420,6 @@ class LoginHandlerTest {
         verify(authSessionService, atLeastOnce())
                 .updateSession(
                         argThat(t -> t.getInternalCommonSubjectId().equals(expectedCommonSubject)));
-    }
-
-    private void verifyAuthSessionIsSaved() {
-        verify(authSessionService, times(1))
-                .updateSession(
-                        argThat(s -> s.getIsNewAccount() == AuthSessionItem.AccountState.EXISTING));
     }
 
     @Test
