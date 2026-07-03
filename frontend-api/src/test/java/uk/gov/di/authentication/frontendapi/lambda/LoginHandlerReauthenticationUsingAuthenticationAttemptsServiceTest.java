@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
@@ -145,8 +144,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             mock(CloudwatchMetricsService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
-    private final AuthenticationAttemptsService authenticationAttemptsService =
-            mock(AuthenticationAttemptsService.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final PermissionDecisionManager permissionDecisionManager =
@@ -168,7 +165,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_ALLOWED_RETRIES);
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_ALLOWED_RETRIES);
         when(configurationService.getCodeMaxRetries()).thenReturn(MAX_ALLOWED_RETRIES);
 
@@ -230,8 +226,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
-
-            verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
             verify(auditService, times(1))
                     .submitAuditEvent(
@@ -310,9 +304,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
-            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                            any(), any(), eq(JourneyType.REAUTHENTICATION)))
-                    .thenReturn(Map.of(countType, MAX_ALLOWED_RETRIES));
 
             ForbiddenReason forbiddenReason =
                     switch (countType) {
@@ -351,8 +342,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
-
-            verify(authenticationAttemptsService, never()).deleteCount(any(), any(), any());
 
             verify(auditService, times(1))
                     .submitAuditEvent(
@@ -519,13 +508,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(authenticationAttemptsService.getCount(
-                        any(), eq(REAUTHENTICATION), eq(ENTER_PASSWORD)))
-                .thenReturn(MAX_ALLOWED_RETRIES - 1);
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        any(), any(), eq(JourneyType.REAUTHENTICATION)))
-                .thenReturn(Map.of(CountType.ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1))
-                .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
 
         setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
 
@@ -567,9 +549,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        any(), any(), eq(JourneyType.REAUTHENTICATION)))
-                .thenReturn(Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES));
 
         setupConfigurationServiceCountForCountType(ENTER_PASSWORD, MAX_ALLOWED_RETRIES);
 
