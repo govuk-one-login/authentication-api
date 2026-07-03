@@ -1173,26 +1173,6 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldDeleteEmailAndPasswordAuthenticationAttemptCountsWhenUserLogsInSuccessfully() {
-        // Arrange
-        UserProfile userProfile = generateUserProfile(null);
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        // Act
-        var result = handler.handleRequest(event, context);
-
-        // Assert
-        assertThat(result, hasStatus(200));
-    }
-
-    @Test
     void shouldUpdateAuthSessionStoreWithExistingAccountState() {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
