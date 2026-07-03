@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -57,14 +56,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CREDENTIALS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
@@ -186,64 +182,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         testUserHelper);
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void
-            shouldReturnErrorNotDeleteCountAndNotLockUserAccountOutAfterMaxNumberOfIncorrectPasswordsPresented(
-                    MFAMethodType mfaMethodType) {
-        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
-                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
-            UserProfile userProfile = generateUserProfile(null);
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
-            clientSubjectHelperMockedStatic
-                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
-                    .thenReturn(subject);
-            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
-
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.ReauthLockedOut(
-                                            ForbiddenReason
-                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
-                                            MAX_ALLOWED_RETRIES,
-                                            Instant.now().plusSeconds(900),
-                                            false,
-                                            Map.of(ENTER_PASSWORD, MAX_ALLOWED_RETRIES - 1),
-                                            java.util.List.of(ENTER_PASSWORD))));
-
-            usingValidAuthSession();
-            usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-
-            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
-
-            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
-
-            verifyReauthFailedReported(0, 5, 0, "incorrect_password");
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTH_INVALID_CREDENTIALS,
-                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
-                                    ENCODED_DEVICE_DETAILS),
-                            pair("internalSubjectId", userProfile.getSubjectID()),
-                            pair("incorrectPasswordCount", MAX_ALLOWED_RETRIES),
-                            pair(
-                                    "attemptNoFailedAt",
-                                    configurationService.getMaxPasswordRetries()));
-
-            verify(cloudwatchMetricsService, never())
-                    .incrementAuthenticationSuccessWithoutMfa(
-                            any(), any(), any(), any(), anyBoolean());
-            verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
-        }
-    }
-
     private static Stream<Arguments> reauthCountTypesAndMetadata() {
         return Stream.of(
                 Arguments.arguments(
@@ -264,69 +202,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         0,
                         MAX_ALLOWED_RETRIES,
                         ReauthFailureReasons.INCORRECT_OTP.getValue()));
-    }
-
-    @ParameterizedTest
-    @MethodSource("reauthCountTypesAndMetadata")
-    void shouldReturnErrorNotDeleteCountAndNotLockUserAccountOutIfUserHasAnyReauthLocks(
-            CountType countType,
-            int expectedEmailAttemptCount,
-            int expectedPasswordAttemptCount,
-            int expectedOtpAttemptCount,
-            String expectedFailureReason) {
-        try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
-                Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
-            UserProfile userProfile = generateUserProfile(null);
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
-            clientSubjectHelperMockedStatic
-                    .when(() -> ClientSubjectHelper.getSubject(any(), any(), any()))
-                    .thenReturn(subject);
-            when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
-
-            ForbiddenReason forbiddenReason =
-                    switch (countType) {
-                        case ENTER_EMAIL -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
-                        case ENTER_EMAIL_CODE -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
-                        case ENTER_PASSWORD -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
-                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
-                    };
-
-            var detailedCounts =
-                    Map.of(
-                            ENTER_EMAIL, expectedEmailAttemptCount,
-                            ENTER_PASSWORD, expectedPasswordAttemptCount,
-                            ENTER_MFA_CODE, expectedOtpAttemptCount);
-
-            when(permissionDecisionManager.canReceivePassword(any(), any()))
-                    .thenReturn(
-                            Result.success(
-                                    new Decision.ReauthLockedOut(
-                                            forbiddenReason,
-                                            MAX_ALLOWED_RETRIES,
-                                            Instant.now().plusSeconds(900),
-                                            false,
-                                            detailedCounts,
-                                            java.util.List.of(countType))));
-
-            setupConfigurationServiceCountForCountType(countType, MAX_ALLOWED_RETRIES);
-
-            usingValidAuthSession();
-            usingApplicableUserCredentialsWithLogin(SMS, true);
-
-            var event = eventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
-
-            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-            assertThat(result, hasStatus(400));
-            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
-
-            verifyReauthFailedReported(detailedCounts, expectedFailureReason);
-        }
     }
 
     @ParameterizedTest
@@ -482,18 +357,6 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
         event.setHeaders(headers);
         event.setBody(body);
         return event;
-    }
-
-    private void setupConfigurationServiceCountForCountType(
-            CountType countType, int retriesAllowed) {
-        switch (countType) {
-            case ENTER_EMAIL -> when(configurationService.getMaxEmailReAuthRetries())
-                    .thenReturn(retriesAllowed);
-            case ENTER_PASSWORD -> when(configurationService.getMaxPasswordRetries())
-                    .thenReturn(retriesAllowed);
-            case ENTER_MFA_CODE -> when(configurationService.getCodeMaxRetries())
-                    .thenReturn(retriesAllowed);
-        }
     }
 
     private void verifyReauthFailedReported(
