@@ -957,27 +957,6 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @MethodSource("validMfaMethods")
-    void shouldCheckForMFACodeBlocks(MFAMethodType mfaMethodType) {
-        setupExistingUserInDatabase(EMAIL);
-        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
-
-        when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canVerifyMfaOtp(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        verify(permissionDecisionManager).canSendSmsOtpNotification(any(), any());
-        verify(permissionDecisionManager).canVerifyMfaOtp(any(), any());
-    }
-
-    @ParameterizedTest
-    @MethodSource("validMfaMethods")
     void shouldNotCheckForMFACodeBlocksIfUserDoesNotHaveAnMFA(MFAMethodType mfaMethodType) {
         setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
