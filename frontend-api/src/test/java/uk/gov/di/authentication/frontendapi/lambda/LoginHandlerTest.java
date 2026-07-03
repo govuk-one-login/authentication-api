@@ -1091,8 +1091,8 @@ class LoginHandlerTest {
                 .correctPasswordReceived(any(), argThat(pc -> pc.authSessionItem() != null));
     }
 
-    private static Stream<Arguments> validMfaMethods() {
-        return Stream.of(Arguments.of(AUTH_APP), Arguments.of(SMS));
+    private static Stream<MFAMethodType> validMfaMethods() {
+        return Stream.of(AUTH_APP, SMS);
     }
 
     @ParameterizedTest
