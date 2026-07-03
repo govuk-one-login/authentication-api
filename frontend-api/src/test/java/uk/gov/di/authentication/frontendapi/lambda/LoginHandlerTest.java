@@ -488,65 +488,27 @@ class LoginHandlerTest {
 
     private static Stream<Arguments> mfaMethodsExpectedFromMfaMethodsService() {
         var expectedRedactedPhoneNumber = redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
+        var smsResponse =
+                new SmsMfaMethodResponse(
+                        DEFAULT_SMS_MFA_METHOD.getMfaIdentifier(),
+                        SMS,
+                        PriorityIdentifier.DEFAULT,
+                        expectedRedactedPhoneNumber);
+        var smsLoginResponse =
+                new LoginResponse(
+                        expectedRedactedPhoneNumber, true, SMS, true, List.of(smsResponse), false);
+        var authAppResponse =
+                new AuthAppMfaMethodResponse(
+                        DEFAULT_AUTH_APP_MFA_METHOD.getMfaIdentifier(),
+                        AUTH_APP,
+                        PriorityIdentifier.DEFAULT);
+        var authAppLoginResponse =
+                new LoginResponse(null, true, AUTH_APP, true, List.of(authAppResponse), false);
         return Stream.of(
-                Arguments.of(
-                        true,
-                        List.of(DEFAULT_SMS_MFA_METHOD),
-                        new LoginResponse(
-                                expectedRedactedPhoneNumber,
-                                true,
-                                SMS,
-                                true,
-                                List.of(
-                                        new SmsMfaMethodResponse(
-                                                "some-mfa-id",
-                                                SMS,
-                                                PriorityIdentifier.DEFAULT,
-                                                expectedRedactedPhoneNumber)),
-                                false)),
-                Arguments.of(
-                        true,
-                        List.of(DEFAULT_AUTH_APP_MFA_METHOD),
-                        new LoginResponse(
-                                null,
-                                true,
-                                AUTH_APP,
-                                true,
-                                List.of(
-                                        new AuthAppMfaMethodResponse(
-                                                "another-mfa-id",
-                                                AUTH_APP,
-                                                PriorityIdentifier.DEFAULT)),
-                                false)),
-                Arguments.of(
-                        false,
-                        List.of(DEFAULT_SMS_MFA_METHOD),
-                        new LoginResponse(
-                                expectedRedactedPhoneNumber,
-                                true,
-                                SMS,
-                                true,
-                                List.of(
-                                        new SmsMfaMethodResponse(
-                                                "some-mfa-id",
-                                                SMS,
-                                                PriorityIdentifier.DEFAULT,
-                                                expectedRedactedPhoneNumber)),
-                                false)),
-                Arguments.of(
-                        false,
-                        List.of(DEFAULT_AUTH_APP_MFA_METHOD),
-                        new LoginResponse(
-                                null,
-                                true,
-                                AUTH_APP,
-                                true,
-                                List.of(
-                                        new AuthAppMfaMethodResponse(
-                                                "another-mfa-id",
-                                                AUTH_APP,
-                                                PriorityIdentifier.DEFAULT)),
-                                false)));
+                Arguments.of(true, List.of(DEFAULT_SMS_MFA_METHOD), smsLoginResponse),
+                Arguments.of(false, List.of(DEFAULT_SMS_MFA_METHOD), smsLoginResponse),
+                Arguments.of(true, List.of(DEFAULT_AUTH_APP_MFA_METHOD), authAppLoginResponse),
+                Arguments.of(false, List.of(DEFAULT_AUTH_APP_MFA_METHOD), authAppLoginResponse));
     }
 
     @ParameterizedTest
