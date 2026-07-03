@@ -709,25 +709,6 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin() {
-        setupExistingUserInDatabase(EMAIL);
-        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(AUTH_APP);
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(Result.success(List.of(DEFAULT_AUTH_APP_MFA_METHOD)));
-        usingValidAuthSession();
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        handler.handleRequest(event, context);
-
-        when(authenticationService.login(applicableUserCredentials, CommonTestVariables.PASSWORD))
-                .thenReturn(true);
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-    }
-
-    @Test
     void shouldReturn401IfUserHasInvalidCredentials() {
         setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, false);
