@@ -385,32 +385,24 @@ class LoginHandlerTest {
         assertThat(response.mfaMethodVerified(), equalTo(true));
     }
 
-    @Test
-    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue() {
-        setupExistingUserInDatabase(EMAIL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        verify(authSessionService)
-                .updateSession(
-                        argThat(
-                                as ->
-                                        as.getAchievedCredentialStrength() == LOW_LEVEL
-                                                && as.getIsNewAccount()
-                                                        == AuthSessionItem.AccountState.EXISTING));
+    private static Stream<Arguments> existingRequestedAndExpectedCredentialStrengths() {
+        return Stream.of(
+                Arguments.of(null, LOW_LEVEL, LOW_LEVEL),
+                Arguments.of(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL),
+                Arguments.of(LOW_LEVEL, MEDIUM_LEVEL, LOW_LEVEL),
+                Arguments.of(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL));
     }
 
-    @Test
-    void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney() {
+    @ParameterizedTest
+    @MethodSource("existingRequestedAndExpectedCredentialStrengths")
+    void shouldSetExpectedCredentialStrength(
+            CredentialTrustLevel existingCredentialStrength,
+            CredentialTrustLevel requestedCredentialStrength,
+            CredentialTrustLevel expectedCredentialStrength) {
         setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(MEDIUM_LEVEL, LOW_LEVEL);
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(
+                existingCredentialStrength, requestedCredentialStrength);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
 
@@ -422,30 +414,8 @@ class LoginHandlerTest {
                 .updateSession(
                         argThat(
                                 as ->
-                                        as.getAchievedCredentialStrength() == MEDIUM_LEVEL
-                                                && as.getIsNewAccount()
-                                                        == AuthSessionItem.AccountState.EXISTING));
-    }
-
-    @Test
-    void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() {
-        setupExistingUserInDatabase(EMAIL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(LOW_LEVEL, LOW_LEVEL);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        verify(authSessionService)
-                .updateSession(
-                        argThat(
-                                as ->
-                                        as.getAchievedCredentialStrength() == LOW_LEVEL
-                                                && as.getIsNewAccount()
-                                                        == AuthSessionItem.AccountState.EXISTING));
+                                        as.getAchievedCredentialStrength()
+                                                == expectedCredentialStrength));
     }
 
     @Test
