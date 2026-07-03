@@ -269,66 +269,44 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue() {
-        setupExistingUserInDatabase(EMAIL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
+    void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully() {
+        String legacySubjectId = new Subject().getValue();
+        UserProfile userProfile = generateUserProfile(legacySubjectId);
+        setupUserInDatabase(EMAIL, userProfile);
+        UserCredentials applicableUserCredentials =
+                usingApplicableUserCredentialsWithLogin(AUTH_APP, false);
+        applicableUserCredentials.withPassword(null);
+        when(userMigrationService.processMigratedUser(
+                        applicableUserCredentials, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        usingValidAuthSession();
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
-
-        verify(authSessionService)
-                .updateSession(
-                        argThat(
-                                as ->
-                                        as.getAchievedCredentialStrength() == LOW_LEVEL
-                                                && as.getIsNewAccount()
-                                                        == AuthSessionItem.AccountState.EXISTING));
     }
 
     @Test
-    void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney() {
+    void shouldReturn200IfLoginIsSuccessfulButPasswordWasCommonPassword()
+            throws Json.JsonException {
+        when(commonPasswordsService.isCommonPassword(anyString())).thenReturn(true);
         setupExistingUserInDatabase(EMAIL);
+        usingValidAuthSession();
         usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(MEDIUM_LEVEL, LOW_LEVEL);
 
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(200));
 
-        verify(authSessionService)
-                .updateSession(
-                        argThat(
-                                as ->
-                                        as.getAchievedCredentialStrength() == MEDIUM_LEVEL
-                                                && as.getIsNewAccount()
-                                                        == AuthSessionItem.AccountState.EXISTING));
-    }
-
-    @Test
-    void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() {
-        setupExistingUserInDatabase(EMAIL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(LOW_LEVEL, LOW_LEVEL);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-
-        verify(authSessionService)
-                .updateSession(
-                        argThat(
-                                as ->
-                                        as.getAchievedCredentialStrength() == LOW_LEVEL
-                                                && as.getIsNewAccount()
-                                                        == AuthSessionItem.AccountState.EXISTING));
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertThat(response.passwordChangeRequired(), equalTo(true));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
+                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
+                        pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
     }
 
     @Test
@@ -407,6 +385,101 @@ class LoginHandlerTest {
         assertThat(response.mfaMethodVerified(), equalTo(true));
     }
 
+    @Test
+    void shouldSetAchievedCredentialTrustLowWhenMfaNotRequiredAndNoPreviousValue() {
+        setupExistingUserInDatabase(EMAIL);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionWithRequestedCredentialStrength(LOW_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                as ->
+                                        as.getAchievedCredentialStrength() == LOW_LEVEL
+                                                && as.getIsNewAccount()
+                                                        == AuthSessionItem.AccountState.EXISTING));
+    }
+
+    @Test
+    void shouldRetainPreviouslyMediumCredentialTrustWhenOnLowLevelJourney() {
+        setupExistingUserInDatabase(EMAIL);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(MEDIUM_LEVEL, LOW_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                as ->
+                                        as.getAchievedCredentialStrength() == MEDIUM_LEVEL
+                                                && as.getIsNewAccount()
+                                                        == AuthSessionItem.AccountState.EXISTING));
+    }
+
+    @Test
+    void shouldRetainLowCredentialTrustLevelWhenPreviouslyObtained() {
+        setupExistingUserInDatabase(EMAIL);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionWithAchievedAndRequestedCredentialStrength(LOW_LEVEL, LOW_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        verify(authSessionService)
+                .updateSession(
+                        argThat(
+                                as ->
+                                        as.getAchievedCredentialStrength() == LOW_LEVEL
+                                                && as.getIsNewAccount()
+                                                        == AuthSessionItem.AccountState.EXISTING));
+    }
+
+    @Test
+    void shouldSetIsPartiallyCreatedAccountTrueWhenMfaMethodNotVerified() {
+        var userProfile =
+                generateUserProfile(null).withPhoneNumberVerified(false).withPhoneNumber(null);
+        setupUserInDatabase(EMAIL, userProfile);
+        var userCredentialsNoMfa =
+                new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
+        when(authenticationService.login(userCredentialsNoMfa, CommonTestVariables.PASSWORD))
+                .thenReturn(true);
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(userCredentialsNoMfa);
+        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        handler.handleRequest(event, context);
+
+        verify(authSessionService).updateSession(argThat(s -> s.getIsPartiallyCreatedAccount()));
+    }
+
+    @Test
+    void shouldSetIsPartiallyCreatedAccountFalseWhenMfaMethodVerified() {
+        setupExistingUserInDatabase(EMAIL);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+        handler.handleRequest(event, context);
+
+        verify(authSessionService).updateSession(argThat(s -> !s.getIsPartiallyCreatedAccount()));
+    }
+
     private static Stream<Arguments> mfaMethodsExpectedFromMfaMethodsService() {
         var expectedRedactedPhoneNumber = redactPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
         var smsResponse =
@@ -473,47 +546,6 @@ class LoginHandlerTest {
 
         var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertEquals(expectedResponse, response);
-    }
-
-    @Test
-    void shouldReturn200IfLoginIsSuccessfulButPasswordWasCommonPassword()
-            throws Json.JsonException {
-        when(commonPasswordsService.isCommonPassword(anyString())).thenReturn(true);
-        setupExistingUserInDatabase(EMAIL);
-        usingValidAuthSession();
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(200));
-
-        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
-        assertThat(response.passwordChangeRequired(), equalTo(true));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(ENCODED_DEVICE_DETAILS),
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        pair("passwordResetType", PasswordResetType.FORCED_WEAK_PASSWORD));
-    }
-
-    @Test
-    void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully() {
-        String legacySubjectId = new Subject().getValue();
-        UserProfile userProfile = generateUserProfile(legacySubjectId);
-        setupUserInDatabase(EMAIL, userProfile);
-        UserCredentials applicableUserCredentials =
-                usingApplicableUserCredentialsWithLogin(AUTH_APP, false);
-        applicableUserCredentials.withPassword(null);
-        when(userMigrationService.processMigratedUser(
-                        applicableUserCredentials, CommonTestVariables.PASSWORD))
-                .thenReturn(true);
-        usingValidAuthSession();
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
     }
 
     @Test
@@ -896,38 +928,6 @@ class LoginHandlerTest {
         assertEquals(
                 Optional.of(CommonTestVariables.UK_MOBILE_NUMBER),
                 permissionContextCaptor.getValue().e164FormattedPhoneNumber());
-    }
-
-    @Test
-    void shouldSetIsPartiallyCreatedAccountTrueWhenMfaMethodNotVerified() {
-        var userProfile =
-                generateUserProfile(null).withPhoneNumberVerified(false).withPhoneNumber(null);
-        setupUserInDatabase(EMAIL, userProfile);
-        var userCredentialsNoMfa =
-                new UserCredentials().withEmail(EMAIL).withPassword(CommonTestVariables.PASSWORD);
-        when(authenticationService.login(userCredentialsNoMfa, CommonTestVariables.PASSWORD))
-                .thenReturn(true);
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(userCredentialsNoMfa);
-        when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
-        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        handler.handleRequest(event, context);
-
-        verify(authSessionService).updateSession(argThat(s -> s.getIsPartiallyCreatedAccount()));
-    }
-
-    @Test
-    void shouldSetIsPartiallyCreatedAccountFalseWhenMfaMethodVerified() {
-        setupExistingUserInDatabase(EMAIL);
-        usingApplicableUserCredentialsWithLogin(SMS, true);
-        usingValidAuthSessionWithRequestedCredentialStrength(MEDIUM_LEVEL);
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-        handler.handleRequest(event, context);
-
-        verify(authSessionService).updateSession(argThat(s -> !s.getIsPartiallyCreatedAccount()));
     }
 
     @Nested
