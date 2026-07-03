@@ -180,7 +180,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     }
 
     @Test
-    void shouldHandleReauthLockedOutDecisionWhenCheckingPasswordPermission() {
+    void shouldReturn400AndReportReauthFailureWhenUserAlreadyLockedOut() {
         try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
             UserProfile userProfile = generateUserProfile(null);
@@ -220,7 +220,7 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
     }
 
     @Test
-    void shouldHandleReauthLockedOutDecisionWhenPasswordIsIncorrect() {
+    void shouldReturn400AndReportReauthFailureWhenUserEntersIncorrectCredentialsAndGetsLockedOut() {
         try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
             UserProfile userProfile = generateUserProfile(null);
