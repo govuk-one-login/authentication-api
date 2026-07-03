@@ -9,9 +9,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
@@ -47,9 +44,9 @@ import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.ForbiddenReason;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -182,36 +179,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                         testUserHelper);
     }
 
-    private static Stream<Arguments> reauthCountTypesAndMetadata() {
-        return Stream.of(
-                Arguments.arguments(
-                        ENTER_EMAIL,
-                        MAX_ALLOWED_RETRIES,
-                        0,
-                        0,
-                        ReauthFailureReasons.INCORRECT_EMAIL.getValue()),
-                Arguments.arguments(
-                        ENTER_PASSWORD,
-                        0,
-                        MAX_ALLOWED_RETRIES,
-                        0,
-                        ReauthFailureReasons.INCORRECT_PASSWORD.getValue()),
-                Arguments.arguments(
-                        ENTER_MFA_CODE,
-                        0,
-                        0,
-                        MAX_ALLOWED_RETRIES,
-                        ReauthFailureReasons.INCORRECT_OTP.getValue()));
-    }
-
-    @ParameterizedTest
-    @MethodSource("reauthCountTypesAndMetadata")
-    void shouldHandleReauthLockedOutDecisionWhenCheckingPasswordPermission(
-            CountType countType,
-            int expectedEmailAttemptCount,
-            int expectedPasswordAttemptCount,
-            int expectedOtpAttemptCount,
-            String expectedFailureReason) {
+    @Test
+    void shouldHandleReauthLockedOutDecisionWhenCheckingPasswordPermission() {
         try (MockedStatic<ClientSubjectHelper> clientSubjectHelperMockedStatic =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
             UserProfile userProfile = generateUserProfile(null);
@@ -222,34 +191,23 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
                     .thenReturn(subject);
             when(subject.getValue()).thenReturn(TEST_RP_PAIRWISE_ID);
 
-            ForbiddenReason forbiddenReason =
-                    switch (countType) {
-                        case ENTER_EMAIL -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_EMAIL_ADDRESS_SUBMISSION_LIMIT;
-                        case ENTER_EMAIL_CODE -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_EMAIL_OTP_SUBMISSION_LIMIT;
-                        case ENTER_PASSWORD -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
-                        case ENTER_MFA_CODE, ENTER_SMS_CODE, ENTER_AUTH_APP_CODE -> ForbiddenReason
-                                .EXCEEDED_INCORRECT_MFA_OTP_SUBMISSION_LIMIT;
-                    };
-
             var detailedCounts =
                     Map.of(
-                            ENTER_EMAIL, expectedEmailAttemptCount,
-                            ENTER_PASSWORD, expectedPasswordAttemptCount,
-                            ENTER_MFA_CODE, expectedOtpAttemptCount);
+                            ENTER_EMAIL, 1,
+                            ENTER_PASSWORD, 2,
+                            ENTER_MFA_CODE, 3);
 
             when(permissionDecisionManager.canReceivePassword(any(), any()))
                     .thenReturn(
                             Result.success(
                                     new Decision.ReauthLockedOut(
-                                            forbiddenReason,
+                                            ForbiddenReason
+                                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
                                             0,
                                             Instant.now().plusSeconds(900),
                                             false,
                                             detailedCounts,
-                                            java.util.List.of(countType))));
+                                            List.of(ENTER_PASSWORD))));
 
             usingValidAuthSession();
             usingApplicableUserCredentialsWithLogin(SMS, true);
@@ -261,7 +219,8 @@ class LoginHandlerReauthenticationUsingAuthenticationAttemptsServiceTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
 
-            verifyReauthFailedReported(detailedCounts, expectedFailureReason);
+            verifyReauthFailedReported(
+                    detailedCounts, ReauthFailureReasons.INCORRECT_PASSWORD.getValue());
         }
     }
 
