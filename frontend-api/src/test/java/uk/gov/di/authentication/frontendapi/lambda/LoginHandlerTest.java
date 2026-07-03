@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -562,7 +561,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void shouldReturn401IfUserHasInvalidCredentials() {
+    void shouldReturn401AndReportFailureIfUserHasInvalidCredentials() {
         setupExistingUserInDatabase(EMAIL);
         usingApplicableUserCredentialsWithLogin(SMS, false);
         when(permissionDecisionManager.canReceivePassword(any(), any()))
@@ -570,9 +569,12 @@ class LoginHandlerTest {
                 .thenReturn(Result.success(new Decision.Permitted(1)));
 
         usingValidAuthSession();
-
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(401));
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_LOGIN_CREDS));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -582,8 +584,9 @@ class LoginHandlerTest {
                         pair("incorrectPasswordCount", 1),
                         pair("attemptNoFailedAt", MAX_ALLOWED_PASSWORD_RETRIES));
 
-        assertThat(result, hasStatus(401));
-        assertThat(result, hasJsonBody(ErrorResponse.INVALID_LOGIN_CREDS));
+        verify(userActionsManager, atLeastOnce())
+                .incorrectPasswordReceived(eq(JourneyType.SIGN_IN), any());
+
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
     }
 
@@ -601,27 +604,6 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(500));
         verify(authSessionService, never()).updateSession(any(AuthSessionItem.class));
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldIncrementRelevantCountWhenCredentialsAreInvalid(boolean isReauthJourney) {
-        setupExistingUserInDatabase(EMAIL);
-        usingApplicableUserCredentialsWithLogin(SMS, false);
-        when(permissionDecisionManager.canReceivePassword(any(), any()))
-                .thenReturn(Result.success(new Decision.Permitted(0)));
-
-        usingValidAuthSession();
-
-        var body = isReauthJourney ? validBodyWithReauthJourney : validBodyWithEmailAndPassword;
-
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-        handler.handleRequest(event, context);
-
-        JourneyType expectedJourneyType =
-                isReauthJourney ? JourneyType.REAUTHENTICATION : JourneyType.SIGN_IN;
-        verify(userActionsManager, atLeastOnce())
-                .incorrectPasswordReceived(eq(expectedJourneyType), any());
     }
 
     @Test
