@@ -57,6 +57,7 @@ Resources:
         - !Ref DynamoUserDeleteAccessPolicy
         - !Ref DynamoAccountModifiersReadAccessPolicy
         - !Ref DynamoAccountModifiersDeleteAccessPolicy
+        - !Ref DynamoAuthenticatorTableReadDeleteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref ClientRegistryTableKmsPolicy
         - !Ref EmailCheckResultsTableKmsPolicy
