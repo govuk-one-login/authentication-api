@@ -56,6 +56,7 @@ public class CloudwatchMetricsService {
     private static final Logger LOG = LogManager.getLogger(CloudwatchMetricsService.class);
     public static final String INTERNATIONAL_SMS_DESTINATION = "INTERNATIONAL";
     public static final String DOMESTIC_SMS_DESTINATION = "DOMESTIC";
+    public static final String UNKNOWN_VALUE = "unknown";
 
     private final ConfigurationService configurationService;
 

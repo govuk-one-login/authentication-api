@@ -83,6 +83,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSWORD_REHASH_COMPLETED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
@@ -883,6 +884,17 @@ class LoginHandlerTest {
             handler.handleRequest(event, context);
 
             verify(authenticationService).updatePassword(EMAIL, CommonTestVariables.PASSWORD);
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            PASSWORD_REHASH_COMPLETED.getValue(),
+                            Map.of(
+                                    "Environment", "test",
+                                    "OldMemory", "15360",
+                                    "OldIterations", "2",
+                                    "OldParallelism", "1",
+                                    "NewMemory", "32768",
+                                    "NewIterations", "2",
+                                    "NewParallelism", "1"));
         }
 
         @Test
@@ -900,6 +912,8 @@ class LoginHandlerTest {
             handler.handleRequest(event, context);
 
             verify(authenticationService, never()).updatePassword(anyString(), anyString());
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
         }
 
         @Test
@@ -934,6 +948,8 @@ class LoginHandlerTest {
             handler.handleRequest(event, context);
 
             verify(authenticationService, never()).updatePassword(anyString(), anyString());
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
         }
 
         private void setupUserWhoCanSuccessfullyLoginWithPassword(String password) {

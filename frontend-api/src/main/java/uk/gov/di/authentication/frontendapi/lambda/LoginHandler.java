@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
+import uk.gov.di.authentication.shared.helpers.Argon2HashParameters;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -67,6 +68,12 @@ import static uk.gov.di.authentication.frontendapi.services.UserMigrationService
 import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NEW_ITERATIONS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NEW_MEMORY;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.NEW_PARALLELISM;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.OLD_ITERATIONS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.OLD_MEMORY;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.OLD_PARALLELISM;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.JOURNEY_TYPE;
@@ -75,6 +82,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessio
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.shared.services.CloudwatchMetricsService.UNKNOWN_VALUE;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -592,11 +600,41 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             userCredentials.getPassword(), configurationService);
             LOG.info("Password rehash check: needsRehash={}", needsRehash);
             if (needsRehash) {
+                var oldParams =
+                        Argon2MatcherHelper.extractParameters(userCredentials.getPassword());
                 authenticationService.updatePassword(email, password);
+
                 LOG.info("Password rehash completed for user");
+                emitPasswordRehashMetric(oldParams.orElse(null));
             }
         } catch (Exception e) {
             LOG.error("Error during password rehash", e);
         }
+    }
+
+    private void emitPasswordRehashMetric(Argon2HashParameters oldParams) {
+        String oldMemory = oldParams != null ? String.valueOf(oldParams.memory()) : UNKNOWN_VALUE;
+        String oldIterations =
+                oldParams != null ? String.valueOf(oldParams.iterations()) : UNKNOWN_VALUE;
+        String oldParallelism =
+                oldParams != null ? String.valueOf(oldParams.parallelism()) : UNKNOWN_VALUE;
+
+        cloudwatchMetricsService.incrementCounter(
+                CloudwatchMetrics.PASSWORD_REHASH_COMPLETED.getValue(),
+                Map.of(
+                        ENVIRONMENT.getValue(),
+                        configurationService.getEnvironment(),
+                        OLD_MEMORY.getValue(),
+                        oldMemory,
+                        OLD_ITERATIONS.getValue(),
+                        oldIterations,
+                        OLD_PARALLELISM.getValue(),
+                        oldParallelism,
+                        NEW_MEMORY.getValue(),
+                        String.valueOf(configurationService.getArgon2MemoryInKibibytes()),
+                        NEW_ITERATIONS.getValue(),
+                        String.valueOf(configurationService.getArgon2Iterations()),
+                        NEW_PARALLELISM.getValue(),
+                        String.valueOf(configurationService.getArgon2Parallelism())));
     }
 }
