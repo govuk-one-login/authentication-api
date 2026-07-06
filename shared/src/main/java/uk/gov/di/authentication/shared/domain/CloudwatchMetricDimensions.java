@@ -27,7 +27,13 @@ public enum CloudwatchMetricDimensions {
             "PasskeyAuthenticationGenerationFailureReason"),
     AMC_JOURNEY_TYPE("AMCJourneyType"),
     AMC_AUTHORISATION_OVERALL_SUCCESS("AMCAuthorisationOverallSuccess"),
-    AMC_SCOPE("AMCScope");
+    AMC_SCOPE("AMCScope"),
+    OLD_MEMORY("OldMemory"),
+    OLD_ITERATIONS("OldIterations"),
+    OLD_PARALLELISM("OldParallelism"),
+    NEW_MEMORY("NewMemory"),
+    NEW_ITERATIONS("NewIterations"),
+    NEW_PARALLELISM("NewParallelism");
 
     private String value;
 
