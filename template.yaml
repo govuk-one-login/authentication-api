@@ -5006,6 +5006,129 @@ Resources:
 
   #endregion
 
+  # region SIS Callback Lambda
+
+  SISCallbackFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_115: Reserved concurrency will be looked into in ATO-657
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    Properties:
+      FunctionName: !Sub ${Environment}-SISCallbackFunction
+      AutoPublishAlias: latest
+      CodeUri: ./sis-api/build/distributions/sis-api.zip
+      Handler: uk.gov.di.orchestration.sis.lambda.SISCallbackHandler::handleRequest
+      LoggingConfig:
+        LogGroup: !Ref SISCallbackFunctionLogGroup
+      DeploymentPreference:
+        Alarms:
+          - Ref: SISCallbackFunctionErrorAnomalyAlarm
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+          - !Ref HttpsEgressSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
+      SnapStart:
+        ApplyOn: PublishedVersions
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          ENVIRONMENT: !Sub ${Environment}
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
+
+  SISCallbackFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${Environment}-sis-callback-lambda
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays: 30
+
+  SISCallbackFunctionSubscriptionFilter:
+    Condition: IsNotDevEnvironment
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref SISCallbackFunctionLogGroup
+
+  SISCallbackFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub ${Environment}-sis-callback-request-errors
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref SISCallbackFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub ${Environment}-sis-callback-count
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  SISCallbackFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
+      AlarmDescription: !Sub "30 or more errors have occurred in the ${Environment} sis-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      AlarmName: !Sub ${Environment}-sis-callback-alarm
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub ${Environment}-sis-callback-count
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold: 30
+
+  SISCallbackFunctionErrorRateCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-sis-callback-error-rate-alarm
+      AlarmDescription: !Sub "Lambda error rate of 10 has been reached in the ${Environment} sis-callback lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/JoD2FwE"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 10
+      Metrics:
+        - Id: e1
+          ReturnData: true
+          Expression: !Sub "IF(m2 >= ${MinErrorThreshold}, m2/m1*100, 0)"
+          Label: Error Rate
+        - Id: m1
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SISCallbackFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+        - Id: m2
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SISCallbackFunction
+            Period: 60
+            Stat: Sum
+            Unit: Count
+  #endregion
+
   #region IPV Callback Lambda
 
   IpvCallbackFunction:
@@ -8989,6 +9112,50 @@ Resources:
               Dimensions:
                 - Name: FunctionName
                   Value: !Sub ${Environment}-ClientRegistrationFunction
+            Period: 60
+            Stat: Average
+
+  #endregion
+
+  #region SISCallback Function Anomaly Alarms
+  SISCallbackFunctionAnomalyDetector:
+    Type: AWS::CloudWatch::AnomalyDetector
+    Properties:
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Stat: Average
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub ${Environment}-SISCallbackFunction
+
+  SISCallbackFunctionErrorAnomalyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${Environment}-SISCallbackFunction-error-anomaly-alarm
+      AlarmDescription: !Sub "Anomalous Error rate in ${Environment} SISCallbackFunction lambda.ACCOUNT: di-orchestration-${Environment}. Runbook: https://govukverify.atlassian.net/wiki/x/YYBcggE/"
+      ActionsEnabled: true
+      AlarmActions:
+        - !If
+          - IsNotProduction
+          - !Ref SlackEvents
+          - !Ref OrchProdSlackEvents
+      ComparisonOperator: GreaterThanUpperThreshold
+      EvaluationPeriods: 3
+      ThresholdMetricId: ad1
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: ad1
+          ReturnData: True
+          Expression: ANOMALY_DETECTION_BAND(m1, 2)
+        - Id: m1
+          ReturnData: True
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: !Sub ${Environment}-SISCallbackFunction
             Period: 60
             Stat: Average
 
