@@ -77,7 +77,10 @@ public class AccountDeletionService {
         var email = userProfile.getEmail();
 
         LOG.info("Deleting user account");
-        dynamoDeleteService.deleteAccount(email, internalCommonSubjectIdentifier.getValue());
+        dynamoDeleteService.deleteAccount(
+                email,
+                internalCommonSubjectIdentifier.getValue(),
+                userProfile.getPublicSubjectID());
 
         if (sendNotification) {
             try {
