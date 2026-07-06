@@ -19,7 +19,6 @@ module "frontend_api_verify_mfa_code_role_with_combined_auth_attempts_policy" {
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
     local.user_credentials_encryption_policy_arn,
-    local.experian_phone_check_sqs_queue_policy_arn
   ], var.test_clients_enabled && local.test_client_allow_list_secret_access_policy_arn != null ? [local.test_client_allow_list_secret_access_policy_arn] : [])
   extra_tags = {
     Service = "verify-mfa-code"
@@ -45,7 +44,6 @@ module "verify_mfa_code" {
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP     = var.test_client_verify_phone_number_otp
     TEST_CLIENTS_ENABLED                    = var.test_clients_enabled ? "true" : "false"
     INTERNAl_SECTOR_URI                     = var.internal_sector_uri
-    EXPERIAN_PHONE_CHECKER_QUEUE_URL        = local.experian_phone_check_sqs_queue_id
     PHONE_CHECKER_WITH_RETRY                = var.phone_checker_with_retry
     CODE_MAX_RETRIES_INCREASED              = var.code_max_retries_increased
     REDUCED_LOCKOUT_DURATION                = var.reduced_lockout_duration

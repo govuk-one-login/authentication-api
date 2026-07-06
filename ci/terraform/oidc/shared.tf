@@ -8,17 +8,6 @@ data "terraform_remote_state" "shared" {
   }
 }
 
-data "terraform_remote_state" "contra" {
-  backend = "s3"
-  config = {
-    bucket      = var.contra_state_bucket
-    key         = "${var.environment}-experian-phone-check-terraform.tfstate"
-    assume_role = var.deployer_role_arn != null ? { role_arn = var.deployer_role_arn } : null
-    region      = var.aws_region
-  }
-}
-
-
 locals {
   redis_key                                       = "session"
   authentication_vpc_arn                          = data.terraform_remote_state.shared.outputs.authentication_vpc_arn
@@ -53,8 +42,6 @@ locals {
   authentication_attempt_kms_key_arn              = data.terraform_remote_state.shared.outputs.authentication_attempt_kms_key_arn
   auth_session_table_encryption_key_arn           = data.terraform_remote_state.shared.outputs.auth_session_table_encryption_key_arn
   email_check_results_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.email_check_results_encryption_policy_arn
-  experian_phone_check_sqs_queue_id               = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_id
-  experian_phone_check_sqs_queue_policy_arn       = data.terraform_remote_state.contra.outputs.aws_experian_phone_check_sqs_policy_arn
   id_reverification_state_key_arn                 = data.terraform_remote_state.shared.outputs.id_reverification_state_key_arn
   secure_pipelines_environment                    = var.environment == "authdev3" ? "dev" : var.environment
   test_client_allow_list_secret_access_policy_arn = var.test_clients_enabled ? data.terraform_remote_state.shared.outputs.test_client_allow_list_secret_access_policy_arn : null
