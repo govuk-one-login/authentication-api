@@ -283,6 +283,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURLOrThrow("IPV_JWKS_URL");
     }
 
+    public URI getSISAuthorisationURI() {
+        return getURIOrEmpty("SIS_AUTHORISATION_URI");
+    }
+
     public String getSISAudience() {
         return System.getenv().getOrDefault("SIS_AUDIENCE", "");
     }
