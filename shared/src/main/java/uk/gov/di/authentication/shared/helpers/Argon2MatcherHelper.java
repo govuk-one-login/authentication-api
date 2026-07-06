@@ -8,6 +8,7 @@ import org.bouncycastle.util.Arrays;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Base64;
+import java.util.Optional;
 
 public class Argon2MatcherHelper {
 
@@ -41,6 +42,19 @@ public class Argon2MatcherHelper {
         } catch (IllegalArgumentException ex) {
             LOG.warn("Unable to parse password hash for rehash check");
             return false;
+        }
+    }
+
+    public static Optional<Argon2HashParameters> extractParameters(String encodedPassword) {
+        try {
+            Argon2Hash decoded = decode(encodedPassword);
+            Argon2Parameters params = decoded.getParameters();
+            return Optional.of(
+                    new Argon2HashParameters(
+                            params.getMemory(), params.getIterations(), params.getLanes()));
+        } catch (IllegalArgumentException ex) {
+            LOG.warn("Unable to parse password hash for parameter extraction");
+            return Optional.empty();
         }
     }
 
