@@ -11,11 +11,15 @@ import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class DynamoDeleteServiceIntegrationTest {
 
@@ -34,6 +38,10 @@ class DynamoDeleteServiceIntegrationTest {
     @RegisterExtension
     protected static final AuthenticatorStoreExtension authenticatorStoreExtension =
             new AuthenticatorStoreExtension();
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(DynamoDeleteService.class);
 
     DynamoDeleteService dynamoDeleteService =
             new DynamoDeleteService(ConfigurationService.getInstance());
@@ -116,5 +124,45 @@ class DynamoDeleteServiceIntegrationTest {
 
         var itemsAfter = authenticatorStoreExtension.getItemsForUser(PUBLIC_SUBJECT_ID);
         assertThat(itemsAfter.isEmpty(), equalTo(true));
+    }
+
+    @Test
+    void shouldNotLogWarningWhenPasskeysFitWithinTransaction() {
+        userStoreExtension.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        authenticatorStoreExtension.addMinimalPasskey(PUBLIC_SUBJECT_ID, "credential-1");
+        authenticatorStoreExtension.addMinimalPasskey(PUBLIC_SUBJECT_ID, "credential-2");
+
+        dynamoDeleteService.deleteAccount(TEST_EMAIL, internalCommonSubjectId, PUBLIC_SUBJECT_ID);
+
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withMessageContaining(
+                                        "Deleting authenticator items prior to the main account deletion transaction"))));
+    }
+
+    @Test
+    void shouldDeletePasskeysOutsideTransactionWhenExceedingCapacity() {
+        userStoreExtension.signUp(TEST_EMAIL, "password-1", SUBJECT);
+
+        for (int i = 0; i < 99; i++) {
+            authenticatorStoreExtension.addMinimalPasskey(PUBLIC_SUBJECT_ID, "credential-" + i);
+        }
+
+        var itemsBefore = authenticatorStoreExtension.getItemsForUser(PUBLIC_SUBJECT_ID);
+        assertThat(itemsBefore.size(), equalTo(99));
+
+        dynamoDeleteService.deleteAccount(TEST_EMAIL, internalCommonSubjectId, PUBLIC_SUBJECT_ID);
+
+        var userProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+        var itemsAfter = authenticatorStoreExtension.getItemsForUser(PUBLIC_SUBJECT_ID);
+        assertThat(Objects.isNull(userProfile), equalTo(true));
+        assertThat(itemsAfter.isEmpty(), equalTo(true));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Deleting authenticator items prior to the main account deletion transaction")));
     }
 }
