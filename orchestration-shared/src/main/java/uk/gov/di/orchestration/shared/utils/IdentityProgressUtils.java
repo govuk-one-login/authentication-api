@@ -1,8 +1,8 @@
-package uk.gov.di.authentication.ipv.utils;
+package uk.gov.di.orchestration.shared.utils;
 
-import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
-import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
+import uk.gov.di.orchestration.shared.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.ProcessingIdentityStatus;
 
 import java.util.Objects;
 import java.util.Optional;

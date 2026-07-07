@@ -9,10 +9,10 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityInterventionResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityRequest;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
-import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
+import uk.gov.di.orchestration.shared.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -33,10 +33,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.ipv.utils.IdentityProgressUtils.getProcessingIdentityStatus;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.utils.IdentityProgressUtils.getProcessingIdentityStatus;
 
 public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIdentityRequest> {
 

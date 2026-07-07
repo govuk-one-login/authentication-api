@@ -17,13 +17,11 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
-import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
-import uk.gov.di.authentication.ipv.services.IdentityProgressService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
@@ -32,6 +30,7 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
+import uk.gov.di.orchestration.shared.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -50,6 +49,7 @@ import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageServ
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.IdentityProgressService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.Metrics;
@@ -282,6 +282,7 @@ public class IPVCallbackHandler
                         clientSessionId,
                         sessionId);
             }
+            // TODO From here on, it should be identical to SIS happy path (without error)!
 
             UserInfo authUserInfo =
                     getAuthUserInfo(
@@ -490,6 +491,7 @@ public class IPVCallbackHandler
                 return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         frontend.errorURI(), new Error("Failed to create redirectURI"));
             }
+            // TODO---------------- END BLOCK ----------------------
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {

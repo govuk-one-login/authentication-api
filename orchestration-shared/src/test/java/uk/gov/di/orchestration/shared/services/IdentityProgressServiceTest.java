@@ -1,23 +1,19 @@
-package uk.gov.di.authentication.ipv.services;
+package uk.gov.di.orchestration.shared.services;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
-import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
-import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.entity.IdentityAuditableEvent.PROCESSING_IDENTITY_REQUEST;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.ENVIRONMENT;
 
@@ -51,7 +47,7 @@ class IdentityProgressServiceTest {
 
         var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
-        assertEquals(IdentityProgressStatus.COMPLETED, status);
+        Assertions.assertEquals(IdentityProgressStatus.COMPLETED, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -65,7 +61,7 @@ class IdentityProgressServiceTest {
 
         var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
-        assertEquals(IdentityProgressStatus.COMPLETED, status);
+        Assertions.assertEquals(IdentityProgressStatus.COMPLETED, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -77,7 +73,7 @@ class IdentityProgressServiceTest {
 
         var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
-        assertEquals(IdentityProgressStatus.NO_ENTRY, status);
+        Assertions.assertEquals(IdentityProgressStatus.NO_ENTRY, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -90,7 +86,7 @@ class IdentityProgressServiceTest {
 
         var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
-        assertEquals(IdentityProgressStatus.ERROR, status);
+        Assertions.assertEquals(IdentityProgressStatus.ERROR, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -102,7 +98,7 @@ class IdentityProgressServiceTest {
 
         var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
-        assertEquals(IdentityProgressStatus.ERROR, status);
+        Assertions.assertEquals(IdentityProgressStatus.ERROR, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -131,7 +127,6 @@ class IdentityProgressServiceTest {
     }
 
     private void verifyAuditEventSubmitted() {
-        verify(auditService)
-                .submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
+        verify(auditService).submitAuditEvent(PROCESSING_IDENTITY_REQUEST, auditContext);
     }
 }

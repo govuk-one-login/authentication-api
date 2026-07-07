@@ -1,18 +1,14 @@
-package uk.gov.di.authentication.ipv.services;
+package uk.gov.di.orchestration.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
-import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.Metrics;
+import uk.gov.di.orchestration.shared.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.shared.utils.IdentityProgressUtils;
 
 import java.util.Map;
 
-import static uk.gov.di.authentication.ipv.utils.IdentityProgressUtils.getIdentityProgressStatus;
+import static uk.gov.di.orchestration.shared.entity.IdentityAuditableEvent.PROCESSING_IDENTITY_REQUEST;
 
 public class IdentityProgressService {
 
@@ -58,7 +54,7 @@ public class IdentityProgressService {
                     attempts,
                     maxRetries);
             var identityCredentials = dynamoIdentityService.getIdentityCredentials(clientSessionId);
-            status = getIdentityProgressStatus(identityCredentials, attempts);
+            status = IdentityProgressUtils.getIdentityProgressStatus(identityCredentials, attempts);
             if (status == IdentityProgressStatus.PROCESSING) {
                 if (attempts >= maxRetries) {
                     LOG.info("Max retries of {} reached. Returning ERROR", maxRetries);
@@ -77,7 +73,7 @@ public class IdentityProgressService {
                         configurationService.getEnvironment(),
                         "Status",
                         status.toString()));
-        auditService.submitAuditEvent(IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
+        auditService.submitAuditEvent(PROCESSING_IDENTITY_REQUEST, auditContext);
 
         return status;
     }

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.ipv.entity;
+package uk.gov.di.orchestration.shared.entity;
 
 public enum ProcessingIdentityStatus {
     COMPLETED,
