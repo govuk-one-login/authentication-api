@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -25,6 +26,7 @@ import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenService;
+import uk.gov.di.orchestration.sis.exception.SISCallbackValidationError;
 
 import java.security.interfaces.RSAPublicKey;
 import java.time.temporal.ChronoUnit;
@@ -181,5 +183,17 @@ public class SISAuthorisationService {
         return claimsSetRequest.add(
                 new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
                         .withValues(List.of(storageToken.getValue())));
+    }
+
+    public Optional<SISCallbackValidationError> validateResponse(
+            Map<String, String> queryParams, String sessionId) {
+        if (queryParams == null || queryParams.isEmpty()) {
+            LOG.warn("No Query parameters in SIS Authorisation response");
+            return Optional.of(
+                    new SISCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
+        }
+
+        return Optional.empty();
     }
 }

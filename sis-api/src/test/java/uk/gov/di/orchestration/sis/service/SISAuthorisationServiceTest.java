@@ -49,12 +49,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST_CODE;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -288,6 +291,33 @@ class SISAuthorisationServiceTest {
                                     """,
                             RP_PAIRWISE_ID);
             return UserInfo.parse(jsonString);
+        }
+    }
+
+    @Nested
+    class ResponseValidation {
+        @Test
+        void shouldReturnErrorWhenQueryParamsAreNull() {
+            var errorOpt = authorisationService.validateResponse(null, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(error.errorDescription(), equalTo("No query parameters present"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
+
+        @Test
+        void shouldReturnErrorWhenQueryParamsAreEmpty() {
+            var errorOpt = authorisationService.validateResponse(Map.of(), SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(error.errorDescription(), equalTo("No query parameters present"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
         }
     }
 }
