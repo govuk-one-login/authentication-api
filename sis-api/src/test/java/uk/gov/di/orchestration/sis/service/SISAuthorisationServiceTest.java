@@ -365,5 +365,36 @@ class SISAuthorisationServiceTest {
             assertFalse(error.userShouldRouteToIpv());
             assertFalse(error.userRequestedUpdate());
         }
+
+        @Test
+        void shouldReturnErrorWhenStateNotPresentInQueryParams() {
+            // Query params needs to be not empty to reach the state check
+            var queryParams = Map.of("unused_param", "test");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.errorDescription(),
+                    equalTo("No state param present in Authorisation response"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateIsEmptyInQueryParams() {
+            var queryParams = Map.of("state", "");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.errorDescription(),
+                    equalTo("No state param present in Authorisation response"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
     }
 }
