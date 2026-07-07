@@ -418,11 +418,7 @@ class SISAuthorisationServiceTest {
 
         @Test
         void shouldReturnErrorWhenStateInDynamoDoesNotMatchStateInQueryParams() {
-            when(stateStorageService.getState("sis-state:" + SESSION_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new StateItem("sis-state:" + SESSION_ID)
-                                            .withState("test-state")));
+            mockStateInDynamo("test-state");
             var queryParams = Map.of("state", "different-state");
             var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
 
@@ -434,6 +430,44 @@ class SISAuthorisationServiceTest {
                     equalTo("Invalid state param present in Authorisation response"));
             assertFalse(error.userShouldRouteToIpv());
             assertFalse(error.userRequestedUpdate());
+        }
+
+        @Test
+        void shouldReturnErrorWhenCodeIsNotPresentInQueryParams() {
+            mockStateInDynamo("test-state");
+            var queryParams = Map.of("state", "test-state");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.errorDescription(),
+                    equalTo("No code param present in Authorisation response"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
+
+        @Test
+        void shouldReturnErrorWhenCodeIsEmptyInQueryParams() {
+            mockStateInDynamo("test-state");
+            var queryParams = Map.of("state", "test-state", "code", "");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.errorDescription(),
+                    equalTo("No code param present in Authorisation response"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
+
+        private void mockStateInDynamo(String state) {
+            when(stateStorageService.getState("sis-state:" + SESSION_ID))
+                    .thenReturn(
+                            Optional.of(new StateItem("sis-state:" + SESSION_ID).withState(state)));
         }
     }
 }
