@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -50,6 +51,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -373,6 +375,41 @@ class SISAuthorisationServiceTest {
                             new SISCallbackValidationError(
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "No state param present in Authorisation response")));
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateInDynamoIsEmpty() {
+            when(stateStorageService.getState("sis-state:" + SESSION_ID))
+                    .thenReturn(Optional.empty());
+            var queryParams = Map.of("state", "test-state");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            assertThat(
+                    errorOpt.get(),
+                    equalTo(
+                            new SISCallbackValidationError(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "Invalid state param present in Authorisation response")));
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateInDynamoDoesNotMatchStateInQueryParams() {
+            when(stateStorageService.getState("sis-state:" + SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem("sis-state:" + SESSION_ID)
+                                            .withState("test-state")));
+            var queryParams = Map.of("state", "different-state");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            assertThat(
+                    errorOpt.get(),
+                    equalTo(
+                            new SISCallbackValidationError(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "Invalid state param present in Authorisation response")));
         }
     }
 }
