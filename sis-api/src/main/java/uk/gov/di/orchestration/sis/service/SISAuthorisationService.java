@@ -18,6 +18,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -228,6 +229,31 @@ public class SISAuthorisationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No state param present in Authorisation response"));
         }
+        if (!isStateValid(sessionId, queryParams.get("state"))) {
+            return Optional.of(
+                    new SISCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid state param present in Authorisation response"));
+        }
         return Optional.empty();
+    }
+
+    private boolean isStateValid(String sessionId, String responseState) {
+        var valueFromDynamo =
+                stateStorageService
+                        .getState(STATE_STORAGE_PREFIX + sessionId)
+                        .map(StateItem::getState);
+        if (valueFromDynamo.isEmpty()) {
+            LOG.info("No state found in Dynamo");
+            return false;
+        }
+
+        State storedState = new State(valueFromDynamo.get());
+        LOG.info(
+                "Response state: {} and Stored state: {}. Are equal: {}",
+                responseState,
+                storedState.getValue(),
+                responseState.equals(storedState.getValue()));
+        return responseState.equals(storedState.getValue());
     }
 }

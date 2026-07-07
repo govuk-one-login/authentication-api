@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -48,6 +49,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST_CODE;
@@ -393,6 +395,43 @@ class SISAuthorisationServiceTest {
             assertThat(
                     error.errorDescription(),
                     equalTo("No state param present in Authorisation response"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateInDynamoIsEmpty() {
+            when(stateStorageService.getState("sis-state:" + SESSION_ID))
+                    .thenReturn(Optional.empty());
+            var queryParams = Map.of("state", "test-state");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.errorDescription(),
+                    equalTo("Invalid state param present in Authorisation response"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateInDynamoDoesNotMatchStateInQueryParams() {
+            when(stateStorageService.getState("sis-state:" + SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem("sis-state:" + SESSION_ID)
+                                            .withState("test-state")));
+            var queryParams = Map.of("state", "different-state");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.errorDescription(),
+                    equalTo("Invalid state param present in Authorisation response"));
             assertFalse(error.userShouldRouteToIpv());
             assertFalse(error.userRequestedUpdate());
         }
