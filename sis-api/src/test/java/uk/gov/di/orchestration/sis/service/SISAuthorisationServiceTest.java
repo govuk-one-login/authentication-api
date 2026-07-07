@@ -438,6 +438,15 @@ class SISAuthorisationServiceTest {
                                     "No code param present in Authorisation response")));
         }
 
+        @Test
+        void shouldNotReturnErrorIfResponseIsValid() {
+            mockStateInDynamo("test-state");
+            var queryParams = Map.of("state", "test-state", "code", "test-auth-code");
+
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+            assertTrue(errorOpt.isEmpty());
+        }
+
         private void mockStateInDynamo(String state) {
             when(stateStorageService.getState("sis-state:" + SESSION_ID))
                     .thenReturn(
