@@ -49,6 +49,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST_CODE;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -316,6 +317,51 @@ class SISAuthorisationServiceTest {
             var error = errorOpt.get();
             assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
             assertThat(error.errorDescription(), equalTo("No query parameters present"));
+            assertFalse(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
+
+        @Test
+        void shouldReturnErrorWhenQueryParamsContainsAccessDeniedError() {
+            var queryParams =
+                    Map.of("error", ACCESS_DENIED_CODE, "error_description", "record_unavailable");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(ACCESS_DENIED_CODE));
+            assertThat(error.errorDescription(), equalTo("record_unavailable"));
+            assertTrue(error.userShouldRouteToIpv());
+            assertFalse(error.userRequestedUpdate());
+        }
+
+        @Test
+        void
+                shouldReturnUserRequestedUpdateErrorWhenQueryParamsContainsUserRequestedUpdateDescription() {
+            var queryParams =
+                    Map.of(
+                            "error",
+                            ACCESS_DENIED_CODE,
+                            "error_description",
+                            "record_update_requested");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo(ACCESS_DENIED_CODE));
+            assertThat(error.errorDescription(), equalTo("record_update_requested"));
+            assertTrue(error.userShouldRouteToIpv());
+            assertTrue(error.userRequestedUpdate());
+        }
+
+        @Test
+        void shouldReturnErrorWhenQueryParamsContainsUnexpectedError() {
+            var queryParams = Map.of("error", "unknown-error");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.errorCode(), equalTo("unknown-error"));
             assertFalse(error.userShouldRouteToIpv());
             assertFalse(error.userRequestedUpdate());
         }

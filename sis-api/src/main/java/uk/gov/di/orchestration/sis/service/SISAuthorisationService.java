@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -42,6 +43,7 @@ import static uk.gov.di.orchestration.shared.helpers.RsaKeyHelper.getRsaPublicKe
 public class SISAuthorisationService {
     private static final String STATE_STORAGE_PREFIX = "sis-state:";
     private static final Logger LOG = LogManager.getLogger(SISAuthorisationService.class);
+    private static final String RECORD_UPDATE_REQUESTED = "record_update_requested";
     private final ConfigurationService configurationService;
     private final TokenService tokenService;
     private final StateStorageService stateStorageService;
@@ -193,7 +195,32 @@ public class SISAuthorisationService {
                     new SISCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
         }
+        if (queryParams.containsKey("error")) {
+            if (ACCESS_DENIED_CODE.equals(queryParams.get("error"))) {
+                if (RECORD_UPDATE_REQUESTED.equals(queryParams.get("error_description"))) {
+                    LOG.info("User requested to update their details");
+                    return Optional.of(
+                            new SISCallbackValidationError(
+                                    queryParams.get("error"),
+                                    queryParams.get("error_description"),
+                                    true,
+                                    true));
+                }
 
+                LOG.info("User could not be verified by SIS, routing to IPV");
+                return Optional.of(
+                        new SISCallbackValidationError(
+                                queryParams.get("error"),
+                                queryParams.get("error_description"),
+                                true,
+                                false));
+            } else {
+                LOG.warn("Error response found in IPV Authorisation response");
+                return Optional.of(
+                        new SISCallbackValidationError(
+                                queryParams.get("error"), queryParams.get("error_description")));
+            }
+        }
         return Optional.empty();
     }
 }
