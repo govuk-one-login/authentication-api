@@ -345,5 +345,34 @@ class SISAuthorisationServiceTest {
                     errorOpt.get(),
                     equalTo(new SISCallbackValidationError("access_denied", null, true)));
         }
+
+        @Test
+        void shouldReturnErrorWhenStateNotPresentInQueryParams() {
+            // Query params needs to be not empty to reach the state check
+            var queryParams = Map.of("unused_param", "test");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            assertThat(
+                    errorOpt.get(),
+                    equalTo(
+                            new SISCallbackValidationError(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "No state param present in Authorisation response")));
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateIsEmptyInQueryParams() {
+            var queryParams = Map.of("state", "");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            assertThat(
+                    errorOpt.get(),
+                    equalTo(
+                            new SISCallbackValidationError(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "No state param present in Authorisation response")));
+        }
     }
 }

@@ -204,6 +204,13 @@ public class SISAuthorisationService {
             LOG.warn("Error response found in IPV Authorisation response");
             return Optional.of(new SISCallbackValidationError(queryParams.get("error"), null));
         }
+        if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
+            LOG.warn("No state param in IPV Authorisation response");
+            return Optional.of(
+                    new SISCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "No state param present in Authorisation response"));
+        }
         return Optional.empty();
     }
 }
