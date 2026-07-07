@@ -218,6 +218,13 @@ public class SISAuthorisationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "Invalid state param present in Authorisation response"));
         }
+        if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
+            LOG.warn("No code param in SIS Authorisation response");
+            return Optional.of(
+                    new SISCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "No code param present in Authorisation response"));
+        }
         return Optional.empty();
     }
 
