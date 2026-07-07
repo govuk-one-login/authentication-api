@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -34,6 +35,7 @@ import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenService;
+import uk.gov.di.orchestration.sis.exception.SISCallbackValidationError;
 
 import java.net.URI;
 import java.net.URL;
@@ -55,6 +57,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -288,6 +291,33 @@ class SISAuthorisationServiceTest {
                                     """,
                             RP_PAIRWISE_ID);
             return UserInfo.parse(jsonString);
+        }
+    }
+
+    @Nested
+    class ResponseValidation {
+        @Test
+        void shouldReturnErrorWhenQueryParamsAreNull() {
+            var errorOpt = authorisationService.validateResponse(null, SESSION_ID);
+            assertTrue(errorOpt.isPresent());
+            assertThat(
+                    errorOpt.get(),
+                    equalTo(
+                            new SISCallbackValidationError(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "No query parameters present")));
+        }
+
+        @Test
+        void shouldReturnErrorWhenQueryParamsAreEmpty() {
+            var errorOpt = authorisationService.validateResponse(Map.of(), SESSION_ID);
+            assertTrue(errorOpt.isPresent());
+            assertThat(
+                    errorOpt.get(),
+                    equalTo(
+                            new SISCallbackValidationError(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "No query parameters present")));
         }
     }
 }
