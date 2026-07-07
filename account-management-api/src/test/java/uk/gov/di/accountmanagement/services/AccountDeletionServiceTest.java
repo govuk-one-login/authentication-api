@@ -106,6 +106,7 @@ class AccountDeletionServiceTest {
         var expectedEmail = "test@example.com";
         when(userProfile.getEmail()).thenReturn(expectedEmail);
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
+        when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
         // when
         underTest.removeAccount(
                 Optional.of(input),
@@ -113,7 +114,8 @@ class AccountDeletionServiceTest {
                 StructuredAuditService.UNKNOWN,
                 AccountDeletionReason.USER_INITIATED);
         // then
-        verify(dynamoDeleteService).deleteAccount(eq(expectedEmail), any());
+        verify(dynamoDeleteService)
+                .deleteAccount(eq(expectedEmail), any(), eq(TEST_PUBLIC_SUBJECT_ID));
     }
 
     @Test
@@ -122,7 +124,7 @@ class AccountDeletionServiceTest {
         var expectedException = new RuntimeException();
         when(userProfile.getEmail()).thenReturn("test@example.com");
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
-        doThrow(expectedException).when(dynamoDeleteService).deleteAccount(any(), any());
+        doThrow(expectedException).when(dynamoDeleteService).deleteAccount(any(), any(), any());
 
         // then
         assertThrows(

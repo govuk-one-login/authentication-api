@@ -43,6 +43,7 @@ Resources:
         - !Ref DynamoUserDeleteAccessPolicy
         - !Ref DynamoAccountModifiersReadAccessPolicy
         - !Ref DynamoAccountModifiersDeleteAccessPolicy
+        - !Ref DynamoAuthenticatorTableReadDeleteAccessPolicy
         - !Ref AccountModifiersTableKmsPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref RedisParametersAccessPolicy
