@@ -42,6 +42,7 @@ import static uk.gov.di.orchestration.shared.helpers.RsaKeyHelper.getRsaPublicKe
 public class SISAuthorisationService {
     private static final String STATE_STORAGE_PREFIX = "sis-state:";
     private static final Logger LOG = LogManager.getLogger(SISAuthorisationService.class);
+    private static final String RECORD_UPDATE_REQUESTED = "record_update_requested";
     private final ConfigurationService configurationService;
     private final TokenService tokenService;
     private final StateStorageService stateStorageService;
@@ -193,7 +194,16 @@ public class SISAuthorisationService {
                     new SISCallbackValidationError(
                             OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
         }
+        if (queryParams.containsKey("error")) {
+            if (RECORD_UPDATE_REQUESTED.equals(queryParams.get("error_description"))) {
+                LOG.warn("User requested to update their details");
+                return Optional.of(
+                        new SISCallbackValidationError(queryParams.get("error"), null, true));
+            }
 
+            LOG.warn("Error response found in IPV Authorisation response");
+            return Optional.of(new SISCallbackValidationError(queryParams.get("error"), null));
+        }
         return Optional.empty();
     }
 }

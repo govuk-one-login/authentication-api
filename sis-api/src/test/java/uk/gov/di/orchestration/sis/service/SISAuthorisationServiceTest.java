@@ -319,5 +319,31 @@ class SISAuthorisationServiceTest {
                                     OAuth2Error.INVALID_REQUEST_CODE,
                                     "No query parameters present")));
         }
+
+        @Test
+        void shouldReturnErrorWhenQueryParamsContainsError() {
+            var queryParams = Map.of("error", "test_error");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            assertThat(errorOpt.get(), equalTo(new SISCallbackValidationError("test_error", null)));
+        }
+
+        @Test
+        void
+                shouldReturnUserRequestedUpdateErrorWhenQueryParamsContainsUserRequestedUpdateDescription() {
+            var queryParams =
+                    Map.of(
+                            "error",
+                            "access_denied",
+                            "error_description",
+                            "record_update_requested");
+            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            assertThat(
+                    errorOpt.get(),
+                    equalTo(new SISCallbackValidationError("access_denied", null, true)));
+        }
     }
 }
