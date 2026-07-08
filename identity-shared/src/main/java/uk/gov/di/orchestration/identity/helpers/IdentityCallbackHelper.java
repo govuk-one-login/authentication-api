@@ -2,17 +2,14 @@ package uk.gov.di.orchestration.identity.helpers;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.TokenResponse;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
-import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,7 +20,6 @@ import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.identity.entity.LogIds;
 import uk.gov.di.orchestration.identity.entity.SPOTClaims;
 import uk.gov.di.orchestration.identity.entity.SPOTRequest;
-import uk.gov.di.orchestration.identity.exceptions.IdentityResponseValidationError;
 import uk.gov.di.orchestration.identity.services.IdentityProgressService;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
@@ -36,9 +32,6 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.exceptions.IdentityCallbackException;
-import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
@@ -55,18 +48,18 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.lang.String.format;
+import static uk.gov.di.orchestration.identity.utils.IdentityCallbackUtils.returnCodePresentInResponse;
+import static uk.gov.di.orchestration.identity.utils.IdentityCallbackUtils.rpRequestedReturnCode;
+import static uk.gov.di.orchestration.identity.utils.IdentityCallbackUtils.sendUserIdentityRequest;
+import static uk.gov.di.orchestration.identity.utils.IdentityCallbackUtils.validateUserIdentityResponse;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
-import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
@@ -141,9 +134,8 @@ public class IdentityCallbackHelper {
         var clientSessionId = orchClientSession.getClientSessionId();
         var sessionId = orchSession.getSessionId();
         var clientId = clientRegistry.getClientID();
-        UserInfo authUserInfo =
+        var authUserInfo =
                 getAuthUserInfo(
-                                authUserInfoStorageService,
                                 orchSession.getInternalCommonSubjectId(),
                                 orchClientSession.getClientSessionId())
                         .orElseThrow(() -> new /*IpvCallback*/ Exception("authUserInfo not found"));
@@ -182,7 +174,7 @@ public class IdentityCallbackHelper {
                 auditEventConfiguration.authResponseReceived(), clientId, user);
 
         var tokenResponse =
-                segmentedFunctionCall("getIpvToken", () -> tokenService.getToken(authCode));
+                segmentedFunctionCall("getToken", () -> tokenService.getToken(authCode));
         if (!tokenResponse.indicatesSuccess()) {
             auditService.submitAuditEvent(
                     auditEventConfiguration.unsuccessfulTokenResponseReceived(), clientId, user);
@@ -190,7 +182,7 @@ public class IdentityCallbackHelper {
                     frontend.errorURI(),
                     new Exception(
                             String.format(
-                                    "IPV TokenResponse was not successful: %s",
+                                    "TokenResponse was not successful: %s",
                                     tokenResponse.toErrorResponse().toJSONObject())));
         }
         auditService.submitAuditEvent(
@@ -210,7 +202,9 @@ public class IdentityCallbackHelper {
         auditService.submitAuditEvent(
                 auditEventConfiguration.successfulIdentityResponseReceived(), clientId, user);
         var vtrList = orchClientSession.getVtrList();
-        var userIdentityError = validateUserIdentityResponse(userIdentityUserInfo, vtrList);
+        var userIdentityError =
+                validateUserIdentityResponse(
+                        userIdentityUserInfo, vtrList, oidcAPI.trustmarkURI().toString());
         if (userIdentityError.isPresent()) {
             var aisResponseOpt =
                     checkForAisIntervention(
@@ -224,7 +218,7 @@ public class IdentityCallbackHelper {
                 return aisResponseOpt.get();
             }
             var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
-            if (returnCodePresentInIPVResponse(returnCode)) {
+            if (returnCodePresentInResponse(returnCode)) {
                 if (rpRequestedReturnCode(clientRegistry, authRequest)) {
                     LOG.info("Generating auth code response for return code(s)");
 
@@ -350,10 +344,8 @@ public class IdentityCallbackHelper {
         return null;
     }
 
-    private static Optional<UserInfo> getAuthUserInfo(
-            AuthenticationUserInfoStorageService authUserInfoStorageService,
-            String internalCommonSubjectId,
-            String clientSessionId) {
+    private Optional<UserInfo> getAuthUserInfo(
+            String internalCommonSubjectId, String clientSessionId) {
 
         if (internalCommonSubjectId == null || internalCommonSubjectId.isBlank()) {
             LOG.warn("internalCommonSubjectId is null or empty");
@@ -369,112 +361,8 @@ public class IdentityCallbackHelper {
         }
     }
 
-    public Optional<IdentityResponseValidationError> validateResponse(
-            Map<String, String> queryParams, Optional<String> stateFromDynamo) {
-        if (queryParams == null || queryParams.isEmpty()) {
-            LOG.warn("No Query parameters in Authorisation response");
-            return Optional.of(
-                    new IdentityResponseValidationError(
-                            OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
-        }
-        if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
-            LOG.warn("No state param in Authorisation response");
-            return Optional.of(
-                    new IdentityResponseValidationError(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "No state param present in Authorisation response"));
-        }
-        if (!isStateValid(stateFromDynamo, queryParams.get("state"))) {
-            return Optional.of(
-                    new IdentityResponseValidationError(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Invalid state param present in Authorisation response"));
-        }
-        if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
-            LOG.warn("No code param in Authorisation response");
-            return Optional.of(
-                    new IdentityResponseValidationError(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "No code param present in Authorisation response"));
-        }
-        return Optional.empty();
-    }
-
-    private boolean isStateValid(Optional<String> stateFromDynamo, String responseState) {
-        if (stateFromDynamo.isEmpty()) {
-            LOG.info("No state found in Dynamo");
-            return false;
-        }
-
-        State storedState = new State(stateFromDynamo.get());
-        LOG.info(
-                "Response state: {} and Stored state: {}. Are equal: {}",
-                responseState,
-                storedState.getValue(),
-                responseState.equals(storedState.getValue()));
-        return responseState.equals(storedState.getValue());
-    }
-
     public interface TokenService {
         TokenResponse getToken(String authCode);
-    }
-
-    public UserInfo sendUserIdentityRequest(UserInfoRequest userInfoRequest)
-            throws UnsuccessfulCredentialResponseException {
-        try {
-            LOG.info("Sending IPV userinfo request");
-            int count = 0;
-            int maxTries = 2;
-            UserInfoResponse userIdentityResponse;
-            do {
-                if (count > 0) LOG.warn("Retrying IPV user identity request");
-                count++;
-                var httpResponse = userInfoRequest.toHTTPRequest().send();
-                userIdentityResponse = UserInfoResponse.parse(httpResponse);
-                if (!httpResponse.indicatesSuccess()) {
-                    LOG.warn(
-                            format(
-                                    "Unsuccessful %s response from IPV user identity endpoint on attempt %d: %s ",
-                                    httpResponse.getStatusCode(), count, httpResponse.getBody()));
-                }
-            } while (!userIdentityResponse.indicatesSuccess() && count < maxTries);
-
-            if (!userIdentityResponse.indicatesSuccess()) {
-                LOG.error("Response from user-identity does not indicate success");
-                throw new UnsuccessfulCredentialResponseException(
-                        userIdentityResponse.toErrorResponse().toString());
-            } else {
-                return userIdentityResponse.toSuccessResponse().getUserInfo();
-            }
-        } catch (ParseException e) {
-            LOG.error("Error when attempting to parse HTTPResponse to UserInfoResponse");
-            throw new UnsuccessfulCredentialResponseException(
-                    "Error when attempting to parse http response to UserInfoResponse");
-        } catch (IOException e) {
-            LOG.error("Error when attempting to call IPV user-identity endpoint", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    public Optional<ErrorObject> validateUserIdentityResponse(
-            UserInfo userIdentityUserInfo, List<VectorOfTrust> vtrList)
-            throws IdentityCallbackException {
-        LOG.info("Validating userinfo response");
-        for (VectorOfTrust vtr : vtrList) {
-            if (vtr.getLevelOfConfidence()
-                    .getValue()
-                    .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
-                var trustmarkURL = oidcAPI.trustmarkURI().toString();
-
-                if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
-                    LOG.warn("VTM does not contain expected trustmark URL");
-                    throw new IdentityCallbackException("IPV trustmark is invalid");
-                }
-                return Optional.empty();
-            }
-        }
-        LOG.warn("IPV missing vot or vot not in vtr list.");
-        return Optional.of(OAuth2Error.ACCESS_DENIED);
     }
 
     private Optional<APIGatewayProxyResponseEvent> checkForAisIntervention(
@@ -503,24 +391,6 @@ public class IdentityCallbackHelper {
                             intervention));
         }
         return Optional.empty();
-    }
-
-    private static boolean returnCodePresentInIPVResponse(Object returnCode) {
-        return returnCode instanceof List<?> returnCodeList && !returnCodeList.isEmpty();
-    }
-
-    private boolean rpRequestedReturnCode(
-            ClientRegistry clientRegistry, AuthenticationRequest authRequest) {
-        if (authRequest.getOIDCClaims() == null
-                || authRequest.getOIDCClaims().getUserInfoClaimsRequest() == null) {
-            return false;
-        }
-        return clientRegistry.getClaims().contains(RETURN_CODE.getValue())
-                && authRequest
-                                .getOIDCClaims()
-                                .getUserInfoClaimsRequest()
-                                .get(RETURN_CODE.getValue())
-                        != null;
     }
 
     public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
