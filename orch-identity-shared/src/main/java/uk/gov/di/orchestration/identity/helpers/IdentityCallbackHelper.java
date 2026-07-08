@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.identity.entity.IdentityAuditEventConfiguration;
 import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.identity.entity.LogIds;
 import uk.gov.di.orchestration.identity.entity.SPOTClaims;
@@ -40,7 +41,6 @@ import uk.gov.di.orchestration.shared.exceptions.IdentityCallbackException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
-import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
@@ -91,6 +91,7 @@ public class IdentityCallbackHelper {
     private final OrchSessionService orchSessionService;
     private final LogoutService logoutService;
     private final AccountInterventionService accountInterventionService;
+    private final IdentityAuditEventConfiguration auditEventConfiguration;
 
     public IdentityCallbackHelper(
             ConfigurationService configurationService,
@@ -107,7 +108,8 @@ public class IdentityCallbackHelper {
             AwsSqsClient spotSqsClient,
             OrchSessionService orchSessionService,
             LogoutService logoutService,
-            AccountInterventionService accountInterventionService) {
+            AccountInterventionService accountInterventionService,
+            IdentityAuditEventConfiguration auditEventConfiguration) {
         this.configurationService = configurationService;
         this.authUserInfoStorageService = authUserInfoStorageService;
         this.auditService = auditService;
@@ -123,6 +125,7 @@ public class IdentityCallbackHelper {
         this.orchSessionService = orchSessionService;
         this.logoutService = logoutService;
         this.accountInterventionService = accountInterventionService;
+        this.auditEventConfiguration = auditEventConfiguration;
     }
 
     public APIGatewayProxyResponseEvent test(
@@ -175,15 +178,14 @@ public class IdentityCallbackHelper {
                                         : authUserInfo.getPhoneNumber())
                         .withPersistentSessionId(persistentId);
 
-        //        auditService.submitAuditEvent(
-        //                IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
+        auditService.submitAuditEvent(
+                auditEventConfiguration.authResponseReceived(), clientId, user);
 
         var tokenResponse =
                 segmentedFunctionCall("getIpvToken", () -> tokenService.getToken(authCode));
         if (!tokenResponse.indicatesSuccess()) {
-            //            auditService.submitAuditEvent(
-            //                    IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-            // clientId, user);
+            auditService.submitAuditEvent(
+                    auditEventConfiguration.unsuccessfulTokenResponseReceived(), clientId, user);
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Exception(
@@ -191,8 +193,8 @@ public class IdentityCallbackHelper {
                                     "IPV TokenResponse was not successful: %s",
                                     tokenResponse.toErrorResponse().toJSONObject())));
         }
-        //        auditService.submitAuditEvent(
-        //                IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
+        auditService.submitAuditEvent(
+                auditEventConfiguration.successfulTokenResponseReceived(), clientId, user);
 
         var userIdentityUserInfo =
                 sendUserIdentityRequest(
@@ -205,9 +207,8 @@ public class IdentityCallbackHelper {
                                         .getTokens()
                                         .getBearerAccessToken()));
 
-        //        auditService.submitAuditEvent(
-        //                IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientId,
-        // user);
+        auditService.submitAuditEvent(
+                auditEventConfiguration.successfulIdentityResponseReceived(), clientId, user);
         var vtrList = orchClientSession.getVtrList();
         var userIdentityError = validateUserIdentityResponse(userIdentityUserInfo, vtrList);
         if (userIdentityError.isPresent()) {
@@ -289,7 +290,7 @@ public class IdentityCallbackHelper {
 
         var spotQueuedAt = NowHelper.now().toInstant().toEpochMilli();
 
-        // auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
+        auditService.submitAuditEvent(auditEventConfiguration.spotRequested(), clientId, user);
         segmentedFunctionCall(
                 "saveIdentityClaims",
                 () ->
@@ -585,18 +586,18 @@ public class IdentityCallbackHelper {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
-        //        sendAuditEvent(
-        //                authRequest,
-        //                orchSession,
-        //                clientSessionId,
-        //                ipAddress,
-        //                persistentSessionId,
-        //                email,
-        //                subjectId,
-        //                rpPairwiseSubjectId,
-        //                internalPairwiseSubjectId,
-        //                authCode);
-        // sendCloudwatchMetrics(orchSession, clientId, clientName);
+        sendAuditEvent(
+                authRequest,
+                orchSession,
+                clientSessionId,
+                ipAddress,
+                persistentSessionId,
+                email,
+                subjectId,
+                rpPairwiseSubjectId,
+                internalPairwiseSubjectId,
+                authCode);
+        sendCloudwatchMetrics(orchSession, clientId, clientName);
         authCodeResponseService.saveSession(false, orchSessionService, orchSession);
         return authenticationResponse;
     }
@@ -621,18 +622,17 @@ public class IdentityCallbackHelper {
             metadataPairs.add(pair("nonce", authRequest.getNonce().getValue()));
         }
 
-        //        auditService.submitAuditEvent(
-        //                IPVAuditableEvent.AUTH_CODE_ISSUED,
-        //                authRequest.getClientID().getValue(),
-        //                TxmaAuditUser.user()
-        //                        .withGovukSigninJourneyId(clientSessionId)
-        //                        .withSessionId(orchSession.getSessionId())
-        //                        .withUserId(internalPairwiseSubjectId)
-        //
-        // .withEmail(Optional.ofNullable(email).orElse(AuditService.UNKNOWN))
-        //                        .withIpAddress(ipAddress)
-        //                        .withPersistentSessionId(persistentSessionId),
-        //                metadataPairs.toArray(AuditService.MetadataPair[]::new));
+        auditService.submitAuditEvent(
+                auditEventConfiguration.authCodeIssued(),
+                authRequest.getClientID().getValue(),
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withSessionId(orchSession.getSessionId())
+                        .withUserId(internalPairwiseSubjectId)
+                        .withEmail(Optional.ofNullable(email).orElse(AuditService.UNKNOWN))
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionId),
+                metadataPairs.toArray(AuditService.MetadataPair[]::new));
     }
 
     private void sendCloudwatchMetrics(
@@ -690,8 +690,7 @@ public class IdentityCallbackHelper {
             UserInfo authUserInfo,
             Subject pairwiseSubject,
             UserInfo userIdentityUserInfo,
-            String clientId)
-            throws Json.JsonException {
+            String clientId) {
         LOG.info("Constructing SPOT request ready to queue");
         var spotClaimsBuilder =
                 SPOTClaims.builder()
