@@ -166,8 +166,38 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             String clientId,
             AccountIntervention intervention) {
+        return handleAccountInterventionLogout(
+                request,
+                createAuditUser(input, request.getSessionId(), internalCommonSubjectId),
+                clientId,
+                intervention);
+    }
 
-        var auditUser = createAuditUser(input, request.getSessionId(), internalCommonSubjectId);
+    public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
+            DestroySessionsRequest request,
+            String internalCommonSubjectId,
+            String ipAddress,
+            String persistentSessionId,
+            String clientSessionId,
+            String clientId,
+            AccountIntervention intervention) {
+        return handleAccountInterventionLogout(
+                request,
+                createAuditUser(
+                        ipAddress,
+                        persistentSessionId,
+                        clientSessionId,
+                        request.getSessionId(),
+                        internalCommonSubjectId),
+                clientId,
+                intervention);
+    }
+
+    public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
+            DestroySessionsRequest request,
+            TxmaAuditUser auditUser,
+            String clientId,
+            AccountIntervention intervention) {
 
         destroySessions(request);
         metrics.incrementLogout(Optional.of(clientId), Optional.of(intervention));
@@ -244,13 +274,25 @@ public class LogoutService {
 
     private TxmaAuditUser createAuditUser(
             APIGatewayProxyRequestEvent input, String sessionId, String internalCommonSubjectId) {
+        return createAuditUser(
+                extractIpAddress(input),
+                extractPersistentIdFromCookieHeader(input.getHeaders()),
+                sessionId,
+                CookieHelper.getClientSessionIdFromRequestHeaders(input.getHeaders()).orElse(null),
+                internalCommonSubjectId);
+    }
+
+    private TxmaAuditUser createAuditUser(
+            String ipAddress,
+            String persistentSessionId,
+            String clientSessionId,
+            String sessionId,
+            String internalCommonSubjectId) {
         return TxmaAuditUser.user()
-                .withIpAddress(extractIpAddress(input))
-                .withPersistentSessionId(extractPersistentIdFromCookieHeader(input.getHeaders()))
+                .withIpAddress(ipAddress)
+                .withPersistentSessionId(persistentSessionId)
                 .withSessionId(sessionId)
-                .withGovukSigninJourneyId(
-                        CookieHelper.getClientSessionIdFromRequestHeaders(input.getHeaders())
-                                .orElse(null))
+                .withGovukSigninJourneyId(clientSessionId)
                 .withUserId(internalCommonSubjectId);
     }
 

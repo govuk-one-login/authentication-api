@@ -1,6 +1,5 @@
 package uk.gov.di.orchestration.identity.helpers;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -54,6 +53,7 @@ import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.io.IOException;
 import java.net.URI;
@@ -75,6 +75,7 @@ import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.
 
 public class IdentityCallbackHelper {
     private static final Logger LOG = LogManager.getLogger(IdentityCallbackHelper.class);
+    private static final SerializationService objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
     private final AuditService auditService;
@@ -131,7 +132,8 @@ public class IdentityCallbackHelper {
             String persistentId,
             String ipAddress,
             String authCode,
-            AuthenticationRequest authRequest)
+            AuthenticationRequest authRequest,
+            String awsRequestId)
             throws Exception {
         var clientSessionId = orchClientSession.getClientSessionId();
         var sessionId = orchSession.getSessionId();
@@ -210,7 +212,13 @@ public class IdentityCallbackHelper {
         var userIdentityError = validateUserIdentityResponse(userIdentityUserInfo, vtrList);
         if (userIdentityError.isPresent()) {
             var aisResponseOpt =
-                    checkForAisIntervention(orchSession, auditContext, input, clientId);
+                    checkForAisIntervention(
+                            orchSession,
+                            auditContext,
+                            ipAddress,
+                            persistentId,
+                            clientSessionId,
+                            clientId);
             if (aisResponseOpt.isPresent()) {
                 return aisResponseOpt.get();
             }
@@ -269,13 +277,7 @@ public class IdentityCallbackHelper {
         }
 
         LOG.info("SPOT will be invoked.");
-        var logIds =
-                new LogIds(
-                        sessionId,
-                        persistentId,
-                        context.getAwsRequestId(),
-                        clientId,
-                        clientSessionId);
+        var logIds = new LogIds(sessionId, persistentId, awsRequestId, clientId, clientSessionId);
         queueSPOTRequest(
                 logIds,
                 getSectorIdentifierForClient(
@@ -310,7 +312,13 @@ public class IdentityCallbackHelper {
             }
             if (status == IdentityProgressStatus.COMPLETED) {
                 var aisResponseOpt =
-                        checkForAisIntervention(orchSession, auditContext, input, clientId);
+                        checkForAisIntervention(
+                                orchSession,
+                                auditContext,
+                                ipAddress,
+                                persistentId,
+                                clientSessionId,
+                                clientId);
                 if (aisResponseOpt.isPresent()) {
                     return aisResponseOpt.get();
                 }
@@ -471,7 +479,9 @@ public class IdentityCallbackHelper {
     private Optional<APIGatewayProxyResponseEvent> checkForAisIntervention(
             OrchSessionItem orchSession,
             AuditContext auditContext,
-            APIGatewayProxyRequestEvent input,
+            String ipAddress,
+            String persistentSessionId,
+            String clientSessionId,
             String clientId) {
         AccountIntervention intervention =
                 segmentedFunctionCall(
@@ -485,7 +495,9 @@ public class IdentityCallbackHelper {
                     logoutService.handleAccountInterventionLogout(
                             new DestroySessionsRequest(orchSession.getSessionId(), orchSession),
                             orchSession.getInternalCommonSubjectId(),
-                            input,
+                            ipAddress,
+                            persistentSessionId,
+                            clientSessionId,
                             clientId,
                             intervention));
         }
