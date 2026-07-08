@@ -13,7 +13,8 @@ import java.util.Map;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
-public class AccountMetricPublishHandler implements RequestHandler<ScheduledEvent, Long> {
+public class AccountMetricPublishHandler
+        implements RequestHandler<ScheduledEvent, Map<String, Long>> {
 
     private final ConfigurationService configurationService;
     private final DynamoDbClient client;
@@ -35,7 +36,13 @@ public class AccountMetricPublishHandler implements RequestHandler<ScheduledEven
     }
 
     @Override
-    public Long handleRequest(ScheduledEvent input, Context context) {
+    public Map<String, Long> handleRequest(ScheduledEvent input, Context context) {
+        var counts = new java.util.HashMap<String, Long>();
+        counts.putAll(publishUserProfileMetrics());
+        return counts;
+    }
+
+    private Map<String, Long> publishUserProfileMetrics() {
         var result =
                 client.describeTable(
                         DescribeTableRequest.builder()
@@ -55,6 +62,8 @@ public class AccountMetricPublishHandler implements RequestHandler<ScheduledEven
         cloudwatchMetricsService.putEmbeddedValue(
                 "NumberOfVerifiedAccounts", numberOfVerifiedAccounts, Map.of());
 
-        return numberOfVerifiedAccounts;
+        return Map.of(
+                "NumberOfAccounts", numberOfAccounts,
+                "NumberOfVerifiedAccounts", numberOfVerifiedAccounts);
     }
 }

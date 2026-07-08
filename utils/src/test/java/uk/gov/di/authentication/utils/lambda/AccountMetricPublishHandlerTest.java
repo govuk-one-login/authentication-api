@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -55,12 +56,14 @@ class AccountMetricPublishHandlerTest {
                                                 .build())
                                 .build());
 
-        handler.handleRequest(mock(ScheduledEvent.class), mock(Context.class));
+        var result = handler.handleRequest(mock(ScheduledEvent.class), mock(Context.class));
 
         verify(cloudwatchMetricsService, times(1))
                 .putEmbeddedValue("NumberOfAccounts", 5100, Map.of());
         verify(cloudwatchMetricsService, times(1))
                 .putEmbeddedValue("NumberOfVerifiedAccounts", 5000, Map.of());
+        assertEquals(5100L, result.get("NumberOfAccounts"));
+        assertEquals(5000L, result.get("NumberOfVerifiedAccounts"));
     }
 
     @Test
