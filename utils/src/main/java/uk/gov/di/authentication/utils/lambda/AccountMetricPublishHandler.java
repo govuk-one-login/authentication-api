@@ -39,6 +39,7 @@ public class AccountMetricPublishHandler
     public Map<String, Long> handleRequest(ScheduledEvent input, Context context) {
         var counts = new java.util.HashMap<String, Long>();
         counts.putAll(publishUserProfileMetrics());
+        counts.putAll(publishAuthenticatorMetrics());
         return counts;
     }
 
@@ -65,5 +66,20 @@ public class AccountMetricPublishHandler
         return Map.of(
                 "NumberOfAccounts", numberOfAccounts,
                 "NumberOfVerifiedAccounts", numberOfVerifiedAccounts);
+    }
+
+    private Map<String, Long> publishAuthenticatorMetrics() {
+        var result =
+                client.describeTable(
+                        DescribeTableRequest.builder()
+                                .tableName(
+                                        TableNameHelper.getFullTableName(
+                                                "authenticator", configurationService))
+                                .build());
+        var numberOfPasskeys = result.table().itemCount();
+
+        cloudwatchMetricsService.putEmbeddedValue("NumberOfPasskeys", numberOfPasskeys, Map.of());
+
+        return Map.of("NumberOfPasskeys", numberOfPasskeys);
     }
 }

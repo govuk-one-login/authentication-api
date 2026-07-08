@@ -55,6 +55,12 @@ class AccountMetricPublishHandlerTest {
                                                 .itemCount(5100l)
                                                 .build())
                                 .build());
+        when(client.describeTable(
+                        DescribeTableRequest.builder().tableName("test-authenticator").build()))
+                .thenReturn(
+                        DescribeTableResponse.builder()
+                                .table(TableDescription.builder().itemCount(1200l).build())
+                                .build());
 
         var result = handler.handleRequest(mock(ScheduledEvent.class), mock(Context.class));
 
@@ -62,8 +68,11 @@ class AccountMetricPublishHandlerTest {
                 .putEmbeddedValue("NumberOfAccounts", 5100, Map.of());
         verify(cloudwatchMetricsService, times(1))
                 .putEmbeddedValue("NumberOfVerifiedAccounts", 5000, Map.of());
+        verify(cloudwatchMetricsService, times(1))
+                .putEmbeddedValue("NumberOfPasskeys", 1200, Map.of());
         assertEquals(5100L, result.get("NumberOfAccounts"));
         assertEquals(5000L, result.get("NumberOfVerifiedAccounts"));
+        assertEquals(1200L, result.get("NumberOfPasskeys"));
     }
 
     @Test
