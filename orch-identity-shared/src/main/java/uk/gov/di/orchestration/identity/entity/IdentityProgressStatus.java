@@ -1,4 +1,4 @@
-package uk.gov.di.orchestration.shared.entity;
+package uk.gov.di.orchestration.identity.entity;
 
 public enum IdentityProgressStatus {
     COMPLETED,

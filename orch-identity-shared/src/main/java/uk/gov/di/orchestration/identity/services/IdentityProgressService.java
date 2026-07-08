@@ -1,14 +1,18 @@
-package uk.gov.di.orchestration.shared.services;
+package uk.gov.di.orchestration.identity.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.IdentityProgressStatus;
-import uk.gov.di.orchestration.shared.utils.IdentityProgressUtils;
+import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.identity.utils.IdentityProgressUtils;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.Metrics;
 
 import java.util.Map;
 
-import static uk.gov.di.orchestration.shared.entity.IdentityAuditableEvent.PROCESSING_IDENTITY_REQUEST;
+import static uk.gov.di.orchestration.identity.entity.IdentityAuditableEvent.PROCESSING_IDENTITY_REQUEST;
 
 public class IdentityProgressService {
 

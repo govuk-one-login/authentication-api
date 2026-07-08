@@ -1,41 +1,51 @@
-package uk.gov.di.orchestration.shared.helpers;
+package uk.gov.di.orchestration.identity.helpers;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
+import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.identity.exceptions.IdentityResponseValidationError;
+import uk.gov.di.orchestration.identity.services.IdentityProgressService;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.exceptions.IdentityResponseValidationError;
-import uk.gov.di.orchestration.shared.services.AccountInterventionService;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.IdentityCallbackException;
+import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
+import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.IdentityProgressService;
-import uk.gov.di.orchestration.shared.services.LogoutService;
-import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
-import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 
+import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static java.lang.String.format;
+import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
+import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
@@ -44,47 +54,38 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segme
 public class IdentityCallbackHelper {
     private static final Logger LOG = LogManager.getLogger(IdentityCallbackHelper.class);
     private final ConfigurationService configurationService;
-    private final OrchSessionService orchSessionService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
-    private final OrchClientSessionService orchClientSessionService;
-    private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
-    private final LogoutService logoutService;
-    private final AccountInterventionService accountInterventionService;
-    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final CommonFrontend frontend;
     private final IdentityProgressService identityProgressService;
+    private final TokenService tokenService;
+    private final OidcAPI oidcAPI;
 
     public IdentityCallbackHelper(
             ConfigurationService configurationService,
-            OrchSessionService orchSessionService,
             AuthenticationUserInfoStorageService authUserInfoStorageService,
-            OrchClientSessionService orchClientSessionService,
-            DynamoClientService dynamoClientService,
             AuditService auditService,
-            LogoutService logoutService,
-            AccountInterventionService accountInterventionService,
-            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             CommonFrontend frontend,
-            IdentityProgressService identityProgressService) {
+            IdentityProgressService identityProgressService,
+            TokenService tokenService,
+            OidcAPI oidcAPI) {
         this.configurationService = configurationService;
-        this.orchSessionService = orchSessionService;
         this.authUserInfoStorageService = authUserInfoStorageService;
-        this.orchClientSessionService = orchClientSessionService;
-        this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
-        this.logoutService = logoutService;
-        this.accountInterventionService = accountInterventionService;
-        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.frontend = frontend;
         this.identityProgressService = identityProgressService;
+        this.tokenService = tokenService;
+        this.oidcAPI = oidcAPI;
     }
 
-    public void test(
+    public APIGatewayProxyResponseEvent test(
             OrchSessionItem orchSession,
             OrchClientSessionItem orchClientSession,
             ClientRegistry clientRegistry,
-            String persistentId)
+            String persistentId,
+            String ipAddress,
+            String authCode,
+            AuthenticationRequest authRequest)
             throws Exception {
         var clientSessionId = orchClientSession.getClientSessionId();
         var sessionId = orchSession.getSessionId();
@@ -126,18 +127,15 @@ public class IdentityCallbackHelper {
                                         : authUserInfo.getPhoneNumber())
                         .withPersistentSessionId(persistentId);
 
-        auditService.submitAuditEvent(
-                IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
+        //        auditService.submitAuditEvent(
+        //                IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
         var tokenResponse =
-                segmentedFunctionCall(
-                        "getIpvToken",
-                        () ->
-                                ipvTokenService.getToken(
-                                        input.getQueryStringParameters().get("code")));
+                segmentedFunctionCall("getIpvToken", () -> tokenService.getToken(authCode));
         if (!tokenResponse.indicatesSuccess()) {
-            auditService.submitAuditEvent(
-                    IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
+            //            auditService.submitAuditEvent(
+            //                    IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+            // clientId, user);
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(),
                     new Exception(
@@ -145,11 +143,11 @@ public class IdentityCallbackHelper {
                                     "IPV TokenResponse was not successful: %s",
                                     tokenResponse.toErrorResponse().toJSONObject())));
         }
-        auditService.submitAuditEvent(
-                IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
+        //        auditService.submitAuditEvent(
+        //                IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
 
         var userIdentityUserInfo =
-                ipvTokenService.sendIpvUserIdentityRequest(
+                sendUserIdentityRequest(
                         new UserInfoRequest(
                                 ConstructUriHelper.buildURI(
                                         configurationService.getIPVBackendURI().toString(),
@@ -159,11 +157,11 @@ public class IdentityCallbackHelper {
                                         .getTokens()
                                         .getBearerAccessToken()));
 
-        auditService.submitAuditEvent(
-                IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientId, user);
+        //        auditService.submitAuditEvent(
+        //                IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientId,
+        // user);
         var vtrList = orchClientSession.getVtrList();
-        var userIdentityError =
-                ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
+        var userIdentityError = validateUserIdentityResponse(userIdentityUserInfo, vtrList);
         if (userIdentityError.isPresent()) {
             var aisResponseOpt =
                     checkForAisIntervention(orchSession, auditContext, input, clientId);
@@ -295,6 +293,7 @@ public class IdentityCallbackHelper {
             return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                     frontend.errorURI(), new Error("Failed to create redirectURI"));
         }
+        return null;
     }
 
     private static Optional<UserInfo> getAuthUserInfo(
@@ -360,5 +359,67 @@ public class IdentityCallbackHelper {
                 storedState.getValue(),
                 responseState.equals(storedState.getValue()));
         return responseState.equals(storedState.getValue());
+    }
+
+    public interface TokenService {
+        TokenResponse getToken(String authCode);
+    }
+
+    public UserInfo sendUserIdentityRequest(UserInfoRequest userInfoRequest)
+            throws UnsuccessfulCredentialResponseException {
+        try {
+            LOG.info("Sending IPV userinfo request");
+            int count = 0;
+            int maxTries = 2;
+            UserInfoResponse userIdentityResponse;
+            do {
+                if (count > 0) LOG.warn("Retrying IPV user identity request");
+                count++;
+                var httpResponse = userInfoRequest.toHTTPRequest().send();
+                userIdentityResponse = UserInfoResponse.parse(httpResponse);
+                if (!httpResponse.indicatesSuccess()) {
+                    LOG.warn(
+                            format(
+                                    "Unsuccessful %s response from IPV user identity endpoint on attempt %d: %s ",
+                                    httpResponse.getStatusCode(), count, httpResponse.getBody()));
+                }
+            } while (!userIdentityResponse.indicatesSuccess() && count < maxTries);
+
+            if (!userIdentityResponse.indicatesSuccess()) {
+                LOG.error("Response from user-identity does not indicate success");
+                throw new UnsuccessfulCredentialResponseException(
+                        userIdentityResponse.toErrorResponse().toString());
+            } else {
+                return userIdentityResponse.toSuccessResponse().getUserInfo();
+            }
+        } catch (ParseException e) {
+            LOG.error("Error when attempting to parse HTTPResponse to UserInfoResponse");
+            throw new UnsuccessfulCredentialResponseException(
+                    "Error when attempting to parse http response to UserInfoResponse");
+        } catch (IOException e) {
+            LOG.error("Error when attempting to call IPV user-identity endpoint", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Optional<ErrorObject> validateUserIdentityResponse(
+            UserInfo userIdentityUserInfo, List<VectorOfTrust> vtrList)
+            throws IdentityCallbackException {
+        LOG.info("Validating userinfo response");
+        for (VectorOfTrust vtr : vtrList) {
+            if (vtr.getLevelOfConfidence()
+                    .getValue()
+                    .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
+                var trustmarkURL = oidcAPI.trustmarkURI().toString();
+
+                if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+                    LOG.warn("VTM does not contain expected trustmark URL");
+                    throw new IdentityCallbackException("IPV trustmark is invalid");
+                }
+                return Optional.empty();
+            }
+        }
+        LOG.warn("IPV missing vot or vot not in vtr list.");
+        return Optional.of(OAuth2Error.ACCESS_DENIED);
     }
 }

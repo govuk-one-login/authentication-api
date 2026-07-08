@@ -1,13 +1,13 @@
-package uk.gov.di.orchestration.shared.utils;
+package uk.gov.di.orchestration.identity.utils;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.identity.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
-import uk.gov.di.orchestration.shared.entity.ProcessingIdentityStatus;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static uk.gov.di.orchestration.shared.utils.IdentityProgressUtils.getProcessingIdentityStatus;
+import static uk.gov.di.orchestration.identity.utils.IdentityProgressUtils.getProcessingIdentityStatus;
 
 class IdentityProgressUtilsTest {
     @Test

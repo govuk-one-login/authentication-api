@@ -1,0 +1,59 @@
+plugins {
+    id "java"
+    id "jacoco"
+    alias libs.plugins.pact
+}
+
+group = "uk.gov.di.orchestration.identity"
+version = "unspecified"
+
+dependencies {
+    compileOnly libs.awsKms,
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsSns,
+            libs.bundles.awsDynamoDb
+
+    implementation libs.govUkNotify,
+            libs.gson,
+            libs.bundles.nimbus,
+            libs.bouncyCastle,
+            libs.awsCloudwatchEmf,
+            libs.bundles.apache,
+            libs.jetbrainsAnnotations,
+            project(":orchestration-shared"),
+            project(":client-registry-api"),
+            project(":doc-checking-app-api"),
+            libs.crac
+
+    runtimeOnly platform(libs.openTelemetryBom),
+            libs.openTelemetryAwsSdk
+
+    testImplementation libs.bundles.test,
+            libs.awsLambdaTests,
+            project(":orchestration-shared-test"),
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.awsKms,
+            libs.bundles.awsDynamoDb,
+            libs.pactConsumer
+
+    testRuntimeOnly libs.bundles.testRuntime
+}
+
+test {
+    useJUnitPlatform()
+    environment "TRACING_ENABLED", "false"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+    dependsOn "test"
+}
