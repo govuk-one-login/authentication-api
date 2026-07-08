@@ -2,7 +2,7 @@ package uk.gov.di.authentication.ipv.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.orchestration.shared.entity.ProcessingIdentityStatus;
+import uk.gov.di.orchestration.identity.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.validation.Required;
 
 public class ProcessingIdentityResponse {

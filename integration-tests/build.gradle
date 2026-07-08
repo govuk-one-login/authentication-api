@@ -33,6 +33,7 @@ dependencies {
     implementation project(":client-registry-api"), noXray
     implementation project(":ipv-api"), noXray
     implementation project(":sis-api"), noXray
+    implementation project(":identity-shared"), noXray
     implementation project(":interventions-api-stub"), noXray
     implementation project(":doc-checking-app-api"), noXray
     implementation project(":utils"), noXray

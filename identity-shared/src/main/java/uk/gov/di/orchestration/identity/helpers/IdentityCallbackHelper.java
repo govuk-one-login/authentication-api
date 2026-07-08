@@ -397,7 +397,7 @@ public class IdentityCallbackHelper {
         return Optional.empty();
     }
 
-    public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
+    private AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
             AuthenticationRequest authRequest,
             OrchSessionItem orchSession,
             OrchClientSessionItem clientSession,
@@ -431,7 +431,7 @@ public class IdentityCallbackHelper {
                 internalPairwiseSubjectId);
     }
 
-    public AuthenticationSuccessResponse generateAuthenticationResponse(
+    private AuthenticationSuccessResponse generateAuthenticationResponse(
             AuthenticationRequest authRequest,
             OrchSessionItem orchSession,
             String clientSessionId,
@@ -525,7 +525,7 @@ public class IdentityCallbackHelper {
         metrics.increment("orchJourneyCompleted", Map.of("journeyType", "identity"));
     }
 
-    public void saveIdentityClaimsToDynamo(
+    private void saveIdentityClaimsToDynamo(
             String clientSessionId,
             Subject rpPairwiseSubject,
             UserInfo userIdentityUserInfo,
@@ -558,7 +558,7 @@ public class IdentityCallbackHelper {
                 spotQueuedAt);
     }
 
-    public void queueSPOTRequest(
+    private void queueSPOTRequest(
             LogIds logIds,
             String sectorIdentifier,
             UserInfo authUserInfo,
