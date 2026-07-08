@@ -20,6 +20,7 @@ import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.identity.entity.LogIds;
 import uk.gov.di.orchestration.identity.entity.SPOTClaims;
 import uk.gov.di.orchestration.identity.entity.SPOTRequest;
+import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
 import uk.gov.di.orchestration.identity.services.IdentityProgressService;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
@@ -32,6 +33,7 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
@@ -121,7 +123,7 @@ public class IdentityCallbackHelper {
         this.auditEventConfiguration = auditEventConfiguration;
     }
 
-    public APIGatewayProxyResponseEvent test(
+    public APIGatewayProxyResponseEvent performIdentityJourney(
             OrchSessionItem orchSession,
             OrchClientSessionItem orchClientSession,
             ClientRegistry clientRegistry,
@@ -130,7 +132,9 @@ public class IdentityCallbackHelper {
             String authCode,
             AuthenticationRequest authRequest,
             String awsRequestId)
-            throws Exception {
+            throws IdentityCallbackException,
+                    UnsuccessfulCredentialResponseException,
+                    InterruptedException {
         var clientSessionId = orchClientSession.getClientSessionId();
         var sessionId = orchSession.getSessionId();
         var clientId = clientRegistry.getClientID();
@@ -138,7 +142,7 @@ public class IdentityCallbackHelper {
                 getAuthUserInfo(
                                 orchSession.getInternalCommonSubjectId(),
                                 orchClientSession.getClientSessionId())
-                        .orElseThrow(() -> new /*IpvCallback*/ Exception("authUserInfo not found"));
+                        .orElseThrow(() -> new IdentityCallbackException("authUserInfo not found"));
 
         var auditContext =
                 new AuditContext(
