@@ -9,6 +9,7 @@ data "aws_iam_policy_document" "account_metrics_dynamo_access" {
 
     resources = [
       data.aws_dynamodb_table.user_profile.arn,
+      data.aws_dynamodb_table.authenticator.arn,
     ]
   }
 
@@ -23,12 +24,16 @@ data "aws_iam_policy_document" "account_metrics_dynamo_access" {
       "kms:CreateGrant",
       "kms:DescribeKey",
     ]
-    resources = [local.user_profile_kms_key_arn]
+    resources = [local.user_profile_kms_key_arn, local.authenticator_kms_key_arn]
   }
 }
 
 data "aws_dynamodb_table" "user_profile" {
   name = "${var.environment}-user-profile"
+}
+
+data "aws_dynamodb_table" "authenticator" {
+  name = "${var.environment}-authenticator"
 }
 
 resource "aws_iam_policy" "account_metrics_dynamo_access" {
