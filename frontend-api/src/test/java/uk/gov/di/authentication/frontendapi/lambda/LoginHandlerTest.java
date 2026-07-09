@@ -17,13 +17,16 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
+import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.mfa.AuthAppMfaMethodResponse;
 import uk.gov.di.authentication.frontendapi.entity.mfa.MfaMethodResponse;
 import uk.gov.di.authentication.frontendapi.entity.mfa.SmsMfaMethodResponse;
 import uk.gov.di.authentication.frontendapi.serialization.MfaMethodResponseAdapter;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
+import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
+import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -78,12 +81,18 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper.redactPhoneNumber;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSWORD_REHASH_COMPLETED;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_EMAIL;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_MFA_CODE;
+import static uk.gov.di.authentication.shared.entity.CountType.ENTER_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
@@ -102,6 +111,7 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VAL
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.userpermissions.entity.ForbiddenReason.EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT;
 
 class LoginHandlerTest {
 
@@ -868,6 +878,111 @@ class LoginHandlerTest {
     }
 
     @Nested
+    class Reauth {
+        private static final int MAX_ALLOWED_RETRIES = 6;
+        private static final String TEST_RP_PAIRWISE_ID =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        INTERNAL_SUBJECT_ID.getValue(), SECTOR_IDENTIFIER_HOST, SALT);
+
+        @Test
+        void shouldReturn400AndReportReauthFailureWhenUserAlreadyLockedOut() {
+            UserProfile userProfile = generateUserProfile(null);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+
+            var detailedCounts =
+                    Map.of(
+                            ENTER_EMAIL, 1,
+                            ENTER_PASSWORD, 2,
+                            ENTER_MFA_CODE, 3);
+
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(reauthLockedOutDecision(detailedCounts)));
+
+            usingValidAuthSession();
+            usingApplicableUserCredentialsWithLogin(SMS, true);
+
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+
+            verifyReauthFailedReported(
+                    detailedCounts, ReauthFailureReasons.INCORRECT_PASSWORD.getValue());
+        }
+
+        @Test
+        void
+                shouldReturn400AndReportReauthFailureWhenUserEntersIncorrectCredentialsAndGetsLockedOut() {
+            UserProfile userProfile = generateUserProfile(null);
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+
+            var detailedCounts =
+                    Map.of(
+                            ENTER_EMAIL, 0,
+                            ENTER_PASSWORD, MAX_ALLOWED_RETRIES,
+                            ENTER_MFA_CODE, 0);
+
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(new Decision.Permitted(MAX_ALLOWED_RETRIES - 1)))
+                    .thenReturn(Result.success(reauthLockedOutDecision(detailedCounts)));
+
+            usingValidAuthSession();
+            usingApplicableUserCredentialsWithLogin(SMS, false);
+
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithReauthJourney);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
+
+            verifyReauthFailedReported(detailedCounts, "incorrect_password");
+        }
+
+        private void verifyReauthFailedReported(
+                Map<CountType, Integer> detailedCounts, String expectedFailureReason) {
+            verify(auditService, times(1))
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                    ENCODED_DEVICE_DETAILS),
+                            pair("rpPairwiseId", TEST_RP_PAIRWISE_ID),
+                            pair("incorrect_email_attempt_count", detailedCounts.get(ENTER_EMAIL)),
+                            pair(
+                                    "incorrect_password_attempt_count",
+                                    detailedCounts.get(ENTER_PASSWORD)),
+                            pair(
+                                    "incorrect_otp_code_attempt_count",
+                                    detailedCounts.get(ENTER_MFA_CODE)),
+                            pair("failure-reason", expectedFailureReason));
+            var expectedDimensions =
+                    Map.ofEntries(
+                            Map.entry(
+                                    ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                            Map.entry(FAILURE_REASON.getValue(), expectedFailureReason));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.REAUTH_FAILED.getValue(), expectedDimensions);
+        }
+
+        private Decision reauthLockedOutDecision(Map<CountType, Integer> detailedCounts) {
+            return new Decision.ReauthLockedOut(
+                    EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                    MAX_ALLOWED_RETRIES,
+                    Instant.now().plusSeconds(900),
+                    false,
+                    detailedCounts,
+                    java.util.List.of(ENTER_EMAIL));
+        }
+    }
+
+    @Nested
     class PasswordRehashing {
         @Test
         void shouldRehashPasswordWhenFlagEnabledAndParamsDiffer() {
@@ -990,7 +1105,8 @@ class LoginHandlerTest {
                                         .withRequestedCredentialStrength(
                                                 requestedCredentialStrength)
                                         .withClientName(CLIENT_NAME)
-                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)));
+                                        .withRpSectorIdentifierHost(SECTOR_IDENTIFIER_HOST)
+                                        .withInternalCommonSubjectId(expectedCommonSubject)));
     }
 
     private void usingValidAuthSessionInSmokeTest() {
