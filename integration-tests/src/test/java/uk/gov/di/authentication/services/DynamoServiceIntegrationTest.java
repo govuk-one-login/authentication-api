@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -249,7 +250,6 @@ class DynamoServiceIntegrationTest {
         @MethodSource("existingMFAs")
         @ParameterizedTest
         void shouldDeleteAllMigratedMfaMethods(MFAMethod mfaMethod, MFAMethod mfaMethod2) {
-            userStore.signUp(TEST_EMAIL, "password-1", new Subject("1111"));
             userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod);
             if (mfaMethod2 != null) {
                 userStore.addMfaMethodSupportingMultiple(TEST_EMAIL, mfaMethod2);
@@ -975,6 +975,15 @@ class DynamoServiceIntegrationTest {
         assertFalse(userProfileAfterUpdate.isMfaMethodsMigrated());
         assertTrue(userProfileAfterUpdate.isPhoneNumberVerified());
         assertEquals(phoneNumber, userProfileAfterUpdate.getPhoneNumber());
+    }
+
+    @Test
+    void shouldThrowErrorOnSignUpForADuplicateEmailAddress() {
+        userStore.signUp("duplicate@example.com", "password-1");
+
+        assertThrows(
+                ConditionalCheckFailedException.class,
+                () -> userStore.signUp("duplicate@example.com", "password-2"));
     }
 
     private void signUpWithPhoneNumber(String email, String subjectId, String phoneNumber) {
