@@ -886,9 +886,7 @@ class LoginHandlerTest {
 
         @Test
         void shouldReturn400AndReportReauthFailureWhenUserAlreadyLockedOut() {
-            UserProfile userProfile = generateUserProfile(null);
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
+            setupExistingUserInDatabase(EMAIL);
 
             var detailedCounts =
                     Map.of(
@@ -917,9 +915,7 @@ class LoginHandlerTest {
         @Test
         void
                 shouldReturn400AndReportReauthFailureWhenUserEntersIncorrectCredentialsAndGetsLockedOut() {
-            UserProfile userProfile = generateUserProfile(null);
-            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                    .thenReturn(Optional.of(userProfile));
+            setupExistingUserInDatabase(EMAIL);
 
             var detailedCounts =
                     Map.of(
