@@ -140,6 +140,7 @@ Mappings:
     authdev1:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d41a1b95-0291-4477-93f7-f1428ceef646
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c4d54754-4c7f-47d2-b54f-4868342b3660
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
@@ -171,6 +172,7 @@ Mappings:
     authdev2:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/88707a9b-53c9-4ad6-ab54-b03b1bf21321
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
@@ -202,6 +204,7 @@ Mappings:
     authdev3:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3a47bbdd-4144-4d1a-959f-56b928fcfe3c
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e3d591b4-d295-4041-b8f0-f5eb71742014
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ab3306cf-843a-423d-96f8-4c88e3fa1906
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9d378f4a-de27-486a-93a4-56515d9ab372
@@ -233,6 +236,7 @@ Mappings:
     dev:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c6a2fb5e-c92b-4129-bc0c-d75b2b72bae8
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/2e7ec5d4-f4b7-4342-a5d6-15952fd9111b
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/348c86dd-4507-4472-ab33-ee7448ce8959
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
@@ -264,6 +268,7 @@ Mappings:
     build:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3c2113fe-9f53-4bed-a46f-c53f02f6c117
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/db350f01-bce4-4da8-9323-e70267569bd8
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2c3850f1-c841-487c-8236-746f01ff707d
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c6826c50-04a2-450a-95c5-0e1309b74d0e
@@ -295,6 +300,7 @@ Mappings:
     staging:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed6c6a2d-866f-4e2e-9ebd-c499ce9513c6
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/9c0cc476-e831-4ebf-81e6-c619e6b795e8
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed0ff55f-0ab2-463e-9c76-56be7052a436
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c289d5e1-1fd7-4629-9f3d-c059aabed970
@@ -326,6 +332,7 @@ Mappings:
     integration:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/743b2818-03fd-4414-bfaf-6aa8a4bb4e45
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/85164499-9392-458c-8596-b5a810ca90f6
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
@@ -357,6 +364,7 @@ Mappings:
     production:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
+      authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/b380ea74-d240-4500-b02b-f5c3d414e34e
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/aca649a0-488b-4696-b94a-49156254afd2
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
@@ -921,6 +929,54 @@ Resources:
                     EnvironmentConfiguration,
                     !Ref Environment,
                     userProfileTableEncryptionKey,
+                  ]
+
+  DynamoAuthenticatorDescribeAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "IAM policy for managing DescribeTable permissions to the authenticator table"
+      Path: !Sub
+        - /${Env}/utils/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDescribeAccessToAuthenticatorTable
+            Effect: Allow
+            Action:
+              - dynamodb:DescribeTable
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToKms
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    authenticatorTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    authenticatorTableEncryptionKey,
                   ]
 
   # Policy for common_passwords table read write access with KMS

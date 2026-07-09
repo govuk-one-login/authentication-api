@@ -24,6 +24,7 @@ Resources:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoCredentialReadAccessPolicy
+        - !Ref DynamoAuthenticatorDescribeAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
       AutoPublishAlias: live
       LoggingConfig:
