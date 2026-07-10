@@ -8,7 +8,8 @@ public record UserWithoutPhone(
         String ipAddress,
         String persistentSessionId,
         String sessionId,
-        String userId) {
+        String userId,
+        String publicSubjectId) {
     public static UserWithoutPhone fromAuditContext(AuditContext auditContext) {
         return new UserWithoutPhone(
                 auditContext.email(),
@@ -16,6 +17,19 @@ public record UserWithoutPhone(
                 auditContext.ipAddress(),
                 auditContext.persistentSessionId(),
                 auditContext.sessionId(),
-                auditContext.subjectId());
+                auditContext.subjectId(),
+                null);
+    }
+
+    public static UserWithoutPhone fromAuditContext(
+            AuditContext auditContext, String publicSubjectId) {
+        return new UserWithoutPhone(
+                auditContext.email(),
+                auditContext.clientSessionId(),
+                auditContext.ipAddress(),
+                auditContext.persistentSessionId(),
+                auditContext.sessionId(),
+                auditContext.subjectId(),
+                publicSubjectId);
     }
 }
