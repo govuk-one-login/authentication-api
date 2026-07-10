@@ -16,6 +16,9 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthCodeVerified;
+import uk.gov.di.authentication.auditevents.entity.ComponentId;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -39,12 +42,12 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaUpdateFailure;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_SWITCH_FAILED;
@@ -59,6 +62,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -84,6 +88,7 @@ public class MFAMethodsPutHandler
     private final MfaMethodsMigrationService mfaMethodsMigrationService;
     private final AuditService auditService;
     private final DynamoService dynamoService;
+    private final StructuredAuditService structuredAuditService;
 
     private final Json serialisationService = SerializationService.getInstance();
 
@@ -105,6 +110,7 @@ public class MFAMethodsPutHandler
         this.auditService = new AuditService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
         this.mfaMethodsMigrationService = new MfaMethodsMigrationService(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     public MFAMethodsPutHandler(
@@ -115,7 +121,8 @@ public class MFAMethodsPutHandler
             AwsSqsClient sqsClient,
             AuditService auditService,
             DynamoService dynamoService,
-            MfaMethodsMigrationService mfaMethodsMigrationService) {
+            MfaMethodsMigrationService mfaMethodsMigrationService,
+            StructuredAuditService structuredAuditService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.authenticationService = authenticationService;
@@ -124,6 +131,7 @@ public class MFAMethodsPutHandler
         this.auditService = auditService;
         this.dynamoService = dynamoService;
         this.mfaMethodsMigrationService = mfaMethodsMigrationService;
+        this.structuredAuditService = structuredAuditService;
     }
 
     @Override
@@ -226,12 +234,7 @@ public class MFAMethodsPutHandler
                 putRequest.request.mfaMethod().priorityIdentifier().equals(DEFAULT)
                         && putRequest.request.mfaMethod().method() == null;
         if (!isSwitch) {
-            var maybeAuditEventStatus =
-                    sendAuditEvent(
-                            AUTH_CODE_VERIFIED,
-                            putRequest,
-                            mfaMethodResult.mfaMethod(),
-                            auditContext);
+            var maybeAuditEventStatus = sendAuthCodeVerifiedEvent(putRequest, auditContext);
             if (maybeAuditEventStatus.isFailure()) {
                 return maybeAuditEventStatus.getFailure();
             }
@@ -551,6 +554,50 @@ public class MFAMethodsPutHandler
             }
             default -> Result.success(null);
         };
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendAuthCodeVerifiedEvent(
+            ValidPutRequest putRequest, AuditContext auditContext) {
+        try {
+            var requestedMethod = putRequest.request.mfaMethod();
+
+            String mfaCodeEntered = null;
+            String notificationType = null;
+            if (requestedMethod.method() instanceof RequestSmsMfaDetail requestSmsMfaDetail
+                    && requestSmsMfaDetail.otp() != null) {
+                mfaCodeEntered = requestSmsMfaDetail.otp();
+                notificationType = MFA_SMS.name();
+            }
+
+            var priority = requestedMethod.priorityIdentifier().name().toLowerCase();
+            var mfaType = requestedMethod.method().mfaMethodType().toString();
+
+            var extensions =
+                    new AuthCodeVerified.Extensions(
+                            notificationType,
+                            null,
+                            "false",
+                            ACCOUNT_MANAGEMENT.getValue(),
+                            mfaCodeEntered,
+                            mfaType,
+                            priority);
+
+            var event =
+                    AuthCodeVerified.create(
+                            auditContext,
+                            putRequest.publicSubjectId(),
+                            ComponentId.HOME,
+                            extensions,
+                            Clock.systemUTC());
+            structuredAuditService.submitAuditEvent(event);
+        } catch (Exception e) {
+            LOG.error("Error submitting audit event", e);
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT));
+        }
+
+        return Result.success(null);
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> sendAuditEvent(
