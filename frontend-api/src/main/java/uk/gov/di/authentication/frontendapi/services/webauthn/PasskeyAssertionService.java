@@ -59,7 +59,8 @@ public class PasskeyAssertionService {
     public Result<FinishPasskeyAssertionFailureReason, AssertionResult> finishAssertion(
             String assertionRequestJson,
             String publicKeyCredentialJson,
-            AuditContext auditContext) {
+            AuditContext auditContext,
+            String publicSubjectId) {
         PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
                 credential;
         try {
@@ -104,7 +105,7 @@ public class PasskeyAssertionService {
         }
 
         emitAuthPasskeyVerificationSuccessEvent(
-                auditContext, assertionRequest, assertionResult, credential);
+                auditContext, assertionRequest, assertionResult, credential, publicSubjectId);
 
         return Result.success(assertionResult);
     }
@@ -166,7 +167,8 @@ public class PasskeyAssertionService {
             AssertionRequest assertionRequest,
             AssertionResult assertionResult,
             PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs>
-                    publicKeyCredential) {
+                    publicKeyCredential,
+            String publicSubjectId) {
         var passkeyDetail =
                 PasskeyDetail.verificationSuccessful(
                         userVerificationStringFrom(assertionRequest),
@@ -180,6 +182,7 @@ public class PasskeyAssertionService {
                         passkeyAllowedCredentialsFrom(assertionRequest),
                         passkeyDetail,
                         publicKeyCredential.getId().getBase64Url(),
+                        publicSubjectId,
                         Clock.systemUTC());
         structuredAuditService.submitAuditEvent(event);
     }

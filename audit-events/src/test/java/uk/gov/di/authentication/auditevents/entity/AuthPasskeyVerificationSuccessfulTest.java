@@ -44,6 +44,7 @@ class AuthPasskeyVerificationSuccessfulTest {
                         passkeyAllowCredentials,
                         passkey,
                         "credential-1",
+                        "urn:fdc:gov.uk:2022:public-subject-id",
                         fixedClock);
 
         var actualEvent = event.serialize();
@@ -62,7 +63,8 @@ class AuthPasskeyVerificationSuccessfulTest {
                     "ip_address": "192.0.2.0/24",
                     "persistent_session_id": "persistent-session-id",
                     "session_id": "session-id",
-                    "user_id": "internal-common-subject-id"
+                    "user_id": "internal-common-subject-id",
+                    "public_subject_id": "urn:fdc:gov.uk:2022:public-subject-id"
                   },
                   "restricted": {
                     "device_information": {
