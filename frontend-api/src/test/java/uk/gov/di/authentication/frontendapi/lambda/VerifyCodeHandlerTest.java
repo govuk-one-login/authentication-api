@@ -17,6 +17,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthCodeVerified;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaResetType;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
@@ -65,6 +67,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -153,6 +156,8 @@ class VerifyCodeHandlerTest {
                     .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final DynamoAccountModifiersService accountModifiersService =
@@ -208,7 +213,8 @@ class VerifyCodeHandlerTest {
                         authSessionService,
                         mfaMethodsService,
                         userActionsManager,
-                        testUserHelper);
+                        testUserHelper,
+                        structuredAuditService);
 
         when(authenticationService.getUserProfileFromEmail(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -277,19 +283,21 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(EMAIL, emailNotificationType);
         verifyNoInteractions(accountModifiersService);
         verify(authSessionService).updateSession(any(AuthSessionItem.class));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT,
-                        pair("notification-type", emailNotificationType.name()),
-                        pair(
-                                "account-recovery",
-                                emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
-                        pair(
-                                "journey-type",
-                                emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
-                                        ? "ACCOUNT_RECOVERY"
-                                        : "REGISTRATION"));
+
+        var expectedExtensions =
+                new AuthCodeVerified.Extensions(
+                        emailNotificationType.name(),
+                        null,
+                        emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES),
+                        emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                                ? "ACCOUNT_RECOVERY"
+                                : "REGISTRATION",
+                        null,
+                        null,
+                        null);
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
         Arrays.stream(CountType.values())
                 .forEach(
                         countType ->
@@ -315,19 +323,20 @@ class VerifyCodeHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT.withTxmaAuditEncoded(AuditService.UNKNOWN),
-                        pair("notification-type", emailNotificationType.name()),
-                        pair(
-                                "account-recovery",
-                                emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
-                        pair(
-                                "journey-type",
-                                emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
-                                        ? "ACCOUNT_RECOVERY"
-                                        : "REGISTRATION"));
+
+        var expectedExtensions =
+                new AuthCodeVerified.Extensions(
+                        emailNotificationType.name(),
+                        null,
+                        emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES),
+                        emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                                ? "ACCOUNT_RECOVERY"
+                                : "REGISTRATION",
+                        null,
+                        null,
+                        null);
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
     }
 
     @ParameterizedTest
@@ -409,13 +418,12 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT_FOR_TEST_CLIENT.withEmail(email),
-                        pair("notification-type", VERIFY_EMAIL.name()),
-                        pair("account-recovery", false),
-                        pair("journey-type", "REGISTRATION"));
+
+        var expectedExtensions =
+                new AuthCodeVerified.Extensions(
+                        VERIFY_EMAIL.name(), null, false, "REGISTRATION", null, null, null);
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
     }
 
     @ParameterizedTest
@@ -444,13 +452,11 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT_FOR_TEST_CLIENT.withEmail(email),
-                        pair("notification-type", VERIFY_EMAIL.name()),
-                        pair("account-recovery", false),
-                        pair("journey-type", "REGISTRATION"));
+        var expectedExtensions =
+                new AuthCodeVerified.Extensions(
+                        VERIFY_EMAIL.name(), null, false, "REGISTRATION", null, null, null);
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
         verifyNoInteractions(authenticationAttemptsService);
     }
 
@@ -607,19 +613,19 @@ class VerifyCodeHandlerTest {
         verify(authSessionService, atLeastOnce())
                 .updateSession(
                         argThat(s -> s.getAchievedCredentialStrength().equals(MEDIUM_LEVEL)));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT,
-                        pair("mfa-method", "default"),
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("account-recovery", false),
-                        pair(
-                                "journey-type",
-                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("loginFailureCount", MAX_RETRIES - 1),
-                        pair("MFACodeEntered", "123456"));
+
+        var expectedExtensions =
+                new AuthCodeVerified.Extensions(
+                        MFA_SMS.name(),
+                        MAX_RETRIES - 1,
+                        false,
+                        journeyType != null ? String.valueOf(journeyType) : "SIGN_IN",
+                        CODE,
+                        MFAMethodType.SMS.getValue(),
+                        "default");
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED,
@@ -664,17 +670,18 @@ class VerifyCodeHandlerTest {
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService)
                 .deleteOtpCode(EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT,
-                        pair("mfa-method", "backup"),
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("account-recovery", false),
-                        pair("journey-type", "SIGN_IN"),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("loginFailureCount", MAX_RETRIES - 1),
-                        pair("MFACodeEntered", "123456"));
+
+        var expectedExtensions =
+                new AuthCodeVerified.Extensions(
+                        MFA_SMS.name(),
+                        MAX_RETRIES - 1,
+                        false,
+                        "SIGN_IN",
+                        CODE,
+                        MFAMethodType.SMS.getValue(),
+                        "backup");
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
     }
 
     @Test
@@ -697,17 +704,19 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService)
                 .deleteOtpCode(EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                        AUDIT_CONTEXT,
-                        pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("account-recovery", false),
-                        pair("journey-type", "SIGN_IN"),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("loginFailureCount", MAX_RETRIES - 1),
-                        pair("MFACodeEntered", "123456"));
+
+        var expectedExtensions =
+                new AuthCodeVerified.Extensions(
+                        MFA_SMS.name(),
+                        MAX_RETRIES - 1,
+                        false,
+                        "SIGN_IN",
+                        CODE,
+                        MFAMethodType.SMS.getValue(),
+                        "default");
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccessWithMfa(
                         AuthSessionItem.AccountState.EXISTING,
@@ -1306,5 +1315,11 @@ class VerifyCodeHandlerTest {
                                     MFA_RESET_TYPE.getValue(),
                                     MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
         }
+    }
+
+    private AuthCodeVerified captureAuthCodeVerifiedEvent() {
+        var argCaptor = ArgumentCaptor.forClass(AuthCodeVerified.class);
+        verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+        return argCaptor.getValue();
     }
 }

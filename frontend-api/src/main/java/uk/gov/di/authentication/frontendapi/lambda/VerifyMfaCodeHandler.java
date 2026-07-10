@@ -7,6 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthCodeVerified;
+import uk.gov.di.authentication.auditevents.entity.ComponentId;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -51,6 +54,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -95,6 +99,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final MFAMethodsService mfaMethodsService;
     private final UserActionsManager userActionsManager;
     private final TestUserHelper testUserHelper;
+    private final StructuredAuditService structuredAuditService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -107,7 +112,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             UserActionsManager userActionsManager,
-            TestUserHelper testUserHelper) {
+            TestUserHelper testUserHelper,
+            StructuredAuditService structuredAuditService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -121,6 +127,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.mfaMethodsService = mfaMethodsService;
         this.userActionsManager = userActionsManager;
         this.testUserHelper = testUserHelper;
+        this.structuredAuditService = structuredAuditService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -146,6 +153,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -168,6 +176,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.authenticationAttemptsService =
                 new AuthenticationAttemptsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     @Override
@@ -393,7 +402,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
             auditFailure(codeRequest, errorResponse, authSession, auditContext, activeMfaMethod);
         } else {
-            auditSuccess(codeRequest, authSession, auditContext, activeMfaMethod);
+            auditSuccess(codeRequest, auditContext, activeMfaMethod, userProfile);
 
             processSuccessfulCodeSession(
                     userContext.getAuthSession(),
@@ -431,16 +440,45 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     private void auditSuccess(
             VerifyMfaCodeRequest codeRequest,
-            AuthSessionItem authSession,
             AuditContext auditContext,
-            Optional<MFAMethod> activeMfaMethod) {
-        var metadataPairs =
-                metadataPairsForEvent(
-                        AUTH_CODE_VERIFIED,
-                        authSession.getEmailAddress(),
-                        codeRequest,
-                        activeMfaMethod);
-        auditService.submitAuditEvent(AUTH_CODE_VERIFIED, auditContext, metadataPairs);
+            Optional<MFAMethod> activeMfaMethod,
+            UserProfile userProfile) {
+        var methodType = codeRequest.getMfaMethodType();
+        var journeyType = codeRequest.getJourneyType();
+
+        String notificationType = null;
+        if (MFAMethodType.SMS.getValue().equals(methodType.getValue())) {
+            notificationType =
+                    getNotificationTypeFromJourney(codeRequest)
+                            .map(Enum::name)
+                            .orElse(AuditService.UNKNOWN);
+        }
+
+        String mfaMethod =
+                getPriorityIdentifier(codeRequest, activeMfaMethod)
+                        .map(id -> id.name().toLowerCase())
+                        .orElse(null);
+
+        var extensions =
+                new AuthCodeVerified.Extensions(
+                        notificationType,
+                        null,
+                        journeyType == JourneyType.ACCOUNT_RECOVERY,
+                        String.valueOf(journeyType),
+                        codeRequest.getCode(),
+                        methodType.getValue(),
+                        mfaMethod);
+
+        var publicSubjectId = userProfile != null ? userProfile.getPublicSubjectID() : null;
+
+        var event =
+                AuthCodeVerified.create(
+                        auditContext,
+                        publicSubjectId,
+                        ComponentId.AUTH,
+                        extensions,
+                        Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(event);
     }
 
     private void auditFailure(
