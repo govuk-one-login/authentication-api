@@ -112,7 +112,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  PublishOldExternalTokenSigningKeys: !Equals [production, !Ref Environment]
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
@@ -3409,10 +3408,7 @@ Resources:
             ]
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
-          PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: !If
-            - PublishOldExternalTokenSigningKeys
-            - true
-            - false
+          PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: false
           DOC_APP_SIGNING_KEY_ALIAS: !Ref OrchDocAppSigningKmsKeyAlias
       Policies:
         - !Ref IdTokenKmsAccessPolicy
@@ -4045,10 +4041,7 @@ Resources:
             - UseStoredOldIdTokenPublicKeys
             - true
             - false
-          PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: !If
-            - PublishOldExternalTokenSigningKeys
-            - true
-            - false
+          PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: false
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
