@@ -1571,11 +1571,6 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             }
 
             @Override
-            public boolean isAuthenticationAttemptsServiceEnabled() {
-                return true;
-            }
-
-            @Override
             public boolean isForcedMFAResetAfterMFACheckEnabled() {
                 return true;
             }

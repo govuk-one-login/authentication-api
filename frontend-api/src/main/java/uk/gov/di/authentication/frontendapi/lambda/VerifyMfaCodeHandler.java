@@ -249,9 +249,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserProfile userProfile,
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId) {
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                && REAUTHENTICATION.equals(journeyType)
-                && userProfile != null) {
+        if (REAUTHENTICATION.equals(journeyType) && userProfile != null) {
             var counts =
                     maybeRpPairwiseId.isEmpty()
                             ? authenticationAttemptsService.getCountsByJourney(
@@ -381,9 +379,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         codeRequest.getJourneyType());
             }
 
-            if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest)
-                    && configurationService.isAuthenticationAttemptsServiceEnabled()
-                    && subjectId != null) {
+            if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest) && subjectId != null) {
                 authenticationAttemptsService.createOrIncrementCount(
                         subjectId,
                         NowHelper.nowPlus(
@@ -553,9 +549,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Optional<String> maybeRpPairwiseId,
             UserProfile userProfile) {
 
-        if (configurationService.isAuthenticationAttemptsServiceEnabled()
-                && codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP
-                && subjectId != null) {
+        if (codeRequest.getMfaMethodType() == MFAMethodType.AUTH_APP && subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
                     codeRequest.getJourneyType(), subjectId, authSession, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
@@ -615,8 +609,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             String subjectId,
             AuthSessionItem authSession,
             Optional<String> maybeRpPairwiseId) {
-        if (journeyType == REAUTHENTICATION
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+        if (journeyType == REAUTHENTICATION) {
             var counts =
                     maybeRpPairwiseId.isPresent()
                             ? authenticationAttemptsService
