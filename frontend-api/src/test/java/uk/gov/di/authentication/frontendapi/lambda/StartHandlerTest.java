@@ -55,7 +55,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
@@ -219,28 +218,6 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldNotCallAuthenticationAttemptsServiceWhenFeatureFlagIsOff()
-            throws Json.JsonException {
-        var isAuthenticated = false;
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(false);
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-
-        // This should not be called. Setup here is to ensure that the feature flag is determining
-        // this test's behaviour
-        when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
-                        any(), any(), any()))
-                .thenReturn(Map.of(CountType.ENTER_PASSWORD, 100));
-
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        useValidSession();
-        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, isAuthenticated);
-        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
-        handler.handleRequest(event, context);
-
-        verifyNoInteractions(authenticationAttemptsService);
-    }
-
-    @Test
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
         var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
@@ -392,7 +369,6 @@ class StartHandlerTest {
             throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
@@ -616,7 +592,6 @@ class StartHandlerTest {
     void shouldHandleReauthWithBlockedCountTypesButNoSubjectId() throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, true, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
 
         // Mock session with no internal subject ID
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
@@ -795,7 +770,6 @@ class StartHandlerTest {
     void shouldHandleNullFailureReasonInCloudwatchMetrics() throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
@@ -825,29 +799,6 @@ class StartHandlerTest {
         // Should handle null failure reason and use "unknown"
         verify(cloudwatchMetricsService)
                 .incrementCounter(eq(CloudwatchMetrics.REAUTH_FAILED.getValue()), any(Map.class));
-    }
-
-    @Test
-    void shouldHandleReauthWhenAttemptsServiceDisabled() throws Json.JsonException {
-        var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        when(configurationService.isAuthenticationAttemptsServiceEnabled())
-                .thenReturn(false); // Disabled
-        useValidSession();
-
-        var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
-        var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(200));
-        // Should not call authentication attempts service when disabled
-        verifyNoInteractions(authenticationAttemptsService);
-        // Should still emit reauth requested event
-        verify(auditService)
-                .submitAuditEvent(
-                        eq(FrontendAuditableEvent.AUTH_REAUTH_REQUESTED),
-                        any(),
-                        any(AuditService.MetadataPair[].class));
     }
 
     @Test
