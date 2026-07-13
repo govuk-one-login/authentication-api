@@ -141,7 +141,11 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
   DeployMigratedRecords:
-    !Or [!Equals [dev, !Ref Environment], !Equals [build, !Ref Environment]]
+    !Or [
+      !Equals [dev, !Ref Environment],
+      !Equals [build, !Ref Environment],
+      !Equals [staging, !Ref Environment],
+    ]
   SwapLiveTrafficToCloudfront:
     !And [
       !Condition DeployMigratedRecords,
