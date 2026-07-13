@@ -905,7 +905,6 @@ class VerifyMfaCodeHandlerTest {
         void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes(
                 JourneyType journeyType, CodeRequestType codeRequestType)
                 throws Json.JsonException {
-            withReauthTurnedOn();
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(authAppCodeProcessor));
             when(authAppCodeProcessor.validateCode())
@@ -998,7 +997,6 @@ class VerifyMfaCodeHandlerTest {
             verify(codeStorageService, never())
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verifyNoInteractions(cloudwatchMetricsService);
-            verifyNoInteractions(authenticationAttemptsService);
             assertAuditEventSubmittedWithMetadata(
                     FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED,
                     pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
@@ -1046,7 +1044,6 @@ class VerifyMfaCodeHandlerTest {
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             verifyNoInteractions(cloudwatchMetricsService);
-            verifyNoInteractions(authenticationAttemptsService);
 
             ArgumentCaptor<AuditService.MetadataPair[]> metadataCaptor =
                     ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
@@ -1088,7 +1085,6 @@ class VerifyMfaCodeHandlerTest {
         void shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeTooManyTimes(
                 JourneyType journeyType, CodeRequestType codeRequestType)
                 throws Json.JsonException {
-            withReauthTurnedOn();
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode())
@@ -1311,7 +1307,6 @@ class VerifyMfaCodeHandlerTest {
         long ttl = 3600L;
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
         when(authAppCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED));
         when(configurationService.getReauthEnterAuthAppCodeCountTTL()).thenReturn(ttl);
@@ -1337,7 +1332,6 @@ class VerifyMfaCodeHandlerTest {
                     throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
@@ -1376,7 +1370,6 @@ class VerifyMfaCodeHandlerTest {
                     throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        withReauthTurnedOn();
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
 
         var existingCounts = Map.of(CountType.ENTER_PASSWORD, 5, ENTER_MFA_CODE, 4);
@@ -1433,7 +1426,6 @@ class VerifyMfaCodeHandlerTest {
             throws Json.JsonException {
         try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
-            when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
             when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(), any(), eq(REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_RETRIES));
@@ -1486,10 +1478,6 @@ class VerifyMfaCodeHandlerTest {
     private void assertAuditEventSubmittedWithMetadata(
             AuditableEvent event, AuditService.MetadataPair... pairs) {
         verify(auditService).submitAuditEvent(event, AUDIT_CONTEXT, pairs);
-    }
-
-    private void withReauthTurnedOn() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
     }
 
     @Test

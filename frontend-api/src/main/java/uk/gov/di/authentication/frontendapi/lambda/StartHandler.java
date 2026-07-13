@@ -249,7 +249,7 @@ public class StartHandler
             }
 
             boolean isBlockedForReauth = false;
-            if (configurationService.isAuthenticationAttemptsServiceEnabled() && reauthenticate) {
+            if (reauthenticate) {
                 var permissionContext =
                         buildPermissionContext(authSession, startRequest, userContext);
                 var permissionResult =

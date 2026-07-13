@@ -83,28 +83,13 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     public static final String ENCODED_DEVICE_INFORMATION =
             "R21vLmd3QilNKHJsaGkvTFxhZDZrKF44SStoLFsieG0oSUY3aEhWRVtOMFRNMVw1dyInKzB8OVV5N09hOi8kLmlLcWJjJGQiK1NPUEJPPHBrYWJHP358NDg2ZDVc";
 
-    private static final IntegrationTestConfigurationService CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    notificationsQueue, tokenSigner, configurationParameters) {
-
-                @Override
-                public String getTxmaAuditQueueUrl() {
-                    return txmaAuditQueue.getQueueUrl();
-                }
-
-                @Override
-                public boolean isAuthenticationAttemptsServiceEnabled() {
-                    return true;
-                }
-            };
-
     @BeforeEach
     void setup() throws Json.JsonException {
         authSessionExtension.addSession(SESSION_ID);
         authSessionExtension.addEmailToSession(SESSION_ID, TEST_EMAIL);
         authSessionExtension.addClientIdToSession(SESSION_ID, CLIENT_ID.getValue());
         requestHeaders = createHeaders(SESSION_ID);
-        handler = new CheckReAuthUserHandler(CONFIGURATION_SERVICE);
+        handler = new CheckReAuthUserHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
 

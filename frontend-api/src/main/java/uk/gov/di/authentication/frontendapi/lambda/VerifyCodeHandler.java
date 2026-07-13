@@ -377,17 +377,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuditContext auditContext,
             Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
         if (journeyType == REAUTHENTICATION && notificationType == MFA_SMS) {
-            if (configurationService.isAuthenticationAttemptsServiceEnabled()) {
-                authenticationAttemptsService.createOrIncrementCount(
-                        subjectId,
-                        NowHelper.nowPlus(
-                                        configurationService.getReauthEnterSMSCodeCountTTL(),
-                                        ChronoUnit.SECONDS)
-                                .toInstant()
-                                .getEpochSecond(),
-                        REAUTHENTICATION,
-                        CountType.ENTER_MFA_CODE);
-            }
+            authenticationAttemptsService.createOrIncrementCount(
+                    subjectId,
+                    NowHelper.nowPlus(
+                                    configurationService.getReauthEnterSMSCodeCountTTL(),
+                                    ChronoUnit.SECONDS)
+                            .toInstant()
+                            .getEpochSecond(),
+                    REAUTHENTICATION,
+                    CountType.ENTER_MFA_CODE);
         } else {
             processBlockedCodeSession(
                     errorResponse,
@@ -404,8 +402,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             AuditContext auditContext,
             Optional<String> maybeRpPairwiseId) {
-        if (journeyType == REAUTHENTICATION
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+        if (journeyType == REAUTHENTICATION) {
             var countsByJourney =
                     maybeRpPairwiseId.isEmpty()
                             ? authenticationAttemptsService.getCountsByJourney(
@@ -559,7 +556,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             : null);
         }
 
-        if (configurationService.isAuthenticationAttemptsServiceEnabled() && subjectId != null) {
+        if (subjectId != null) {
             preserveReauthCountsForAuditIfJourneyIsReauth(
                     journeyType, subjectId, authSession, maybeRpPairwiseId);
             clearReauthErrorCountsForSuccessfullyAuthenticatedUser(subjectId);
@@ -587,8 +584,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             String subjectId,
             AuthSessionItem authSession,
             Optional<String> maybeRpPairwiseId) {
-        if (journeyType == REAUTHENTICATION
-                && configurationService.isAuthenticationAttemptsServiceEnabled()) {
+        if (journeyType == REAUTHENTICATION) {
             var counts =
                     maybeRpPairwiseId.isPresent()
                             ? authenticationAttemptsService

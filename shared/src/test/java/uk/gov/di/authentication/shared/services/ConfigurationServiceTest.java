@@ -559,11 +559,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void isAuthenticationAttemptsServiceEnabledShouldEqualDefaultWhenEnvVarUnset() {
-        assertFalse(configurationService.isAuthenticationAttemptsServiceEnabled());
-    }
-
-    @Test
     void getAccountManagementNotifyDestinations() {
         assertNull(configurationService.getAccountManagementNotifyBucketDestination());
     }

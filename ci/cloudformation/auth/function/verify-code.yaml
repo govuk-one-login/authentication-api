@@ -11,7 +11,6 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler::handleRequest
       Environment:
         Variables:
-          AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED: "true"
           CODE_MAX_RETRIES_INCREASED: !Sub
             - "{{resolve:ssm:/deploy/${env}/code_max_retries_increased}}"
             - env:

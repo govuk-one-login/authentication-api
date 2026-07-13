@@ -74,6 +74,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -189,6 +190,8 @@ class VerifyCodeHandlerTest {
         assertThat(
                 logging.events(),
                 not(hasItem(withMessageContaining(CLIENT_ID, TEST_CLIENT_CODE, SESSION_ID))));
+
+        reset(authenticationAttemptsService);
     }
 
     @BeforeEach
@@ -287,7 +290,11 @@ class VerifyCodeHandlerTest {
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                                         ? "ACCOUNT_RECOVERY"
                                         : "REGISTRATION"));
-        verifyNoInteractions(authenticationAttemptsService);
+        Arrays.stream(CountType.values())
+                .forEach(
+                        countType ->
+                                verify(authenticationAttemptsService)
+                                        .deleteCount(TEST_SUBJECT_ID, REAUTHENTICATION, countType));
     }
 
     @ParameterizedTest
@@ -321,7 +328,6 @@ class VerifyCodeHandlerTest {
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                                         ? "ACCOUNT_RECOVERY"
                                         : "REGISTRATION"));
-        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
@@ -410,7 +416,6 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
-        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @ParameterizedTest
@@ -516,7 +521,6 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
         verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(authenticationAttemptsService);
     }
 
     // TODO remove temporary ZDD measure to reference existing deprecated keys when expired
@@ -632,7 +636,6 @@ class VerifyCodeHandlerTest {
                         journeyType != null ? journeyType : JourneyType.SIGN_IN,
                         MFAMethodType.SMS,
                         PriorityIdentifier.DEFAULT);
-        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -672,7 +675,6 @@ class VerifyCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("loginFailureCount", MAX_RETRIES - 1),
                         pair("MFACodeEntered", "123456"));
-        verifyNoInteractions(authenticationAttemptsService);
     }
 
     @Test
@@ -686,7 +688,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(false);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        withReauthTurnedOn();
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
@@ -735,7 +736,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(MAX_RETRIES - 1);
         when(accountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(false);
-        withReauthTurnedOn();
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
 
@@ -796,7 +796,6 @@ class VerifyCodeHandlerTest {
     @MethodSource("codeRequestTypes")
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
             CodeRequestType codeRequestType, JourneyType journeyType) {
-        withReauthTurnedOn();
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         when(codeStorageService.getOtpCode(
                         EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
@@ -978,7 +977,6 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(CODE));
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        withReauthTurnedOn();
         var existingCounts = Map.of(ENTER_EMAIL, 5, ENTER_PASSWORD, 1);
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(REAUTHENTICATION)))
@@ -1021,7 +1019,6 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldIncrementEnterMFAAuthenticationAttemptCountOnFailedReauthenticationAttempt() {
         long ttl = 120L;
-        withReauthTurnedOn();
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(configurationService.getReauthEnterSMSCodeCountTTL()).thenReturn(ttl);
@@ -1072,7 +1069,6 @@ class VerifyCodeHandlerTest {
             String expectedFailureReason) {
         try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
                 Mockito.mockStatic(ClientSubjectHelper.class, Mockito.CALLS_REAL_METHODS)) {
-            withReauthTurnedOn();
             when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(), any(), eq(REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_RETRIES));
@@ -1209,10 +1205,6 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verify(userActionsManager)
                 .correctSmsOtpReceived(any(), argThat(pc -> pc.authSessionItem() != null));
-    }
-
-    private void withReauthTurnedOn() {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
     }
 
     @Nested
