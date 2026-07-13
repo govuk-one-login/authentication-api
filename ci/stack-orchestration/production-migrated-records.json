@@ -1,0 +1,18 @@
+{
+  "Comment": "Importing records from old hosted zone",
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "_ec07f09329c6edb637c173f61b8dd45f.oidc.account.gov.uk.",
+        "Type": "CNAME",
+        "TTL": 60,
+        "ResourceRecords": [
+          {
+            "Value": "_2955e7860640816d252b5cf34a0d03d3.snmnbsbtgy.acm-validations.aws."
+          }
+        ]
+      }
+    }
+  ]
+}
