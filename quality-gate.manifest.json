@@ -436,7 +436,41 @@
             "file": ".github/workflows/deploy-orch.yml",
             "path": "$.jobs.run-alerting-tests"
           }
+        },
+        { 
+          "checkTypes": [
+            "integration"
+          ],
+          "phase": "build",
+          "provider": "Stack Orchestration Tool",
+          "config": {
+            "file": "ci/stack-orchestration/configuration/build/build-orch-be-pipeline/parameters.json",
+            "path": "$[?@.ParameterKey=='TestImageRepositoryUri']"
+          }
+        },
+        { 
+          "checkTypes": [
+            "canary"
+          ],
+          "phase": "staging",
+          "provider": "Stack Orchestration Tool",
+          "config": {
+            "file": "ci/stack-orchestration/configuration/staging/staging-orch-be-pipeline/parameters.json",
+            "path": "$[?@.ParameterKey=='LambdaCanaryDeployment']"
+          }
+        },
+        { 
+          "checkTypes": [
+            "canary"
+          ],
+          "phase": "production",
+          "provider": "Stack Orchestration Tool",
+          "config": {
+            "file": "ci/stack-orchestration/configuration/production/production-orch-be-pipeline/parameters.json",
+            "path": "$[?@.ParameterKey=='LambdaCanaryDeployment']"
+          }
         }
+
       ]
     }
   ]
