@@ -77,6 +77,7 @@ class PasskeyAssertionServiceTest {
             @Test
             void shouldReturnAssertionRequestIfRelyingPartyStartAssertionSucceeds() {
                 // Given
+                final Long ONE_HOUR_IN_MILLISECONDS = 3_600_000L;
                 var mockAssertionRequest = mock(AssertionRequest.class);
                 when(relyingParty.startAssertion(any())).thenReturn(mockAssertionRequest);
 
@@ -88,6 +89,7 @@ class PasskeyAssertionServiceTest {
                                                         PUBLIC_SUBJECT_ID.getBytes(
                                                                 StandardCharsets.UTF_8))))
                                 .userVerification(UserVerificationRequirement.REQUIRED)
+                                .timeout(ONE_HOUR_IN_MILLISECONDS)
                                 .build();
 
                 // When
