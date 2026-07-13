@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.auditevents.entity;
 
 import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformation;
+import uk.gov.di.authentication.auditevents.entity.shared.RestrictedDeviceInformation;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 
 import java.time.Clock;
@@ -14,7 +14,7 @@ public record AuthDeleteAccount(
         String clientId,
         String componentId,
         User user,
-        Restricted restricted,
+        RestrictedDeviceInformation restricted,
         Extensions extensions)
         implements StructuredAuditEvent {
 
@@ -45,7 +45,7 @@ public record AuthDeleteAccount(
                         publicSubjectId,
                         auditContext.sessionId(),
                         auditContext.subjectId()),
-                new Restricted(EncodedDeviceInformation.from(auditContext)),
+                RestrictedDeviceInformation.from(auditContext),
                 new Extensions(reason, phoneNumberCountryCode));
     }
 
@@ -59,8 +59,6 @@ public record AuthDeleteAccount(
             String publicSubjectId,
             String sessionId,
             String userId) {}
-
-    public record Restricted(EncodedDeviceInformation deviceInformation) {}
 
     public record Extensions(String accountDeletionReason, String phoneNumberCountryCode) {}
 }
