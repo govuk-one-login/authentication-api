@@ -150,7 +150,6 @@ class StartServiceTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void shouldCreateUserStartInfoWithCorrectReauthBlockedValue(boolean isBlockedForReauth) {
-        when(configurationService.isAuthenticationAttemptsServiceEnabled()).thenReturn(true);
         var maxRetries = 6;
         when(configurationService.getMaxPasswordRetries()).thenReturn(maxRetries);
 
