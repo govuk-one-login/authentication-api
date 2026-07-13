@@ -11,7 +11,6 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler::handleRequest
       Environment:
         Variables:
-          AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED: "true"
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:

@@ -39,7 +39,6 @@ Resources:
               passwordRehashOnLoginEnabled,
               DefaultValue: "false",
             ]
-          AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED: "true"
           DYNAMO_ARN_PREFIX: !Sub
             - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
             - DataStoreAccountId:
