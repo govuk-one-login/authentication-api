@@ -88,6 +88,12 @@ import static uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent.A
 import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
 import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.STATUS_CODE;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTH_TOKEN_REQUEST_FAILED;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTH_TOKEN_REQUEST_SUCCESSFUL;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTH_USER_INFO_REQUEST_FAILED;
+import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTH_USER_INFO_REQUEST_SUCCESSFUL;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
@@ -328,7 +334,19 @@ public class AuthenticationCallbackHandler
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
                         user);
+
+                metrics.increment(
+                        AUTH_TOKEN_REQUEST_SUCCESSFUL.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
             } else {
+                metrics.increment(
+                        AUTH_TOKEN_REQUEST_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                STATUS_CODE.getValue(),
+                                String.valueOf(tokenResponse.toHTTPResponse().getStatusCode())));
+
                 auditService.submitAuditEvent(
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientId,
@@ -346,6 +364,7 @@ public class AuthenticationCallbackHandler
                         buildURI(
                                 configurationService.getAuthenticationBackendURI().toString(),
                                 "userinfo");
+
                 HTTPRequest authorizationRequest = new HTTPRequest(GET, userInfoURI);
                 authorizationRequest.setHeader(SESSION_ID_HEADER, sessionId);
                 authorizationRequest.setAuthorization(
@@ -360,6 +379,11 @@ public class AuthenticationCallbackHandler
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                         clientId,
                         user);
+
+                metrics.increment(
+                        AUTH_USER_INFO_REQUEST_SUCCESSFUL.getValue(),
+                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+
                 LOG.info("Adding Authentication userinfo to dynamo");
 
                 String internalCommonSubjectId = userInfo.getSubject().getValue();
@@ -574,6 +598,14 @@ public class AuthenticationCallbackHandler
                 return generateApiGatewayProxyResponse(302, "", headers, null);
 
             } catch (UnsuccessfulCredentialResponseException e) {
+                metrics.increment(
+                        AUTH_USER_INFO_REQUEST_FAILED.getValue(),
+                        Map.of(
+                                ENVIRONMENT.getValue(),
+                                configurationService.getEnvironment(),
+                                STATUS_CODE.getValue(),
+                                String.valueOf(e.getHttpCode())));
+
                 auditService.submitAuditEvent(
                         AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED, clientId, user);
                 return RedirectService.redirectToFrontendErrorPageWithWarnLog(
