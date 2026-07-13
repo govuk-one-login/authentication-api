@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -94,6 +95,21 @@ class InactiveAccountDataExportHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertEquals(itemCount, response.totalItemsScanned());
+    }
+
+    @Test
+    void shouldLogErrorAndPropagateExceptionWhenScanFails() {
+        when(client.scan(any(ScanRequest.class)))
+                .thenThrow(
+                        DynamoDbException.builder()
+                                .message("Provisioned throughput exceeded")
+                                .build());
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(1, 1, null);
+
+        assertThrows(
+                DynamoDbException.class, () -> handler.handleRequest(request, context));
     }
 
     private Map<String, AttributeValue> createItem(int index) {

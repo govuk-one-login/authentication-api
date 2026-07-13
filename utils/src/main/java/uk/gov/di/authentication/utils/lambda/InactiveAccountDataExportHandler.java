@@ -73,7 +73,7 @@ public class InactiveAccountDataExportHandler
                 totalSegments,
                 maxRetries);
 
-        List<ForkJoinTask<Long>> tasks = new ArrayList<>();
+        List<ForkJoinTask<SegmentResult>> tasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(parallelism);
 
         try {
@@ -85,11 +85,17 @@ public class InactiveAccountDataExportHandler
             gracefulPoolShutdown(forkJoinPool);
 
             long totalItemsScanned = 0;
-            for (ForkJoinTask<Long> task : tasks) {
-                totalItemsScanned += task.join();
+            long totalMissingCredentials = 0;
+            for (ForkJoinTask<SegmentResult> task : tasks) {
+                SegmentResult result = task.join();
+                totalItemsScanned += result.itemsScanned();
+                totalMissingCredentials += result.missingCredentialsCount();
             }
 
-            LOG.info("Scan completed: {} total items scanned", totalItemsScanned);
+            LOG.info(
+                    "Scan completed: {} total items scanned, {} missing credentials",
+                    totalItemsScanned,
+                    totalMissingCredentials);
 
             return new InactiveAccountDataExportResponse(totalItemsScanned);
         } finally {
@@ -97,7 +103,7 @@ public class InactiveAccountDataExportHandler
         }
     }
 
-    private long scanSegment(int segment, int totalSegments) {
+    private SegmentResult scanSegment(int segment, int totalSegments) {
         Map<String, AttributeValue> lastKey = null;
         long itemsScanned = 0;
 
@@ -114,7 +120,17 @@ public class InactiveAccountDataExportHandler
                 requestBuilder.exclusiveStartKey(lastKey);
             }
 
-            ScanResponse response = client.scan(requestBuilder.build());
+            ScanResponse response;
+            try {
+                response = client.scan(requestBuilder.build());
+            } catch (Exception e) {
+                LOG.error(
+                        "Scan failed for segment {}: {} - {}",
+                        segment,
+                        e.getClass().getSimpleName(),
+                        e.getMessage());
+                throw e;
+            }
 
             itemsScanned += response.items().size();
 
@@ -123,8 +139,10 @@ public class InactiveAccountDataExportHandler
 
         LOG.info("Segment {} completed: {} items scanned", segment, itemsScanned);
 
-        return itemsScanned;
+        return new SegmentResult(itemsScanned, 0);
     }
+
+    private record SegmentResult(long itemsScanned, long missingCredentialsCount) {}
 
     private static void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
         forkJoinPool.shutdown();
