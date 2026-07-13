@@ -46,12 +46,40 @@ class InactiveAccountDataExportHandlerTest {
                 IllegalArgumentException.class,
                 () ->
                         handler.handleRequest(
-                                new InactiveAccountDataExportRequest(null, 5), context));
+                                new InactiveAccountDataExportRequest(null, 5, null), context));
         assertThrows(
                 IllegalArgumentException.class,
                 () ->
                         handler.handleRequest(
-                                new InactiveAccountDataExportRequest(10, null), context));
+                                new InactiveAccountDataExportRequest(10, null, null), context));
+    }
+
+    @Test
+    void shouldDefaultMaxRetriesToThreeWhenNull() {
+        int itemCount = 5;
+        int pageSize = 5;
+        mockScanWithPagination(itemCount, pageSize);
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(4, 1, null);
+
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(itemCount, response.totalItemsScanned());
+    }
+
+    @Test
+    void shouldUseExplicitMaxRetriesValue() {
+        int itemCount = 5;
+        int pageSize = 5;
+        mockScanWithPagination(itemCount, pageSize);
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(4, 1, 5);
+
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(itemCount, response.totalItemsScanned());
     }
 
     @Test
@@ -61,7 +89,7 @@ class InactiveAccountDataExportHandlerTest {
         mockScanWithPagination(itemCount, pageSize);
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(4, 1);
+        var request = new InactiveAccountDataExportRequest(4, 1, null);
 
         var response = handler.handleRequest(request, context);
 

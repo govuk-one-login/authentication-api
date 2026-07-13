@@ -28,6 +28,8 @@ public class InactiveAccountDataExportHandler
 
     private static final Logger LOG = LogManager.getLogger(InactiveAccountDataExportHandler.class);
     private static final String USER_PROFILE_TABLE = "user-profile";
+    private static final String USER_CREDENTIALS_TABLE = "user-credentials";
+    private static final int DEFAULT_MAX_RETRIES = 3;
 
     private static final String PROJECTION_EXPRESSION =
             "Email,Created,Updated,termsAndConditions.#ts,PublicSubjectID,SubjectID,salt";
@@ -36,12 +38,15 @@ public class InactiveAccountDataExportHandler
 
     private final DynamoDbClient client;
     private final String userProfileTableName;
+    private final String userCredentialsTableName;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService, DynamoDbClient client) {
         this.client = client;
         this.userProfileTableName =
                 TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
+        this.userCredentialsTableName =
+                TableNameHelper.getFullTableName(USER_CREDENTIALS_TABLE, configurationService);
     }
 
     public InactiveAccountDataExportHandler() {
@@ -60,11 +65,13 @@ public class InactiveAccountDataExportHandler
 
         int parallelism = request.parallelism();
         int totalSegments = request.totalSegments();
+        int maxRetries = request.maxRetries() != null ? request.maxRetries() : DEFAULT_MAX_RETRIES;
 
         LOG.info(
-                "Inactive account data export request: parallelism={}, totalSegments={}",
+                "Inactive account data export request: parallelism={}, totalSegments={}, maxRetries={}",
                 parallelism,
-                totalSegments);
+                totalSegments,
+                maxRetries);
 
         List<ForkJoinTask<Long>> tasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(parallelism);
