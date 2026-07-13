@@ -785,12 +785,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals(FEATURE_SWITCH_ON);
     }
 
-    public boolean isAuthenticationAttemptsServiceEnabled() {
-        return System.getenv()
-                .getOrDefault("AUTHENTICATION_ATTEMPTS_SERVICE_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
     public boolean isBulkUserEmailEmailSendingEnabled() {
         return System.getenv()
                 .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", FEATURE_SWITCH_OFF)
