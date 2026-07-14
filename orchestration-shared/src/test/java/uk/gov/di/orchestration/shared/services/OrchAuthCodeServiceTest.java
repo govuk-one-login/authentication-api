@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
@@ -52,6 +53,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
                         Clock.fixed(CREATION_INSTANT, ZoneId.systemDefault()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldStoreOrchAuthCodeItem() throws Json.JsonException {
         orchAuthCodeService.generateAndSaveAuthorisationCode(
@@ -73,6 +75,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
         assertEquals(expectedTimeToLive, capturedRequest.getTimeToLive());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenFailingToStoreOrchAuthCode() {
         withFailedPut();
@@ -88,6 +91,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
                                 INTERNAL_PAIRWISE_SUBJECT_ID));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetOrchAuthCodeExchangeDataByAuthCode() throws Json.JsonException {
         var exchangeData = anAuthCodeExchangeDataEntity();
@@ -107,6 +111,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
                 actualExchangeData.get().getInternalPairwiseSubjectId());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotGetAuthCodeExchangeDataByAuthCodeWhenNoOrchAuthCodeItemExists() {
         var exchangeData = orchAuthCodeService.getExchangeDataForCode(AUTH_CODE);
@@ -116,6 +121,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
         verify(table).getItem(AUTH_CODE_GET_REQUEST);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldMarkAuthCodeAsUsedAfterSuccessfullyGettingOrchAuthCodeExchangeData()
             throws Json.JsonException {
@@ -132,6 +138,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
         assertTrue(capturedRequest.item().getIsUsed());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenFailingToGetAuthCodeExchangeDataByAuthCode() {
         withFailedGet();
@@ -141,6 +148,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
                 () -> orchAuthCodeService.getExchangeDataForCode(AUTH_CODE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotGetAuthCodeExchangeDataByAuthCodeWhenOrchAuthCodeItemExistsButIsMarkedAsUsed()
             throws Json.JsonException {
@@ -151,6 +159,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
         assertTrue(exchangeData.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotGetAuthCodeExchangeDataByAuthCodeWhenOrchAuthCodeItemExistsButTimeToLiveExpired()
             throws Json.JsonException {
@@ -161,6 +170,7 @@ class OrchAuthCodeServiceTest extends BaseDynamoServiceTest<OrchAuthCodeItem> {
         assertTrue(exchangeData.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenFailingToUpdateOrchAuthCodeItemWhenMarkingAsUsed()
             throws Json.JsonException {
