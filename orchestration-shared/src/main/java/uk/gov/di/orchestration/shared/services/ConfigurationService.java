@@ -385,10 +385,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("TEST_CLIENTS_ENABLED");
     }
 
-    public String getExternalTokenSigningKeyRsaAlias() {
-        return System.getenv("EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS");
-    }
-
     public String getNextExternalTokenSigningKeyAliasV2() {
         return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2");
     }

@@ -204,7 +204,6 @@ Mappings:
       newauthAccountId: "058264536367"
       authEnvironment: build
       serviceDomain: build.account.gov.uk
-      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/0189356a-b80f-4f12-9f31-60f5b34a574f
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -241,7 +240,6 @@ Mappings:
       newauthAccountId: "851725205974"
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
-      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:758531536632:key/1d506b73-c506-4cec-bc46-db0ac1a54149
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
       docAppDomain: https://api.review-b.staging.account.gov.uk
@@ -280,7 +278,6 @@ Mappings:
       newauthAccountId: "211125600642"
       authEnvironment: integration
       serviceDomain: integration.account.gov.uk
-      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
       docAppDomain: https://api.review-b.integration.account.gov.uk
@@ -317,7 +314,6 @@ Mappings:
       newauthAccountId: "211125303002"
       authEnvironment: production
       serviceDomain: account.gov.uk
-      idTokenKeyRsaArn: arn:aws:kms:eu-west-2:172348255554:key/ce5d0a05-909c-449b-be82-87009f5bef9a
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
       docAppDomain: https://api.review-b.account.gov.uk
@@ -2309,12 +2305,6 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyRsaArn,
-            ]
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
           OIDC_API_BASE_URL: !Sub
@@ -2512,12 +2502,6 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyRsaArn,
-            ]
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
           OIDC_API_BASE_URL: !Sub
@@ -3367,12 +3351,6 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyRsaArn,
-            ]
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
           PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: false
@@ -4221,12 +4199,6 @@ Resources:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
           IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
-          EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyRsaArn,
-            ]
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS_V2: !Ref OrchExternalTokenRsaSigningKmsKeyAliasV2
           OIDC_API_BASE_URL: !Sub
@@ -6935,17 +6907,6 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowIdTokenSigningKmsRsa
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  idTokenKeyRsaArn,
-                ]
           - Sid: AllowNewIdTokenSigningKmsV2
             Effect: Allow
             Action:

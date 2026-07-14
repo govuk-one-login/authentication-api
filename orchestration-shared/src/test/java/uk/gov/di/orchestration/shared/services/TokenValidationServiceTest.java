@@ -95,12 +95,10 @@ class TokenValidationServiceTest {
 
     @Test
     void shouldSuccessfullyValidateNewV2RsaSignedAccessToken() throws JOSEException {
-        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
         var newRSAKey = generateCustomRsaKeyPair(NEW_V2_KEY_ID);
         var newRSASigner = new RSASSASigner(newRSAKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
         when(jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2()).thenReturn(newRSAKey);
 
         SignedJWT signedAccessToken = createCustomSignedAccessToken(newRSASigner, NEW_V2_KEY_ID);
@@ -112,12 +110,10 @@ class TokenValidationServiceTest {
     @Test
     void shouldFailToValidateRsaKeyAccessTokenIfKeyIdInvalid() throws JOSEException {
         var wrongRSAKey = generateCustomRsaKeyPair(FAILED_KEY_ID);
-        var rsaKey = generateCustomRsaKeyPair(KEY_ID);
         var newRSAKey = generateCustomRsaKeyPair(NEW_V2_KEY_ID);
         var rsaSigner = new RSASSASigner(wrongRSAKey);
 
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
-        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
         when(jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2()).thenReturn(newRSAKey);
 
         SignedJWT signedAccessToken = createCustomSignedAccessToken(rsaSigner, FAILED_KEY_ID);
