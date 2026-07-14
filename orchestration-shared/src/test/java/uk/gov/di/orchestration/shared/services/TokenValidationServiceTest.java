@@ -52,7 +52,8 @@ class TokenValidationServiceTest {
     @BeforeEach
     void setUp() throws JOSEException {
         ecJWK = generateECKeyPair();
-        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(ecJWK.toPublicJWK());
+        when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
+                .thenReturn(new ArrayList<>(List.of(ecJWK.toECKey())));
 
         newV2ECJWK = generateCustomECKeyPair(NEW_V2_KEY_ID);
         newV2Signer = new ECDSASigner(newV2ECJWK);
@@ -131,9 +132,6 @@ class TokenValidationServiceTest {
         void shouldSuccessfullyValidateReauthIDToken() {
             Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
 
-            when(configurationService.isPublishOldExternalTokenSigningKeysEnabled())
-                    .thenReturn(true);
-
             SignedJWT signedIdToken = createSignedIdToken(expiryDate);
             assertTrue(
                     tokenValidationService.isReauthTokenSignatureValid(signedIdToken.serialize()));
@@ -142,9 +140,6 @@ class TokenValidationServiceTest {
         @Test
         void shouldNotFailSignatureValidationIfReauthIDTokenHasExpired() {
             Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
-
-            when(configurationService.isPublishOldExternalTokenSigningKeysEnabled())
-                    .thenReturn(true);
 
             SignedJWT signedIdToken = createSignedIdToken(expiryDate);
             assertTrue(
@@ -156,20 +151,6 @@ class TokenValidationServiceTest {
             Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
 
             SignedJWT signedIdToken = createSignedIdTokenWithV2Key(expiryDate);
-            assertTrue(
-                    tokenValidationService.isReauthTokenSignatureValid(
-                            new BearerAccessToken(signedIdToken.serialize()).getValue()));
-        }
-
-        @Test
-        void
-                shouldSuccessfullyValidateReauthIDTokenWithOldKeyWhenKeyIdMatchesAndOldKeyIsPublished() {
-            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-
-            when(configurationService.isPublishOldExternalTokenSigningKeysEnabled())
-                    .thenReturn(true);
-
-            SignedJWT signedIdToken = createSignedIdToken(expiryDate);
             assertTrue(
                     tokenValidationService.isReauthTokenSignatureValid(
                             new BearerAccessToken(signedIdToken.serialize()).getValue()));
@@ -211,8 +192,6 @@ class TokenValidationServiceTest {
             when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
                     .thenReturn(new ArrayList<ECKey>(Arrays.asList(oldStoredECKey.toECKey())));
             when(configurationService.isUseStoredOldIdTokenPublicKeysEnabled()).thenReturn(false);
-            when(configurationService.isPublishOldExternalTokenSigningKeysEnabled())
-                    .thenReturn(false);
 
             SignedJWT signedIdToken = createCustomSignedIdToken(expiryDate, oldStoredECKey);
             assertTrue(

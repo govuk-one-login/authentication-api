@@ -405,10 +405,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("STORED_OLD_ID_TOKEN_EC_PUBLIC_KEYS");
     }
 
-    public boolean isPublishOldExternalTokenSigningKeysEnabled() {
-        return getFlagOrFalse("PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS");
-    }
-
     public boolean isRsaSigningAvailable() {
         return List.of("dev", "build", "staging", "integration", "production")
                 .contains(getEnvironment());

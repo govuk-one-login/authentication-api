@@ -4045,7 +4045,6 @@ Resources:
             - UseStoredOldIdTokenPublicKeys
             - true
             - false
-          PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS: false
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
