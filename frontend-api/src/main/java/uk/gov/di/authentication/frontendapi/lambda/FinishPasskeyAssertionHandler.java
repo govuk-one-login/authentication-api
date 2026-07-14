@@ -16,6 +16,7 @@ import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionSe
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -132,10 +133,13 @@ public class FinishPasskeyAssertionHandler
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+        var publicSubjectId =
+                userContext.getUserProfile().map(UserProfile::getPublicSubjectID).orElse(null);
         return passkeyAssertionService.finishAssertion(
                 userContext.getAuthSession().getPasskeyAssertionRequest(),
                 request.pkc(),
-                auditContext);
+                auditContext,
+                publicSubjectId);
     }
 
     private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(

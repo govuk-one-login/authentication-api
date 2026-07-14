@@ -7,6 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthCodeVerified;
+import uk.gov.di.authentication.auditevents.entity.ComponentId;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
@@ -47,6 +50,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -94,6 +98,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final MFAMethodsService mfaMethodsService;
     private final UserActionsManager userActionsManager;
     private final TestUserHelper testUserHelper;
+    private final StructuredAuditService structuredAuditService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -106,7 +111,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthSessionService authSessionService,
             MFAMethodsService mfaMethodsService,
             UserActionsManager userActionsManager,
-            TestUserHelper testUserHelper) {
+            TestUserHelper testUserHelper,
+            StructuredAuditService structuredAuditService) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -120,6 +126,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.mfaMethodsService = mfaMethodsService;
         this.userActionsManager = userActionsManager;
         this.testUserHelper = testUserHelper;
+        this.structuredAuditService = structuredAuditService;
     }
 
     public VerifyCodeHandler() {
@@ -137,6 +144,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     public VerifyCodeHandler(
@@ -151,6 +159,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.mfaMethodsService = new MFAMethodsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
         this.testUserHelper = new TestUserHelper(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     @Override
@@ -567,16 +576,61 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
         codeStorageService.deleteOtpCode(otpCodeIdentifier, notificationType);
 
-        var metadataPairArray =
-                metadataPairs(
-                        notificationType,
-                        journeyType,
-                        codeRequest,
-                        loginFailureCount,
-                        false,
-                        initialMetadataPairs);
-        auditService.submitAuditEvent(
-                FrontendAuditableEvent.AUTH_CODE_VERIFIED, auditContext, metadataPairArray);
+        auditSuccess(
+                notificationType,
+                journeyType,
+                codeRequest,
+                loginFailureCount,
+                initialMetadataPairs,
+                auditContext,
+                userContext);
+    }
+
+    private void auditSuccess(
+            NotificationType notificationType,
+            JourneyType journeyType,
+            VerifyCodeRequest codeRequest,
+            int loginFailureCount,
+            List<AuditService.MetadataPair> initialMetadataPairs,
+            AuditContext auditContext,
+            UserContext userContext) {
+        String mfaType = null;
+        Integer failureCount = null;
+        String mfaCodeEntered = null;
+        String mfaMethod =
+                initialMetadataPairs.stream()
+                        .filter(p -> p.key().equals(AUDIT_EVENT_EXTENSIONS_MFA_METHOD))
+                        .map(p -> (String) p.value())
+                        .findFirst()
+                        .orElse(null);
+
+        if (notificationType == MFA_SMS) {
+            mfaType = MFAMethodType.SMS.getValue();
+            failureCount = loginFailureCount;
+            mfaCodeEntered = codeRequest.code();
+        }
+
+        var extensions =
+                new AuthCodeVerified.Extensions(
+                        notificationType.name(),
+                        failureCount,
+                        journeyType == JourneyType.ACCOUNT_RECOVERY,
+                        String.valueOf(journeyType),
+                        mfaCodeEntered,
+                        mfaType,
+                        mfaMethod);
+
+        var publicSubjectId =
+                userContext.getUserProfile().map(UserProfile::getPublicSubjectID).orElse(null);
+
+        var event =
+                AuthCodeVerified.create(
+                        auditContext,
+                        publicSubjectId,
+                        ComponentId.AUTH,
+                        extensions,
+                        Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(event);
     }
 
     void preserveReauthCountsForAuditIfJourneyIsReauth(

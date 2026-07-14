@@ -23,8 +23,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
-import uk.gov.di.audit.AuditContext;
-import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
+import uk.gov.di.authentication.auditevents.entity.AuthTokenSentToOrchestration;
+import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.external.services.TokenService;
 import uk.gov.di.authentication.external.validators.TokenRequestValidator;
 import uk.gov.di.authentication.shared.entity.AuthCodeStore;
@@ -64,6 +65,8 @@ class TokenHandlerTest {
     private static final ClientSubjectHelper clientSubjectHelper = mock(ClientSubjectHelper.class);
     private static final TokenService tokenUtilityService = mock(TokenService.class);
     private static final AuditService auditService = mock(AuditService.class);
+    private static final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final BearerAccessToken SUCCESS_TOKEN_RESPONSE_ACCESS_TOKEN =
             new BearerAccessToken();
@@ -77,8 +80,14 @@ class TokenHandlerTest {
     private static final String CLIENT_ID = "test-client-id";
     private static final Long PASSWORD_RESET_TIME = 1710255274L;
     private static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String USER_EMAIL = "test@example.com";
+    private static final String PUBLIC_SUBJECT_ID = "urn:fdc:gov.uk:2022:public-subject-id";
     private static final UserProfile USER_PROFILE =
-            new UserProfile().withSubjectID("any").withSalt(ByteBuffer.allocateDirect(12345));
+            new UserProfile()
+                    .withSubjectID("any")
+                    .withSalt(ByteBuffer.allocateDirect(12345))
+                    .withEmail(USER_EMAIL)
+                    .withPublicSubjectID(PUBLIC_SUBJECT_ID);
     private static final AuthCodeStore VALID_AUTH_CODE_STORE =
             new AuthCodeStore()
                     .withAuthCode(VALID_AUTH_CODE)
@@ -151,7 +160,8 @@ class TokenHandlerTest {
                         tokenRequestValidator,
                         auditService,
                         dynamoService,
-                        authJwksService);
+                        authJwksService,
+                        structuredAuditService);
         ecKeyPair = new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
         when(authJwksService.retrieveJwkFromURLWithKeyId(ecKeyPair.getKeyID()))
                 .thenReturn(ecKeyPair.toPublicJWK());
@@ -300,19 +310,15 @@ class TokenHandlerTest {
                         VALID_AUTH_CODE_STORE.getPasswordResetTime());
         verify(authCodeService).updateHasBeenUsed(VALID_AUTH_CODE, true);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AuthExternalApiAuditableEvent.AUTH_TOKEN_SENT_TO_ORCHESTRATION,
-                        new AuditContext(
-                                CLIENT_ID,
-                                CLIENT_SESSION_ID,
-                                AuditService.UNKNOWN,
-                                internalPairwiseId,
-                                AuditService.UNKNOWN,
-                                AuditService.UNKNOWN,
-                                AuditService.UNKNOWN,
-                                AuditService.UNKNOWN,
-                                AuditService.UNKNOWN));
+        var argCaptor = org.mockito.ArgumentCaptor.forClass(StructuredAuditEvent.class);
+        verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+        var capturedEvent = (AuthTokenSentToOrchestration) argCaptor.getValue();
+        assertEquals("AUTH_TOKEN_SENT_TO_ORCHESTRATION", capturedEvent.eventName());
+        assertEquals(CLIENT_ID, capturedEvent.clientId());
+        assertEquals("AUTH", capturedEvent.componentId());
+        assertEquals(internalPairwiseId, capturedEvent.user().userId());
+        assertEquals(USER_EMAIL, capturedEvent.user().email());
+        assertEquals(PUBLIC_SUBJECT_ID, capturedEvent.user().publicSubjectId());
     }
 
     private Map<String, List<String>> privateKeyJWTParams() throws JOSEException {

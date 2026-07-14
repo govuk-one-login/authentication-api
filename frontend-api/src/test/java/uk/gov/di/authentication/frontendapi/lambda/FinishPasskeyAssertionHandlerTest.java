@@ -79,7 +79,7 @@ class FinishPasskeyAssertionHandlerTest {
         void shouldReturn200WhenPasskeyAssertionSuccessful() {
             // Given
             AssertionResult mockAssertionResult = mock(AssertionResult.class);
-            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(Result.success(mockAssertionResult));
 
             // When
@@ -93,7 +93,7 @@ class FinishPasskeyAssertionHandlerTest {
         void shouldReportCorrectPasskeyReceivedWhenAssertionSuccessful() {
             // Given
             AssertionResult mockAssertionResult = mock(AssertionResult.class);
-            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(Result.success(mockAssertionResult));
 
             // When
@@ -108,7 +108,7 @@ class FinishPasskeyAssertionHandlerTest {
         void shouldEmitCloudwatchMetricsWhenAssertionSuccessful() {
             // Given
             AssertionResult mockAssertionResult = mock(AssertionResult.class);
-            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(Result.success(mockAssertionResult));
 
             // When
@@ -149,7 +149,7 @@ class FinishPasskeyAssertionHandlerTest {
         @Test
         void shouldReportIncorrectPasskeyReceivedWhenAssertionUnsuccessful() {
             // Given
-            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(
                             Result.failure(
                                     FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR));
@@ -165,7 +165,7 @@ class FinishPasskeyAssertionHandlerTest {
         @Test
         void shouldReturn500WhenAssertionRequestDeserializationFails() {
             // Given
-            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(
                             Result.failure(
                                     FinishPasskeyAssertionFailureReason
@@ -182,7 +182,7 @@ class FinishPasskeyAssertionHandlerTest {
         @Test
         void shouldReturn400WhenPKCDeserializationFails() {
             // Given
-            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(
                             Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR));
 
@@ -197,7 +197,7 @@ class FinishPasskeyAssertionHandlerTest {
         @Test
         void shouldReturn401WhenPasskeyAssertionFailed() {
             // Given
-            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(
                             Result.failure(
                                     FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR));
@@ -215,7 +215,7 @@ class FinishPasskeyAssertionHandlerTest {
         void shouldEmitVerificationFailureMetricWhenAssertionFailsForAnyReason(
                 FinishPasskeyAssertionFailureReason failureReason) {
             // Given
-            when(passkeyAssertionService.finishAssertion(any(), any(), any()))
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(Result.failure(failureReason));
 
             // When

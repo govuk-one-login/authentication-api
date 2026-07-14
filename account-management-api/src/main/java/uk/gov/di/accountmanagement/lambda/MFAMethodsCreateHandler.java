@@ -17,6 +17,9 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthCodeVerified;
+import uk.gov.di.authentication.auditevents.entity.ComponentId;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -39,10 +42,10 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaCreateFailureReason;
 
+import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
@@ -83,6 +86,7 @@ public class MFAMethodsCreateHandler
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final MfaMethodsMigrationService mfaMethodsMigrationService;
+    private final StructuredAuditService structuredAuditService;
     private static final Logger LOG = LogManager.getLogger(MFAMethodsCreateHandler.class);
 
     public MFAMethodsCreateHandler() {
@@ -103,6 +107,7 @@ public class MFAMethodsCreateHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.mfaMethodsMigrationService = new MfaMethodsMigrationService(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     public MFAMethodsCreateHandler(
@@ -113,7 +118,8 @@ public class MFAMethodsCreateHandler
             AuditService auditService,
             AwsSqsClient sqsClient,
             CloudwatchMetricsService cloudwatchMetricsService,
-            MfaMethodsMigrationService mfaMethodsMigrationService) {
+            MfaMethodsMigrationService mfaMethodsMigrationService,
+            StructuredAuditService structuredAuditService) {
         this.configurationService = configurationService;
         this.mfaMethodsService = mfaMethodsService;
         this.dynamoService = dynamoService;
@@ -122,6 +128,7 @@ public class MFAMethodsCreateHandler
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.mfaMethodsMigrationService = mfaMethodsMigrationService;
+        this.structuredAuditService = structuredAuditService;
     }
 
     @Override
@@ -259,7 +266,7 @@ public class MFAMethodsCreateHandler
         MfaMethodCreateRequest mfaMethodCreateRequest = maybeValidRequest.getSuccess();
 
         var auditEventStatus =
-                sendAuditEvent(AUTH_CODE_VERIFIED, auditContext, mfaMethodCreateRequest);
+                sendAuthCodeVerifiedEvent(auditContext, userProfile, mfaMethodCreateRequest);
         if (auditEventStatus.isFailure()) {
             LOG.error(auditEventStatus.getFailure());
             return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
@@ -309,11 +316,6 @@ public class MFAMethodsCreateHandler
         if (addCompletedResult.isFailure()) {
             LOG.error(addCompletedResult.getFailure());
             return generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure());
-        }
-
-        if (auditEventStatus.isFailure()) {
-            LOG.error(auditEventStatus.getFailure());
-            return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
         }
 
         if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
@@ -433,6 +435,48 @@ public class MFAMethodsCreateHandler
         } else {
             return baseAuditContext;
         }
+    }
+
+    private Result<ErrorResponse, Void> sendAuthCodeVerifiedEvent(
+            AuditContext auditContext,
+            UserProfile userProfile,
+            MfaMethodCreateRequest mfaMethodCreateRequest) {
+        try {
+            var mfaType = mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString();
+            var mfaPriority = PriorityIdentifier.BACKUP.name().toLowerCase();
+
+            String mfaCodeEntered = null;
+            String notificationType = null;
+            if (mfaMethodCreateRequest.mfaMethod().method()
+                    instanceof RequestSmsMfaDetail smsDetail) {
+                mfaCodeEntered = smsDetail.otp();
+                notificationType = MFA_SMS.name();
+            }
+
+            var extensions =
+                    new AuthCodeVerified.Extensions(
+                            notificationType,
+                            null,
+                            "false",
+                            ACCOUNT_MANAGEMENT.getValue(),
+                            mfaCodeEntered,
+                            mfaType,
+                            mfaPriority);
+
+            var event =
+                    AuthCodeVerified.create(
+                            auditContext,
+                            userProfile.getPublicSubjectID(),
+                            ComponentId.HOME,
+                            extensions,
+                            Clock.systemUTC());
+            structuredAuditService.submitAuditEvent(event);
+        } catch (Exception e) {
+            LOG.error("Error submitting audit event", e);
+            return Result.failure(ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
+        }
+
+        return Result.success(null);
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(

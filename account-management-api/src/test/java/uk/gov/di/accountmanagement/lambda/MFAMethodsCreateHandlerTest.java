@@ -20,6 +20,8 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthCodeVerified;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -62,7 +64,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
-import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
@@ -112,6 +113,8 @@ class MFAMethodsCreateHandlerTest {
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
     private final MfaMethodsMigrationService mfaMethodsMigrationService =
             mock(MfaMethodsMigrationService.class);
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
@@ -202,7 +205,8 @@ class MFAMethodsCreateHandlerTest {
                         auditService,
                         sqsClient,
                         cloudwatchMetricsService,
-                        mfaMethodsMigrationService);
+                        mfaMethodsMigrationService,
+                        structuredAuditService);
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
@@ -281,17 +285,18 @@ class MFAMethodsCreateHandlerTest {
                     JsonParser.parseString(expectedResponse).getAsJsonObject().toString();
             assertEquals(expectedResponseParsedToString, result.getBody());
 
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTH_CODE_VERIFIED,
-                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
-                            AUDIT_EVENT_COMPONENT_ID_HOME,
-                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
-                            pair("mfa-type", SMS.name()),
-                            pair("mfa-method", BACKUP.name().toLowerCase()),
-                            pair("account-recovery", "false"),
-                            pair("MFACodeEntered", TEST_OTP),
-                            pair("notification-type", MFA_SMS.name()));
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            MFA_SMS.name(),
+                            null,
+                            "false",
+                            ACCOUNT_MANAGEMENT.getValue(),
+                            TEST_OTP,
+                            SMS.name(),
+                            BACKUP.name().toLowerCase());
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+            assertEquals(AUDIT_EVENT_COMPONENT_ID_HOME, authCodeVerifiedEvent.componentId());
 
             verify(auditService)
                     .submitAuditEvent(
@@ -381,15 +386,18 @@ class MFAMethodsCreateHandlerTest {
                             any(),
                             any(AuditService.MetadataPair[].class));
 
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTH_CODE_VERIFIED,
-                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
-                            AUDIT_EVENT_COMPONENT_ID_HOME,
-                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
-                            pair("mfa-type", AUTH_APP.name()),
-                            pair("mfa-method", BACKUP.name().toLowerCase()),
-                            pair("account-recovery", "false"));
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            null,
+                            null,
+                            "false",
+                            ACCOUNT_MANAGEMENT.getValue(),
+                            null,
+                            AUTH_APP.name(),
+                            BACKUP.name().toLowerCase());
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+            assertEquals(AUDIT_EVENT_COMPONENT_ID_HOME, authCodeVerifiedEvent.componentId());
 
             verify(auditService)
                     .submitAuditEvent(
@@ -453,17 +461,18 @@ class MFAMethodsCreateHandlerTest {
 
             handler.handleRequest(event, context);
 
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTH_CODE_VERIFIED,
-                            BASE_AUDIT_CONTEXT.withPhoneNumber(TEST_E164_PHONE_NUMBER),
-                            AUDIT_EVENT_COMPONENT_ID_HOME,
-                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
-                            pair("mfa-type", SMS.name()),
-                            pair("mfa-method", BACKUP.name().toLowerCase()),
-                            pair("account-recovery", "false"),
-                            pair("MFACodeEntered", TEST_OTP),
-                            pair("notification-type", MFA_SMS.name()));
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            MFA_SMS.name(),
+                            null,
+                            "false",
+                            ACCOUNT_MANAGEMENT.getValue(),
+                            TEST_OTP,
+                            SMS.name(),
+                            BACKUP.name().toLowerCase());
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+            assertEquals(AUDIT_EVENT_COMPONENT_ID_HOME, authCodeVerifiedEvent.componentId());
         }
     }
 
@@ -828,5 +837,11 @@ class MFAMethodsCreateHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_PRINCIPAL));
             verifyNoInteractions(auditService);
         }
+    }
+
+    private AuthCodeVerified captureAuthCodeVerifiedEvent() {
+        var argCaptor = ArgumentCaptor.forClass(AuthCodeVerified.class);
+        verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+        return argCaptor.getValue();
     }
 }

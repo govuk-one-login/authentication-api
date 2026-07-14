@@ -16,6 +16,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthCodeVerified;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -84,12 +86,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_RESET_TYPE;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_PHONE_NUMBER_COUNTRY_CODE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
@@ -169,6 +168,8 @@ class VerifyMfaCodeHandlerTest {
     private final UserProfile userProfile = mock(UserProfile.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
@@ -223,7 +224,8 @@ class VerifyMfaCodeHandlerTest {
                         authSessionService,
                         mfaMethodsService,
                         userActionsManager,
-                        testUserHelper);
+                        testUserHelper,
+                        structuredAuditService);
     }
 
     @AfterEach
@@ -262,13 +264,18 @@ class VerifyMfaCodeHandlerTest {
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                    pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                    pair("account-recovery", false),
-                    pair("journey-type", REGISTRATION),
-                    pair("MFACodeEntered", CODE),
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            null,
+                            null,
+                            false,
+                            String.valueOf(REGISTRATION),
+                            CODE,
+                            MFAMethodType.AUTH_APP.getValue(),
+                            "default");
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.NEW,
@@ -298,15 +305,7 @@ class VerifyMfaCodeHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(204));
-            verify(auditService)
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                            AUDIT_CONTEXT.withTxmaAuditEncoded(AuditService.UNKNOWN),
-                            pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                            pair("account-recovery", false),
-                            pair("journey-type", REGISTRATION),
-                            pair("MFACodeEntered", CODE),
-                            pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+            verify(structuredAuditService).submitAuditEvent(any(AuthCodeVerified.class));
         }
 
         @Test
@@ -339,13 +338,18 @@ class VerifyMfaCodeHandlerTest {
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                    pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                    pair("account-recovery", false),
-                    pair("journey-type", JourneyType.PASSWORD_RESET_MFA),
-                    pair("MFACodeEntered", CODE),
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            null,
+                            null,
+                            false,
+                            String.valueOf(JourneyType.PASSWORD_RESET_MFA),
+                            CODE,
+                            MFAMethodType.AUTH_APP.getValue(),
+                            "default");
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.EXISTING,
@@ -384,14 +388,18 @@ class VerifyMfaCodeHandlerTest {
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                    pair("mfa-type", MFAMethodType.SMS.getValue()),
-                    pair("account-recovery", false),
-                    pair("journey-type", REGISTRATION),
-                    pair("MFACodeEntered", CODE),
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
-                    pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, VERIFY_PHONE_NUMBER.name()));
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            VERIFY_PHONE_NUMBER.name(),
+                            null,
+                            false,
+                            String.valueOf(REGISTRATION),
+                            CODE,
+                            MFAMethodType.SMS.getValue(),
+                            "default");
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.NEW,
@@ -428,13 +436,18 @@ class VerifyMfaCodeHandlerTest {
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                    pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                    pair("account-recovery", true),
-                    pair("journey-type", JourneyType.ACCOUNT_RECOVERY),
-                    pair("MFACodeEntered", CODE),
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"));
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            null,
+                            null,
+                            true,
+                            String.valueOf(JourneyType.ACCOUNT_RECOVERY),
+                            CODE,
+                            MFAMethodType.AUTH_APP.getValue(),
+                            "default");
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.EXISTING,
@@ -490,14 +503,18 @@ class VerifyMfaCodeHandlerTest {
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
 
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                    pair("mfa-type", MFAMethodType.SMS.getValue()),
-                    pair("account-recovery", isAccountRecovery),
-                    pair("journey-type", journeyType),
-                    pair("MFACodeEntered", CODE),
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
-                    pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, notificationType));
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            notificationType,
+                            null,
+                            isAccountRecovery,
+                            String.valueOf(journeyType),
+                            CODE,
+                            MFAMethodType.SMS.getValue(),
+                            "default");
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.EXISTING,
@@ -557,13 +574,19 @@ class VerifyMfaCodeHandlerTest {
             verify(codeStorageService, never())
                     .saveBlockedForEmail(EMAIL, CODE_BLOCKED_KEY_PREFIX, 900L);
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
-            assertAuditEventSubmittedWithMetadata(
-                    FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                    pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                    pair("account-recovery", false),
-                    pair("journey-type", journeyType),
-                    pair("MFACodeEntered", CODE),
-                    pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, expectedMethodPriority));
+
+            var expectedExtensions =
+                    new AuthCodeVerified.Extensions(
+                            null,
+                            null,
+                            false,
+                            String.valueOf(journeyType),
+                            CODE,
+                            MFAMethodType.AUTH_APP.getValue(),
+                            expectedMethodPriority);
+            var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+            assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+
             verify(cloudwatchMetricsService)
                     .incrementAuthenticationSuccessWithMfa(
                             AuthSessionItem.AccountState.EXISTING,
@@ -1560,14 +1583,15 @@ class VerifyMfaCodeHandlerTest {
 
         boolean isAccountRecoveryJourney = journeyType.equals(ACCOUNT_RECOVERY);
 
-        assertAuditEventSubmittedWithMetadata(
-                FrontendAuditableEvent.AUTH_CODE_VERIFIED,
-                pair(AUDIT_EVENT_EXTENSIONS_MFA_TYPE, MFAMethodType.SMS.getValue()),
-                pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_RECOVERY, isAccountRecoveryJourney),
-                pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType),
-                pair(AUDIT_EVENT_EXTENSIONS_MFA_CODE_ENTERED, CODE),
-                pair(AUDIT_EVENT_EXTENSIONS_MFA_METHOD, "default"),
-                pair(AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE, expectedNotificationType));
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(MFAMethodType.SMS.getValue(), authCodeVerifiedEvent.extensions().mfaType());
+        assertEquals(
+                isAccountRecoveryJourney, authCodeVerifiedEvent.extensions().accountRecovery());
+        assertEquals(String.valueOf(journeyType), authCodeVerifiedEvent.extensions().journeyType());
+        assertEquals(CODE, authCodeVerifiedEvent.extensions().mfaCodeEntered());
+        assertEquals("default", authCodeVerifiedEvent.extensions().mfaMethod());
+        assertEquals(
+                expectedNotificationType, authCodeVerifiedEvent.extensions().notificationType());
     }
 
     @Test
@@ -1615,5 +1639,11 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verify(userActionsManager)
                 .correctAuthAppOtpReceived(any(), argThat(pc -> pc.authSessionItem() != null));
+    }
+
+    private AuthCodeVerified captureAuthCodeVerifiedEvent() {
+        var argCaptor = ArgumentCaptor.forClass(AuthCodeVerified.class);
+        verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+        return argCaptor.getValue();
     }
 }

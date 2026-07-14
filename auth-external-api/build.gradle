@@ -18,6 +18,7 @@ dependencies {
             libs.bundles.nimbus
 
     implementation project(":shared")
+    implementation project(":audit-events")
 
     runtimeOnly libs.bundles.loggingRuntime,
             platform(libs.openTelemetryBom),

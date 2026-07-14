@@ -11,12 +11,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.accountmanagement.services.MfaMethodsMigrationService;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthCodeVerified;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -92,6 +95,8 @@ class MFAMethodsPutHandlerTest {
     private static final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private static final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private static final AuditService auditService = mock(AuditService.class);
+    private static final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
     private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
@@ -139,6 +144,7 @@ class MFAMethodsPutHandlerTest {
                 codeStorageService,
                 mfaMethodsService,
                 auditService,
+                structuredAuditService,
                 dynamoService,
                 authenticationService,
                 sqsClient,
@@ -161,7 +167,8 @@ class MFAMethodsPutHandlerTest {
                         sqsClient,
                         auditService,
                         dynamoService,
-                        mfaMethodsMigrationService);
+                        mfaMethodsMigrationService,
+                        structuredAuditService);
     }
 
     @Test
@@ -619,17 +626,18 @@ class MFAMethodsPutHandlerTest {
 
         handler.handleRequest(eventWithUpdateRequest, context);
 
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_CODE_VERIFIED,
-                        BASE_AUDIT_CONTEXT.withPhoneNumber(UK_MOBILE_NUMBER),
-                        AUDIT_EVENT_COMPONENT_ID_HOME,
-                        pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
-                        pair("MFACodeEntered", TEST_OTP),
-                        pair("notification-type", "MFA_SMS"),
-                        pair("account-recovery", "false"),
-                        pair("mfa-method", DEFAULT_SMS_METHOD.getPriority().toLowerCase()),
-                        pair("mfa-type", DEFAULT_SMS_METHOD.getMfaMethodType()));
+        var expectedExtensions =
+                new AuthCodeVerified.Extensions(
+                        "MFA_SMS",
+                        null,
+                        "false",
+                        ACCOUNT_MANAGEMENT.getValue(),
+                        TEST_OTP,
+                        DEFAULT_SMS_METHOD.getMfaMethodType(),
+                        DEFAULT_SMS_METHOD.getPriority().toLowerCase());
+        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
+        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
+        assertEquals(AUDIT_EVENT_COMPONENT_ID_HOME, authCodeVerifiedEvent.componentId());
     }
 
     @Test
@@ -648,7 +656,7 @@ class MFAMethodsPutHandlerTest {
 
         handler.handleRequest(eventWithUpdateRequest, context);
 
-        verify(auditService, never()).submitAuditEvent(eq(AUTH_CODE_VERIFIED), any());
+        verify(structuredAuditService, never()).submitAuditEvent(any(AuthCodeVerified.class));
     }
 
     private static Stream<Arguments> migrationFailureReasonsToExpectedStatusCodes() {
@@ -1360,5 +1368,11 @@ class MFAMethodsPutHandlerTest {
     private static void setupValidOtpForEmail(String otp, String email) {
         when(codeStorageService.isValidOtpCode(email, otp, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
+    }
+
+    private AuthCodeVerified captureAuthCodeVerifiedEvent() {
+        var argCaptor = ArgumentCaptor.forClass(AuthCodeVerified.class);
+        verify(structuredAuditService).submitAuditEvent(argCaptor.capture());
+        return argCaptor.getValue();
     }
 }

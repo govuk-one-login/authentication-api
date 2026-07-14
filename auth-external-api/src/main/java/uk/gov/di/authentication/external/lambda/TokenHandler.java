@@ -17,6 +17,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthTokenSentToOrchestration;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.external.exceptions.AuthCodeStoreRetreivalException;
 import uk.gov.di.authentication.external.services.TokenService;
 import uk.gov.di.authentication.external.validators.TokenRequestValidator;
@@ -37,13 +39,13 @@ import uk.gov.di.authentication.shared.services.SystemService;
 
 import java.net.URI;
 import java.security.spec.X509EncodedKeySpec;
+import java.time.Clock;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.AUTH_TOKEN_SENT_TO_ORCHESTRATION;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -61,6 +63,7 @@ public class TokenHandler
     private final AuditService auditService;
     private final AuthenticationService authenticationService;
     private final RemoteJwksService authJwksService;
+    private final StructuredAuditService structuredAuditService;
 
     public TokenHandler(
             ConfigurationService configurationService,
@@ -70,7 +73,8 @@ public class TokenHandler
             TokenRequestValidator tokenRequestValidator,
             AuditService auditService,
             AuthenticationService authenticationService,
-            RemoteJwksService authJwksService) {
+            RemoteJwksService authJwksService,
+            StructuredAuditService structuredAuditService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.accessTokenStoreService = accessTokenStoreService;
@@ -79,6 +83,7 @@ public class TokenHandler
         this.auditService = auditService;
         this.authenticationService = authenticationService;
         this.authJwksService = authJwksService;
+        this.structuredAuditService = structuredAuditService;
     }
 
     public TokenHandler() {
@@ -100,6 +105,7 @@ public class TokenHandler
         this.auditService = new AuditService(configurationService);
         this.authenticationService = new DynamoService(configurationService);
         this.authJwksService = new RemoteJwksService(configurationService.getAuthJwksUrl());
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     @Override
@@ -211,7 +217,13 @@ public class TokenHandler
                                             .orElse(AuditService.UNKNOWN))
                             .withClientSessionId(authCodeStore.getJourneyID());
 
-            auditService.submitAuditEvent(AUTH_TOKEN_SENT_TO_ORCHESTRATION, auditContext);
+            var auditEvent =
+                    AuthTokenSentToOrchestration.create(
+                            auditContext,
+                            userProfile.getEmail(),
+                            userProfile.getPublicSubjectID(),
+                            Clock.systemUTC());
+            structuredAuditService.submitAuditEvent(auditEvent);
 
             Map<String, String> headers = new HashMap<>();
             headers.put("Content-Type", "application/json");

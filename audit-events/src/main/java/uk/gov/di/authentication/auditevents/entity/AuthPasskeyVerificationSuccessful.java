@@ -30,10 +30,11 @@ public record AuthPasskeyVerificationSuccessful(
             List<PasskeyAllowCredentials> passkeyAllowedCredentials,
             PasskeyDetail passkey,
             String credentialId,
+            String publicSubjectId,
             Clock clock) {
         var eventName = "AUTH_PASSKEY_VERIFICATION_SUCCESSFUL";
         Instant now = clock.instant();
-        var user = UserWithoutPhone.fromAuditContext(auditContext);
+        var user = UserWithoutPhone.fromAuditContext(auditContext, publicSubjectId);
         var restricted =
                 new Restricted(
                         EncodedDeviceInformation.from(auditContext),
