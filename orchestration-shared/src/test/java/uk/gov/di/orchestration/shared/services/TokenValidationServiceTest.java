@@ -168,30 +168,12 @@ class TokenValidationServiceTest {
         }
 
         @Test
-        void
-                shouldSuccessfullyValidateOldStoredECKeyReauthIDTokenWhenKeyIdMatchesAndStoredKeyEnabled() {
+        void shouldSuccessfullyValidateOldStoredECKeyReauthIDTokenWhenKeyIdMatches() {
             Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
             var oldStoredECKey = generateCustomECKeyPair(OLD_STORED_KEY_ID);
 
             when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
                     .thenReturn(new ArrayList<ECKey>(Arrays.asList(oldStoredECKey.toECKey())));
-            when(configurationService.isUseStoredOldIdTokenPublicKeysEnabled()).thenReturn(true);
-
-            SignedJWT signedIdToken = createCustomSignedIdToken(expiryDate, oldStoredECKey);
-            assertTrue(
-                    tokenValidationService.isReauthTokenSignatureValid(
-                            new BearerAccessToken(signedIdToken.serialize()).getValue()));
-        }
-
-        @Test
-        void
-                shouldSuccessfullyValidateOldStoredECKeyReauthIDTokenWhenKeyIdMatchesAndStoredKeyDisabledAndOldKeyIsNotPublished() {
-            Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-            var oldStoredECKey = generateCustomECKeyPair(OLD_STORED_KEY_ID);
-
-            when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
-                    .thenReturn(new ArrayList<ECKey>(Arrays.asList(oldStoredECKey.toECKey())));
-            when(configurationService.isUseStoredOldIdTokenPublicKeysEnabled()).thenReturn(false);
 
             SignedJWT signedIdToken = createCustomSignedIdToken(expiryDate, oldStoredECKey);
             assertTrue(
@@ -207,7 +189,6 @@ class TokenValidationServiceTest {
 
             when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
                     .thenReturn(new ArrayList<ECKey>(Arrays.asList(oldStoredECKey.toECKey())));
-            when(configurationService.isUseStoredOldIdTokenPublicKeysEnabled()).thenReturn(true);
 
             SignedJWT signedIdToken = createCustomSignedIdToken(expiryDate, failedECKey);
             assertFalse(
@@ -220,7 +201,6 @@ class TokenValidationServiceTest {
             Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
             when(jwksService.getStoredOldPublicTokenJwksWithOpaqueId())
                     .thenReturn(new ArrayList<>());
-            when(configurationService.isUseStoredOldIdTokenPublicKeysEnabled()).thenReturn(true);
 
             SignedJWT signedIdToken = createSignedIdToken(expiryDate);
             assertFalse(

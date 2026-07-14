@@ -410,10 +410,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .contains(getEnvironment());
     }
 
-    public boolean isUseStoredOldIdTokenPublicKeysEnabled() {
-        return getFlagOrFalse("USE_STORED_OLD_ID_TOKEN_PUBLIC_KEYS");
-    }
-
     public boolean isSingleFactorAccountDeletionEnabled() {
         return getFlagOrFalse("SINGLE_FACTOR_ACCOUNT_DELETION_ENABLED");
     }

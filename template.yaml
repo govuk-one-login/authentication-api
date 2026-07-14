@@ -104,14 +104,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  UseStoredOldIdTokenPublicKeys:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
@@ -4041,10 +4033,6 @@ Resources:
               !Ref Environment,
               oldIdTokenECPublicKeys,
             ]
-          USE_STORED_OLD_ID_TOKEN_PUBLIC_KEYS: !If
-            - UseStoredOldIdTokenPublicKeys
-            - true
-            - false
           IDENTITY_ENABLED: true
           INTERNAl_SECTOR_URI: !Sub
             - https://identity.${ServiceDomain}
