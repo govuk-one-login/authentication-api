@@ -167,7 +167,6 @@ Mappings:
       newauthAccountId: "975050272416"
       authEnvironment: authdev3
       serviceDomain: authdev3.dev.account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:653994557586:key/853e9af8-2f07-439d-97da-c72fa5b238e9
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:653994557586:key/17e5e566-4e99-43b4-ad59-e1ef924a582b
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:653994557586:authdev3-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -205,7 +204,6 @@ Mappings:
       newauthAccountId: "058264536367"
       authEnvironment: build
       serviceDomain: build.account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/ca2e4723-7ae8-478d-8fa2-baad3f71f506
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/0189356a-b80f-4f12-9f31-60f5b34a574f
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -243,7 +241,6 @@ Mappings:
       newauthAccountId: "851725205974"
       authEnvironment: staging
       serviceDomain: staging.account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:758531536632:key/1d506b73-c506-4cec-bc46-db0ac1a54149
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:758531536632:staging-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.staging.account.gov.uk
@@ -283,7 +280,6 @@ Mappings:
       newauthAccountId: "211125600642"
       authEnvironment: integration
       serviceDomain: integration.account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:761723964695:key/6eadd5bf-8a7f-4062-88c4-7774f070df02
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:integration-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.integration.account.gov.uk
@@ -321,7 +317,6 @@ Mappings:
       newauthAccountId: "211125303002"
       authEnvironment: production
       serviceDomain: account.gov.uk
-      idTokenKeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:172348255554:key/ce5d0a05-909c-449b-be82-87009f5bef9a
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:172348255554:production-back-channel-logout-queue
       docAppBackendUri: https://api-backend-api.review-b.account.gov.uk
@@ -1919,12 +1914,6 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
           OIDC_API_BASE_URL: !Sub
             - https://oidc.${ServiceDomain}/
             - ServiceDomain:
@@ -2320,12 +2309,6 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -2529,12 +2512,6 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -3390,12 +3367,6 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -4020,12 +3991,6 @@ Resources:
                   authEnvironment,
                 ]
           ENVIRONMENT: !Sub ${Environment}
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
           NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2: !Ref OrchExternalTokenEcSigningKmsKeyAliasV2
           STORED_OLD_ID_TOKEN_EC_PUBLIC_KEYS:
             !FindInMap [
@@ -4256,12 +4221,6 @@ Resources:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
           IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
-          EXTERNAL_TOKEN_SIGNING_KEY_ALIAS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              idTokenKeyArn,
-            ]
           EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS:
             !FindInMap [
               EnvironmentConfiguration,
@@ -6962,17 +6921,6 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowIdTokenSigningKms
-            Effect: Allow
-            Action:
-              - kms:Sign
-              - kms:GetPublicKey
-            Resource:
-              - !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  idTokenKeyArn,
-                ]
           - Sid: AllowNewIdTokenSigningKmsV2
             Effect: Allow
             Action:
