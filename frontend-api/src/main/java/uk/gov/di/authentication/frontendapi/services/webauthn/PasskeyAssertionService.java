@@ -37,6 +37,7 @@ public class PasskeyAssertionService {
     private final PasskeyJsonParser jsonParser;
     private static final Logger LOG = LogManager.getLogger(PasskeyAssertionService.class);
     private final StructuredAuditService structuredAuditService;
+    private static final Long ONE_HOUR_IN_MILLISECONDS = 3_600_000L;
 
     public PasskeyAssertionService(
             RelyingParty relyingParty,
@@ -53,6 +54,7 @@ public class PasskeyAssertionService {
                 StartAssertionOptions.builder()
                         .userHandle(Optional.of(userHandle))
                         .userVerification(UserVerificationRequirement.REQUIRED)
+                        .timeout(ONE_HOUR_IN_MILLISECONDS)
                         .build());
     }
 
