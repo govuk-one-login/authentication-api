@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "DistributionAlias",
+    "ParameterValue": "oidc-orch.account.gov.uk"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "TODO"
+  },
+  {
+    "ParameterKey": "FraudHeaderEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "StandardLoggingEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogDestination",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeaderManagedSecretRotationMonthWeekDaySchedule",
+    "ParameterValue": "WED#3"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeader",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "PreviousOriginCloakingHeader",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "ApiGatewayOriginDomain",
+    "ParameterValue": "b8adb2uzol.execute-api.eu-west-2.amazonaws.com"
+  },
+  {
+    "ParameterKey": "OriginPath",
+    "ParameterValue": "/production"
+  }
+]
