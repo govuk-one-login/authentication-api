@@ -97,19 +97,18 @@ public class FinishPasskeyAssertionHandler
 
         return verifyPasskeyAssertion(userContext, request, input)
                 .flatMap(this::updatePasskeyRecord)
-                .map(success -> reportCorrectPasskeyReceived(userContext))
+                .tap(success -> reportCorrectPasskeyReceived(userContext))
+                .tapFailure(failure -> reportIncorrectPasskeyReceived(userContext, failure))
                 .fold(
-                        failure -> {
-                            reportIncorrectPasskeyReceived(userContext, failure);
-                            return switch (failure) {
-                                case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
-                                        500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
-                                case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
-                                case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
-                                        401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
-                            };
-                        },
+                        failure ->
+                                switch (failure) {
+                                    case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
+                                            500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
+                                    case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
+                                    case ASSERTION_FAILED_ERROR -> generateApiGatewayProxyErrorResponse(
+                                            401, ErrorResponse.PASSKEY_ASSERTION_FAILED);
+                                },
                         success -> generateApiGatewayProxyResponse(200, ""));
     }
 
