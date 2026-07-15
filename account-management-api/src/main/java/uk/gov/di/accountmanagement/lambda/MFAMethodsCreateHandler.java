@@ -434,7 +434,12 @@ public class MFAMethodsCreateHandler
                                 LOG.info(
                                         "Successfully submitted audit event: {}",
                                         auditEvent.name()))
-                .tapFailure(LOG::error);
+                .tapFailure(
+                        f ->
+                                LOG.error(
+                                        "Failure {} when attempting to emit audit event: {}",
+                                        f,
+                                        auditEvent.name()));
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
