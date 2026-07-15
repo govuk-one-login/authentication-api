@@ -267,11 +267,11 @@ public class MFAMethodsCreateHandler
                         userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
         if (addBackupMfaResult.isFailure()) {
-            auditEventStatus =
+            var addFailedAuditStatus =
                     sendAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (auditEventStatus.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
+            if (addFailedAuditStatus.isFailure()) {
+                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
             }
             return handleCreateBackupMfaFailure(addBackupMfaResult.getFailure());
         }
@@ -281,11 +281,11 @@ public class MFAMethodsCreateHandler
 
         if (backupMfaMethodAsResponse.isFailure()) {
             LOG.error(backupMfaMethodAsResponse.getFailure());
-            auditEventStatus =
+            var addFailedAuditStatus =
                     sendAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (auditEventStatus.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
+            if (addFailedAuditStatus.isFailure()) {
+                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
             }
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
@@ -295,11 +295,6 @@ public class MFAMethodsCreateHandler
 
         if (addCompletedResult.isFailure()) {
             return generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure());
-        }
-
-        if (auditEventStatus.isFailure()) {
-            LOG.error(auditEventStatus.getFailure());
-            return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
         }
 
         if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
