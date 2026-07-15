@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "DistributionAlias",
+    "ParameterValue": "oidc.staging.account.gov.uk"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "TODO"
+  },
+  {
+    "ParameterKey": "FraudHeaderEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "StandardLoggingEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogDestination",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeaderManagedSecretRotationMonthWeekDaySchedule",
+    "ParameterValue": "WED#3"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeader",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "PreviousOriginCloakingHeader",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "ApiGatewayOriginDomain",
+    "ParameterValue": "u76vrv46ld.execute-api.eu-west-2.amazonaws.com"
+  },
+  {
+    "ParameterKey": "OriginPath",
+    "ParameterValue": "/staging"
+  }
+]

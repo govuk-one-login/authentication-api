@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "DistributionAlias",
+    "ParameterValue": "oidc.account.gov.uk"
+  },
+  {
+    "ParameterKey": "CloudFrontCertArn",
+    "ParameterValue": "TODO"
+  },
+  {
+    "ParameterKey": "FraudHeaderEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "StandardLoggingEnabled",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "LogDestination",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeaderManagedSecretRotationMonthWeekDaySchedule",
+    "ParameterValue": "WED#3"
+  },
+  {
+    "ParameterKey": "OriginCloakingHeader",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "PreviousOriginCloakingHeader",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "ApiGatewayOriginDomain",
+    "ParameterValue": "none"
+  },
+  {
+    "ParameterKey": "OriginPath",
+    "ParameterValue": "none"
+  }
+]

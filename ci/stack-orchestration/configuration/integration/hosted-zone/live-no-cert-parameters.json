@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "integration"
+  },
+  {
+    "ParameterKey": "DeployCertificate",
+    "ParameterValue": "No"
+  },
+  {
+    "ParameterKey": "EndpointSuffix",
+    "ParameterValue": ""
+  }
+]
