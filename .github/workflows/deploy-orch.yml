@@ -86,7 +86,7 @@ jobs:
       - name: Run Unit Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew client-registry-api:test doc-checking-app-api:test ipv-api:test oidc-api:test orchestration-shared:test jacocoTestReport sis-api:test
+        run: ./gradlew client-registry-api:test doc-checking-app-api:test ipv-api:test oidc-api:test orchestration-shared:test jacocoTestReport sis-api:test identity-shared:test
 
   run-alerting-tests:
     if: ${{ inputs.run_unit_tests == true }}

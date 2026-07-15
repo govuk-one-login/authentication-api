@@ -3,27 +3,31 @@ plugins {
     id "jacoco"
 }
 
-group = "uk.gov.di.orchestration.sisapi"
+group = "uk.gov.di.orchestration.identity"
 version = "unspecified"
 
 dependencies {
-    compileOnly libs.bundles.awsLambda
+    compileOnly libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.bundles.awsDynamoDb
 
     implementation libs.gson,
-            libs.bundles.nimbus
+            libs.bundles.nimbus,
+            libs.awsCloudwatchEmf,
+            libs.jetbrainsAnnotations,
+            project(":orchestration-shared"),
+            project(":client-registry-api"),
+            libs.crac
 
-    implementation project(":orchestration-shared")
-    implementation project(":identity-shared")
-
-    runtimeOnly libs.bundles.loggingRuntime,
-            platform(libs.openTelemetryBom),
+    runtimeOnly platform(libs.openTelemetryBom),
             libs.openTelemetryAwsSdk
 
     testImplementation libs.bundles.test,
-            libs.bundles.apache,
             libs.awsLambdaTests,
             project(":orchestration-shared-test"),
-            libs.bundles.awsLambda
+            libs.bundles.awsLambda,
+            libs.awsSqs,
+            libs.bundles.awsDynamoDb
 
     testRuntimeOnly libs.bundles.testRuntime
 }
@@ -31,14 +35,6 @@ dependencies {
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
-}
-
-task buildZip(type: Zip) {
-    from compileJava
-    from processResources
-    into("lib") {
-        from configurations.runtimeClasspath
-    }
 }
 
 java {
