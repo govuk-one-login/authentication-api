@@ -92,20 +92,14 @@ class PasskeysServiceTest {
         void hasActivePasskeyShouldReturnTheExpectedResultForASuccessfulPasskeysResponse(
                 List<String> returnedPasskeys, boolean expectedResult)
                 throws IOException, InterruptedException {
-            when(httpResponse.body()).thenReturn(passkeyResponse(returnedPasskeys));
-            when(httpResponse.statusCode()).thenReturn(200);
-            when(httpClient.send(
-                            argThat(
-                                    request ->
-                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
-                            any()))
-                    .thenReturn(httpResponse);
+            var responseBody = passkeyResponse(returnedPasskeys);
+            stubPasskeyRetrieveToReturn(200, responseBody);
 
             var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
+
             assertTrue(result.isSuccess());
 
-            var expectedAuthorizationHeader =
-                    Optional.of(ADAPI_BEARER_ACCESS_TOKEN.toAuthorizationHeader());
+            var expectedAuthorizationHeader = Optional.of(ADAPI_BEARER_ACCESS_TOKEN.toAuthorizationHeader());
             verify(httpClient)
                     .send(
                             argThat(
@@ -132,15 +126,10 @@ class PasskeysServiceTest {
         @Test
         void hasActivePasskeyShouldReturnFailureWhenAccountDataApiReturnsANon200ResponseCode()
                 throws IOException, InterruptedException {
-            when(httpResponse.statusCode()).thenReturn(500);
-            when(httpClient.send(
-                            argThat(
-                                    request ->
-                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
-                            any()))
-                    .thenReturn(httpResponse);
+            stubPasskeyRetrieveToReturn(500, "");
 
             var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
+
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
@@ -152,21 +141,14 @@ class PasskeysServiceTest {
         void
                 hasActivePasskeyShouldReturnFailureWhenAccountDataApiResponseReturnsResponseThatCannotBeParsedAsPasskeysRetrieveResponse(
                         String invalidResponseBody) throws IOException, InterruptedException {
-            when(httpResponse.body()).thenReturn(invalidResponseBody);
-            when(httpResponse.statusCode()).thenReturn(200);
-            when(httpClient.send(
-                            argThat(
-                                    request ->
-                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
-                            any()))
-                    .thenReturn(httpResponse);
+            stubPasskeyRetrieveToReturn(200, invalidResponseBody);
 
             var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
+
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
-            assertEquals(
-                    PasskeyRetrieveError.ERROR_PARSING_RESPONSE_FROM_PASSKEY_RETRIEVE, failure);
+            assertEquals(PasskeyRetrieveError.ERROR_PARSING_RESPONSE_FROM_PASSKEY_RETRIEVE, failure);
         }
 
         private static Stream<Arguments> exceptionsToExpectedErrors() {
@@ -190,6 +172,7 @@ class PasskeysServiceTest {
                     .thenThrow(e);
 
             var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
+
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
@@ -215,15 +198,8 @@ class PasskeysServiceTest {
         @Test
         void retrievePasskeysShouldReturnFullResponseOnSuccess()
                 throws IOException, InterruptedException {
-            when(httpResponse.body())
-                    .thenReturn(passkeyResponse(List.of(aPasskeyWithId("123456"))));
-            when(httpResponse.statusCode()).thenReturn(200);
-            when(httpClient.send(
-                            argThat(
-                                    request ->
-                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
-                            any()))
-                    .thenReturn(httpResponse);
+            var responseBody = passkeyResponse(List.of(aPasskeyWithId("123456")));
+            stubPasskeyRetrieveToReturn(200, responseBody);
 
             var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isSuccess());
@@ -233,18 +209,11 @@ class PasskeysServiceTest {
 
         @Test
         void shouldReturnFailureWhenApiReturnsNon200() throws IOException, InterruptedException {
-            when(httpResponse.statusCode()).thenReturn(500);
-            when(httpClient.send(
-                            argThat(
-                                    request ->
-                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
-                            any()))
-                    .thenReturn(httpResponse);
+            stubPasskeyRetrieveToReturn(500, "");
 
             var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
-            assertEquals(
-                    PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, result.getFailure());
+            assertEquals(PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, result.getFailure());
         }
     }
 
@@ -272,5 +241,15 @@ class PasskeysServiceTest {
                 }
                 """
                 .formatted(id);
+    }
+
+
+    private void stubPasskeyRetrieveToReturn(int statusCode, String body) throws IOException, InterruptedException {
+        when(httpResponse.body()).thenReturn(body);
+        when(httpResponse.statusCode()).thenReturn(statusCode);
+        when(httpClient.send(
+                argThat(request -> request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                any()))
+                .thenReturn(httpResponse);
     }
 }
