@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -302,6 +303,32 @@ class PasskeysServiceTest {
                             "{\"signCount\":%d,\"lastUsedAt\":\"%s\"}", signCount, FIXED_TIMESTAMP);
             assertEquals(expectedRequestBody, actualRequestBody);
             assertEquals("PATCH", sentRequest.method());
+            var expectedAuthorizationHeader =
+                    Optional.of(ADAPI_BEARER_ACCESS_TOKEN.toAuthorizationHeader());
+            assertEquals(
+                    expectedAuthorizationHeader, sentRequest.headers().firstValue("Authorization"));
+        }
+
+        @Test
+        void updatePasskeyShouldCreateAnAccessTokenWithTheRelevantData()
+                throws IOException, InterruptedException {
+            var signCount = 2;
+            stubApiResponseToReturn(UPDATE_PASSKEY_URL, 204, "");
+
+            passkeysService.updatePasskey(
+                    PUBLIC_SUBJECT_ID, SESSION_ID, PASSKEY_IDENTIFIER, signCount, FIXED_CLOCK);
+
+            verify(accessTokenConstructorService)
+                    .createSignedAccessToken(
+                            eq(PUBLIC_SUBJECT_ID),
+                            eq(List.of(AccountDataScope.PASSKEY_UPDATE)),
+                            eq(SESSION_ID),
+                            any(),
+                            any(),
+                            eq(AUTH_TO_ACCOUNT_DATA_AUDIENCE),
+                            eq(AUTH_ISSUER_CLAIM),
+                            eq(AMC_CLIENT_ID),
+                            eq(AUTH_TO_ACCOUNT_DATA_SIGNING_KEY));
         }
 
         private static Stream<Arguments> responseCodesAndBodiesToExpectedErrors() {
@@ -342,6 +369,28 @@ class PasskeysServiceTest {
 
             assertTrue(result.isFailure());
             assertEquals(expectedError, result.getFailure());
+        }
+
+        @Test
+        void updatePasskeyShouldReturnErrorWhenTokenCreationFails()
+                throws IOException, InterruptedException {
+            when(accessTokenConstructorService.createSignedAccessToken(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
+
+            var signCount = 2;
+            var result =
+                    passkeysService.updatePasskey(
+                            PUBLIC_SUBJECT_ID,
+                            SESSION_ID,
+                            PASSKEY_IDENTIFIER,
+                            signCount,
+                            FIXED_CLOCK);
+
+            assertTrue(result.isFailure());
+            assertEquals(PasskeyUpdateError.ERROR_CREATING_ACCESS_TOKEN, result.getFailure());
+
+            verify(httpClient, never()).send(any(), any());
         }
     }
 

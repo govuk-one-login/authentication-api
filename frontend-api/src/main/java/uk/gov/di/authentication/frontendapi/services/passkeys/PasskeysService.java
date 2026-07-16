@@ -67,7 +67,7 @@ public class PasskeysService {
                 createAccountDataApiAccessToken(
                         publicSubjectId, sessionId, List.of(AccountDataScope.PASSKEY_RETRIEVE));
         if (accountDataApiAccessTokenResult.isFailure()) {
-            return Result.failure(accountDataApiAccessTokenResult.getFailure());
+            return Result.failure(PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN);
         }
 
         var accountDataBaseUri = configurationService.getAccountDataURI();
@@ -132,8 +132,19 @@ public class PasskeysService {
         var bodyPublisher =
                 HttpRequest.BodyPublishers.ofString(
                         serialisationService.writeValueAsString(updateRequest));
+        var accountDataApiAccessTokenResult =
+                createAccountDataApiAccessToken(
+                        publicSubjectId, sessionId, List.of(AccountDataScope.PASSKEY_UPDATE));
+        if (accountDataApiAccessTokenResult.isFailure()) {
+            return Result.failure(PasskeyUpdateError.ERROR_CREATING_ACCESS_TOKEN);
+        }
         var request =
                 HttpRequest.newBuilder(updatePasskeysRequestUri)
+                        .header(
+                                "Authorization",
+                                accountDataApiAccessTokenResult
+                                        .getSuccess()
+                                        .toAuthorizationHeader())
                         .method("PATCH", bodyPublisher)
                         .build();
 
@@ -167,7 +178,7 @@ public class PasskeysService {
         }
     }
 
-    private Result<PasskeyRetrieveError, BearerAccessToken> createAccountDataApiAccessToken(
+    private Result<String, BearerAccessToken> createAccountDataApiAccessToken(
             String publicSubjectId, String sessionId, List<AccessTokenScope> scopes) {
         return accessTokenConstructorService
                 .createSignedAccessToken(
@@ -185,7 +196,7 @@ public class PasskeysService {
                             LOG.warn(
                                     "Error creating account data api access token. Error: {}",
                                     failure);
-                            return PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN;
+                            return "Error creating access token";
                         });
     }
 }

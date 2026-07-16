@@ -6,7 +6,8 @@ public enum PasskeyUpdateError {
     PASSKEY_OR_USER_NOT_FOUND("Passkey or user not found"),
     PASSKEY_UPDATE_INTERNAL_SERVER_ERROR("Passkey update account data api internal server error"),
     PASSKEY_UPDATE_UNEXPECTED_RESPONSE_CODE(
-            "Account data api returned unexpected response code for update passkeys");
+            "Account data api returned unexpected response code for update passkeys"),
+    ERROR_CREATING_ACCESS_TOKEN("Failure constructing adapi access token");
 
     private final String value;
 
