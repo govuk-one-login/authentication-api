@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyUpdateError;
 import uk.gov.di.authentication.shared.entity.AccessTokenScope;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -112,7 +113,7 @@ public class PasskeysService {
         }
     }
 
-    public Result<String, Void> updatePasskey(
+    public Result<PasskeyUpdateError, Void> updatePasskey(
             String publicSubjectId,
             String sessionId,
             String passkeyIdentifier,
@@ -137,8 +138,16 @@ public class PasskeysService {
                         .build();
 
         try {
-            httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return Result.emptySuccess();
+            var result = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return switch (result.statusCode()) {
+                case 204 -> Result.emptySuccess();
+                case 400 -> Result.failure(PasskeyUpdateError.PASSKEY_UPDATE_BAD_REQUEST);
+                case 403 -> Result.failure(PasskeyUpdateError.PASSKEY_UPDATE_UNAUTHORISED);
+                case 404 -> Result.failure(PasskeyUpdateError.PASSKEY_OR_USER_NOT_FOUND);
+                case 500 -> Result.failure(PasskeyUpdateError.PASSKEY_UPDATE_INTERNAL_SERVER_ERROR);
+                default -> Result.failure(
+                        PasskeyUpdateError.PASSKEY_UPDATE_UNEXPECTED_RESPONSE_CODE);
+            };
         } catch (Exception e) {
             throw new RuntimeException("TODO");
         }

@@ -12,6 +12,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyUpdateError;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -301,6 +302,46 @@ class PasskeysServiceTest {
                             "{\"signCount\":%d,\"lastUsedAt\":\"%s\"}", signCount, FIXED_TIMESTAMP);
             assertEquals(expectedRequestBody, actualRequestBody);
             assertEquals("PATCH", sentRequest.method());
+        }
+
+        private static Stream<Arguments> responseCodesAndBodiesToExpectedErrors() {
+
+            return Stream.of(
+                    Arguments.of(
+                            400,
+                            "{\"code\":4000,\"message\":\"Invalid request body\"}",
+                            PasskeyUpdateError.PASSKEY_UPDATE_BAD_REQUEST),
+                    Arguments.of(
+                            403,
+                            "{\"code\":4000,\"message\":\"Unauthorised\"}",
+                            PasskeyUpdateError.PASSKEY_UPDATE_UNAUTHORISED),
+                    Arguments.of(
+                            404,
+                            "{\"code\":4040,\"message\":\"Passkey not found\"}",
+                            PasskeyUpdateError.PASSKEY_OR_USER_NOT_FOUND),
+                    Arguments.of(
+                            500,
+                            "{\"code\":5000,\"message\":\"Internal server error\"}",
+                            PasskeyUpdateError.PASSKEY_UPDATE_INTERNAL_SERVER_ERROR),
+                    Arguments.of(
+                            418,
+                            "{\"code\":4180,\"message\":\"Teapot\"}",
+                            PasskeyUpdateError.PASSKEY_UPDATE_UNEXPECTED_RESPONSE_CODE));
+        }
+
+        @ParameterizedTest
+        @MethodSource("responseCodesAndBodiesToExpectedErrors")
+        void updatePasskeyShouldHandleNon204Responses(
+                int responseStatus, String responseBody, PasskeyUpdateError expectedError)
+                throws IOException, InterruptedException {
+            stubApiResponseToReturn(UPDATE_PASSKEY_URL, responseStatus, responseBody);
+
+            var result =
+                    passkeysService.updatePasskey(
+                            PUBLIC_SUBJECT_ID, SESSION_ID, PASSKEY_IDENTIFIER, 2, FIXED_CLOCK);
+
+            assertTrue(result.isFailure());
+            assertEquals(expectedError, result.getFailure());
         }
     }
 
