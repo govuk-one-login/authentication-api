@@ -99,26 +99,6 @@ class PasskeysServiceTest {
 
             assertTrue(result.isSuccess());
 
-            var expectedAuthorizationHeader = Optional.of(ADAPI_BEARER_ACCESS_TOKEN.toAuthorizationHeader());
-            verify(httpClient)
-                    .send(
-                            argThat(
-                                    request ->
-                                            request.headers()
-                                                    .firstValue("Authorization")
-                                                    .equals(expectedAuthorizationHeader)),
-                            any());
-            verify(accessTokenConstructorService)
-                    .createSignedAccessToken(
-                            eq(PUBLIC_SUBJECT_ID),
-                            eq(List.of(AccountDataScope.PASSKEY_RETRIEVE)),
-                            eq(SESSION_ID),
-                            any(),
-                            any(),
-                            eq(AUTH_TO_ACCOUNT_DATA_AUDIENCE),
-                            eq(AUTH_ISSUER_CLAIM),
-                            eq(AMC_CLIENT_ID),
-                            eq(AUTH_TO_ACCOUNT_DATA_SIGNING_KEY));
             var hasActivePasskey = result.getSuccess();
             assertEquals(expectedResult, hasActivePasskey);
         }
@@ -148,7 +128,8 @@ class PasskeysServiceTest {
             assertTrue(result.isFailure());
 
             var failure = result.getFailure();
-            assertEquals(PasskeyRetrieveError.ERROR_PARSING_RESPONSE_FROM_PASSKEY_RETRIEVE, failure);
+            assertEquals(
+                    PasskeyRetrieveError.ERROR_PARSING_RESPONSE_FROM_PASSKEY_RETRIEVE, failure);
         }
 
         private static Stream<Arguments> exceptionsToExpectedErrors() {
@@ -208,12 +189,56 @@ class PasskeysServiceTest {
         }
 
         @Test
+        void retrievePasskeyShouldCreateAnAccessTokenWithTheRelevantData()
+                throws IOException, InterruptedException {
+            stubPasskeyRetrieveToReturn(200, passkeyResponse(List.of()));
+
+            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID, SESSION_ID);
+
+            assertTrue(result.isSuccess());
+
+            verify(accessTokenConstructorService)
+                    .createSignedAccessToken(
+                            eq(PUBLIC_SUBJECT_ID),
+                            eq(List.of(AccountDataScope.PASSKEY_RETRIEVE)),
+                            eq(SESSION_ID),
+                            any(),
+                            any(),
+                            eq(AUTH_TO_ACCOUNT_DATA_AUDIENCE),
+                            eq(AUTH_ISSUER_CLAIM),
+                            eq(AMC_CLIENT_ID),
+                            eq(AUTH_TO_ACCOUNT_DATA_SIGNING_KEY));
+        }
+
+        @Test
+        void retrievePasskeysShouldMakeACallWithAnAuthorizationHeader()
+                throws IOException, InterruptedException {
+            stubPasskeyRetrieveToReturn(200, passkeyResponse(List.of()));
+
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
+
+            assertTrue(result.isSuccess());
+
+            var expectedAuthorizationHeader =
+                    Optional.of(ADAPI_BEARER_ACCESS_TOKEN.toAuthorizationHeader());
+            verify(httpClient)
+                    .send(
+                            argThat(
+                                    request ->
+                                            request.headers()
+                                                    .firstValue("Authorization")
+                                                    .equals(expectedAuthorizationHeader)),
+                            any());
+        }
+
+        @Test
         void shouldReturnFailureWhenApiReturnsNon200() throws IOException, InterruptedException {
             stubPasskeyRetrieveToReturn(500, "");
 
             var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID, SESSION_ID);
             assertTrue(result.isFailure());
-            assertEquals(PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, result.getFailure());
+            assertEquals(
+                    PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, result.getFailure());
         }
     }
 
@@ -243,13 +268,13 @@ class PasskeysServiceTest {
                 .formatted(id);
     }
 
-
-    private void stubPasskeyRetrieveToReturn(int statusCode, String body) throws IOException, InterruptedException {
+    private void stubPasskeyRetrieveToReturn(int statusCode, String body)
+            throws IOException, InterruptedException {
         when(httpResponse.body()).thenReturn(body);
         when(httpResponse.statusCode()).thenReturn(statusCode);
         when(httpClient.send(
-                argThat(request -> request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
-                any()))
+                        argThat(request -> request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                        any()))
                 .thenReturn(httpResponse);
     }
 }
