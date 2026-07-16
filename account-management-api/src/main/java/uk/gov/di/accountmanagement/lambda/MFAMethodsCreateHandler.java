@@ -201,12 +201,7 @@ public class MFAMethodsCreateHandler
                             configurationService.isAccountManagementInternationalSmsEnabled());
 
             if (invalidPhoneNumber.isPresent()) {
-                var auditEventStatus =
-                        sendAuditEvent(
-                                AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-                if (auditEventStatus.isFailure()) {
-                    LOG.error(auditEventStatus.getFailure());
-                }
+                sendAuditEvent(AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
                 return Result.failure(invalidPhoneNumber.get());
             }
 
@@ -217,12 +212,7 @@ public class MFAMethodsCreateHandler
                             NotificationType.VERIFY_PHONE_NUMBER);
             if (!isValidOtpCode) {
                 LOG.info("Invalid OTP presented.");
-                var auditEventStatus =
-                        sendAuditEvent(
-                                AUTH_INVALID_CODE_SENT, auditContext, mfaMethodCreateRequest);
-                if (auditEventStatus.isFailure()) {
-                    LOG.error(auditEventStatus.getFailure());
-                }
+                sendAuditEvent(AUTH_INVALID_CODE_SENT, auditContext, mfaMethodCreateRequest);
                 return Result.failure(INVALID_OTP);
             }
         }
@@ -268,7 +258,6 @@ public class MFAMethodsCreateHandler
         var auditEventStatus =
                 sendAuthCodeVerifiedEvent(auditContext, userProfile, mfaMethodCreateRequest);
         if (auditEventStatus.isFailure()) {
-            LOG.error(auditEventStatus.getFailure());
             return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
         }
 
@@ -285,12 +274,11 @@ public class MFAMethodsCreateHandler
                         userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
         if (addBackupMfaResult.isFailure()) {
-            auditEventStatus =
+            var addFailedAuditStatus =
                     sendAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (auditEventStatus.isFailure()) {
-                LOG.error(auditEventStatus.getFailure());
-                return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
+            if (addFailedAuditStatus.isFailure()) {
+                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
             }
             return handleCreateBackupMfaFailure(addBackupMfaResult.getFailure());
         }
@@ -300,12 +288,11 @@ public class MFAMethodsCreateHandler
 
         if (backupMfaMethodAsResponse.isFailure()) {
             LOG.error(backupMfaMethodAsResponse.getFailure());
-            auditEventStatus =
+            var addFailedAuditStatus =
                     sendAuditEvent(
                             AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (auditEventStatus.isFailure()) {
-                LOG.error(auditEventStatus.getFailure());
-                return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
+            if (addFailedAuditStatus.isFailure()) {
+                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
             }
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
@@ -314,7 +301,6 @@ public class MFAMethodsCreateHandler
                 sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, mfaMethodCreateRequest);
 
         if (addCompletedResult.isFailure()) {
-            LOG.error(addCompletedResult.getFailure());
             return generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure());
         }
 
@@ -323,7 +309,6 @@ public class MFAMethodsCreateHandler
                     sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext, mfaMethodCreateRequest);
 
             if (updatePhoneNumberResult.isFailure()) {
-                LOG.error(updatePhoneNumberResult.getFailure());
                 return generateApiGatewayProxyErrorResponse(
                         500, updatePhoneNumberResult.getFailure());
             }
@@ -488,11 +473,17 @@ public class MFAMethodsCreateHandler
         var metadataPairs = metadataPairsForEvent(auditEvent, mfaMethodCreateRequest);
         return AuditHelper.sendAuditEvent(
                         auditEvent, enrichedAuditContext, auditService, LOG, metadataPairs)
-                .map(
-                        sucess -> {
-                            LOG.info("Successfully submitted audit event: {}", auditEvent.name());
-                            return sucess;
-                        });
+                .tap(
+                        success ->
+                                LOG.info(
+                                        "Successfully submitted audit event: {}",
+                                        auditEvent.name()))
+                .tapFailure(
+                        f ->
+                                LOG.error(
+                                        "Failure {} when attempting to emit audit event: {}",
+                                        f,
+                                        auditEvent.name()));
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {

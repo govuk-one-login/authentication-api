@@ -1,10 +1,12 @@
 package uk.gov.di.authentication.shared.entity;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -196,6 +198,127 @@ class ResultTest {
             assertEquals("Found failure abc", failureLogs.get(0));
             assertEquals(
                     Result.<Integer, Integer>failure(failureString.length()), mapFailureResult);
+        }
+    }
+
+    @Nested
+    class TapAndTapFailureTests {
+        private ArrayList<String> logsEmitted;
+
+        @BeforeEach
+        void setup() {
+            logsEmitted = new ArrayList<>();
+        }
+
+        @Test
+        void tapShouldPerformASideEffectOnASuccessAndReturnOriginalResult() {
+            var successValue = 1;
+            var originalSuccess = Result.success(successValue);
+
+            var tapResult =
+                    originalSuccess.tap(i -> logFunction(String.format("Got success value %d", i)));
+
+            assertLogged("Got success value 1");
+
+            assertEquals(originalSuccess, tapResult);
+        }
+
+        @Test
+        void tapShouldPerformMultipleSideEffectsOnASuccessAndReturnOriginalResult() {
+            var successValue = 5;
+            var originalSuccess = Result.success(successValue);
+            var originalSumOfValues = 100;
+            var sumOfSuccessesSoFar = new AtomicInteger(originalSumOfValues);
+
+            var tapResult =
+                    originalSuccess.tap(
+                            i -> {
+                                logFunction(String.format("Got success value %d", i));
+                                sumOfSuccessesSoFar.set(sumOfSuccessesSoFar.get() + i);
+                            });
+
+            assertLogged("Got success value 5");
+
+            assertEquals(originalSumOfValues + successValue, sumOfSuccessesSoFar.get());
+
+            assertEquals(originalSuccess, tapResult);
+        }
+
+        @Test
+        void tapShouldNotPerformASideEffectOnAFailureAndReturnOriginalResult() {
+            var originalFailure = Result.<String, Integer>failure("some failure");
+
+            var tapResult =
+                    originalFailure.tap(i -> logFunction(String.format("Got success value %d", i)));
+
+            assertLogsEmpty();
+            assertEquals(originalFailure, tapResult);
+        }
+
+        @Test
+        void tapFailureShouldNotPerformASideEffectOnASuccessAndReturnOriginalResult() {
+            var successValue = 1;
+            var originalSuccess = Result.success(successValue);
+            var originalNumberOfFailures = 100;
+            AtomicInteger numberOfFailuresSoFar = new AtomicInteger(originalNumberOfFailures);
+
+            var tapFailureResult =
+                    originalSuccess.tapFailure(
+                            f -> numberOfFailuresSoFar.set(numberOfFailuresSoFar.get() + 1));
+
+            assertEquals(originalNumberOfFailures, numberOfFailuresSoFar.get());
+
+            assertEquals(originalSuccess, tapFailureResult);
+        }
+
+        @Test
+        void tapFailureShouldPerformASideEffectOnAFailureAndReturnOriginalResult() {
+            var originalFailure = Result.<String, Integer>failure("some failure");
+
+            var originalNumberOfFailures = 100;
+            AtomicInteger numberOfFailuresSoFar = new AtomicInteger(originalNumberOfFailures);
+
+            var tapFailureResult =
+                    originalFailure.tapFailure(
+                            f -> numberOfFailuresSoFar.set(numberOfFailuresSoFar.get() + 1));
+
+            assertEquals(originalNumberOfFailures + 1, numberOfFailuresSoFar.get());
+
+            assertEquals(originalFailure, tapFailureResult);
+        }
+
+        @Test
+        void tapFailureShouldPerformMultipleSideEffectsOnAFailureAndReturnOriginalResult() {
+            var originalFailure = Result.<String, Integer>failure("some failure");
+
+            var originalNumberOfFailures = 100;
+            AtomicInteger numberOfFailuresSoFar = new AtomicInteger(originalNumberOfFailures);
+
+            var tapFailureResult =
+                    originalFailure.tapFailure(
+                            f -> {
+                                numberOfFailuresSoFar.set(numberOfFailuresSoFar.get() + 1);
+                                logFunction(String.format("Got failure: %s", f));
+                            });
+
+            assertEquals(originalNumberOfFailures + 1, numberOfFailuresSoFar.get());
+
+            assertLogged("Got failure: some failure");
+
+            assertEquals(originalFailure, tapFailureResult);
+        }
+
+        private void logFunction(String s) {
+            logsEmitted.add(s);
+        }
+
+        private void assertLogsEmpty() {
+            assertEquals(0, logsEmitted.size());
+        }
+
+        private void assertLogged(String expected) {
+            assertEquals(1, logsEmitted.size());
+            assertEquals(expected, logsEmitted.get(0));
         }
     }
 }

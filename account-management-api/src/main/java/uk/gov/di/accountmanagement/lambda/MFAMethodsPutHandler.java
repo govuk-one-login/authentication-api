@@ -616,11 +616,7 @@ public class MFAMethodsPutHandler
         return AuditHelper.sendAuditEvent(
                         auditEvent, contextWithPhoneNumber, auditService, LOG, pairs)
                 .mapFailure(f -> generateApiGatewayProxyErrorResponse(500, f))
-                .map(
-                        success -> {
-                            LOG.info("Successfully submitted audit event: {}", auditEvent.name());
-                            return success;
-                        });
+                .tap(s -> LOG.info("Successfully submitted audit event: {}", auditEvent.name()));
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> emitAuditEventForAuthAppUpdate(

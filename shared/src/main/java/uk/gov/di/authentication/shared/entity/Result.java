@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public sealed interface Result<F, S> permits Result.Failure, Result.Success {
@@ -45,6 +46,10 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
 
     <T> T fold(Function<F, T> failureMapper, Function<S, T> successMapper);
 
+    Result<F, S> tap(Consumer<S> action);
+
+    Result<F, S> tapFailure(Consumer<F> action);
+
     record Failure<F, S>(F value) implements Result<F, S> {
         @Override
         public boolean isFailure() {
@@ -84,6 +89,17 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
         @Override
         public <T> T fold(Function<F, T> failureMapper, Function<S, T> successMapper) {
             return failureMapper.apply(value);
+        }
+
+        @Override
+        public Result<F, S> tap(Consumer<S> action) {
+            return this;
+        }
+
+        @Override
+        public Result<F, S> tapFailure(Consumer<F> action) {
+            action.accept(this.value());
+            return this;
         }
     }
 
@@ -126,6 +142,17 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
         @Override
         public <T> T fold(Function<F, T> failureMapper, Function<S, T> successMapper) {
             return successMapper.apply(value);
+        }
+
+        @Override
+        public Result<F, S> tap(Consumer<S> action) {
+            action.accept(this.value());
+            return this;
+        }
+
+        @Override
+        public Result<F, S> tapFailure(Consumer<F> action) {
+            return this;
         }
     }
 }
