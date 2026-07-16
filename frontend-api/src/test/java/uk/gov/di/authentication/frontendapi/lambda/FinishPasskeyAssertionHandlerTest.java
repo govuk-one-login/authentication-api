@@ -277,6 +277,19 @@ class FinishPasskeyAssertionHandlerTest {
         }
 
         @Test
+        void shouldReturn400IfNoUserProfile() {
+            // Given
+            when(authenticationService.getUserProfileFromEmail(EMAIL)).thenReturn(Optional.empty());
+
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(400));
+            assertThat(response, hasJsonBody(ErrorResponse.USER_NOT_FOUND));
+        }
+
+        @Test
         void shouldReturn400WhenPKCDeserializationFails() {
             // Given
             when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))

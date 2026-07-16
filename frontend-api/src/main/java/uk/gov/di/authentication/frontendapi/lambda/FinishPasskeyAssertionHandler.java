@@ -102,8 +102,18 @@ public class FinishPasskeyAssertionHandler
 
         reportPasskeyAuthenticationSuccess();
 
+        var maybeUserProfile = userContext.getUserProfile();
+
+        if (maybeUserProfile.isEmpty()) {
+            LOG.error("User profile not found for finish passkey assertion");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.USER_NOT_FOUND);
+        }
+        var userProfile = maybeUserProfile.get();
+
         return verifyPasskeyAssertion(userContext, request, input)
-                .flatMap(assertionResult -> updatePasskeyRecord(assertionResult, userContext))
+                .flatMap(
+                        assertionResult ->
+                                updatePasskeyRecord(assertionResult, userContext, userProfile))
                 .tap(success -> reportCorrectPasskeyReceived(userContext))
                 .tapFailure(failure -> reportIncorrectPasskeyReceived(userContext, failure))
                 .fold(
@@ -149,8 +159,8 @@ public class FinishPasskeyAssertionHandler
     }
 
     private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(
-            AssertionResult assertionResult, UserContext userContext) {
-        var publicSubjectId = userContext.getUserProfile().get().getPublicSubjectID();
+            AssertionResult assertionResult, UserContext userContext, UserProfile userProfile) {
+        var publicSubjectId = userProfile.getPublicSubjectID();
         var sessionId = userContext.getAuthSession().getSessionId();
         var passkeyId = assertionResult.getCredential().getCredentialId().getBase64Url();
         var signCount = assertionResult.getSignatureCount();
