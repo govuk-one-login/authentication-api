@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.AccessTokenScope;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
+import uk.gov.di.authentication.shared.entity.passkeys.PasskeysUpdateRequest;
 import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -108,6 +109,38 @@ public class PasskeysService {
             LOG.error("Interrupted exception in retrieve passkeys");
             Thread.currentThread().interrupt();
             return Result.failure(PasskeyRetrieveError.INTERRUPTED_EXCEPTION);
+        }
+    }
+
+    public Result<String, Void> updatePasskey(
+            String publicSubjectId,
+            String sessionId,
+            String passkeyIdentifier,
+            int signCount,
+            Clock clock) {
+        var accountDataBaseUri = configurationService.getAccountDataURI();
+        var updatePasskeysRequestUri =
+                buildURI(
+                        accountDataBaseUri,
+                        "/accounts/"
+                                + publicSubjectId
+                                + "/authenticators/passkeys/"
+                                + passkeyIdentifier);
+        var serialisationService = SerializationService.getInstance();
+        var updateRequest = new PasskeysUpdateRequest(signCount, clock.instant().toString());
+        var bodyPublisher =
+                HttpRequest.BodyPublishers.ofString(
+                        serialisationService.writeValueAsString(updateRequest));
+        var request =
+                HttpRequest.newBuilder(updatePasskeysRequestUri)
+                        .method("PATCH", bodyPublisher)
+                        .build();
+
+        try {
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return Result.emptySuccess();
+        } catch (Exception e) {
+            throw new RuntimeException("TODO");
         }
     }
 
