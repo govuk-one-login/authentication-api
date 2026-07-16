@@ -7,6 +7,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,12 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static uk.gov.di.authentication.frontendapi.helpers.PasskeyRegistrationPromptHelper.shouldSuppressPasskeyRegistrationPrompt;
 
 class PasskeyRegistrationPromptHelperTest {
-    private static final String YESTERDAY = LocalDateTime.now().minusDays(1).toString();
-    private static final String TWO_HOURS_ONE_MINUTE_AGO =
-            LocalDateTime.now().minusMinutes(121).toString();
-    private static final String ONE_HOUR_59_AGO = LocalDateTime.now().minusMinutes(119).toString();
-    private static final String THIRTY_MINUTES_AGO =
-            LocalDateTime.now().minusMinutes(30).toString();
+    private static final LocalDateTime NOW = LocalDateTime.now(ZoneId.of("UTC"));
+    private static final String YESTERDAY = NOW.minusDays(1).toString();
+    private static final String TWO_HOURS_ONE_MINUTE_AGO = NOW.minusMinutes(121).toString();
+    private static final String ONE_HOUR_59_AGO = NOW.minusMinutes(119).toString();
+    private static final String THIRTY_MINUTES_AGO = NOW.minusMinutes(30).toString();
 
     private static Stream<Arguments> dateTimesToExpectedShouldSuppressPrompts() {
         return Stream.of(
