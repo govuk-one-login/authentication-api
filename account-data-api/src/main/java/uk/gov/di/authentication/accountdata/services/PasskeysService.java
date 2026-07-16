@@ -10,7 +10,7 @@ import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.Passke
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysUpdateFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import static uk.gov.di.authentication.accountdata.helpers.PasskeysHelper.buildSortKey;
@@ -36,7 +36,7 @@ public class PasskeysService {
             PasskeysCreateRequest passkeysCreateRequest, String publicSubjectId) {
 
         var passkeyId = passkeysCreateRequest.passkeyId();
-        var created = LocalDateTime.now().toString();
+        var created = Instant.now().toString();
         var passkey =
                 new Passkey()
                         .withPublicSubjectId(publicSubjectId)
