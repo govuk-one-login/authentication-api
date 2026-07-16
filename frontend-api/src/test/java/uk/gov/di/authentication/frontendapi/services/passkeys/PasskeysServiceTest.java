@@ -79,7 +79,7 @@ class PasskeysServiceTest {
     }
 
     @Nested
-    class SuccessCases {
+    class HasActivePasskey {
         private static Stream<Arguments> successfulTestCases() {
             return Stream.of(
                     Arguments.of(List.of(aPasskeyWithId("123456")), true),
@@ -129,28 +129,6 @@ class PasskeysServiceTest {
             assertEquals(expectedResult, hasActivePasskey);
         }
 
-        @Test
-        void retrievePasskeysShouldReturnFullResponseOnSuccess()
-                throws IOException, InterruptedException {
-            when(httpResponse.body())
-                    .thenReturn(passkeyResponse(List.of(aPasskeyWithId("123456"))));
-            when(httpResponse.statusCode()).thenReturn(200);
-            when(httpClient.send(
-                            argThat(
-                                    request ->
-                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
-                            any()))
-                    .thenReturn(httpResponse);
-
-            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID, SESSION_ID);
-            assertTrue(result.isSuccess());
-            assertEquals(1, result.getSuccess().passkeys().size());
-            assertEquals("123456", result.getSuccess().passkeys().get(0).passkeyId());
-        }
-    }
-
-    @Nested
-    class FailureCases {
         @Test
         void hasActivePasskeyShouldReturnFailureWhenAccountDataApiReturnsANon200ResponseCode()
                 throws IOException, InterruptedException {
@@ -219,6 +197,41 @@ class PasskeysServiceTest {
         }
 
         @Test
+        void retrievePasskeysShouldReturnFailureIfErrorCreatingAccessToken() {
+            when(accessTokenConstructorService.createSignedAccessToken(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
+
+            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
+
+            assertTrue(result.isFailure());
+            assertEquals(PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN, result.getFailure());
+            verifyNoInteractions(httpClient);
+        }
+    }
+
+    @Nested
+    class RetrievePasskeys {
+        @Test
+        void retrievePasskeysShouldReturnFullResponseOnSuccess()
+                throws IOException, InterruptedException {
+            when(httpResponse.body())
+                    .thenReturn(passkeyResponse(List.of(aPasskeyWithId("123456"))));
+            when(httpResponse.statusCode()).thenReturn(200);
+            when(httpClient.send(
+                            argThat(
+                                    request ->
+                                            request.uri().equals(URI.create(EXPECTED_REQUEST_URL))),
+                            any()))
+                    .thenReturn(httpResponse);
+
+            var result = passkeysService.retrievePasskeys(PUBLIC_SUBJECT_ID, SESSION_ID);
+            assertTrue(result.isSuccess());
+            assertEquals(1, result.getSuccess().passkeys().size());
+            assertEquals("123456", result.getSuccess().passkeys().get(0).passkeyId());
+        }
+
+        @Test
         void shouldReturnFailureWhenApiReturnsNon200() throws IOException, InterruptedException {
             when(httpResponse.statusCode()).thenReturn(500);
             when(httpClient.send(
@@ -232,19 +245,6 @@ class PasskeysServiceTest {
             assertTrue(result.isFailure());
             assertEquals(
                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE, result.getFailure());
-        }
-
-        @Test
-        void retrievePasskeysShouldReturnFailureIfErrorCreatingAccessToken() {
-            when(accessTokenConstructorService.createSignedAccessToken(
-                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                    .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
-
-            var result = passkeysService.hasActivePasskey(PUBLIC_SUBJECT_ID, SESSION_ID);
-
-            assertTrue(result.isFailure());
-            assertEquals(PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN, result.getFailure());
-            verifyNoInteractions(httpClient);
         }
     }
 
