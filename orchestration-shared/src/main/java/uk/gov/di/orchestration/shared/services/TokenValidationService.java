@@ -106,21 +106,12 @@ public class TokenValidationService {
     }
 
     private boolean validateWithOldECPublicKey(SignedJWT jwt) throws JOSEException {
-        if (configuration.isUseStoredOldIdTokenPublicKeysEnabled()
-                || !configuration.isPublishOldExternalTokenSigningKeysEnabled()) {
-            var oldStoredPublicKeys = jwksService.getStoredOldPublicTokenJwksWithOpaqueId();
-            Optional<ECKey> optionalPublicKey =
-                    oldStoredPublicKeys.stream()
-                            .filter(
-                                    key ->
-                                            Objects.equals(
-                                                    jwt.getHeader().getKeyID(), key.getKeyID()))
-                            .findFirst();
-            return optionalPublicKey.isPresent()
-                    && jwt.verify(new ECDSAVerifier(optionalPublicKey.get()));
-        } else {
-            var oldPublicKey = jwksService.getPublicTokenJwkWithOpaqueId();
-            return jwt.verify(new ECDSAVerifier(oldPublicKey.toECKey()));
-        }
+        var oldStoredPublicKeys = jwksService.getStoredOldPublicTokenJwksWithOpaqueId();
+        Optional<ECKey> optionalPublicKey =
+                oldStoredPublicKeys.stream()
+                        .filter(key -> Objects.equals(jwt.getHeader().getKeyID(), key.getKeyID()))
+                        .findFirst();
+        return optionalPublicKey.isPresent()
+                && jwt.verify(new ECDSAVerifier(optionalPublicKey.get()));
     }
 }

@@ -385,14 +385,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getFlagOrFalse("TEST_CLIENTS_ENABLED");
     }
 
-    public String getExternalTokenSigningKeyAlias() {
-        return System.getenv("EXTERNAL_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getExternalTokenSigningKeyRsaAlias() {
-        return System.getenv("EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS");
-    }
-
     public String getNextExternalTokenSigningKeyAliasV2() {
         return System.getenv("NEXT_EXTERNAL_TOKEN_SIGNING_KEY_ALIAS_V2");
     }
@@ -405,17 +397,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("STORED_OLD_ID_TOKEN_EC_PUBLIC_KEYS");
     }
 
-    public boolean isPublishOldExternalTokenSigningKeysEnabled() {
-        return getFlagOrFalse("PUBLISH_OLD_EXTERNAL_TOKEN_SIGNING_KEYS");
-    }
-
     public boolean isRsaSigningAvailable() {
         return List.of("dev", "build", "staging", "integration", "production")
                 .contains(getEnvironment());
-    }
-
-    public boolean isUseStoredOldIdTokenPublicKeysEnabled() {
-        return getFlagOrFalse("USE_STORED_OLD_ID_TOKEN_PUBLIC_KEYS");
     }
 
     public boolean isSingleFactorAccountDeletionEnabled() {

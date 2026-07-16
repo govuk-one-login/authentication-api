@@ -152,7 +152,6 @@ class TokenServiceTest {
 
     @Test
     void shouldGenerateTokenResponseWithRefreshToken() throws ParseException, JOSEException {
-        when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
@@ -215,7 +214,6 @@ class TokenServiceTest {
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
 
-        when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
         createSignedIdToken();
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();
@@ -274,7 +272,6 @@ class TokenServiceTest {
     @Test
     void shouldGenerateTokenResponseWithoutRefreshTokenWhenOfflineAccessScopeIsMissing()
             throws ParseException, JOSEException {
-        when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
         createSignedAccessToken();
@@ -302,7 +299,6 @@ class TokenServiceTest {
 
     @Test
     void shouldNotIncludeInternalIdentifiersInTokens() throws ParseException, JOSEException {
-        when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(KEY_ID);
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         createSignedIdToken();
         createSignedAccessToken();

@@ -32,14 +32,14 @@ class JwksServiceTest {
             new JwksService(configurationService, kmsConnectionService);
 
     @Test
-    void shouldRetrievePublicTokenSigningKeyFromKmsAndParseToJwk() throws Exception {
-        var keyAlias = "14342354354353";
-        when(configurationService.getExternalTokenSigningKeyAlias()).thenReturn(keyAlias);
+    void shouldRetrieveExternalTokenSigningECKeyFromKmsAndParseToJwk() throws Exception {
+        var keyAlias = "test-external-token-signing-key-alias";
+        when(configurationService.getNextExternalTokenSigningKeyAliasV2()).thenReturn(keyAlias);
 
         var publicKey = generateECKey().toPublicKey().getEncoded();
         mockKmsPublicKeyResponse(publicKey, keyAlias);
 
-        JWK publicKeyJwk = jwksService.getPublicTokenJwkWithOpaqueId();
+        JWK publicKeyJwk = jwksService.getNextPublicTokenJwkWithOpaqueIdV2();
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(keyAlias)));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
@@ -47,15 +47,15 @@ class JwksServiceTest {
     }
 
     @Test
-    void shouldRetrievePublicTokenSigningRsaKeyFromKmsAndParseToJwk() throws Exception {
-        var keyAlias = "25252525252525";
-        when(configurationService.getExternalTokenSigningKeyRsaAlias()).thenReturn(keyAlias);
+    void shouldRetrieveExternalTokenSigningRSAKeyFromKmsAndParseToJwk() throws Exception {
+        var keyAlias = "test-external-token-signing-key-rsa-alias";
+        when(configurationService.getNextExternalTokenSigningKeyRsaAliasV2()).thenReturn(keyAlias);
 
         var publicKey = generateRsaKey().toPublicKey().getEncoded();
         mockKmsPublicKeyResponse(
                 publicKey, SigningAlgorithmSpec.RSASSA_PKCS1_V1_5_SHA_256, keyAlias);
 
-        JWK publicKeyJwk = jwksService.getPublicTokenRsaJwkWithOpaqueId();
+        JWK publicKeyJwk = jwksService.getNextPublicTokenRsaJwkWithOpaqueIdV2();
 
         assertThat(publicKeyJwk.getKeyID(), equalTo(hashSha256String(keyAlias)));
         assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.RS256));

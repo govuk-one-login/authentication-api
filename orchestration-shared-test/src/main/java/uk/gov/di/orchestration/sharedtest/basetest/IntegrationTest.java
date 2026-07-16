@@ -220,11 +220,6 @@ public class IntegrationTest {
         }
 
         @Override
-        public String getExternalTokenSigningKeyAlias() {
-            return externalTokenSigner.getKeyAlias();
-        }
-
-        @Override
         public String getNextExternalTokenSigningKeyAliasV2() {
             return externalTokenSigner.getNewKeyAliasV2();
         }

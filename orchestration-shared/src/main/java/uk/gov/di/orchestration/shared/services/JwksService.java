@@ -46,16 +46,6 @@ public class JwksService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public JWK getPublicTokenJwkWithOpaqueId() {
-        LOG.info("Retrieving EC public key");
-        return getPublicJWKWithKeyId(configurationService.getExternalTokenSigningKeyAlias());
-    }
-
-    public JWK getPublicTokenRsaJwkWithOpaqueId() {
-        LOG.info("Retrieving RSA public key");
-        return getPublicJWKWithKeyId(configurationService.getExternalTokenSigningKeyRsaAlias());
-    }
-
     public ArrayList<ECKey> getStoredOldPublicTokenJwksWithOpaqueId() {
         try {
             LOG.info("Retrieving stored EC public key");

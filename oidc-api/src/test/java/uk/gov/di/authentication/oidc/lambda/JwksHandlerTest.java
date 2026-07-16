@@ -97,28 +97,6 @@ class JwksHandlerTest {
         assertThat(response, hasHeader("Cache-Control", "max-age=86400"));
     }
 
-    @Test
-    void shouldPublishOldEcKeyWhenOldPublishEnabled() throws JOSEException {
-        when(configurationService.isPublishOldExternalTokenSigningKeysEnabled()).thenReturn(true);
-
-        var tokenSigningKey = generateECKey();
-        var docAppSigningKey = generateECKey();
-        var newTokenSigningKeyV2 = generateECKey();
-
-        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
-        when(jwksService.getPublicDocAppSigningJwkWithOpaqueId()).thenReturn(docAppSigningKey);
-        when(jwksService.getNextPublicTokenJwkWithOpaqueIdV2()).thenReturn(newTokenSigningKeyV2);
-
-        var event = new APIGatewayProxyRequestEvent();
-        var result = handler.handleRequest(event, context);
-
-        var expectedJWKSet =
-                new JWKSet(List.of(docAppSigningKey, tokenSigningKey, newTokenSigningKeyV2));
-
-        assertThat(result, hasStatus(200));
-        assertThat(result, hasBody(expectedJWKSet.toString(true)));
-    }
-
     private static ECKey generateECKey() throws JOSEException {
         return new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
     }
