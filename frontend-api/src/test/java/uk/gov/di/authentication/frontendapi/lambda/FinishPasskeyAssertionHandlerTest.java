@@ -3,28 +3,36 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.yubico.webauthn.AssertionResult;
+import com.yubico.webauthn.RegisteredCredential;
+import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.exception.Base64UrlException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
+import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
+import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -34,7 +42,9 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_AUTHENTICATION_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_VERIFICATION_FAILED;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_VERIFICATION_SUCCESSFUL;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -51,10 +61,14 @@ class FinishPasskeyAssertionHandlerTest {
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final PasskeysService passkeysService = mock(PasskeysService.class);
     private FinishPasskeyAssertionHandler handler;
-    private final AuthSessionItem authSession = new AuthSessionItem().withSessionId(SESSION_ID);
+    private final AuthSessionItem authSession =
+            new AuthSessionItem().withSessionId(SESSION_ID).withEmailAddress(EMAIL);
 
     private static final String ENV = "test";
+    private static final String CREDENTIAL_ID = "some-passkey-id";
+    private static final Long SIGN_COUNT = 5L;
 
     @BeforeEach
     void setup() {
@@ -62,6 +76,12 @@ class FinishPasskeyAssertionHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
+        when(authenticationService.getUserProfileFromEmail(EMAIL))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withPublicSubjectID(PUBLIC_SUBJECT_ID)));
 
         handler =
                 new FinishPasskeyAssertionHandler(
@@ -70,17 +90,35 @@ class FinishPasskeyAssertionHandlerTest {
                         authSessionService,
                         passkeyAssertionService,
                         userActionsManager,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        passkeysService);
     }
 
     @Nested
     class Success {
-        @Test
-        void shouldReturn200WhenPasskeyAssertionSuccessful() {
-            // Given
-            AssertionResult mockAssertionResult = mock(AssertionResult.class);
+        void setupSuccess() throws Base64UrlException {
+            var mockAssertionResult = mock(AssertionResult.class);
+            var mockCredential = mock(RegisteredCredential.class);
+            when(mockCredential.getCredentialId())
+                    .thenReturn(ByteArray.fromBase64Url(CREDENTIAL_ID));
+            when(mockAssertionResult.getCredential()).thenReturn(mockCredential);
+            when(mockAssertionResult.getSignatureCount()).thenReturn(SIGN_COUNT);
+
             when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(Result.success(mockAssertionResult));
+            when(passkeysService.updatePasskey(
+                            PUBLIC_SUBJECT_ID,
+                            SESSION_ID,
+                            CREDENTIAL_ID,
+                            SIGN_COUNT,
+                            Clock.systemUTC()))
+                    .thenReturn(Result.emptySuccess());
+        }
+
+        @Test
+        void shouldReturn200WhenPasskeyAssertionSuccessful() throws Base64UrlException {
+            // Given
+            setupSuccess();
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
@@ -90,11 +128,9 @@ class FinishPasskeyAssertionHandlerTest {
         }
 
         @Test
-        void shouldReportCorrectPasskeyReceivedWhenAssertionSuccessful() {
+        void shouldReportCorrectPasskeyReceivedWhenAssertionSuccessful() throws Base64UrlException {
             // Given
-            AssertionResult mockAssertionResult = mock(AssertionResult.class);
-            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
-                    .thenReturn(Result.success(mockAssertionResult));
+            setupSuccess();
 
             // When
             handler.handleRequest(finishPasskeyAssertionRequest(), context);
@@ -105,11 +141,9 @@ class FinishPasskeyAssertionHandlerTest {
         }
 
         @Test
-        void shouldEmitCloudwatchMetricsWhenAssertionSuccessful() {
+        void shouldEmitCloudwatchMetricsWhenAssertionSuccessful() throws Base64UrlException {
             // Given
-            AssertionResult mockAssertionResult = mock(AssertionResult.class);
-            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
-                    .thenReturn(Result.success(mockAssertionResult));
+            setupSuccess();
 
             // When
             handler.handleRequest(finishPasskeyAssertionRequest(), context);
@@ -125,6 +159,22 @@ class FinishPasskeyAssertionHandlerTest {
 
             verify(cloudwatchMetricsService, never())
                     .incrementCounter(eq(PASSKEY_VERIFICATION_FAILED), anyMap());
+        }
+
+        @Test
+        void shouldUpdatePasskeyWhenAssertionSuccessful() throws Base64UrlException {
+            setupSuccess();
+            // When
+            handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            verify(passkeysService, times(1))
+                    .updatePasskey(
+                            PUBLIC_SUBJECT_ID,
+                            SESSION_ID,
+                            CREDENTIAL_ID,
+                            SIGN_COUNT,
+                            Clock.systemUTC());
         }
     }
 
@@ -160,6 +210,23 @@ class FinishPasskeyAssertionHandlerTest {
             // Then
             verify(userActionsManager, times(1)).incorrectPasskeyReceived(any(), any());
             verify(userActionsManager, times(0)).correctPasskeyReceived(any(), any());
+        }
+
+        @Test
+        void shouldNotUpdatePasskeyRecordWhenAssertionUnsuccessful() {
+            // Given
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
+                    .thenReturn(
+                            Result.failure(
+                                    FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR));
+
+            // When
+            handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            verify(passkeysService, never())
+                    .updatePasskey(
+                            anyString(), anyString(), anyString(), anyLong(), any(Clock.class));
         }
 
         @Test

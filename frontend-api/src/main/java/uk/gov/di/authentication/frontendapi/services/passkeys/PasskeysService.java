@@ -117,7 +117,7 @@ public class PasskeysService {
             String publicSubjectId,
             String sessionId,
             String passkeyIdentifier,
-            int signCount,
+            long signCount,
             Clock clock) {
         var accountDataBaseUri = configurationService.getAccountDataURI();
         var updatePasskeysRequestUri =

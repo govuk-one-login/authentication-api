@@ -11,6 +11,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest;
+import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.time.Clock;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
@@ -46,6 +48,7 @@ public class FinishPasskeyAssertionHandler
     private final PasskeyAssertionService passkeyAssertionService;
     private final UserActionsManager userActionsManager;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final PasskeysService passkeysService;
 
     public FinishPasskeyAssertionHandler() {
         this(ConfigurationService.getInstance());
@@ -57,7 +60,8 @@ public class FinishPasskeyAssertionHandler
             AuthSessionService authSessionService,
             PasskeyAssertionService passkeyAssertionService,
             UserActionsManager userActionsManager,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            PasskeysService passkeysService) {
         super(
                 FinishPasskeyAssertionRequest.class,
                 configurationService,
@@ -66,6 +70,7 @@ public class FinishPasskeyAssertionHandler
         this.passkeyAssertionService = passkeyAssertionService;
         this.userActionsManager = userActionsManager;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.passkeysService = passkeysService;
     }
 
     public FinishPasskeyAssertionHandler(ConfigurationService configurationService) {
@@ -77,6 +82,7 @@ public class FinishPasskeyAssertionHandler
                         new StructuredAuditService(configurationService));
         this.userActionsManager = new UserActionsManager(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.passkeysService = new PasskeysService(configurationService);
     }
 
     @Override
@@ -97,7 +103,7 @@ public class FinishPasskeyAssertionHandler
         reportPasskeyAuthenticationSuccess();
 
         return verifyPasskeyAssertion(userContext, request, input)
-                .flatMap(this::updatePasskeyRecord)
+                .flatMap(assertionResult -> updatePasskeyRecord(assertionResult, userContext))
                 .tap(success -> reportCorrectPasskeyReceived(userContext))
                 .tapFailure(failure -> reportIncorrectPasskeyReceived(userContext, failure))
                 .fold(
@@ -142,8 +148,17 @@ public class FinishPasskeyAssertionHandler
     }
 
     private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(
-            AssertionResult assertionResult) {
-        // TODO - AUT-4938 - Update database with latest passkey values
+            AssertionResult assertionResult, UserContext userContext) {
+        var publicSubjectId = userContext.getUserProfile().get().getPublicSubjectID();
+        var sessionId = userContext.getAuthSession().getSessionId();
+        var passkeyId = assertionResult.getCredential().getCredentialId().getBase64Url();
+        var signCount = assertionResult.getSignatureCount();
+        var result =
+                passkeysService.updatePasskey(
+                        publicSubjectId, sessionId, passkeyId, signCount, Clock.systemUTC());
+        if (result.isFailure()) {
+            throw new RuntimeException("TODO");
+        }
         return Result.success(null);
     }
 
