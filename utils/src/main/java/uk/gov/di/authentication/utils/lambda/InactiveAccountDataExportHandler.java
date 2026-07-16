@@ -6,6 +6,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.BatchGetItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
@@ -14,6 +17,7 @@ import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportRequest;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportResponse;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
@@ -21,6 +25,10 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.TimeUnit;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.backoff;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildCredentialKeys;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.countMissingCredentials;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.extractUnprocessedKeys;
 
 public class InactiveAccountDataExportHandler
         implements RequestHandler<
@@ -28,20 +36,28 @@ public class InactiveAccountDataExportHandler
 
     private static final Logger LOG = LogManager.getLogger(InactiveAccountDataExportHandler.class);
     private static final String USER_PROFILE_TABLE = "user-profile";
+    private static final String USER_CREDENTIALS_TABLE = "user-credentials";
+    private static final int DEFAULT_MAX_RETRIES = 3;
+    private static final int BATCH_GET_ITEM_MAX_SIZE = 100;
 
-    private static final String PROJECTION_EXPRESSION =
+    private static final String USER_PROFILE_PROJECTION_EXPRESSION =
             "Email,Created,Updated,termsAndConditions.#ts,PublicSubjectID,SubjectID,salt";
-    private static final Map<String, String> EXPRESSION_ATTRIBUTE_NAMES =
+    private static final Map<String, String> USER_PROFILE_EXPRESSION_ATTRIBUTE_NAMES =
             Map.of("#ts", "timestamp");
+    private static final String USER_CREDENTIALS_PROJECTION_EXPRESSION =
+            "Email,Created,Updated,MigratedPassword";
 
     private final DynamoDbClient client;
     private final String userProfileTableName;
+    private final String userCredentialsTableName;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService, DynamoDbClient client) {
         this.client = client;
         this.userProfileTableName =
                 TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
+        this.userCredentialsTableName =
+                TableNameHelper.getFullTableName(USER_CREDENTIALS_TABLE, configurationService);
     }
 
     public InactiveAccountDataExportHandler() {
@@ -60,29 +76,39 @@ public class InactiveAccountDataExportHandler
 
         int parallelism = request.parallelism();
         int totalSegments = request.totalSegments();
+        int maxRetries = request.maxRetries() != null ? request.maxRetries() : DEFAULT_MAX_RETRIES;
 
         LOG.info(
-                "Inactive account data export request: parallelism={}, totalSegments={}",
+                "Inactive account data export request: parallelism={}, totalSegments={}, maxRetries={}",
                 parallelism,
-                totalSegments);
+                totalSegments,
+                maxRetries);
 
-        List<ForkJoinTask<Long>> tasks = new ArrayList<>();
+        List<ForkJoinTask<SegmentResult>> tasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(parallelism);
 
         try {
             for (int segment = 0; segment < totalSegments; segment++) {
                 final int currentSegment = segment;
-                tasks.add(forkJoinPool.submit(() -> scanSegment(currentSegment, totalSegments)));
+                tasks.add(
+                        forkJoinPool.submit(
+                                () -> scanSegment(currentSegment, totalSegments, maxRetries)));
             }
 
             gracefulPoolShutdown(forkJoinPool);
 
             long totalItemsScanned = 0;
-            for (ForkJoinTask<Long> task : tasks) {
-                totalItemsScanned += task.join();
+            long totalMissingCredentials = 0;
+            for (ForkJoinTask<SegmentResult> task : tasks) {
+                SegmentResult result = task.join();
+                totalItemsScanned += result.itemsScanned();
+                totalMissingCredentials += result.missingCredentialsCount();
             }
 
-            LOG.info("Scan completed: {} total items scanned", totalItemsScanned);
+            LOG.info(
+                    "Scan completed: {} total items scanned, {} missing credentials",
+                    totalItemsScanned,
+                    totalMissingCredentials);
 
             return new InactiveAccountDataExportResponse(totalItemsScanned);
         } finally {
@@ -90,9 +116,11 @@ public class InactiveAccountDataExportHandler
         }
     }
 
-    private long scanSegment(int segment, int totalSegments) {
+    private SegmentResult scanSegment(int segment, int totalSegments, int maxRetries) {
         Map<String, AttributeValue> lastKey = null;
         long itemsScanned = 0;
+        long missingCredentialsCount = 0;
+        List<Map<String, AttributeValue>> currentBatch = new ArrayList<>();
 
         do {
             ScanRequest.Builder requestBuilder =
@@ -100,24 +128,118 @@ public class InactiveAccountDataExportHandler
                             .tableName(userProfileTableName)
                             .segment(segment)
                             .totalSegments(totalSegments)
-                            .projectionExpression(PROJECTION_EXPRESSION)
-                            .expressionAttributeNames(EXPRESSION_ATTRIBUTE_NAMES);
+                            .projectionExpression(USER_PROFILE_PROJECTION_EXPRESSION)
+                            .expressionAttributeNames(USER_PROFILE_EXPRESSION_ATTRIBUTE_NAMES);
 
             if (lastKey != null && !lastKey.isEmpty()) {
                 requestBuilder.exclusiveStartKey(lastKey);
             }
 
-            ScanResponse response = client.scan(requestBuilder.build());
+            ScanResponse response;
+            try {
+                response = client.scan(requestBuilder.build());
+            } catch (Exception e) {
+                LOG.error(
+                        "Scan failed for segment {}: {} - {}",
+                        segment,
+                        e.getClass().getSimpleName(),
+                        e.getMessage());
+                throw e;
+            }
 
-            itemsScanned += response.items().size();
+            for (Map<String, AttributeValue> item : response.items()) {
+                itemsScanned++;
+                currentBatch.add(item);
+
+                if (currentBatch.size() >= BATCH_GET_ITEM_MAX_SIZE) {
+                    missingCredentialsCount += batchGetUserCredentials(currentBatch, maxRetries);
+                    currentBatch.clear();
+                }
+            }
 
             lastKey = response.lastEvaluatedKey();
         } while (lastKey != null && !lastKey.isEmpty());
 
-        LOG.info("Segment {} completed: {} items scanned", segment, itemsScanned);
+        if (!currentBatch.isEmpty()) {
+            missingCredentialsCount += batchGetUserCredentials(currentBatch, maxRetries);
+            currentBatch.clear();
+        }
 
-        return itemsScanned;
+        LOG.info(
+                "Segment {} completed: {} items scanned, {} missing credentials",
+                segment,
+                itemsScanned,
+                missingCredentialsCount);
+
+        return new SegmentResult(itemsScanned, missingCredentialsCount);
     }
+
+    private long batchGetUserCredentials(
+            List<Map<String, AttributeValue>> userProfileItems, int maxRetries) {
+        if (userProfileItems.isEmpty()) {
+            return 0;
+        }
+
+        List<Map<String, AttributeValue>> keys = buildCredentialKeys(userProfileItems);
+        if (keys.isEmpty()) {
+            return userProfileItems.size();
+        }
+
+        List<Map<String, AttributeValue>> results = fetchWithRetry(keys, maxRetries);
+
+        return countMissingCredentials(keys.size(), results.size());
+    }
+
+    private List<Map<String, AttributeValue>> fetchWithRetry(
+            List<Map<String, AttributeValue>> keys, int maxRetries) {
+        List<Map<String, AttributeValue>> allResults = new ArrayList<>();
+
+        Map<String, KeysAndAttributes> requestItems = new HashMap<>();
+        requestItems.put(
+                userCredentialsTableName,
+                KeysAndAttributes.builder()
+                        .keys(keys)
+                        .projectionExpression(USER_CREDENTIALS_PROJECTION_EXPRESSION)
+                        .build());
+
+        int retryCount = 0;
+
+        while (!requestItems.isEmpty()) {
+            BatchGetItemResponse response =
+                    client.batchGetItem(
+                            BatchGetItemRequest.builder().requestItems(requestItems).build());
+
+            List<Map<String, AttributeValue>> results =
+                    response.responses().get(userCredentialsTableName);
+            if (results != null) {
+                allResults.addAll(results);
+            }
+
+            requestItems = extractUnprocessedKeys(response, userCredentialsTableName);
+
+            if (!requestItems.isEmpty()) {
+                retryCount++;
+                int unprocessedCount = requestItems.get(userCredentialsTableName).keys().size();
+                if (retryCount > maxRetries) {
+                    LOG.error(
+                            "Failed to process {} keys after {} retries",
+                            unprocessedCount,
+                            maxRetries);
+                    break;
+                }
+                LOG.warn(
+                        "{} unprocessed keys (attempt {}/{})",
+                        unprocessedCount,
+                        retryCount,
+                        maxRetries);
+                backoff(retryCount);
+            }
+        }
+
+        return allResults;
+    }
+
+    private record SegmentResult(long itemsScanned, long missingCredentialsCount) {}
 
     private static void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
         forkJoinPool.shutdown();
