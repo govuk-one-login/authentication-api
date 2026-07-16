@@ -159,8 +159,20 @@ public class PasskeysService {
                 default -> Result.failure(
                         PasskeyUpdateError.PASSKEY_UPDATE_UNEXPECTED_RESPONSE_CODE);
             };
-        } catch (Exception e) {
-            throw new RuntimeException("TODO");
+        } catch (IOException e) {
+            LOG.error("IOException in update passkeys", e);
+            return Result.failure(PasskeyUpdateError.IO_EXCEPTION);
+        } catch (InterruptedException e) {
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making passkey update request, exiting with fault");
+                System.exit(1);
+            }
+            LOG.error("Interrupted exception in update passkeys");
+            Thread.currentThread().interrupt();
+            return Result.failure(PasskeyUpdateError.INTERRUPTED_EXCEPTION);
         }
     }
 

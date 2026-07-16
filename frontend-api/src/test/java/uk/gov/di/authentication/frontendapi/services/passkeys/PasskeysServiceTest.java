@@ -392,6 +392,41 @@ class PasskeysServiceTest {
 
             verify(httpClient, never()).send(any(), any());
         }
+
+        private static Stream<Arguments> exceptionsToExpectedErrors() {
+            return Stream.of(
+                    Arguments.of(new IOException("uh oh"), PasskeyUpdateError.IO_EXCEPTION),
+                    Arguments.of(
+                            new InterruptedException("uh oh"),
+                            PasskeyUpdateError.INTERRUPTED_EXCEPTION));
+        }
+
+        @MethodSource("exceptionsToExpectedErrors")
+        @ParameterizedTest
+        void updatePasskeyShouldReturnFailureWhenAccountDataApiThrowsAnIOException(
+                Exception e, PasskeyUpdateError expectedError)
+                throws IOException, InterruptedException {
+            when(httpClient.send(
+                            argThat(
+                                    request ->
+                                            request.uri().equals(URI.create(UPDATE_PASSKEY_URL))),
+                            any()))
+                    .thenThrow(e);
+
+            var signCount = 2;
+            var result =
+                    passkeysService.updatePasskey(
+                            PUBLIC_SUBJECT_ID,
+                            SESSION_ID,
+                            PASSKEY_IDENTIFIER,
+                            signCount,
+                            FIXED_CLOCK);
+
+            assertTrue(result.isFailure());
+
+            var failure = result.getFailure();
+            assertEquals(expectedError, failure);
+        }
     }
 
     private String passkeyResponse(List<String> passkeys) {

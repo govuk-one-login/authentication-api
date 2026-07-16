@@ -7,7 +7,9 @@ public enum PasskeyUpdateError {
     PASSKEY_UPDATE_INTERNAL_SERVER_ERROR("Passkey update account data api internal server error"),
     PASSKEY_UPDATE_UNEXPECTED_RESPONSE_CODE(
             "Account data api returned unexpected response code for update passkeys"),
-    ERROR_CREATING_ACCESS_TOKEN("Failure constructing adapi access token");
+    ERROR_CREATING_ACCESS_TOKEN("Failure constructing adapi access token"),
+    IO_EXCEPTION("IO exception calling passkey update endpoint"),
+    INTERRUPTED_EXCEPTION("Interrupted exception calling passkey update endpoint");
 
     private final String value;
 
