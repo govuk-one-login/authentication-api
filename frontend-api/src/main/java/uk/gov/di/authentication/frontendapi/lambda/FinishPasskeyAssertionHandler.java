@@ -109,7 +109,8 @@ public class FinishPasskeyAssertionHandler
                 .fold(
                         failure ->
                                 switch (failure) {
-                                    case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
+                                    case PARSING_ASSERTION_REQUEST_ERROR,
+                                            ERROR_UPDATING_PASSKEY_RECORD -> generateApiGatewayProxyErrorResponse(
                                             500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
                                     case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
@@ -156,10 +157,8 @@ public class FinishPasskeyAssertionHandler
         var result =
                 passkeysService.updatePasskey(
                         publicSubjectId, sessionId, passkeyId, signCount, Clock.systemUTC());
-        if (result.isFailure()) {
-            throw new RuntimeException("TODO");
-        }
-        return Result.success(null);
+        return result.tapFailure(f -> LOG.error(f.getValue()))
+                .mapFailure(f -> FinishPasskeyAssertionFailureReason.ERROR_UPDATING_PASSKEY_RECORD);
     }
 
     private Void reportCorrectPasskeyReceived(UserContext userContext) {

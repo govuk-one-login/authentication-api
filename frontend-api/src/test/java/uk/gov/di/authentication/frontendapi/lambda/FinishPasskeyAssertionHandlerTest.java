@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyUpdateError;
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -237,6 +238,35 @@ class FinishPasskeyAssertionHandlerTest {
                             Result.failure(
                                     FinishPasskeyAssertionFailureReason
                                             .PARSING_ASSERTION_REQUEST_ERROR));
+
+            // When
+            var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+            // Then
+            assertThat(response, hasStatus(500));
+            assertThat(response, hasJsonBody(ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR));
+        }
+
+        @Test
+        void shouldReturn500WhenUpdateRequestFails() throws Base64UrlException {
+            // Given
+            var mockAssertionResult = mock(AssertionResult.class);
+            var mockCredential = mock(RegisteredCredential.class);
+            when(mockCredential.getCredentialId())
+                    .thenReturn(ByteArray.fromBase64Url(CREDENTIAL_ID));
+            when(mockAssertionResult.getCredential()).thenReturn(mockCredential);
+            when(mockAssertionResult.getSignatureCount()).thenReturn(SIGN_COUNT);
+
+            when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
+                    .thenReturn(Result.success(mockAssertionResult));
+
+            when(passkeysService.updatePasskey(
+                            PUBLIC_SUBJECT_ID,
+                            SESSION_ID,
+                            CREDENTIAL_ID,
+                            SIGN_COUNT,
+                            Clock.systemUTC()))
+                    .thenReturn(Result.failure(PasskeyUpdateError.PASSKEY_UPDATE_BAD_REQUEST));
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);
