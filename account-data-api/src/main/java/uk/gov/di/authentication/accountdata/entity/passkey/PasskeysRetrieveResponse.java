@@ -14,7 +14,7 @@ public record PasskeysRetrieveResponse(
             @SerializedName("credential") @Expose @Required String credential,
             @SerializedName("aaguid") @Expose @Required String aaguid,
             @SerializedName("isAttested") @Expose @Required boolean isAttested,
-            @SerializedName("signCount") @Expose @Required int signCount,
+            @SerializedName("signCount") @Expose @Required long signCount,
             @SerializedName("transports") @Expose @Required List<String> transports,
             @SerializedName("isBackUpEligible") @Expose @Required boolean isBackUpEligible,
             @SerializedName("isBackedUp") @Expose @Required boolean isBackedUp,

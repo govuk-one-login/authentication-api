@@ -52,7 +52,7 @@ class DynamoPasskeyServiceIntegrationTest {
                             PRIMARY_PASSKEY_ID,
                             PASSKEY_AAGUID,
                             true,
-                            1,
+                            1L,
                             PASSKEY_TRANSPORTS,
                             true,
                             false,
@@ -82,7 +82,7 @@ class DynamoPasskeyServiceIntegrationTest {
             assertThat(savedPasskey.getCredentialId(), equalTo(PRIMARY_PASSKEY_ID));
             assertThat(savedPasskey.getPasskeyAaguid(), equalTo(PASSKEY_AAGUID));
             assertThat(savedPasskey.getPasskeyIsAttested(), equalTo(true));
-            assertThat(savedPasskey.getPasskeySignCount(), equalTo(1));
+            assertThat(savedPasskey.getPasskeySignCount(), equalTo(1L));
             assertThat(savedPasskey.getPasskeyTransports(), equalTo(PASSKEY_TRANSPORTS));
             assertThat(savedPasskey.getPasskeyBackupEligible(), equalTo(true));
             assertThat(savedPasskey.getPasskeyBackedUp(), equalTo(false));
@@ -260,7 +260,7 @@ class DynamoPasskeyServiceIntegrationTest {
             dynamoPasskeyService.savePasskeyIfUnique(passkeyBeforeUpdate);
 
             String lastUsedTime = LocalDateTime.now().plusHours(1).toString();
-            int updatedSignCount = passkeyBeforeUpdate.getPasskeySignCount() + 1;
+            long updatedSignCount = passkeyBeforeUpdate.getPasskeySignCount() + 1;
 
             // When
             var updateResult =

@@ -31,7 +31,7 @@ public class PasskeysTestHelper {
             String passkeyId,
             String aaguid,
             boolean isAttested,
-            int signCount,
+            long signCount,
             List<String> transports,
             boolean backupEligible,
             boolean backedUp,

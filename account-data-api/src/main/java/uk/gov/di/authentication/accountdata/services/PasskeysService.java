@@ -75,7 +75,7 @@ public class PasskeysService {
     }
 
     public Result<PasskeysUpdateFailureReason, Passkey> updatePasskey(
-            String publicSubjectId, String passkeyId, String lastUsedTime, int updatedSignCount) {
+            String publicSubjectId, String passkeyId, String lastUsedTime, long updatedSignCount) {
         try {
             return dynamoPasskeyService.updatePasskey(
                     publicSubjectId, passkeyId, lastUsedTime, updatedSignCount);

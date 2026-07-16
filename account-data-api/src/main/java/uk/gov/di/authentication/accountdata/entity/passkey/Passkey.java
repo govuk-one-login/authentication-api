@@ -21,7 +21,7 @@ public class Passkey extends Authenticator<Passkey> {
 
     private String passkeyAaguid;
     private boolean passkeyIsAttested;
-    private int passkeySignCount;
+    private long passkeySignCount;
     private List<String> passkeyTransports;
     private boolean passkeyBackupEligible;
     private boolean passkeyBackedUp;
@@ -67,15 +67,15 @@ public class Passkey extends Authenticator<Passkey> {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_PASSKEY_SIGN_COUNT)
-    public int getPasskeySignCount() {
+    public long getPasskeySignCount() {
         return passkeySignCount;
     }
 
-    public void setPasskeySignCount(int passkeySignCount) {
+    public void setPasskeySignCount(long passkeySignCount) {
         this.passkeySignCount = passkeySignCount;
     }
 
-    public Passkey withPasskeySignCount(int passkeySignCount) {
+    public Passkey withPasskeySignCount(long passkeySignCount) {
         this.passkeySignCount = passkeySignCount;
         return this;
     }
