@@ -47,57 +47,13 @@ class InactiveAccountDataExportHandlerTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configurationService.getInactiveAccountExportParallelism()).thenReturn(4);
+        when(configurationService.getInactiveAccountExportTotalSegments()).thenReturn(1);
+        when(configurationService.getInactiveAccountExportMaxRetries()).thenReturn(3);
     }
 
     private InactiveAccountDataExportHandler createHandler() {
         return new InactiveAccountDataExportHandler(configurationService, client);
-    }
-
-    @Test
-    void shouldThrowIfRequestIsMissingRequiredFields() {
-        var handler = createHandler();
-
-        assertThrows(IllegalArgumentException.class, () -> handler.handleRequest(null, context));
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        handler.handleRequest(
-                                new InactiveAccountDataExportRequest(null, 5, null), context));
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        handler.handleRequest(
-                                new InactiveAccountDataExportRequest(10, null, null), context));
-    }
-
-    @Test
-    void shouldDefaultMaxRetriesToThreeWhenNull() {
-        int itemCount = 5;
-        int pageSize = 5;
-        mockScanWithPagination(itemCount, pageSize);
-        mockBatchGetItemWithFullMatch();
-
-        var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(4, 1, null);
-
-        var response = handler.handleRequest(request, context);
-
-        assertEquals(itemCount, response.totalItemsScanned());
-    }
-
-    @Test
-    void shouldUseExplicitMaxRetriesValue() {
-        int itemCount = 5;
-        int pageSize = 5;
-        mockScanWithPagination(itemCount, pageSize);
-        mockBatchGetItemWithFullMatch();
-
-        var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(4, 1, 5);
-
-        var response = handler.handleRequest(request, context);
-
-        assertEquals(itemCount, response.totalItemsScanned());
     }
 
     @Test
@@ -108,7 +64,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(4, 1, null);
+        var request = new InactiveAccountDataExportRequest();
 
         var response = handler.handleRequest(request, context);
 
@@ -124,7 +80,7 @@ class InactiveAccountDataExportHandlerTest {
                                 .build());
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(1, 1, null);
+        var request = new InactiveAccountDataExportRequest();
 
         assertThrows(DynamoDbException.class, () -> handler.handleRequest(request, context));
     }
@@ -136,7 +92,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(1, 1, null);
+        var request = new InactiveAccountDataExportRequest();
 
         var response = handler.handleRequest(request, context);
 
@@ -192,7 +148,7 @@ class InactiveAccountDataExportHandlerTest {
                         });
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(1, 1, 3);
+        var request = new InactiveAccountDataExportRequest();
 
         var response = handler.handleRequest(request, context);
 
@@ -204,6 +160,8 @@ class InactiveAccountDataExportHandlerTest {
     void shouldCountUnprocessedKeysAsMissingAfterRetriesExhausted() {
         int itemCount = 5;
         mockScanWithPagination(itemCount, itemCount);
+
+        when(configurationService.getInactiveAccountExportMaxRetries()).thenReturn(2);
 
         // Always return unprocessed keys for items 4 and 5
         when(client.batchGetItem(any(BatchGetItemRequest.class)))
@@ -245,8 +203,7 @@ class InactiveAccountDataExportHandlerTest {
                         });
 
         var handler = createHandler();
-        // maxRetries = 2 so total attempts = initial + 2 retries = 3
-        var request = new InactiveAccountDataExportRequest(1, 1, 2);
+        var request = new InactiveAccountDataExportRequest();
 
         var response = handler.handleRequest(request, context);
 
@@ -260,7 +217,7 @@ class InactiveAccountDataExportHandlerTest {
         mockScanWithPagination(0, 1);
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(1, 1, null);
+        var request = new InactiveAccountDataExportRequest();
 
         var response = handler.handleRequest(request, context);
 
@@ -275,7 +232,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(1, 1, null);
+        var request = new InactiveAccountDataExportRequest();
 
         var response = handler.handleRequest(request, context);
 
@@ -290,7 +247,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(1, 1, null);
+        var request = new InactiveAccountDataExportRequest();
 
         var response = handler.handleRequest(request, context);
 
@@ -308,7 +265,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(1, 1, null);
+        var request = new InactiveAccountDataExportRequest();
 
         var response = handler.handleRequest(request, context);
 

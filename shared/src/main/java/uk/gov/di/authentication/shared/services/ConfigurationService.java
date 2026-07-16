@@ -223,6 +223,21 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
     }
 
+    public int getInactiveAccountExportParallelism() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("INACTIVE_ACCOUNT_EXPORT_PARALLELISM", "200"));
+    }
+
+    public int getInactiveAccountExportTotalSegments() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("INACTIVE_ACCOUNT_EXPORT_TOTAL_SEGMENTS", "200"));
+    }
+
+    public int getInactiveAccountExportMaxRetries() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("INACTIVE_ACCOUNT_EXPORT_MAX_RETRIES", "3"));
+    }
+
     public String getTicfCRILambdaIdentifier() {
         return System.getenv().getOrDefault("TICF_CRI_LAMBDA_IDENTIFIER", "");
     }

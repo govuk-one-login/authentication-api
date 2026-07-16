@@ -193,6 +193,21 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getInactiveAccountExportParallelismShouldDefault() {
+        assertEquals(200, configurationService.getInactiveAccountExportParallelism());
+    }
+
+    @Test
+    void getInactiveAccountExportTotalSegmentsShouldDefault() {
+        assertEquals(200, configurationService.getInactiveAccountExportTotalSegments());
+    }
+
+    @Test
+    void getInactiveAccountExportMaxRetriesShouldDefault() {
+        assertEquals(3, configurationService.getInactiveAccountExportMaxRetries());
+    }
+
+    @Test
     void getTicfCRILambdaNameShouldDefault() {
         assertEquals("", configurationService.getTicfCRILambdaIdentifier());
     }

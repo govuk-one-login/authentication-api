@@ -37,7 +37,6 @@ public class InactiveAccountDataExportHandler
     private static final Logger LOG = LogManager.getLogger(InactiveAccountDataExportHandler.class);
     private static final String USER_PROFILE_TABLE = "user-profile";
     private static final String USER_CREDENTIALS_TABLE = "user-credentials";
-    private static final int DEFAULT_MAX_RETRIES = 3;
     private static final int BATCH_GET_ITEM_MAX_SIZE = 100;
 
     private static final String USER_PROFILE_PROJECTION_EXPRESSION =
@@ -48,12 +47,14 @@ public class InactiveAccountDataExportHandler
             "Email,Created,Updated,MigratedPassword";
 
     private final DynamoDbClient client;
+    private final ConfigurationService configurationService;
     private final String userProfileTableName;
     private final String userCredentialsTableName;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService, DynamoDbClient client) {
         this.client = client;
+        this.configurationService = configurationService;
         this.userProfileTableName =
                 TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
         this.userCredentialsTableName =
@@ -69,14 +70,9 @@ public class InactiveAccountDataExportHandler
     @Override
     public InactiveAccountDataExportResponse handleRequest(
             InactiveAccountDataExportRequest request, Context context) {
-        if (request == null || request.parallelism() == null || request.totalSegments() == null) {
-            throw new IllegalArgumentException(
-                    "Request must contain 'parallelism' and 'totalSegments' fields.");
-        }
-
-        int parallelism = request.parallelism();
-        int totalSegments = request.totalSegments();
-        int maxRetries = request.maxRetries() != null ? request.maxRetries() : DEFAULT_MAX_RETRIES;
+        int parallelism = configurationService.getInactiveAccountExportParallelism();
+        int totalSegments = configurationService.getInactiveAccountExportTotalSegments();
+        int maxRetries = configurationService.getInactiveAccountExportMaxRetries();
 
         LOG.info(
                 "Inactive account data export request: parallelism={}, totalSegments={}, maxRetries={}",
