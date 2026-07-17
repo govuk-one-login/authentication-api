@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.utils.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
@@ -25,6 +27,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -50,10 +54,37 @@ class InactiveAccountDataExportHandlerTest {
         when(configurationService.getInactiveAccountExportParallelism()).thenReturn(4);
         when(configurationService.getInactiveAccountExportTotalSegments()).thenReturn(1);
         when(configurationService.getInactiveAccountExportMaxRetries()).thenReturn(3);
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(7500);
     }
 
     private InactiveAccountDataExportHandler createHandler() {
         return new InactiveAccountDataExportHandler(configurationService, client);
+    }
+
+    @Test
+    void shouldHandleNullRequest() {
+        mockScanWithPagination(0, 1);
+
+        var handler = createHandler();
+        var response = handler.handleRequest(null, context);
+
+        assertEquals(0, response.processedCount());
+        assertEquals(0, response.writtenCount());
+    }
+
+    @Test
+    void shouldHandleEmptyRequest() {
+        int itemCount = 5;
+        mockScanWithPagination(itemCount, itemCount);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
+
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(itemCount, response.processedCount());
+        assertEquals(0, response.writtenCount());
     }
 
     @Test
@@ -68,7 +99,7 @@ class InactiveAccountDataExportHandlerTest {
 
         var response = handler.handleRequest(request, context);
 
-        assertEquals(itemCount, response.totalItemsScanned());
+        assertEquals(itemCount, response.processedCount());
     }
 
     @Test
@@ -96,7 +127,7 @@ class InactiveAccountDataExportHandlerTest {
 
         var response = handler.handleRequest(request, context);
 
-        assertEquals(itemCount, response.totalItemsScanned());
+        assertEquals(itemCount, response.processedCount());
         verify(client, times(1)).batchGetItem(any(BatchGetItemRequest.class));
     }
 
@@ -152,7 +183,7 @@ class InactiveAccountDataExportHandlerTest {
 
         var response = handler.handleRequest(request, context);
 
-        assertEquals(itemCount, response.totalItemsScanned());
+        assertEquals(itemCount, response.processedCount());
         verify(client, times(2)).batchGetItem(any(BatchGetItemRequest.class));
     }
 
@@ -207,7 +238,7 @@ class InactiveAccountDataExportHandlerTest {
 
         var response = handler.handleRequest(request, context);
 
-        assertEquals(itemCount, response.totalItemsScanned());
+        assertEquals(itemCount, response.processedCount());
         // Initial call + 2 retries = 3 calls
         verify(client, times(3)).batchGetItem(any(BatchGetItemRequest.class));
     }
@@ -221,7 +252,7 @@ class InactiveAccountDataExportHandlerTest {
 
         var response = handler.handleRequest(request, context);
 
-        assertEquals(0, response.totalItemsScanned());
+        assertEquals(0, response.processedCount());
         verify(client, never()).batchGetItem(any(BatchGetItemRequest.class));
     }
 
@@ -236,7 +267,7 @@ class InactiveAccountDataExportHandlerTest {
 
         var response = handler.handleRequest(request, context);
 
-        assertEquals(itemCount, response.totalItemsScanned());
+        assertEquals(itemCount, response.processedCount());
         verify(client, times(1)).batchGetItem(any(BatchGetItemRequest.class));
     }
 
@@ -251,14 +282,13 @@ class InactiveAccountDataExportHandlerTest {
 
         var response = handler.handleRequest(request, context);
 
-        assertEquals(itemCount, response.totalItemsScanned());
+        assertEquals(itemCount, response.processedCount());
         // 101 items = batch of 100 + final batch of 1 = 2 calls
         verify(client, times(2)).batchGetItem(any(BatchGetItemRequest.class));
     }
 
     @Test
     void shouldAccumulateItemsAcrossPagesBeforeBatching() {
-        // 25 items across 5 pages of 5 items each — all in one batch at the end
         int itemCount = 25;
         int pageSize = 5;
         mockScanWithPagination(itemCount, pageSize);
@@ -269,9 +299,143 @@ class InactiveAccountDataExportHandlerTest {
 
         var response = handler.handleRequest(request, context);
 
-        assertEquals(itemCount, response.totalItemsScanned());
+        assertEquals(itemCount, response.processedCount());
         // 25 items < 100 so only final partial batch = 1 call
         verify(client, times(1)).batchGetItem(any(BatchGetItemRequest.class));
+    }
+
+    @Test
+    void shouldStopScanningSegmentWhenItemLimitReached() {
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(10);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
+
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(10, response.processedCount());
+    }
+
+    @Test
+    void shouldReturnLastEvaluatedKeyWhenItemLimitStopsSegmentEarly() {
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+
+        var result = handler.scanSegment(0, 1, 3, 5, null);
+
+        assertEquals(5, result.itemsScanned());
+        assertNotNull(result.lastEvaluatedKey());
+    }
+
+    @Test
+    void shouldReturnNullLastEvaluatedKeyWhenSegmentFullyExhausted() {
+        int totalItems = 5;
+        mockScanWithPagination(totalItems, totalItems);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+
+        var result = handler.scanSegment(0, 1, 3, 7500, null);
+
+        assertEquals(5, result.itemsScanned());
+        assertNull(result.lastEvaluatedKey());
+    }
+
+    @Test
+    void shouldResumeFromStartKeyWhenProvided() {
+        int totalItems = 10;
+        int pageSize = 5;
+        List<ScanResponse> pages = buildPages(totalItems, pageSize);
+        AtomicInteger callCount = new AtomicInteger(0);
+
+        when(client.scan(any(ScanRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            ScanRequest req = invocation.getArgument(0);
+                            assertNotNull(req.exclusiveStartKey());
+                            return pages.get(callCount.getAndIncrement() + 1);
+                        });
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        Map<String, AttributeValue> startKey =
+                Map.of("Email", AttributeValue.builder().s("lastKey-5").build());
+
+        var result = handler.scanSegment(0, 1, 3, 7500, startKey);
+
+        assertEquals(5, result.itemsScanned());
+        assertNull(result.lastEvaluatedKey());
+    }
+
+    @Test
+    void shouldOnlyScanActiveSegmentsFromContinuationState() {
+        when(configurationService.getInactiveAccountExportTotalSegments()).thenReturn(3);
+        mockScanWithPagination(5, 5);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        Map<Integer, Map<String, String>> segmentKeys = new HashMap<>();
+        segmentKeys.put(1, Map.of("Email", "user5@example.com"));
+
+        var request = new InactiveAccountDataExportRequest(segmentKeys, 100L, 0L);
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(105, response.processedCount());
+        assertEquals(0, response.writtenCount());
+        verify(client, times(1)).scan(any(ScanRequest.class));
+    }
+
+    @Test
+    void shouldAccumulateProcessedCountFromPreviousInvocations() {
+        int itemCount = 5;
+        mockScanWithPagination(itemCount, itemCount);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, 500L, 0L);
+
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(505, response.processedCount());
+        assertEquals(0, response.writtenCount());
+    }
+
+    @Test
+    void shouldSerialiseContinuationStateAsJson() {
+        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+
+        var request =
+                new InactiveAccountDataExportRequest(
+                        Map.of(0, Map.of("Email", "user5@example.com")), 100L, 0L);
+
+        String json = gson.toJson(request);
+        var deserialised = gson.fromJson(json, InactiveAccountDataExportRequest.class);
+
+        assertEquals(request.processedCount(), deserialised.processedCount());
+        assertEquals(request.writtenCount(), deserialised.writtenCount());
+        assertEquals(
+                request.segmentKeys().get(0).get("Email"),
+                deserialised.segmentKeys().get(0).get("Email"));
+    }
+
+    @Test
+    void shouldDeserialiseEmptyPayloadAsFirstInvocation() {
+        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+
+        var deserialised = gson.fromJson("{}", InactiveAccountDataExportRequest.class);
+
+        assertNull(deserialised.segmentKeys());
+        assertNull(deserialised.processedCount());
+        assertNull(deserialised.writtenCount());
     }
 
     private Map<String, AttributeValue> createItem(int index) {
