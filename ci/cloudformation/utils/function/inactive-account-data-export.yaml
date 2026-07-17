@@ -60,6 +60,7 @@ Resources:
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoCredentialReadAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
+        - !Ref InactiveAccountDataExportSelfInvokePolicy
       AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDataExportLogGroup
@@ -105,3 +106,16 @@ Resources:
       LogGroupName: !Ref InactiveAccountDataExportLogGroup
       FilterPattern: ""
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  InactiveAccountDataExportSelfInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !Sub
+              - "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvironmentName}-inactive-account-data-export-lambda"
+              - EnvironmentName:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
