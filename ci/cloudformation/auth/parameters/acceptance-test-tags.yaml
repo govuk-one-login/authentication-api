@@ -23,7 +23,7 @@ Mappings:
         or @PasskeysEnabled or @PasskeyUsageEnabled)
     staging:
       tags: >-
-        @UI and not (@under-development or @AccountInterventions or @Reauth or
+        @UI and not (@under-development or @AccountInterventions or @ReauthMultiTabLogout or
         @new-mfa-reset-with-ipv or @AcceptInternationalNumbers
         or @InternationalSmsSendingDisabled or @EnvironmentWithAMCStubDeployed)
 
