@@ -64,7 +64,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -80,7 +80,7 @@ class InactiveAccountDataExportHandlerTest {
                                 .build());
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         assertThrows(DynamoDbException.class, () -> handler.handleRequest(request, context));
     }
@@ -92,7 +92,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -148,7 +148,7 @@ class InactiveAccountDataExportHandlerTest {
                         });
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -203,7 +203,7 @@ class InactiveAccountDataExportHandlerTest {
                         });
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -217,7 +217,7 @@ class InactiveAccountDataExportHandlerTest {
         mockScanWithPagination(0, 1);
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -232,7 +232,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -247,7 +247,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -265,7 +265,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
 
         var response = handler.handleRequest(request, context);
 

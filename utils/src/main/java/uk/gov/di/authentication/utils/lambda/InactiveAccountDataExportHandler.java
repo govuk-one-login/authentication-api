@@ -73,12 +73,23 @@ public class InactiveAccountDataExportHandler
         int parallelism = configurationService.getInactiveAccountExportParallelism();
         int totalSegments = configurationService.getInactiveAccountExportTotalSegments();
         int maxRetries = configurationService.getInactiveAccountExportMaxRetries();
+        int maxItemsPerSegment = configurationService.getInactiveAccountExportMaxItemsPerSegment();
+
+        long processedCount =
+                request != null && request.processedCount() != null ? request.processedCount() : 0L;
+        long writtenCount =
+                request != null && request.writtenCount() != null ? request.writtenCount() : 0L;
+
 
         LOG.info(
-                "Inactive account data export request: parallelism={}, totalSegments={}, maxRetries={}",
+                "Inactive account data export: parallelism={}, totalSegments={}, maxRetries={}, "
+                        + "maxItemsPerSegment={}, activeSegments={}, processedCount={}",
                 parallelism,
                 totalSegments,
-                maxRetries);
+                maxRetries,
+                maxItemsPerSegment,
+                activeSegments.size(),
+                processedCount);
 
         List<ForkJoinTask<SegmentResult>> tasks = new ArrayList<>();
         ForkJoinPool forkJoinPool = new ForkJoinPool(parallelism);
