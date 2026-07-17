@@ -86,6 +86,6 @@ class LambdaInvokerServiceTest {
                         withMessage(
                                 "Could not convert payload for "
                                         + functionName
-                                        + " into SdkBytes: null")));
+                                        + " into SdkBytes")));
     }
 }
