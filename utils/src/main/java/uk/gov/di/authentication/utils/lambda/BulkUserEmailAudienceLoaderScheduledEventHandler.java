@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.exceptions.LambdaInvokerServiceException;
+import uk.gov.di.authentication.shared.helpers.LambdaPauseHelper;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -16,7 +17,6 @@ import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.DynamoTable;
-import uk.gov.di.authentication.utils.helpers.BulkEmailBatchPauseHelper;
 import uk.gov.di.authentication.utils.services.audienceloader.BulkEmailAudienceLoader;
 import uk.gov.di.authentication.utils.services.audienceloader.InternationalNumbersForcedMfaResetBulkEmailAudienceLoader;
 import uk.gov.di.authentication.utils.services.audienceloader.TermsAndConditionsBulkEmailAudienceLoader;
@@ -186,7 +186,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
                 totalUsersAddedSoFar,
                 nextTableToScan.name());
 
-        BulkEmailBatchPauseHelper.pauseBetweenBatches(
+        LambdaPauseHelper.pauseBetweenInvocations(
                 configurationService.getBulkUserEmailAudienceLoadPauseDuration());
 
         reinvokeLambdaAsync(event);

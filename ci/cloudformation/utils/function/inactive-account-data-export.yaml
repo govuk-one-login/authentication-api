@@ -21,6 +21,24 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
+          INACTIVE_ACCOUNT_EXPORT_PARALLELISM:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountExportParallelism,
+            ]
+          INACTIVE_ACCOUNT_EXPORT_TOTAL_SEGMENTS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountExportTotalSegments,
+            ]
+          INACTIVE_ACCOUNT_EXPORT_MAX_RETRIES:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountExportMaxRetries,
+            ]
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadAccessPolicy
