@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportRequest;
 
 import java.nio.ByteBuffer;
@@ -31,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -46,6 +49,7 @@ class InactiveAccountDataExportHandlerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoDbClient client = mock(DynamoDbClient.class);
+    private final LambdaInvokerService lambdaInvokerService = mock(LambdaInvokerService.class);
     private final Context context = mock(Context.class);
 
     @BeforeEach
@@ -54,11 +58,16 @@ class InactiveAccountDataExportHandlerTest {
         when(configurationService.getInactiveAccountExportParallelism()).thenReturn(4);
         when(configurationService.getInactiveAccountExportTotalSegments()).thenReturn(1);
         when(configurationService.getInactiveAccountExportMaxRetries()).thenReturn(3);
-        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(7500);
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(100000);
+        when(configurationService.getInactiveAccountExportLambdaName())
+                .thenReturn("test-inactive-account-data-export-lambda");
+        when(configurationService.getInactiveAccountExportPauseBetweenInvocationsMs())
+                .thenReturn(0L);
     }
 
     private InactiveAccountDataExportHandler createHandler() {
-        return new InactiveAccountDataExportHandler(configurationService, client);
+        return new InactiveAccountDataExportHandler(
+                configurationService, client, lambdaInvokerService);
     }
 
     @Test
@@ -436,6 +445,153 @@ class InactiveAccountDataExportHandlerTest {
         assertNull(deserialised.segmentKeys());
         assertNull(deserialised.processedCount());
         assertNull(deserialised.writtenCount());
+    }
+
+    @Test
+    void shouldSelfInvokeWhenSegmentsRemainAfterProcessing() {
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
+
+        handler.handleRequest(request, context);
+
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(
+                        any(String.class), eq("test-inactive-account-data-export-lambda"));
+    }
+
+    @Test
+    void shouldNotSelfInvokeWhenAllSegmentsExhausted() {
+        int totalItems = 5;
+        mockScanWithPagination(totalItems, totalItems);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
+
+        handler.handleRequest(request, context);
+
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
+    }
+
+    @Test
+    void shouldPassCorrectContinuationStateInSelfInvocation() {
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L);
+
+        handler.handleRequest(request, context);
+
+        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(
+                        payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
+
+        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+        var continuation =
+                gson.fromJson(payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
+
+        assertNotNull(continuation.segmentKeys());
+        assertEquals(105, continuation.processedCount());
+        assertEquals(0, continuation.writtenCount());
+    }
+
+    @Test
+    void shouldSelfInvokeWithOnlyRemainingSegments() {
+        when(configurationService.getInactiveAccountExportTotalSegments()).thenReturn(2);
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+
+        // First segment exhausts (5 items, no more pages), second has more
+        AtomicInteger scanCallCount = new AtomicInteger(0);
+        when(client.scan(any(ScanRequest.class)))
+                .thenAnswer(
+                        invocation -> {
+                            ScanRequest req = invocation.getArgument(0);
+                            int segment = req.segment();
+                            int call = scanCallCount.getAndIncrement();
+
+                            List<Map<String, AttributeValue>> items = new ArrayList<>();
+                            for (int i = 1; i <= 5; i++) {
+                                items.add(createItem(segment * 100 + i));
+                            }
+
+                            ScanResponse.Builder builder =
+                                    ScanResponse.builder().items(items).count(5).scannedCount(5);
+
+                            if (segment == 1) {
+                                builder.lastEvaluatedKey(
+                                        Map.of(
+                                                UserProfile.ATTRIBUTE_EMAIL,
+                                                AttributeValue.builder()
+                                                        .s("continue@example.com")
+                                                        .build()));
+                            }
+
+                            return builder.build();
+                        });
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
+
+        handler.handleRequest(request, context);
+
+        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(
+                        payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
+
+        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+        var continuation =
+                gson.fromJson(payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
+
+        // Only segment 1 should remain
+        assertEquals(1, continuation.segmentKeys().size());
+        assertNotNull(continuation.segmentKeys().get(1));
+        assertNull(continuation.segmentKeys().get(0));
+    }
+
+    @Test
+    void shouldThrowWhenSelfInvocationFails() {
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        doThrow(new RuntimeException("Invoke failed"))
+                .when(lambdaInvokerService)
+                .invokeAsyncWithPayload(any(), any());
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
+
+        assertThrows(RuntimeException.class, () -> handler.handleRequest(request, context));
+    }
+
+    @Test
+    void shouldThrowWhenLambdaNameNotConfigured() {
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        when(configurationService.getInactiveAccountExportLambdaName()).thenReturn("");
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null);
+
+        assertThrows(RuntimeException.class, () -> handler.handleRequest(request, context));
     }
 
     private Map<String, AttributeValue> createItem(int index) {

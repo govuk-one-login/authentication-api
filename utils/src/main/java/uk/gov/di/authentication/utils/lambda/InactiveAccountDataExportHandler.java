@@ -11,8 +11,12 @@ import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import uk.gov.di.authentication.shared.helpers.LambdaPauseHelper;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportRequest;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportResponse;
 
@@ -48,13 +52,18 @@ public class InactiveAccountDataExportHandler
 
     private final DynamoDbClient client;
     private final ConfigurationService configurationService;
+    private final LambdaInvokerService lambdaInvokerService;
+    private final Json objectMapper = SerializationService.getInstance();
     private final String userProfileTableName;
     private final String userCredentialsTableName;
 
     public InactiveAccountDataExportHandler(
-            ConfigurationService configurationService, DynamoDbClient client) {
+            ConfigurationService configurationService,
+            DynamoDbClient client,
+            LambdaInvokerService lambdaInvokerService) {
         this.client = client;
         this.configurationService = configurationService;
+        this.lambdaInvokerService = lambdaInvokerService;
         this.userProfileTableName =
                 TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
         this.userCredentialsTableName =
@@ -64,7 +73,8 @@ public class InactiveAccountDataExportHandler
     public InactiveAccountDataExportHandler() {
         this(
                 ConfigurationService.getInstance(),
-                createDynamoClient(ConfigurationService.getInstance()));
+                createDynamoClient(ConfigurationService.getInstance()),
+                new LambdaInvokerService(ConfigurationService.getInstance()));
     }
 
     @Override
@@ -145,6 +155,10 @@ public class InactiveAccountDataExportHandler
                     processedCount,
                     remainingSegmentKeys.size());
 
+            if (!remainingSegmentKeys.isEmpty()) {
+                selfInvoke(remainingSegmentKeys, processedCount, writtenCount);
+            }
+
             return new InactiveAccountDataExportResponse(processedCount, writtenCount);
         } finally {
             forcePoolShutdown(forkJoinPool);
@@ -166,6 +180,44 @@ public class InactiveAccountDataExportHandler
         }
 
         return activeSegments;
+    }
+
+    private void selfInvoke(
+            Map<Integer, Map<String, String>> remainingSegmentKeys,
+            long processedCount,
+            long writtenCount) {
+        long pauseMs = configurationService.getInactiveAccountExportPauseBetweenInvocationsMs();
+        String lambdaName = configurationService.getInactiveAccountExportLambdaName();
+
+        if (lambdaName == null || lambdaName.isEmpty()) {
+            throw new RuntimeException(
+                    "INACTIVE_ACCOUNT_EXPORT_LAMBDA_NAME not set, cannot self-invoke");
+        }
+
+        LambdaPauseHelper.pauseBetweenInvocations(pauseMs);
+
+        var continuationRequest =
+                new InactiveAccountDataExportRequest(
+                        remainingSegmentKeys, processedCount, writtenCount);
+
+        String payload;
+        try {
+            payload = objectMapper.writeValueAsStringCamelCase(continuationRequest);
+        } catch (Json.JsonException e) {
+            throw new RuntimeException("Failed to serialise continuation request", e);
+        }
+
+        LOG.info(
+                "Self-invoking with {} remaining segments, processedCount={}",
+                remainingSegmentKeys.size(),
+                processedCount);
+
+        try {
+            lambdaInvokerService.invokeAsyncWithPayload(payload, lambdaName);
+        } catch (Exception e) {
+            LOG.error("Self-invocation failed", e);
+            throw new RuntimeException("Failed to self-invoke lambda: " + lambdaName, e);
+        }
     }
 
     private Map<String, AttributeValue> toDynamoKeys(Map<String, String> serialisedKey) {
