@@ -69,16 +69,72 @@ public class InactiveAccountDataExportHelper {
     public static LastActiveDate calculateLastActiveDate(
             Map<String, AttributeValue> userProfileItem,
             Map<String, AttributeValue> userCredentialsItem) {
-        String timestamp = getStringAttribute(userProfileItem, "Updated");
+        List<TimestampCandidate> candidates =
+                buildTimestampCandidates(userProfileItem, userCredentialsItem);
 
-        // TODO: THIS PR: Use other attributes too to determine latest timestamp.
+        LocalDateTime mostRecent = null;
+        String mostRecentSource = null;
 
-        if (timestamp == null) {
+        for (TimestampCandidate candidate : candidates) {
+            if (candidate.timestamp() == null) {
+                continue;
+            }
+
+            try {
+                LocalDateTime parsed = LocalDateTime.parse(candidate.timestamp());
+                if (mostRecent == null || parsed.isAfter(mostRecent)) {
+                    mostRecent = parsed;
+                    mostRecentSource = candidate.source();
+                }
+            } catch (Exception e) {
+                LOG.warn(
+                        "Failed to parse timestamp '{}' from source '{}': {}",
+                        candidate.timestamp(),
+                        candidate.source(),
+                        e.getMessage());
+            }
+        }
+
+        if (mostRecent == null) {
             return null;
         }
 
-        return new LastActiveDate(timestamp, "user_profile.updated");
+        return new LastActiveDate(mostRecent.toString(), mostRecentSource);
     }
+
+    private static List<TimestampCandidate> buildTimestampCandidates(
+            Map<String, AttributeValue> userProfileItem,
+            Map<String, AttributeValue> userCredentialsItem) {
+        List<TimestampCandidate> candidates = new ArrayList<>();
+
+        if (userProfileItem != null) {
+            candidates.add(
+                    new TimestampCandidate(
+                            getStringAttribute(userProfileItem, "Created"), "UserProfile.Created"));
+            candidates.add(
+                    new TimestampCandidate(
+                            getStringAttribute(userProfileItem, "Updated"), "UserProfile.Updated"));
+            candidates.add(
+                    new TimestampCandidate(
+                            getTermsAndConditionsTimestamp(userProfileItem),
+                            "UserProfile.termsAndConditions.timestamp"));
+        }
+
+        if (userCredentialsItem != null) {
+            candidates.add(
+                    new TimestampCandidate(
+                            getStringAttribute(userCredentialsItem, "Created"),
+                            "UserCredentials.Created"));
+            candidates.add(
+                    new TimestampCandidate(
+                            getStringAttribute(userCredentialsItem, "Updated"),
+                            "UserCredentials.Updated"));
+        }
+
+        return candidates;
+    }
+
+    private record TimestampCandidate(String timestamp, String source) {}
 
     public static String calculateDateForDeletion(String lastActiveDate) {
         if (lastActiveDate == null || lastActiveDate.isBlank()) {
@@ -101,6 +157,13 @@ public class InactiveAccountDataExportHelper {
 
         String dateForDeletion = calculateDateForDeletion(lastActiveTimestamp);
 
+        if (dateForDeletion == null) {
+            LOG.warn(
+                    "Skipping tracker item for public subject ID '{}': could not determine dateForDeletion (lastActiveDate was null)",
+                    publicSubjectId);
+            return null;
+        }
+
         return new InactiveAccountTrackerItem()
                 .withDateForDeletion(dateForDeletion)
                 .withCommonSubjectId(subjectId)
@@ -109,6 +172,14 @@ public class InactiveAccountDataExportHelper {
                 .withUserLastActive(lastActiveTimestamp)
                 .withStatusLastUpdated(NowHelper.toTimestampString(NowHelper.now()))
                 .withSourceId(lastActiveSource);
+    }
+
+    private static String getTermsAndConditionsTimestamp(Map<String, AttributeValue> item) {
+        AttributeValue tcMap = item.get("termsAndConditions");
+        if (tcMap == null || !tcMap.hasM()) {
+            return null;
+        }
+        return getStringAttribute(tcMap.m(), "timestamp");
     }
 
     private static String getStringAttribute(

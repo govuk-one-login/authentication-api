@@ -139,7 +139,7 @@ class InactiveAccountDataExportHelperTest {
                         "Email",
                         AttributeValue.builder().s("test@example.com").build(),
                         "Updated",
-                        AttributeValue.builder().s("2021-07-17T10:30:00.000000").build());
+                        AttributeValue.builder().s("2021-07-17T10:30:00.123456").build());
 
         Map<String, AttributeValue> userCredentialsItem =
                 Map.of("Email", AttributeValue.builder().s("test@example.com").build());
@@ -150,27 +150,21 @@ class InactiveAccountDataExportHelperTest {
         assertEquals("subject-123", result.getCommonSubjectId());
         assertEquals("public-456", result.getPublicSubjectId());
         assertEquals("test@example.com", result.getEmailAddress());
-        assertEquals("2021-07-17T10:30:00.000000", result.getUserLastActive());
+        assertEquals("2021-07-17T10:30:00.123456", result.getUserLastActive());
         assertEquals("pending", result.getStatus());
         assertEquals("AUTH_BACKFILL", result.getSource());
-        assertEquals("user_profile.updated", result.getSourceId());
+        assertEquals("UserProfile.Updated", result.getSourceId());
         assertNotNull(result.getStatusLastUpdated());
     }
 
     @Test
-    void buildTrackerItemShouldHandleMissingUpdatedAttribute() {
+    void buildTrackerItemShouldReturnNullWhenNoTimestampsAvailable() {
         Map<String, AttributeValue> userProfileItem =
                 Map.of("SubjectID", AttributeValue.builder().s("subject-789").build());
 
         InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, null);
 
-        assertNull(result.getDateForDeletion());
-        assertEquals("subject-789", result.getCommonSubjectId());
-        assertNull(result.getPublicSubjectId());
-        assertNull(result.getEmailAddress());
-        assertNull(result.getUserLastActive());
-        assertNull(result.getSourceId());
-        assertNotNull(result.getStatusLastUpdated());
+        assertNull(result);
     }
 
     @Test
@@ -186,29 +180,107 @@ class InactiveAccountDataExportHelperTest {
 
         InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, null);
 
-        assertEquals("user_profile.updated", result.getSourceId());
+        assertEquals("UserProfile.Updated", result.getSourceId());
         assertEquals("my-subject-id", result.getCommonSubjectId());
     }
 
     @Test
-    void calculateLastActiveDateShouldReturnUpdatedFromUserProfile() {
+    void calculateLastActiveDateShouldReturnMostRecentAcrossAllAttributes() {
         Map<String, AttributeValue> userProfileItem =
-                Map.of("Updated", AttributeValue.builder().s("2023-05-10T14:30:00.000000").build());
+                Map.of(
+                        "Created",
+                        AttributeValue.builder().s("2022-01-01T10:00:00.111111").build(),
+                        "Updated",
+                        AttributeValue.builder().s("2023-05-10T14:30:00.222222").build(),
+                        "termsAndConditions",
+                        AttributeValue.builder()
+                                .m(
+                                        Map.of(
+                                                "timestamp",
+                                                AttributeValue.builder()
+                                                        .s("2024-11-20T09:15:00.123456")
+                                                        .build()))
+                                .build());
 
-        LastActiveDate result = calculateLastActiveDate(userProfileItem, null);
+        Map<String, AttributeValue> userCredentialsItem =
+                Map.of(
+                        "Created",
+                        AttributeValue.builder().s("2022-01-01T10:00:00.111111").build(),
+                        "Updated",
+                        AttributeValue.builder().s("2024-06-01T08:00:00.333333").build());
 
-        assertEquals("2023-05-10T14:30:00.000000", result.timestamp());
-        assertEquals("user_profile.updated", result.source());
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
+
+        assertEquals("2024-11-20T09:15:00.123456", result.timestamp());
+        assertEquals("UserProfile.termsAndConditions.timestamp", result.source());
     }
 
     @Test
-    void calculateLastActiveDateShouldReturnNullWhenUpdatedMissing() {
+    void calculateLastActiveDateShouldReturnCredentialsUpdatedWhenMostRecent() {
+        Map<String, AttributeValue> userProfileItem =
+                Map.of(
+                        "Created",
+                        AttributeValue.builder().s("2020-01-01T00:00:00.111111").build(),
+                        "Updated",
+                        AttributeValue.builder().s("2021-06-15T12:00:00.222222").build());
+
+        Map<String, AttributeValue> userCredentialsItem =
+                Map.of(
+                        "Created",
+                        AttributeValue.builder().s("2020-01-01T00:00:00.111111").build(),
+                        "Updated",
+                        AttributeValue.builder().s("2025-03-20T16:45:00.552352138").build());
+
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
+
+        assertEquals("2025-03-20T16:45:00.552352138", result.timestamp());
+        assertEquals("UserCredentials.Updated", result.source());
+    }
+
+    @Test
+    void calculateLastActiveDateShouldReturnProfileCreatedWhenOnlyAttributePresent() {
+        Map<String, AttributeValue> userProfileItem =
+                Map.of("Created", AttributeValue.builder().s("2023-05-10T14:30:00.123456").build());
+
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, null);
+
+        assertEquals("2023-05-10T14:30:00.123456", result.timestamp());
+        assertEquals("UserProfile.Created", result.source());
+    }
+
+    @Test
+    void calculateLastActiveDateShouldReturnNullWhenNoTimestampAttributesPresent() {
         Map<String, AttributeValue> userProfileItem =
                 Map.of("Email", AttributeValue.builder().s("test@example.com").build());
 
         LastActiveDate result = calculateLastActiveDate(userProfileItem, null);
 
         assertNull(result);
+    }
+
+    @Test
+    void calculateLastActiveDateShouldReturnNullWhenBothItemsNull() {
+        LastActiveDate result = calculateLastActiveDate(null, null);
+
+        assertNull(result);
+    }
+
+    @Test
+    void calculateLastActiveDateShouldHandleOnlyCredentialsItemProvided() {
+        Map<String, AttributeValue> userCredentialsItem =
+                Map.of(
+                        "Created",
+                        AttributeValue.builder().s("2022-08-01T09:00:00.111111").build(),
+                        "Updated",
+                        AttributeValue.builder().s("2023-12-25T18:30:00.654321").build());
+
+        Map<String, AttributeValue> userProfileItem =
+                Map.of("Email", AttributeValue.builder().s("test@example.com").build());
+
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
+
+        assertEquals("2023-12-25T18:30:00.654321", result.timestamp());
+        assertEquals("UserCredentials.Updated", result.source());
     }
 
     @Test
