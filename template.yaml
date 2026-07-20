@@ -159,6 +159,8 @@ Conditions:
     ]
   #endregion
 
+  # Comment to force re-deployment of template - this can be deleted once the staging API GW/CloudFront migration is complete.
+
 Mappings:
   EnvironmentConfiguration:
     dev:
