@@ -1,6 +1,5 @@
 import com.github.spotbugs.snom.Confidence
 import com.github.spotbugs.snom.Effort
-import groovy.json.JsonSlurper
 
 buildscript {
     repositories {
@@ -37,13 +36,6 @@ apply plugin: "application"
 apply plugin: "idea"
 
 ext {
-    terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
-
-    awsCredentialsEnvironment = terraformEnvironment == "localstack" ? [
-        AWS_ACCESS_KEY_ID: "mockaccesskey",
-        AWS_SECRET_ACCESS_KEY: "mocksecretkey",
-    ] : [:]
-
     noXray = {
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-bom"
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-core"
@@ -308,137 +300,6 @@ dockerCompose {
 compileJava.dependsOn "spotlessApply"
 
 clean.dependsOn "composeDown"
-
-abstract class Terraform extends DefaultTask {
-
-    @Inject
-    abstract ExecOperations getExecOps()
-
-    Terraform() {
-        group = "terraform"
-    }
-
-    @Input
-    abstract MapProperty<String, String> getEnvironmentVars()
-
-    @InputDirectory
-    abstract DirectoryProperty getTerraformDirectory()
-
-    @Input
-    abstract Property<String> getEnvironmentName()
-
-    @Internal
-    Object terraformOutputs
-
-    @TaskAction
-    void apply() {
-        def tfEnvironment = [
-            "TF_DATA_DIR": "${project.layout.buildDirectory.get().asFile}/terraform/${environmentName.get()}-${terraformDirectory.get().asFile.name}",
-            "TF_IN_AUTOMATION": "1"
-        ] + environmentVars.get()
-
-        logger.lifecycle("Running Terraform Initialise...")
-        execOps.exec {
-            executable "terraform"
-            workingDir terraformDirectory.asFile
-            environment tfEnvironment
-            args "init", "-backend-config=${environmentName.get()}.hcl"
-        }
-
-        logger.lifecycle("Applying ${terraformDirectory.getAsFile().get().name} Terraform...")
-        execOps.exec {
-            executable "terraform"
-            workingDir terraformDirectory.asFile
-            environment tfEnvironment
-            args "apply", "-auto-approve", "-var-file=${environmentName.get()}.tfvars"
-        }
-
-        logger.lifecycle("Getting Terraform Outputs!")
-        new ByteArrayOutputStream().withStream { os ->
-            execOps.exec {
-                standardOutput os
-                executable "terraform"
-                workingDir terraformDirectory.asFile
-                environment tfEnvironment
-                args "output", "-json"
-            }
-            this.terraformOutputs = new JsonSlurper().parse(os.toByteArray())
-        }
-        logger.lifecycle("Terraform Complete!")
-    }
-
-    protected Object outputs() {
-        return this.terraformOutputs
-    }
-}
-
-tasks.register('sharedTerraform', Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/shared")
-    environmentName = terraformEnvironment
-    environmentVars = awsCredentialsEnvironment
-
-    if (terraformEnvironment == "localstack") {
-        dependsOn "composeUp"
-    }
-}
-
-tasks.register('oidcTerraform', Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/oidc")
-    environmentName = terraformEnvironment
-    environmentVars = awsCredentialsEnvironment
-
-    doLast {
-        def json = outputs()
-        allprojects.findAll {it.name == "integration-tests"}.first().tasks.named("test") {
-            environment "API_GATEWAY_ID", json.api_gateway_root_id.value
-            environment "EXTERNAL_TOKEN_SIGNING_KEY_ALIAS", json.id_token_signing_key_alias.value
-            environment "OIDC_API_BASE_URL", json.base_url.value
-            environment "API_KEY", json.frontend_api_key.value
-            environment "FRONTEND_API_GATEWAY_ID", json.frontend_api_gateway_root_id.value
-            environment "FRONTEND_API_KEY", json.frontend_api_key.value
-            environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
-            environment "EMAIL_QUEUE_URL", json.email_queue.value
-            environment "EXPERIAN_PHONE_CHECK_QUEUE_URL", json.experian_phone_check_queue.value
-        }
-        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.named("test") {
-            environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
-        }
-    }
-    dependsOn ":client-registry-api:buildZip"
-    dependsOn ":frontend-api:buildZip"
-    dependsOn ":oidc-api:buildZip"
-    dependsOn ":ipv-api:buildZip"
-    dependsOn ":sis-api:buildZip"
-    dependsOn ":doc-checking-app-api:buildZip"
-    dependsOn "sharedTerraform"
-}
-
-tasks.register('acctMgmtTerraform', Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/account-management")
-    environmentName = terraformEnvironment
-    environmentVars = awsCredentialsEnvironment
-
-    doLast {
-        def json = outputs()
-        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.named("test") {
-            environment "API_GATEWAY_ID", json.api_gateway_root_id.value
-            environment "OIDC_API_BASE_URL", json.base_url.value
-            environment "EMAIL_QUEUE_URL", json.email_queue.value
-        }
-    }
-    dependsOn ":account-management-api:buildZip"
-    dependsOn "auditTerraform"
-}
-
-
-tasks.register('utilsTerraform', Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/utils")
-    environmentName = terraformEnvironment
-    environmentVars = awsCredentialsEnvironment
-
-    dependsOn ":utils:buildZip"
-    dependsOn "oidcTerraform"
-}
 
 sonar {
     properties {
