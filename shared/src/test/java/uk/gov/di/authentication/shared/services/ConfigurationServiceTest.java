@@ -208,6 +208,22 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getInactiveAccountExportLambdaNameShouldDefault() {
+        assertEquals("", configurationService.getInactiveAccountExportLambdaName());
+    }
+
+    @Test
+    void getInactiveAccountExportMaxItemsPerSegmentShouldDefault() {
+        assertEquals(7500, configurationService.getInactiveAccountExportMaxItemsPerSegment());
+    }
+
+    @Test
+    void getInactiveAccountExportPauseBetweenInvocationsMsShouldDefault() {
+        assertEquals(
+                60000, configurationService.getInactiveAccountExportPauseBetweenInvocationsMs());
+    }
+
+    @Test
     void getTicfCRILambdaNameShouldDefault() {
         assertEquals("", configurationService.getTicfCRILambdaIdentifier());
     }

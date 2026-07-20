@@ -39,11 +39,28 @@ Resources:
               !Ref Environment,
               inactiveAccountExportMaxRetries,
             ]
+          INACTIVE_ACCOUNT_EXPORT_LAMBDA_NAME: !Sub
+            - "${EnvironmentName}-inactive-account-data-export-lambda"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          INACTIVE_ACCOUNT_EXPORT_MAX_ITEMS_PER_SEGMENT:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountExportMaxItemsPerSegment,
+            ]
+          INACTIVE_ACCOUNT_EXPORT_PAUSE_BETWEEN_INVOCATIONS_MS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountExportPauseBetweenInvocationsMs,
+            ]
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoCredentialReadAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
+        - !Ref InactiveAccountDataExportSelfInvokePolicy
       AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDataExportLogGroup
@@ -89,3 +106,16 @@ Resources:
       LogGroupName: !Ref InactiveAccountDataExportLogGroup
       FilterPattern: ""
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  InactiveAccountDataExportSelfInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !Sub
+              - "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvironmentName}-inactive-account-data-export-lambda"
+              - EnvironmentName:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
