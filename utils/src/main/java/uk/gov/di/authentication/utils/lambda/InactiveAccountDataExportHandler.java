@@ -51,23 +51,34 @@ public class InactiveAccountDataExportHandler
             "Email,Created,Updated,MigratedPassword";
 
     private final DynamoDbClient client;
-    private final ConfigurationService configurationService;
     private final LambdaInvokerService lambdaInvokerService;
     private final Json objectMapper = SerializationService.getInstance();
     private final String userProfileTableName;
     private final String userCredentialsTableName;
+    private final int parallelism;
+    private final int totalSegments;
+    private final int maxRetries;
+    private final int maxItemsPerSegment;
+    private final long pauseBetweenInvocationsMs;
+    private final String lambdaName;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService,
             DynamoDbClient client,
             LambdaInvokerService lambdaInvokerService) {
         this.client = client;
-        this.configurationService = configurationService;
         this.lambdaInvokerService = lambdaInvokerService;
         this.userProfileTableName =
                 TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
         this.userCredentialsTableName =
                 TableNameHelper.getFullTableName(USER_CREDENTIALS_TABLE, configurationService);
+        this.parallelism = configurationService.getInactiveAccountExportParallelism();
+        this.totalSegments = configurationService.getInactiveAccountExportTotalSegments();
+        this.maxRetries = configurationService.getInactiveAccountExportMaxRetries();
+        this.maxItemsPerSegment = configurationService.getInactiveAccountExportMaxItemsPerSegment();
+        this.pauseBetweenInvocationsMs =
+                configurationService.getInactiveAccountExportPauseBetweenInvocationsMs();
+        this.lambdaName = configurationService.getInactiveAccountExportLambdaName();
     }
 
     public InactiveAccountDataExportHandler() {
@@ -80,11 +91,6 @@ public class InactiveAccountDataExportHandler
     @Override
     public InactiveAccountDataExportResponse handleRequest(
             InactiveAccountDataExportRequest request, Context context) {
-        int parallelism = configurationService.getInactiveAccountExportParallelism();
-        int totalSegments = configurationService.getInactiveAccountExportTotalSegments();
-        int maxRetries = configurationService.getInactiveAccountExportMaxRetries();
-        int maxItemsPerSegment = configurationService.getInactiveAccountExportMaxItemsPerSegment();
-
         if (maxItemsPerSegment <= 0) {
             throw new IllegalStateException(
                     "INACTIVE_ACCOUNT_EXPORT_MAX_ITEMS_PER_SEGMENT must be greater than 0");
@@ -186,15 +192,12 @@ public class InactiveAccountDataExportHandler
             Map<Integer, Map<String, String>> remainingSegmentKeys,
             long processedCount,
             long writtenCount) {
-        long pauseMs = configurationService.getInactiveAccountExportPauseBetweenInvocationsMs();
-        String lambdaName = configurationService.getInactiveAccountExportLambdaName();
-
         if (lambdaName == null || lambdaName.isEmpty()) {
             throw new RuntimeException(
                     "INACTIVE_ACCOUNT_EXPORT_LAMBDA_NAME not set, cannot self-invoke");
         }
 
-        LambdaPauseHelper.pauseBetweenInvocations(pauseMs);
+        LambdaPauseHelper.pauseBetweenInvocations(pauseBetweenInvocationsMs);
 
         var continuationRequest =
                 new InactiveAccountDataExportRequest(
