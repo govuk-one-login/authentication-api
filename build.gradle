@@ -181,7 +181,7 @@ ext {
 String jacocoBuildReportPath = "reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
 
 subprojects {
-    task allDeps(type: DependencyReportTask) {}
+    tasks.register('allDeps', DependencyReportTask) {}
     buildscript {
         dependencies {
             constraints {
@@ -252,10 +252,10 @@ subprojects {
 
 allprojects {
     gradle.projectsEvaluated {
-        tasks.withType(JavaCompile) {
+        tasks.withType(JavaCompile).configureEach {
             options.compilerArgs << "-Xlint:deprecation" << "-Werror"
         }
-        tasks.withType(AbstractArchiveTask) {
+        tasks.withType(AbstractArchiveTask).configureEach {
             // Ensure that the jar / zip files are reproducible
             includeEmptyDirs = false
             preserveFileTimestamps = false
@@ -370,7 +370,7 @@ abstract class Terraform extends DefaultTask {
     }
 }
 
-task sharedTerraform (type: Terraform) {
+tasks.register('sharedTerraform', Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/shared")
     environmentName = terraformEnvironment
     environmentVars = awsCredentialsEnvironment
@@ -380,14 +380,14 @@ task sharedTerraform (type: Terraform) {
     }
 }
 
-task oidcTerraform (type: Terraform) {
+tasks.register('oidcTerraform', Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/oidc")
     environmentName = terraformEnvironment
     environmentVars = awsCredentialsEnvironment
 
     doLast {
         def json = outputs()
-        allprojects.findAll {it.name == "integration-tests"}.first().tasks.getByName("test") {
+        allprojects.findAll {it.name == "integration-tests"}.first().tasks.named("test") {
             environment "API_GATEWAY_ID", json.api_gateway_root_id.value
             environment "EXTERNAL_TOKEN_SIGNING_KEY_ALIAS", json.id_token_signing_key_alias.value
             environment "OIDC_API_BASE_URL", json.base_url.value
@@ -398,7 +398,7 @@ task oidcTerraform (type: Terraform) {
             environment "EMAIL_QUEUE_URL", json.email_queue.value
             environment "EXPERIAN_PHONE_CHECK_QUEUE_URL", json.experian_phone_check_queue.value
         }
-        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
+        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.named("test") {
             environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
         }
     }
@@ -411,14 +411,14 @@ task oidcTerraform (type: Terraform) {
     dependsOn "sharedTerraform"
 }
 
-task acctMgmtTerraform (type: Terraform) {
+tasks.register('acctMgmtTerraform', Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/account-management")
     environmentName = terraformEnvironment
     environmentVars = awsCredentialsEnvironment
 
     doLast {
         def json = outputs()
-        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
+        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.named("test") {
             environment "API_GATEWAY_ID", json.api_gateway_root_id.value
             environment "OIDC_API_BASE_URL", json.base_url.value
             environment "EMAIL_QUEUE_URL", json.email_queue.value
@@ -428,7 +428,8 @@ task acctMgmtTerraform (type: Terraform) {
     dependsOn "auditTerraform"
 }
 
-task utilsTerraform (type: Terraform) {
+
+tasks.register('utilsTerraform', Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/utils")
     environmentName = terraformEnvironment
     environmentVars = awsCredentialsEnvironment
@@ -475,7 +476,7 @@ jacocoTestReport {
     dependsOn "test"
 }
 
-task searchForDependency {
+tasks.register('searchForDependency') {
     group = 'Custom'
     description = 'Find all projects that have a dependency'
 
