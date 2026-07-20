@@ -3,7 +3,8 @@ package uk.gov.di.authentication.frontendapi.entity;
 public enum FinishPasskeyAssertionFailureReason {
     PARSING_ASSERTION_REQUEST_ERROR("parsing_assertion_request_error"),
     PARSING_PKC_ERROR("parsing_pkc_error"),
-    ASSERTION_FAILED_ERROR("assertion_failed_error");
+    ASSERTION_FAILED_ERROR("assertion_failed_error"),
+    ERROR_UPDATING_PASSKEY_RECORD("error_updating_passkey_record");
 
     private final String value;
 

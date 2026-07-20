@@ -11,6 +11,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionRequest;
+import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
+import java.time.Clock;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
@@ -46,6 +48,7 @@ public class FinishPasskeyAssertionHandler
     private final PasskeyAssertionService passkeyAssertionService;
     private final UserActionsManager userActionsManager;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final PasskeysService passkeysService;
 
     public FinishPasskeyAssertionHandler() {
         this(ConfigurationService.getInstance());
@@ -57,7 +60,8 @@ public class FinishPasskeyAssertionHandler
             AuthSessionService authSessionService,
             PasskeyAssertionService passkeyAssertionService,
             UserActionsManager userActionsManager,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            PasskeysService passkeysService) {
         super(
                 FinishPasskeyAssertionRequest.class,
                 configurationService,
@@ -66,6 +70,7 @@ public class FinishPasskeyAssertionHandler
         this.passkeyAssertionService = passkeyAssertionService;
         this.userActionsManager = userActionsManager;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.passkeysService = passkeysService;
     }
 
     public FinishPasskeyAssertionHandler(ConfigurationService configurationService) {
@@ -77,6 +82,7 @@ public class FinishPasskeyAssertionHandler
                         new StructuredAuditService(configurationService));
         this.userActionsManager = new UserActionsManager(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.passkeysService = new PasskeysService(configurationService);
     }
 
     @Override
@@ -96,14 +102,25 @@ public class FinishPasskeyAssertionHandler
 
         reportPasskeyAuthenticationSuccess();
 
+        var maybeUserProfile = userContext.getUserProfile();
+
+        if (maybeUserProfile.isEmpty()) {
+            LOG.error("User profile not found for finish passkey assertion");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.USER_NOT_FOUND);
+        }
+        var userProfile = maybeUserProfile.get();
+
         return verifyPasskeyAssertion(userContext, request, input)
-                .flatMap(this::updatePasskeyRecord)
+                .flatMap(
+                        assertionResult ->
+                                updatePasskeyRecord(assertionResult, userContext, userProfile))
                 .tap(success -> reportCorrectPasskeyReceived(userContext))
                 .tapFailure(failure -> reportIncorrectPasskeyReceived(userContext, failure))
                 .fold(
                         failure ->
                                 switch (failure) {
-                                    case PARSING_ASSERTION_REQUEST_ERROR -> generateApiGatewayProxyErrorResponse(
+                                    case PARSING_ASSERTION_REQUEST_ERROR,
+                                            ERROR_UPDATING_PASSKEY_RECORD -> generateApiGatewayProxyErrorResponse(
                                             500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
                                     case PARSING_PKC_ERROR -> generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.PASSKEY_ASSERTION_INVALID_PKC);
@@ -142,9 +159,16 @@ public class FinishPasskeyAssertionHandler
     }
 
     private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(
-            AssertionResult assertionResult) {
-        // TODO - AUT-4938 - Update database with latest passkey values
-        return Result.success(null);
+            AssertionResult assertionResult, UserContext userContext, UserProfile userProfile) {
+        var publicSubjectId = userProfile.getPublicSubjectID();
+        var sessionId = userContext.getAuthSession().getSessionId();
+        var passkeyId = assertionResult.getCredential().getCredentialId().getBase64Url();
+        var signCount = assertionResult.getSignatureCount();
+        var result =
+                passkeysService.updatePasskey(
+                        publicSubjectId, sessionId, passkeyId, signCount, Clock.systemUTC());
+        return result.tapFailure(f -> LOG.error(f.getValue()))
+                .mapFailure(f -> FinishPasskeyAssertionFailureReason.ERROR_UPDATING_PASSKEY_RECORD);
     }
 
     private Void reportCorrectPasskeyReceived(UserContext userContext) {

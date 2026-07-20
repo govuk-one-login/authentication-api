@@ -5,10 +5,12 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyRetrieveError;
+import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyUpdateError;
 import uk.gov.di.authentication.shared.entity.AccessTokenScope;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
+import uk.gov.di.authentication.shared.entity.passkeys.PasskeysUpdateRequest;
 import uk.gov.di.authentication.shared.helpers.HttpClientHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -65,7 +67,7 @@ public class PasskeysService {
                 createAccountDataApiAccessToken(
                         publicSubjectId, sessionId, List.of(AccountDataScope.PASSKEY_RETRIEVE));
         if (accountDataApiAccessTokenResult.isFailure()) {
-            return Result.failure(accountDataApiAccessTokenResult.getFailure());
+            return Result.failure(PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN);
         }
 
         var accountDataBaseUri = configurationService.getAccountDataURI();
@@ -111,6 +113,69 @@ public class PasskeysService {
         }
     }
 
+    public Result<PasskeyUpdateError, Void> updatePasskey(
+            String publicSubjectId,
+            String sessionId,
+            String passkeyIdentifier,
+            long signCount,
+            Clock clock) {
+        var accountDataBaseUri = configurationService.getAccountDataURI();
+        var updatePasskeysRequestUri =
+                buildURI(
+                        accountDataBaseUri,
+                        "/accounts/"
+                                + publicSubjectId
+                                + "/authenticators/passkeys/"
+                                + passkeyIdentifier);
+        var serialisationService = SerializationService.getInstance();
+        var updateRequest = new PasskeysUpdateRequest(signCount, clock.instant().toString());
+        var bodyPublisher =
+                HttpRequest.BodyPublishers.ofString(
+                        serialisationService.writeValueAsString(updateRequest));
+        var accountDataApiAccessTokenResult =
+                createAccountDataApiAccessToken(
+                        publicSubjectId, sessionId, List.of(AccountDataScope.PASSKEY_UPDATE));
+        if (accountDataApiAccessTokenResult.isFailure()) {
+            return Result.failure(PasskeyUpdateError.ERROR_CREATING_ACCESS_TOKEN);
+        }
+        var request =
+                HttpRequest.newBuilder(updatePasskeysRequestUri)
+                        .header(
+                                "Authorization",
+                                accountDataApiAccessTokenResult
+                                        .getSuccess()
+                                        .toAuthorizationHeader())
+                        .method("PATCH", bodyPublisher)
+                        .build();
+
+        try {
+            var result = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return switch (result.statusCode()) {
+                case 204 -> Result.emptySuccess();
+                case 400 -> Result.failure(PasskeyUpdateError.PASSKEY_UPDATE_BAD_REQUEST);
+                case 403 -> Result.failure(PasskeyUpdateError.PASSKEY_UPDATE_UNAUTHORISED);
+                case 404 -> Result.failure(PasskeyUpdateError.PASSKEY_OR_USER_NOT_FOUND);
+                case 500 -> Result.failure(PasskeyUpdateError.PASSKEY_UPDATE_INTERNAL_SERVER_ERROR);
+                default -> Result.failure(
+                        PasskeyUpdateError.PASSKEY_UPDATE_UNEXPECTED_RESPONSE_CODE);
+            };
+        } catch (IOException e) {
+            LOG.error("IOException in update passkeys", e);
+            return Result.failure(PasskeyUpdateError.IO_EXCEPTION);
+        } catch (InterruptedException e) {
+            if (e.getCause() instanceof LinkageError) {
+                // In rare cases we see a linkage error within the HTTP Client
+                // which fails all future requests made by the lambda
+                // As a temporary measure we crash the lambda to force a restart
+                LOG.error("Linkage error making passkey update request, exiting with fault");
+                System.exit(1);
+            }
+            LOG.error("Interrupted exception in update passkeys");
+            Thread.currentThread().interrupt();
+            return Result.failure(PasskeyUpdateError.INTERRUPTED_EXCEPTION);
+        }
+    }
+
     private Result<PasskeyRetrieveError, PasskeysRetrieveResponse> parseResponse(
             HttpResponse<String> response) {
         try {
@@ -125,7 +190,7 @@ public class PasskeysService {
         }
     }
 
-    private Result<PasskeyRetrieveError, BearerAccessToken> createAccountDataApiAccessToken(
+    private Result<String, BearerAccessToken> createAccountDataApiAccessToken(
             String publicSubjectId, String sessionId, List<AccessTokenScope> scopes) {
         return accessTokenConstructorService
                 .createSignedAccessToken(
@@ -143,7 +208,7 @@ public class PasskeysService {
                             LOG.warn(
                                     "Error creating account data api access token. Error: {}",
                                     failure);
-                            return PasskeyRetrieveError.ERROR_CREATING_ACCESS_TOKEN;
+                            return "Error creating access token";
                         });
     }
 }
