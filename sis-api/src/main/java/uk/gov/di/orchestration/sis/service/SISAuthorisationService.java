@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -17,6 +18,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -25,6 +27,7 @@ import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenService;
+import uk.gov.di.orchestration.sis.exception.SISCallbackValidationError;
 
 import java.security.interfaces.RSAPublicKey;
 import java.time.temporal.ChronoUnit;
@@ -32,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -40,6 +44,7 @@ import static uk.gov.di.orchestration.shared.helpers.RsaKeyHelper.getRsaPublicKe
 public class SISAuthorisationService {
     private static final String STATE_STORAGE_PREFIX = "sis-state:";
     private static final Logger LOG = LogManager.getLogger(SISAuthorisationService.class);
+    private static final String RECORD_UPDATE_REQUESTED = "record_update_requested";
     private final ConfigurationService configurationService;
     private final TokenService tokenService;
     private final StateStorageService stateStorageService;
@@ -181,5 +186,81 @@ public class SISAuthorisationService {
         return claimsSetRequest.add(
                 new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
                         .withValues(List.of(storageToken.getValue())));
+    }
+
+    public Optional<SISCallbackValidationError> validateResponse(
+            Map<String, String> queryParams, String sessionId) {
+        if (queryParams == null || queryParams.isEmpty()) {
+            LOG.warn("No Query parameters in SIS Authorisation response");
+            return Optional.of(
+                    new SISCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
+        }
+        if (queryParams.containsKey("error")) {
+            if (ACCESS_DENIED_CODE.equals(queryParams.get("error"))) {
+                if (RECORD_UPDATE_REQUESTED.equals(queryParams.get("error_description"))) {
+                    LOG.info("User requested to update their details");
+                    return Optional.of(
+                            new SISCallbackValidationError(
+                                    queryParams.get("error"),
+                                    queryParams.get("error_description"),
+                                    true,
+                                    true));
+                }
+
+                LOG.info("User could not be verified by SIS, routing to IPV");
+                return Optional.of(
+                        new SISCallbackValidationError(
+                                queryParams.get("error"),
+                                queryParams.get("error_description"),
+                                true,
+                                false));
+            } else {
+                LOG.warn("Error response found in IPV Authorisation response");
+                return Optional.of(
+                        new SISCallbackValidationError(
+                                queryParams.get("error"), queryParams.get("error_description")));
+            }
+        }
+        if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
+            LOG.warn("No state param in IPV Authorisation response");
+            return Optional.of(
+                    new SISCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "No state param present in Authorisation response"));
+        }
+        if (!isStateValid(sessionId, queryParams.get("state"))) {
+            return Optional.of(
+                    new SISCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid state param present in Authorisation response"));
+        }
+        if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
+            LOG.warn("No code param in SIS Authorisation response");
+            return Optional.of(
+                    new SISCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "No code param present in Authorisation response"));
+        }
+        return Optional.empty();
+    }
+
+    private boolean isStateValid(String sessionId, String responseState) {
+        var valueFromDynamo =
+                stateStorageService
+                        .getState(STATE_STORAGE_PREFIX + sessionId)
+                        .map(StateItem::getState);
+        if (valueFromDynamo.isEmpty()) {
+            LOG.info("No state found in Dynamo");
+            return false;
+        }
+
+        State storedState = new State(valueFromDynamo.get());
+        LOG.info(
+                "Response state: {} and Stored state: {}. Are equal: {}",
+                responseState,
+                storedState.getValue(),
+                responseState.equals(storedState.getValue()));
+        return responseState.equals(storedState.getValue());
     }
 }
