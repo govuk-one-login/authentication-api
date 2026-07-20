@@ -492,7 +492,8 @@ class AMCCallbackHandlerTest {
                 Map.ofEntries(
                         Map.entry("Environment", ENV),
                         Map.entry("AMCAuthorisationOverallSuccess", "false"),
-                        Map.entry("AMCScope", "passkey-create"));
+                        Map.entry("AMCScope", "passkey-create"),
+                        Map.entry("FailureReason", "UserBackedOutOfJourney"));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         CloudwatchMetrics.AMC_AUTHORISATION_RECEIVED, expectedMetricsDimensions);

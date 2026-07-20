@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS;
@@ -227,13 +228,24 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
     }
 
     private void emitAuthorisationReceivedMetric(JourneyOutcomeResponse journeyOutcomeResponse) {
-        var metricDimensions =
-                Map.ofEntries(
-                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
-                        Map.entry(
-                                AMC_AUTHORISATION_OVERALL_SUCCESS.getValue(),
-                                String.valueOf(journeyOutcomeResponse.success())),
-                        Map.entry(AMC_SCOPE.getValue(), journeyOutcomeResponse.scope()));
+        var metricDimensions = new HashMap<String, String>();
+        metricDimensions.put(ENVIRONMENT.getValue(), configurationService.getEnvironment());
+        metricDimensions.put(
+                AMC_AUTHORISATION_OVERALL_SUCCESS.getValue(),
+                String.valueOf(journeyOutcomeResponse.success()));
+        metricDimensions.put(AMC_SCOPE.getValue(), journeyOutcomeResponse.scope());
+        // this logic will need to be updated for sfad
+        var optionalFailureReason =
+                journeyOutcomeResponse.actions().stream()
+                        .filter(
+                                action ->
+                                        Objects.equals(action.action(), "passkey-create")
+                                                && !Objects.isNull(action.details().error()))
+                        .findFirst()
+                        .map(action -> action.details().error().description());
+        if (optionalFailureReason.isPresent()) {
+            metricDimensions.put(FAILURE_REASON.getValue(), optionalFailureReason.get());
+        }
         cloudwatchMetricsService.incrementCounter(AMC_AUTHORISATION_RECEIVED, metricDimensions);
     }
 
