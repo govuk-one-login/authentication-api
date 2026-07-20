@@ -499,8 +499,8 @@ tasks.register('searchForDependency') {
                         if (id instanceof ModuleComponentIdentifier) {
                             if (id.group == targetGroup && id.module == targetName) {
                                 def resolvedVersion = id.version
-                                def isLower = compareVersions(resolvedVersion, minVersion) < 0
-                                def versionString = isLower
+                                def isLower = compareVersions(resolvedVersion, minVersion as String) < 0
+                                GString versionString = isLower
                                         ? "Version: \u001B[31m${resolvedVersion}\u001B[0m ⚠️"
                                         : "Version: \u001B[32m${resolvedVersion}\u001B[0m ✅"
                                 foundProjects.add(project.path + ":" + config.name + ". " + versionString)
