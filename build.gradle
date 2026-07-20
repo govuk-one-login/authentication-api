@@ -397,7 +397,7 @@ task sharedTerraform (type: Terraform) {
 
 task oidcTerraform (type: Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/oidc")
-    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentName = terraformEnvironment
     environmentVars = awsCredentialsEnvironment
 
     doLast {
@@ -428,7 +428,7 @@ task oidcTerraform (type: Terraform) {
 
 task acctMgmtTerraform (type: Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/account-management")
-    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentName = terraformEnvironment
     environmentVars = awsCredentialsEnvironment
 
     doLast {
@@ -445,7 +445,7 @@ task acctMgmtTerraform (type: Terraform) {
 
 task utilsTerraform (type: Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/utils")
-    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentName = terraformEnvironment
     environmentVars = awsCredentialsEnvironment
 
     dependsOn ":utils:buildZip"
