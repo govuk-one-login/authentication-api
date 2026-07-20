@@ -15,10 +15,6 @@ buildscript {
                 because 'CVE-2026-5598 is fixed in org.bouncycastle:bcprov-jdk18on 1.84 and higher'
             }
 
-            classpath('io.opentelemetry:opentelemetry-api:[1.62.0,)') {
-                because 'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
-            }
-
             add('classpath', 'com.fasterxml.jackson.core:jackson-databind:[2.21.4,)') {
                 because 'GHSA-j3rv-43j4-c7qm is fixed in com.fasterxml.jackson.core:jackson-databind:2.21.4 and higher'
             }
@@ -54,6 +50,132 @@ ext {
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2"
         exclude group: "com.amazonaws", module: "aws-xray-recorder-sdk-aws-sdk-v2-instrumentor"
     }
+
+    // Shared CVE dependency constraints applied to both buildscript and runtime configurations.
+    // Each entry is [artifact coordinate, version range, reason].
+    cveConstraints = [
+        // Netty
+        [
+            'io.netty:netty-codec-http',
+            '[4.1.133.Final,)',
+            'CVE-2026-42587 is fixed in io.netty:netty-codec-http:4.1.133.Final and higher'
+        ],
+        [
+            'io.netty:netty-codec-dns',
+            '[4.2.13.Final,5.0)',
+            'CVE-2026-42579 is fixed in io.netty:netty-codec-dns:4.2.13.Final and higher'
+        ],
+        [
+            'io.netty:netty-common',
+            '[4.1.118.Final,4.2)',
+            'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
+        ],
+        [
+            'io.netty:netty-handler',
+            '[4.2.15.Final,)',
+            'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
+        ],
+        [
+            'io.netty:netty-codec-http2',
+            '[4.1.135.Final,4.2.0)',
+            'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
+        ],
+        [
+            'io.netty:netty-codec',
+            '[4.1.125.Final,4.2.0)',
+            'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
+        ],
+        [
+            'io.netty:netty-handler-proxy',
+            '[4.1.133.Final,4.2.0)',
+            'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
+        ],
+        [
+            'io.netty:netty-resolver-dns',
+            '[4.2.15.Final,5.0)',
+            'CVE-2026-45674 is fixed in io.netty:netty-resolver-dns:4.2.15.Final and higher'
+        ],
+        [
+            'io.netty:netty-transport-native-epoll',
+            '[4.2.15.Final,5.0)',
+            'CVE-2026-45536 is fixed in io.netty:netty-transport-native-epoll:4.2.15.Final and higher'
+        ],
+        [
+            'io.netty:netty-transport-native-kqueue',
+            '[4.2.15.Final,5.0)',
+            'CVE-2026-45536 is fixed in io.netty:netty-transport-native-kqueue:4.2.15.Final and higher'
+        ],
+        // Apache Commons
+        [
+            'commons-beanutils:commons-beanutils',
+            '[1.11.0,)',
+            'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
+        ],
+        [
+            'org.apache.commons:commons-lang3',
+            '[3.18.0,)',
+            'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
+        ],
+        // Other
+        [
+            'com.google.protobuf:protobuf-java',
+            '[3.25.5,)',
+            'CVE-2024-7254 is fixed in 3.25.5 and above'
+        ],
+        [
+            'io.opentelemetry:opentelemetry-api',
+            '[1.62.0,)',
+            'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
+        ],
+        [
+            'com.github.jknack:handlebars',
+            '[4.5.2,)',
+            'CVE-2026-55760 is fixed in com.github.jknack:handlebars:4.5.2 and higher'
+        ],
+    ]
+
+    // Additional runtime-only CVE constraints (not needed on the buildscript classpath).
+    runtimeCveConstraints = [
+        // Jetty
+        [
+            'org.eclipse.jetty.http2:jetty-http2-common',
+            '[12.0.25,12.1.0)',
+            'CVE-2025-5115 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.25 and higher'
+        ],
+        [
+            'org.eclipse.jetty:jetty-server',
+            '[12.0.32,)',
+            'CVE-2026-1605 is fixed in org.eclipse.jetty:jetty-server:12.0.32 and higher'
+        ],
+        [
+            'org.eclipse.jetty:jetty-http',
+            '[12.0.33,12.1.0)',
+            'CVE-2026-2332 is fixed in org.eclipse.jetty:jetty-http:12.0.33'
+        ],
+        // Jackson
+        [
+            'com.fasterxml.jackson.core:jackson-databind',
+            '[2.12.7.1,)',
+            'CVE-2022-42003 is fixed in 2.12.7.1 and above'
+        ],
+        [
+            'com.fasterxml.jackson.core:jackson-core',
+            '[2.21.1,)',
+            'GHSA-72hv-8253-57qq is fixed in com.fasterxml.jackson.core:jackson-core:2.21.1 and higher'
+        ],
+        // Apache Commons
+        [
+            'commons-io:commons-io',
+            '[2.21.0,)',
+            'CVE-2021-29425 is fixed in commons-io:commons-io:2.21.0 and higher'
+        ],
+        // Logging
+        [
+            'org.apache.logging.log4j:log4j-core',
+            '[2.25.4,3.0.0)',
+            'CVE-2026-34480 is fixed in 2.25.4 and higher'
+        ],
+    ]
 }
 
 String jacocoBuildReportPath = "reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
@@ -63,67 +185,8 @@ subprojects {
     buildscript {
         dependencies {
             constraints {
-                // Netty constraints
-                classpath('io.netty:netty-codec-http:[4.1.133.Final,)') {
-                    because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http:4.1.133.Final and higher'
-                }
-
-                classpath('io.netty:netty-codec-dns:[4.2.13.Final,5.0)') {
-                    because 'CVE-2026-42579 is fixed in io.netty:netty-codec-dns:4.2.13.Final and higher'
-                }
-
-                classpath('io.netty:netty-common:[4.1.118.Final,4.2)') {
-                    because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
-                }
-
-                classpath('io.netty:netty-handler:[4.2.15.Final,)') {
-                    because 'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
-                }
-
-                classpath('io.netty:netty-codec-http2:[4.1.135.Final,4.2.0)') {
-                    because 'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
-                }
-
-                classpath('io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
-                    because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
-                }
-
-                classpath('io.netty:netty-handler-proxy:[4.1.133.Final,4.2.0)') {
-                    because 'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
-                }
-
-                classpath('io.netty:netty-resolver-dns:[4.2.15.Final,5.0)') {
-                    because 'CVE-2026-45674 is fixed in io.netty:netty-resolver-dns:4.2.15.Final and higher'
-                }
-
-                classpath('io.netty:netty-transport-native-epoll:[4.2.15.Final,5.0)') {
-                    because 'CVE-2026-45536 is fixed in io.netty:netty-transport-native-epoll:4.2.15.Final and higher'
-                }
-
-                classpath('io.netty:netty-transport-native-kqueue:[4.2.15.Final,5.0)') {
-                    because 'CVE-2026-45536 is fixed in io.netty:netty-transport-native-kqueue:4.2.15.Final and higher'
-                }
-
-                // Apache Commons constraints
-                classpath('commons-beanutils:commons-beanutils:[1.11.0,)') {
-                    because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
-                }
-
-                classpath('org.apache.commons:commons-lang3:[3.18.0,)') {
-                    because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
-                }
-
-                // Other constraints
-                classpath('com.google.protobuf:protobuf-java:[3.25.5,)') {
-                    because 'CVE-2024-7254 is fixed in 3.25.5 and above'
-                }
-
-                classpath('io.opentelemetry:opentelemetry-api:[1.62.0,)') {
-                    because 'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
-                }
-
-                classpath('com.github.jknack:handlebars:[4.5.2,)') {
-                    because 'CVE-2026-55760 is fixed in com.github.jknack:handlebars:4.5.2 and higher'
+                rootProject.cveConstraints.each { String artifact, String version, String reason ->
+                    add('classpath', "$artifact:$version") { because reason }
                 }
             }
         }
@@ -169,97 +232,11 @@ subprojects {
                 // Unneeded constraints should be removed once no longer required
                 // https://discuss.gradle.org/t/dependency-version-constraints-for-all-configurations/34161/3
                 constraints {
-                    // Netty constraints
-                    add(conf.name, 'io.netty:netty-codec-http:[4.1.133.Final,)') {
-                        because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http:4.1.133.Final and higher'
+                    rootProject.cveConstraints.each { String artifact, String version, String reason ->
+                        add(conf.name, "$artifact:$version") { because reason }
                     }
-
-                    add(conf.name, 'io.netty:netty-codec-dns:[4.2.13.Final,5.0)') {
-                        because 'CVE-2026-42579 is fixed in io.netty:netty-codec-dns:4.2.13.Final and higher'
-                    }
-
-                    add(conf.name, 'io.netty:netty-common:[4.1.118.Final,4.2)') {
-                        because 'CVE-2025-25193 is fixed in io.netty:netty-common:4.1.118.Final and higher'
-                    }
-
-                    add(conf.name, 'io.netty:netty-handler:[4.2.15.Final,)') {
-                        because 'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
-                    }
-
-                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.135.Final,4.2.0)') {
-                        because 'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
-                    }
-
-                    add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
-                        because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
-                    }
-
-                    add(conf.name, 'io.netty:netty-transport-native-epoll:[4.2.15.Final,5.0)') {
-                        because 'CVE-2026-45536 is fixed in io.netty:netty-transport-native-epoll:4.2.15.Final and higher'
-                    }
-
-                    add(conf.name, 'io.netty:netty-transport-native-kqueue:[4.2.15.Final,5.0)') {
-                        because 'CVE-2026-45536 is fixed in io.netty:netty-transport-native-kqueue:4.2.15.Final and higher'
-                    }
-
-                    add(conf.name, 'io.netty:netty-handler-proxy:[4.1.133.Final,4.2.0)') {
-                        because 'CVE-2026-42578 is fixed in io.netty:netty-handler-proxy:4.1.133.Final and higher'
-                    }
-
-                    add(conf.name, 'io.netty:netty-resolver-dns:[4.2.15.Final,5.0)') {
-                        because 'CVE-2026-45674 is fixed in io.netty:netty-resolver-dns:4.2.15.Final and higher'
-                    }
-
-                    // Jetty constraints
-                    add(conf.name, 'org.eclipse.jetty.http2:jetty-http2-common:[12.0.25,12.1.0)') {
-                        because 'CVE-2025-5115 is fixed in org.eclipse.jetty.http2:jetty-http2-common:12.0.25 and higher'
-                    }
-
-                    add(conf.name, 'org.eclipse.jetty:jetty-server:[12.0.32,)') {
-                        because 'CVE-2026-1605 is fixed in org.eclipse.jetty:jetty-server:12.0.32 and higher'
-                    }
-
-                    add(conf.name, 'org.eclipse.jetty:jetty-http:[12.0.33,12.1.0)') {
-                        because 'CVE-2026-2332 is fixed in org.eclipse.jetty:jetty-http:12.0.33'
-                    }
-
-                    // Jackson constraints
-                    add(conf.name, 'com.fasterxml.jackson.core:jackson-databind:[2.12.7.1,)') {
-                        because 'CVE-2022-42003 is fixed in 2.12.7.1 and above'
-                    }
-
-                    add(conf.name, 'com.fasterxml.jackson.core:jackson-core:[2.21.1,)') {
-                        because 'GHSA-72hv-8253-57qq is fixed in com.fasterxml.jackson.core:jackson-core:2.21.1 and higher'
-                    }
-
-                    // Apache Commons constraints
-                    add(conf.name, 'commons-beanutils:commons-beanutils:[1.11.0,)') {
-                        because 'CVE-2025-48734 is fixed in commons-beanutils:commons-beanutils:1.11.0 and higher'
-                    }
-
-                    add(conf.name, 'org.apache.commons:commons-lang3:[3.18.0,)') {
-                        because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
-                    }
-
-                    add(conf.name, 'commons-io:commons-io:[2.21.0,)') {
-                        because 'CVE-2021-29425 is fixed in commons-io:commons-io:2.21.0 and higher'
-                    }
-
-                    // Other constraints
-                    add(conf.name, 'com.google.protobuf:protobuf-java:[3.25.5,)') {
-                        because 'CVE-2024-7254 is fixed in 3.25.5 and above'
-                    }
-
-                    add(conf.name, 'org.apache.logging.log4j:log4j-core:[2.25.4,3.0.0)') {
-                        because 'CVE-2026-34480 is fixed in 2.25.4 and higher'
-                    }
-
-                    add(conf.name, 'io.opentelemetry:opentelemetry-api:[1.62.0,)') {
-                        because 'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
-                    }
-
-                    add(conf.name, 'com.github.jknack:handlebars:[4.5.2,)') {
-                        because 'CVE-2026-55760 is fixed in com.github.jknack:handlebars:4.5.2 and higher'
+                    rootProject.runtimeCveConstraints.each { String artifact, String version, String reason ->
+                        add(conf.name, "$artifact:$version") { because reason }
                     }
                 }
             }
