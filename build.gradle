@@ -56,6 +56,8 @@ ext {
     }
 }
 
+String jacocoBuildReportPath = "reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
+
 subprojects {
     task allDeps(type: DependencyReportTask) {}
     buildscript {
@@ -142,9 +144,15 @@ subprojects {
         excludeFilter = file("$rootProject.projectDir/spotbugsExclude.xml")
     }
 
-    configurations.all {
-        exclude group: 'org.apache.tika', module: 'tika-parser-pdf-module'
-        exclude group: 'org.apache.commons', module: 'commons-io'
+    dependencies {
+        constraints {
+            add('spotbugs', 'org.apache.logging.log4j:log4j-core:[2.25.4,3.0.0)') {
+                because 'CVE-2026-34480 is fixed in 2.25.4 and higher'
+            }
+        }
+
+        spotbugs libs.spotbugs
+        spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
     }
 
     // Check dependencies using:
@@ -152,12 +160,15 @@ subprojects {
     // ./gradlew :frontend-api:dependencyInsight --dependency guava  --configuration testRuntimeClasspath
     // ./gradlew :frontend-api:dependencyInsight --dependency guava  --configuration runtimeClasspath
     //
-    dependencies {
-        // Unneeded constraints should be removed once no longer required
-        // https://discuss.gradle.org/t/dependency-version-constraints-for-all-configurations/34161/3
-        constraints {
-            configurations.configureEach { conf ->
-                if (!conf.canBeConsumed && !conf.canBeResolved) {
+    configurations.configureEach { conf ->
+        exclude group: 'org.apache.tika', module: 'tika-parser-pdf-module'
+        exclude group: 'org.apache.commons', module: 'commons-io'
+
+        if (!conf.canBeConsumed && !conf.canBeResolved) {
+            dependencies {
+                // Unneeded constraints should be removed once no longer required
+                // https://discuss.gradle.org/t/dependency-version-constraints-for-all-configurations/34161/3
+                constraints {
                     // Netty constraints
                     add(conf.name, 'io.netty:netty-codec-http:[4.1.133.Final,)') {
                         because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http:4.1.133.Final and higher'
@@ -253,15 +264,12 @@ subprojects {
                 }
             }
         }
+    }
 
-        constraints {
-            spotbugs('org.apache.logging.log4j:log4j-core:[2.25.4,3.0.0)') {
-                because 'CVE-2026-34480 is fixed in 2.25.4 and higher'
-            }
+    sonar {
+        properties {
+            property 'sonar.coverage.jacoco.xmlReportPaths', "$projectDir.parentFile.path/build/$jacocoBuildReportPath"
         }
-
-        spotbugs libs.spotbugs
-        spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
     }
 }
 
@@ -452,8 +460,6 @@ task utilsTerraform (type: Terraform) {
     dependsOn "oidcTerraform"
 }
 
-String jacocoBuildReportPath = "reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
-
 sonar {
     properties {
         property "sonar.projectKey", "govuk-one-login_authentication-api"
@@ -461,14 +467,6 @@ sonar {
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.coverage.exclusions", "**/shared-test/**,**/orchestration-shared-test/**,**/orchestration-shared-test/**"
         property "sonar.coverage.jacoco.xmlReportPaths", "${layout.buildDirectory.get().asFile}/$jacocoBuildReportPath"
-    }
-}
-
-subprojects {
-    sonar {
-        properties {
-            property 'sonar.coverage.jacoco.xmlReportPaths', "$projectDir.parentFile.path/build/$jacocoBuildReportPath"
-        }
     }
 }
 
@@ -484,10 +482,13 @@ dependencies {
     jacocoAggregation subprojects
 
     constraints {
-        spotbugs('org.apache.logging.log4j:log4j-core:[2.25.4,)') {
+        add('spotbugs', 'org.apache.logging.log4j:log4j-core:[2.25.4,3.0.0)') {
             because 'CVE-2026-34480 is fixed in 2.25.4 and higher'
         }
     }
+
+    spotbugs libs.spotbugs
+    spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
 }
 
 jacocoTestReport {
