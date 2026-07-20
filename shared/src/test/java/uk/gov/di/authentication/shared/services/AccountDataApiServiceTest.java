@@ -153,7 +153,7 @@ class AccountDataApiServiceTest {
             // Assert
             assertThat(result.passkeys().size(), equalTo(2));
             assertThat(result.passkeys().get(0).passkeyId(), equalTo("credential-id-123"));
-            assertThat(result.passkeys().get(0).signCount(), equalTo(5));
+            assertThat(result.passkeys().get(0).signCount(), equalTo(5L));
             assertThat(result.passkeys().get(1).passkeyId(), equalTo("credential-id-456"));
             assertThat(result.passkeys().get(1).isAttested(), equalTo(false));
         }
