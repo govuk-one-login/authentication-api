@@ -11,8 +11,8 @@ public record JourneyOutcomeResponse(
     public record Action(
             @Expose String action, @Expose boolean success, @Expose ActionDetails details) {}
 
-    public record ActionDetails(@Expose ActionError error) {}
+    public record ActionDetails(@Expose Error error) {}
 
-    public record ActionError(
+    public record Error(
             @Expose int code, @Expose @SerializedName("description") String description) {}
 }
