@@ -288,10 +288,7 @@ dockerCompose {
         'redis'
     ]
     def logDir = layout.buildDirectory.dir("logs").get().asFile
-    if (!logDir.exists()) {
-        println("creating logs folder...")
-        logDir.mkdir()
-    }
+    logDir.mkdirs()
     captureContainersOutput = false
     captureContainersOutputToFile = new File('logs', 'docker-compose-gradle.log')
     projectName = rootProject.rootDir.name
