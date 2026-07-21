@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,7 +58,7 @@ class PasskeysUpdateHandlerTest {
             var request =
                     passkeysUpdateRequest(
                             SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
-            when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
+            when(passkeysService.updatePasskey(any(), any(), any(), anyLong()))
                     .thenReturn(Result.success(new Passkey()));
 
             // When
@@ -79,7 +79,7 @@ class PasskeysUpdateHandlerTest {
             var request =
                     passkeysUpdateRequest(
                             SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
-            when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
+            when(passkeysService.updatePasskey(any(), any(), any(), anyLong()))
                     .thenReturn(Result.failure(PasskeysUpdateFailureReason.PASSKEY_NOT_FOUND));
 
             // When
@@ -96,7 +96,7 @@ class PasskeysUpdateHandlerTest {
             var request =
                     passkeysUpdateRequest(
                             SIGN_COUNT, LAST_USED_AT, PUBLIC_SUBJECT_ID, PRIMARY_PASSKEY_ID);
-            when(passkeysService.updatePasskey(any(), any(), any(), anyInt()))
+            when(passkeysService.updatePasskey(any(), any(), any(), anyLong()))
                     .thenReturn(
                             Result.failure(PasskeysUpdateFailureReason.FAILED_TO_UPDATE_PASSKEY));
             // When

@@ -5,5 +5,5 @@ import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public record PasskeysUpdateRequest(
-        @SerializedName("signCount") @Expose @Required Integer signCount, // TODO make long
+        @SerializedName("signCount") @Expose @Required Long signCount,
         @SerializedName("lastUsedAt") @Expose @Required String lastUsedAt) {}

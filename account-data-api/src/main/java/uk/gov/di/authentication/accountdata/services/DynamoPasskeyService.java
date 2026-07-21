@@ -40,7 +40,7 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
     }
 
     public Result<PasskeysUpdateFailureReason, Passkey> updatePasskey(
-            String publicSubjectId, String passkeyId, String lastUsed, int signCount) {
+            String publicSubjectId, String passkeyId, String lastUsed, long signCount) {
         return getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId)
                 .map(
                         passkey -> {
