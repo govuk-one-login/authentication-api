@@ -230,6 +230,62 @@ Resources:
           DefaultValue: 10,
         ]
 
+  EnhancedAuthCodeProtectionCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !If
+            - IsProduction
+            - "{{resolve:ssm:/deploy/production/auth_notifications_channel_topic_arn}}"
+            - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "30 or more journeys have been blocked by the enhanced auth code protection in the last 24 hours in ${Env}."
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmName: !Sub
+        - ${Env}-enhanced-auth-code-protection-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Threshold: 30
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: m1
+          ReturnData: true
+          MetricStat:
+            Metric:
+              Namespace: Authentication
+              MetricName: EnhancedAuthCodeBlocked
+              Dimensions:
+                - Name: Environment
+                  Value: !If
+                    - UseSubEnvironment
+                    - !Ref SubEnvironment
+                    - !Ref Environment
+                - Name: LogGroup
+                  Value: !Sub
+                    - /aws/lambda/${Env}-orch-auth-code-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+                - Name: ServiceName
+                  Value: !Sub
+                    - ${Env}-orch-auth-code-lambda
+                    - Env:
+                        !If [
+                          UseSubEnvironment,
+                          !Ref SubEnvironment,
+                          !Ref Environment,
+                        ]
+                - Name: ServiceType
+                  Value: "AWS::Lambda::Function"
+            Period: 86400 # 24 hours
+            Stat: Sum
+
   OrchAuthCodeFunctionSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
