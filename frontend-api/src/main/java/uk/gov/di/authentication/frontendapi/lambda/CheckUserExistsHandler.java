@@ -207,7 +207,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         configurationService.isForcedMFAResetAfterMFACheckEnabled()
                                 && requiresMfaResetForInternationalNumber(
                                         authSession, userCredentials, userProfile);
-                hasActivePasskey = hasActivePasskey(userProfile.getPublicSubjectID(), authSession);
+                hasActivePasskey =
+                        hasActivePasskey(
+                                userProfile.getPublicSubjectID(),
+                                authSession,
+                                request.isSupportPasskeyUsage());
                 shouldSuppressPasskeyRegistrationPrompt =
                         PasskeyRegistrationPromptHelper.shouldSuppressPasskeyRegistrationPrompt(
                                 userProfile);
@@ -261,8 +265,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     }
 
     private Optional<Boolean> hasActivePasskey(
-            String publicSubjectId, AuthSessionItem authSession) {
-        if (configurationService.supportPasskeys()) {
+            String publicSubjectId, AuthSessionItem authSession, boolean supportPasskeyUsage) {
+        if (supportPasskeyUsage) {
             LOG.info("Checking if user has active passkey");
 
             var hasActivePasskeyResult =
