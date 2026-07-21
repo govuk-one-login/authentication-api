@@ -634,7 +634,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                             .withStatus(200)
                                             .withBody(passkeysResponseWithActivePasskey)));
 
-            var request = new CheckUserExistsRequest(TEST_EMAIL_1);
+            var request = new CheckUserExistsRequest(TEST_EMAIL_1, true);
             var response =
                     makeRequest(
                             Optional.of(request),
