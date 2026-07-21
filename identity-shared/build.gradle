@@ -9,6 +9,7 @@ version = "unspecified"
 dependencies {
     compileOnly libs.bundles.awsLambda,
             libs.awsSqs,
+            libs.awsKms,
             libs.bundles.awsDynamoDb
 
     implementation libs.gson,
@@ -27,6 +28,7 @@ dependencies {
             project(":orchestration-shared-test"),
             libs.bundles.awsLambda,
             libs.awsSqs,
+            libs.awsKms,
             libs.bundles.awsDynamoDb
 
     testRuntimeOnly libs.bundles.testRuntime

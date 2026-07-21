@@ -3,7 +3,7 @@ package uk.gov.di.orchestration.identity.helpers;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.identity.entity.AuditEventConfiguration;
-import uk.gov.di.orchestration.identity.entity.IdentityTokenService;
+import uk.gov.di.orchestration.identity.service.IdentityTokenService;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
