@@ -43,7 +43,8 @@ public enum CloudwatchMetrics {
     AMC_FAILURE_GETTING_AUTHORISATION("AMCFailureGettingAuthorisation"),
     PASSKEY_DELETION_SUCCESSFUL("PasskeyDeletionSuccessful"),
     PASSKEY_DELETION_FAILED("PasskeyDeletionFailed"),
-    PASSWORD_REHASH_COMPLETED("PasswordRehashCompleted");
+    PASSWORD_REHASH_COMPLETED("PasswordRehashCompleted"),
+    ENHANCED_AUTH_CODE_BLOCKED("EnhancedAuthCodeBlocked");
 
     private String value;
 
