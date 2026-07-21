@@ -598,8 +598,8 @@ class InactiveAccountDataExportHandlerTest {
         var profile =
                 new UserProfile()
                         .withEmail("user" + index + "@example.com")
-                        .withCreated("2024-01-15")
-                        .withUpdated("2024-06-20")
+                        .withCreated("2024-01-15T09:01:02.345678")
+                        .withUpdated("2024-06-20T10:03:04.567890")
                         .withPublicSubjectID("public-subject-" + index)
                         .withSubjectID("subject-" + index)
                         .withSalt(ByteBuffer.wrap(new byte[] {(byte) index, 42}))
@@ -611,8 +611,8 @@ class InactiveAccountDataExportHandlerTest {
     private Map<String, AttributeValue> createCredentialItem(String email) {
         Map<String, AttributeValue> item = new HashMap<>();
         item.put("Email", AttributeValue.builder().s(email).build());
-        item.put("Created", AttributeValue.builder().s("2024-01-15").build());
-        item.put("Updated", AttributeValue.builder().s("2024-06-20").build());
+        item.put("Created", AttributeValue.builder().s("2024-01-15T09:01:02.345678").build());
+        item.put("Updated", AttributeValue.builder().s("2024-06-20T10:03:04.567890").build());
         item.put("MigratedPassword", AttributeValue.builder().s("migrated-hash").build());
         return item;
     }
