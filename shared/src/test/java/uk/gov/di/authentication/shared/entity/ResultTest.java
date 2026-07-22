@@ -321,4 +321,123 @@ class ResultTest {
             assertEquals(expected, logsEmitted.get(0));
         }
     }
+
+    @Nested
+    class FlatTapTests {
+        private ArrayList<String> logsEmitted;
+
+        private Result<String, Boolean> addToLogsReturningSuccess(String logMessage) {
+            return Result.success(logsEmitted.add(logMessage));
+        }
+
+        private Result<String, Boolean> addToLogsReturningFailure(
+                String logMessage, String failureMessage) {
+            logsEmitted.add(logMessage);
+            return Result.failure(failureMessage);
+        }
+
+        @BeforeEach
+        void setup() {
+            logsEmitted = new ArrayList<>();
+        }
+
+        @Test
+        void flatTapShouldExecuteActionAndReturnOriginalSuccessWhenActionSucceeds() {
+            var successValue = 42;
+            var originalSuccess = Result.<String, Integer>success(successValue);
+
+            var result =
+                    originalSuccess.flatTap(
+                            i -> addToLogsReturningSuccess(String.format("Processing %d", i)));
+
+            assertEquals(1, logsEmitted.size());
+            assertEquals("Processing 42", logsEmitted.get(0));
+            assertEquals(originalSuccess, result);
+            assertTrue(result.isSuccess());
+            assertEquals(successValue, result.getSuccess());
+        }
+
+        @Test
+        void flatTapShouldPropagateFailureWhenActionFails() {
+            var successValue = 42;
+            var originalSuccess = Result.<String, Integer>success(successValue);
+            var actionFailureMessage = "action failed";
+
+            var result =
+                    originalSuccess.flatTap(
+                            i ->
+                                    addToLogsReturningFailure(
+                                            String.format("Processing %d", i),
+                                            actionFailureMessage));
+
+            assertEquals(1, logsEmitted.size());
+            assertEquals("Processing 42", logsEmitted.get(0));
+            assertTrue(result.isFailure());
+            assertEquals(actionFailureMessage, result.getFailure());
+        }
+
+        @Test
+        void flatTapShouldNotExecuteActionOnFailureAndReturnOriginalFailure() {
+            var failureValue = "original failure";
+            var originalFailure = Result.<String, Integer>failure(failureValue);
+
+            var result =
+                    originalFailure.flatTap(
+                            i -> addToLogsReturningSuccess(String.format("Processing %d", i)));
+
+            assertEquals(0, logsEmitted.size());
+            assertEquals(originalFailure, result);
+            assertTrue(result.isFailure());
+            assertEquals(failureValue, result.getFailure());
+        }
+
+        @Test
+        void flatTapShouldReturnOriginalSuccessNotActionSuccessValue() {
+            var successValue = "original";
+            var originalSuccess = Result.<String, String>success(successValue);
+
+            var result =
+                    originalSuccess.flatTap(
+                            s -> Result.success("different success value that should be ignored"));
+
+            assertTrue(result.isSuccess());
+            assertEquals(successValue, result.getSuccess());
+        }
+
+        @Test
+        void flatTapShouldChainMultipleActionsCorrectly() {
+            var successValue = 10;
+            var originalSuccess = Result.<String, Integer>success(successValue);
+
+            var result =
+                    originalSuccess
+                            .flatTap(s -> addToLogsReturningSuccess("first action"))
+                            .flatTap(s -> addToLogsReturningSuccess("second action"));
+
+            assertEquals(2, logsEmitted.size());
+            assertEquals("first action", logsEmitted.get(0));
+            assertEquals("second action", logsEmitted.get(1));
+            assertEquals(originalSuccess, result);
+        }
+
+        @Test
+        void flatTapShouldShortCircuitOnFirstFailureInChain() {
+            var successValue = 10;
+            var originalSuccess = Result.<String, Integer>success(successValue);
+
+            var failureMessageForFirstAction = "first failed";
+            var result =
+                    originalSuccess
+                            .flatTap(
+                                    i ->
+                                            addToLogsReturningFailure(
+                                                    "first action", failureMessageForFirstAction))
+                            .flatTap(s -> addToLogsReturningSuccess("second action"));
+
+            assertEquals(1, logsEmitted.size());
+            assertEquals("first action", logsEmitted.get(0));
+            assertTrue(result.isFailure());
+            assertEquals(failureMessageForFirstAction, result.getFailure());
+        }
+    }
 }
