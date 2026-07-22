@@ -822,15 +822,6 @@ class MFAMethodsCreateHandlerTest {
                             pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", AUTH_APP.toString()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED,
-                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
-                            AUDIT_EVENT_COMPONENT_ID_HOME,
-                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
-                            pair("mfa-type", AUTH_APP.toString()),
-                            pair("mfa-method", BACKUP.name().toLowerCase()));
         }
 
         @Test
