@@ -169,7 +169,7 @@ public class MFAMethodsCreateHandler
         var auditContext = auditContextResult.getSuccess();
 
         var maybeValidRequest =
-                validateRequest(input, userProfile, auditContext)
+                validateRequestAndCode(input, userProfile, auditContext)
                         .mapFailure(
                                 errorResponse ->
                                         generateApiGatewayProxyErrorResponse(400, errorResponse))
@@ -265,7 +265,7 @@ public class MFAMethodsCreateHandler
         return Result.success(userProfile);
     }
 
-    private Result<ErrorResponse, MfaMethodCreateRequest> validateRequest(
+    private Result<ErrorResponse, MfaMethodCreateRequest> validateRequestAndCode(
             APIGatewayProxyRequestEvent input, UserProfile userProfile, AuditContext auditContext) {
         MfaMethodCreateRequest mfaMethodCreateRequest = null;
 
