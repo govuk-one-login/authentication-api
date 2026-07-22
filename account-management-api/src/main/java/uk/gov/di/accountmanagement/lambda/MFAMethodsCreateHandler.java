@@ -223,23 +223,9 @@ public class MFAMethodsCreateHandler
             }
         }
 
-        LocaleHelper.SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
-
-        LOG.info("Backup method added successfully. Adding confirmation message to SQS queue");
-
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        userProfile.getEmail(), NotificationType.BACKUP_METHOD_ADDED, userLanguage);
-
-        try {
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            LOG.info("Message successfully added to queue. Generating successful response");
-        } catch (Json.JsonException e) {
-            LOG.error("Failed to add message to queue: ", e);
-            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
+        var emailResult = sendUpdateEmailToUser(userProfile, input);
+        if (emailResult.isFailure()) {
+            return emailResult.getFailure();
         }
 
         cloudwatchMetricsService.incrementMfaMethodCounter(
@@ -479,6 +465,29 @@ public class MFAMethodsCreateHandler
                                         "Failure {} when attempting to emit audit event: {}",
                                         f,
                                         auditEvent.name()));
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendUpdateEmailToUser(
+            UserProfile userProfile, APIGatewayProxyRequestEvent input) {
+        LocaleHelper.SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
+
+        LOG.info("Backup method added successfully. Adding confirmation message to SQS queue");
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        userProfile.getEmail(), NotificationType.BACKUP_METHOD_ADDED, userLanguage);
+
+        try {
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOG.info("Message successfully added to queue. Generating successful response");
+        } catch (Json.JsonException e) {
+            LOG.error("Failed to add message to queue: ", e);
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR));
+        }
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
