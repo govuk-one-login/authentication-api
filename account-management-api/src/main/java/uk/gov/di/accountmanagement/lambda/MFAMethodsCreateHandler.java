@@ -207,18 +207,6 @@ public class MFAMethodsCreateHandler
         }
 
         var backupMfaMethod = addBackupMfaResult.getSuccess();
-        var backupMfaMethodAsResponse = MfaMethodResponse.from(backupMfaMethod);
-
-        if (backupMfaMethodAsResponse.isFailure()) {
-            LOG.error(backupMfaMethodAsResponse.getFailure());
-            var addFailedAuditStatus =
-                    sendAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (addFailedAuditStatus.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
-            }
-            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
-        }
 
         var auditResult =
                 sendSuccessfulAddEvents(auditContext, mfaMethodCreateRequest, backupMfaMethod);
@@ -253,6 +241,19 @@ public class MFAMethodsCreateHandler
                 ACCOUNT_MANAGEMENT,
                 mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString(),
                 PriorityIdentifier.BACKUP);
+
+        var backupMfaMethodAsResponse = MfaMethodResponse.from(backupMfaMethod);
+
+        if (backupMfaMethodAsResponse.isFailure()) {
+            LOG.error(backupMfaMethodAsResponse.getFailure());
+            var addFailedAuditStatus =
+                    sendAuditEvent(
+                            AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
+            if (addFailedAuditStatus.isFailure()) {
+                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
+            }
+            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
+        }
 
         try {
             return generateApiGatewayProxyResponse(
