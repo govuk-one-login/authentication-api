@@ -143,85 +143,6 @@ public class MFAMethodsCreateHandler
                 () -> mfaMethodsHandler(input, context));
     }
 
-    private Result<APIGatewayProxyResponseEvent, UserProfile>
-            getUserProfileWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
-        var subject = input.getPathParameters().get("publicSubjectId");
-
-        if (subject == null) {
-            LOG.error("Subject missing from request prevents request being handled.");
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS));
-        }
-
-        Optional<UserProfile> maybeUserProfile =
-                dynamoService.getOptionalUserProfileFromPublicSubject(subject);
-        if (maybeUserProfile.isEmpty()) {
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND));
-        }
-
-        UserProfile userProfile = maybeUserProfile.get();
-
-        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
-
-        if (PrincipalValidationHelper.principalIsInvalid(
-                userProfile,
-                configurationService.getInternalSectorUri(),
-                dynamoService,
-                authorizerParams)) {
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL));
-        }
-
-        return Result.success(userProfile);
-    }
-
-    private Result<ErrorResponse, MfaMethodCreateRequest> validateRequest(
-            APIGatewayProxyRequestEvent input, UserProfile userProfile, AuditContext auditContext) {
-        MfaMethodCreateRequest mfaMethodCreateRequest = null;
-
-        try {
-            mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
-        } catch (Json.JsonException e) {
-            LOG.error("Invalid request to create an MFA method: ", e);
-            return Result.failure(REQUEST_MISSING_PARAMS);
-        }
-
-        if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier() == PriorityIdentifier.DEFAULT) {
-            LOG.error(DEFAULT_MFA_ALREADY_EXISTS.name());
-            return Result.failure(DEFAULT_MFA_ALREADY_EXISTS);
-        }
-
-        if (mfaMethodCreateRequest.mfaMethod().method()
-                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
-
-            var invalidPhoneNumber =
-                    ValidationHelper.validatePhoneNumber(
-                            requestSmsMfaDetail.phoneNumber(),
-                            PRODUCTION.name(),
-                            false,
-                            configurationService.isAccountManagementInternationalSmsEnabled());
-
-            if (invalidPhoneNumber.isPresent()) {
-                sendAuditEvent(AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-                return Result.failure(invalidPhoneNumber.get());
-            }
-
-            boolean isValidOtpCode =
-                    codeStorageService.isValidOtpCode(
-                            userProfile.getEmail(),
-                            requestSmsMfaDetail.otp(),
-                            NotificationType.VERIFY_PHONE_NUMBER);
-            if (!isValidOtpCode) {
-                LOG.info("Invalid OTP presented.");
-                sendAuditEvent(AUTH_INVALID_CODE_SENT, auditContext, mfaMethodCreateRequest);
-                return Result.failure(INVALID_OTP);
-            }
-        }
-
-        return Result.success(mfaMethodCreateRequest);
-    }
-
     private APIGatewayProxyResponseEvent mfaMethodsHandler(
             APIGatewayProxyRequestEvent input, Context context) {
 
@@ -340,6 +261,85 @@ public class MFAMethodsCreateHandler
             LOG.error("Failed to build successful response: ", e);
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
+    }
+
+    private Result<APIGatewayProxyResponseEvent, UserProfile>
+            getUserProfileWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
+        var subject = input.getPathParameters().get("publicSubjectId");
+
+        if (subject == null) {
+            LOG.error("Subject missing from request prevents request being handled.");
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(400, REQUEST_MISSING_PARAMS));
+        }
+
+        Optional<UserProfile> maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(subject);
+        if (maybeUserProfile.isEmpty()) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND));
+        }
+
+        UserProfile userProfile = maybeUserProfile.get();
+
+        Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+
+        if (PrincipalValidationHelper.principalIsInvalid(
+                userProfile,
+                configurationService.getInternalSectorUri(),
+                dynamoService,
+                authorizerParams)) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL));
+        }
+
+        return Result.success(userProfile);
+    }
+
+    private Result<ErrorResponse, MfaMethodCreateRequest> validateRequest(
+            APIGatewayProxyRequestEvent input, UserProfile userProfile, AuditContext auditContext) {
+        MfaMethodCreateRequest mfaMethodCreateRequest = null;
+
+        try {
+            mfaMethodCreateRequest = readMfaMethodCreateRequest(input);
+        } catch (Json.JsonException e) {
+            LOG.error("Invalid request to create an MFA method: ", e);
+            return Result.failure(REQUEST_MISSING_PARAMS);
+        }
+
+        if (mfaMethodCreateRequest.mfaMethod().priorityIdentifier() == PriorityIdentifier.DEFAULT) {
+            LOG.error(DEFAULT_MFA_ALREADY_EXISTS.name());
+            return Result.failure(DEFAULT_MFA_ALREADY_EXISTS);
+        }
+
+        if (mfaMethodCreateRequest.mfaMethod().method()
+                instanceof RequestSmsMfaDetail requestSmsMfaDetail) {
+
+            var invalidPhoneNumber =
+                    ValidationHelper.validatePhoneNumber(
+                            requestSmsMfaDetail.phoneNumber(),
+                            PRODUCTION.name(),
+                            false,
+                            configurationService.isAccountManagementInternationalSmsEnabled());
+
+            if (invalidPhoneNumber.isPresent()) {
+                sendAuditEvent(AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
+                return Result.failure(invalidPhoneNumber.get());
+            }
+
+            boolean isValidOtpCode =
+                    codeStorageService.isValidOtpCode(
+                            userProfile.getEmail(),
+                            requestSmsMfaDetail.otp(),
+                            NotificationType.VERIFY_PHONE_NUMBER);
+            if (!isValidOtpCode) {
+                LOG.info("Invalid OTP presented.");
+                sendAuditEvent(AUTH_INVALID_CODE_SENT, auditContext, mfaMethodCreateRequest);
+                return Result.failure(INVALID_OTP);
+            }
+        }
+
+        return Result.success(mfaMethodCreateRequest);
     }
 
     private static APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(
