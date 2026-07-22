@@ -190,35 +190,39 @@ public class MFAMethodsCreateHandler
             return maybeMigrationErrorResponse.get();
         }
 
-        Result<MfaCreateFailureReason, MFAMethod> addBackupMfaResult =
-                mfaMethodsService.addBackupMfa(
-                        userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
+        var addBackupMfaResult =
+                mfaMethodsService
+                        .addBackupMfa(userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod())
+                        .mapFailure(
+                                mfaCreateFailureReason ->
+                                        handleCreateBackupMfaFailure(
+                                                mfaCreateFailureReason,
+                                                auditContext,
+                                                mfaMethodCreateRequest))
+                        .flatTap(
+                                addedMethod ->
+                                        sendSuccessAuditEvents(
+                                                auditContext, mfaMethodCreateRequest, addedMethod))
+                        .flatTap(addedMethod -> sendUpdateEmailToUser(userProfile, input))
+                        .tap(
+                                addedMethod ->
+                                        cloudwatchMetricsService.incrementMfaMethodCounter(
+                                                configurationService.getEnvironment(),
+                                                "CreateMfaMethod",
+                                                "SUCCESS",
+                                                ACCOUNT_MANAGEMENT,
+                                                mfaMethodCreateRequest
+                                                        .mfaMethod()
+                                                        .method()
+                                                        .mfaMethodType()
+                                                        .toString(),
+                                                PriorityIdentifier.BACKUP));
 
         if (addBackupMfaResult.isFailure()) {
-            return handleCreateBackupMfaFailure(
-                    addBackupMfaResult.getFailure(), auditContext, mfaMethodCreateRequest);
+            return addBackupMfaResult.getFailure();
         }
 
         var backupMfaMethod = addBackupMfaResult.getSuccess();
-
-        var auditResult =
-                sendSuccessAuditEvents(auditContext, mfaMethodCreateRequest, backupMfaMethod);
-        if (auditResult.isFailure()) {
-            return auditResult.getFailure();
-        }
-
-        var emailResult = sendUpdateEmailToUser(userProfile, input);
-        if (emailResult.isFailure()) {
-            return emailResult.getFailure();
-        }
-
-        cloudwatchMetricsService.incrementMfaMethodCounter(
-                configurationService.getEnvironment(),
-                "CreateMfaMethod",
-                "SUCCESS",
-                ACCOUNT_MANAGEMENT,
-                mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString(),
-                PriorityIdentifier.BACKUP);
 
         var backupMfaMethodAsResponse = MfaMethodResponse.from(backupMfaMethod);
 
