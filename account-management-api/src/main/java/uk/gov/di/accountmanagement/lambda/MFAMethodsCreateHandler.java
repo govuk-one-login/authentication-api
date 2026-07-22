@@ -146,7 +146,7 @@ public class MFAMethodsCreateHandler
 
         addSessionIdToLogs(input);
 
-        var maybePassedGuardConditions = getUserProfileWhenGuardConditionsPassed(input);
+        var maybePassedGuardConditions = getUserDetailsWhenGuardConditionsPassed(input);
 
         if (maybePassedGuardConditions.isFailure()) {
             return maybePassedGuardConditions.getFailure();
@@ -154,19 +154,9 @@ public class MFAMethodsCreateHandler
 
         LOG.info("Request passed guard conditions");
 
-        var userProfile = maybePassedGuardConditions.getSuccess();
-
-        var auditContextResult =
-                accountManagementAuditContext(
-                        configurationService, dynamoService, input, userProfile);
-        if (auditContextResult.isFailure()) {
-            LOG.error(
-                    "Error when building audit context for with error code {}. No events raised",
-                    auditContextResult.getFailure());
-            return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
-        }
-        var auditContext = auditContextResult.getSuccess();
+        var userDetails = maybePassedGuardConditions.getSuccess();
+        var userProfile = userDetails.userProfile;
+        var auditContext = userDetails.auditContext;
 
         var maybeValidRequest =
                 validateRequestAndCode(input, userProfile, auditContext)
@@ -232,8 +222,10 @@ public class MFAMethodsCreateHandler
         }
     }
 
-    private Result<APIGatewayProxyResponseEvent, UserProfile>
-            getUserProfileWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
+    private record UserDetails(UserProfile userProfile, AuditContext auditContext) {}
+
+    private Result<APIGatewayProxyResponseEvent, UserDetails>
+            getUserDetailsWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
         var subject = input.getPathParameters().get("publicSubjectId");
 
         if (subject == null) {
@@ -262,7 +254,19 @@ public class MFAMethodsCreateHandler
                     generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL));
         }
 
-        return Result.success(userProfile);
+        var auditContextResult =
+                accountManagementAuditContext(
+                        configurationService, dynamoService, input, userProfile);
+        if (auditContextResult.isFailure()) {
+            LOG.error(
+                    "Error when building audit context for with error code {}. No events raised",
+                    auditContextResult.getFailure());
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT));
+        }
+
+        return Result.success(new UserDetails(userProfile, auditContextResult.getSuccess()));
     }
 
     private Result<ErrorResponse, MfaMethodCreateRequest> validateRequestAndCode(
