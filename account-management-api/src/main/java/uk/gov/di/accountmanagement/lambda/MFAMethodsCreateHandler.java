@@ -204,19 +204,7 @@ public class MFAMethodsCreateHandler
                                         sendSuccessAuditEvents(
                                                 auditContext, mfaMethodCreateRequest, addedMethod))
                         .flatTap(addedMethod -> sendUpdateEmailToUser(userProfile, input))
-                        .tap(
-                                addedMethod ->
-                                        cloudwatchMetricsService.incrementMfaMethodCounter(
-                                                configurationService.getEnvironment(),
-                                                "CreateMfaMethod",
-                                                "SUCCESS",
-                                                ACCOUNT_MANAGEMENT,
-                                                mfaMethodCreateRequest
-                                                        .mfaMethod()
-                                                        .method()
-                                                        .mfaMethodType()
-                                                        .toString(),
-                                                PriorityIdentifier.BACKUP));
+                        .tap(addedMethod -> emitSuccessMetric(mfaMethodCreateRequest));
 
         if (addBackupMfaResult.isFailure()) {
             return addBackupMfaResult.getFailure();
@@ -480,6 +468,16 @@ public class MFAMethodsCreateHandler
                         })
                 .mapFailure(
                         auditFailure -> generateApiGatewayProxyErrorResponse(500, auditFailure));
+    }
+
+    private void emitSuccessMetric(MfaMethodCreateRequest mfaMethodCreateRequest) {
+        cloudwatchMetricsService.incrementMfaMethodCounter(
+                configurationService.getEnvironment(),
+                "CreateMfaMethod",
+                "SUCCESS",
+                ACCOUNT_MANAGEMENT,
+                mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString(),
+                PriorityIdentifier.BACKUP);
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> sendUpdateEmailToUser(
