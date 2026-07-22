@@ -246,12 +246,6 @@ public class MFAMethodsCreateHandler
 
         if (backupMfaMethodAsResponse.isFailure()) {
             LOG.error(backupMfaMethodAsResponse.getFailure());
-            var addFailedAuditStatus =
-                    sendAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (addFailedAuditStatus.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
-            }
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
