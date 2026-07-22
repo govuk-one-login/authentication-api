@@ -195,13 +195,8 @@ public class MFAMethodsCreateHandler
                         userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
 
         if (addBackupMfaResult.isFailure()) {
-            var addFailedAuditStatus =
-                    sendAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (addFailedAuditStatus.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
-            }
-            return handleCreateBackupMfaFailure(addBackupMfaResult.getFailure());
+            return handleCreateBackupMfaFailure(
+                    addBackupMfaResult.getFailure(), auditContext, mfaMethodCreateRequest);
         }
 
         var backupMfaMethod = addBackupMfaResult.getSuccess();
@@ -320,8 +315,15 @@ public class MFAMethodsCreateHandler
         return Result.success(mfaMethodCreateRequest);
     }
 
-    private static APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(
-            MfaCreateFailureReason failureReason) {
+    private APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(
+            MfaCreateFailureReason failureReason,
+            AuditContext auditContext,
+            MfaMethodCreateRequest mfaMethodCreateRequest) {
+        var addFailedAuditStatus =
+                sendAuditEvent(AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
+        if (addFailedAuditStatus.isFailure()) {
+            return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
+        }
         return switch (failureReason) {
             case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.MFA_METHOD_COUNT_LIMIT_REACHED);
