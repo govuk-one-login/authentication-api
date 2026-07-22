@@ -52,6 +52,7 @@ import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.BACKUP;
 import static uk.gov.di.authentication.shared.entity.PriorityIdentifier.DEFAULT;
+import static uk.gov.di.authentication.shared.entity.UserCredentials.ATTRIBUTE_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfAnyMfaMethodHasNullPriority;
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logDebugIfMfaMethodHasNullPriority;
 
@@ -129,7 +130,15 @@ public class DynamoService implements AuthenticationService {
             userProfile.setTestUser(1);
         }
 
-        dynamoUserCredentialsTable.putItem(userCredentials);
+        dynamoUserCredentialsTable.putItem(
+                (builder) ->
+                        builder.item(userCredentials)
+                                .conditionExpression(
+                                        Expression.builder()
+                                                .expression(
+                                                        "attribute_not_exists(%s)"
+                                                                .formatted(ATTRIBUTE_EMAIL))
+                                                .build()));
         dynamoUserProfileTable.putItem(userProfile);
         return new User(userProfile, userCredentials);
     }
