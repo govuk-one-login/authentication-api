@@ -168,18 +168,25 @@ public class MFAMethodsCreateHandler
         }
         var auditContext = auditContextResult.getSuccess();
 
-        var maybeValidRequest = validateRequest(input, userProfile, auditContext);
+        var maybeValidRequest =
+                validateRequest(input, userProfile, auditContext)
+                        .mapFailure(
+                                errorResponse ->
+                                        generateApiGatewayProxyErrorResponse(400, errorResponse))
+                        .flatTap(
+                                createRequest ->
+                                        sendAuthCodeVerifiedEvent(
+                                                        auditContext, userProfile, createRequest)
+                                                .mapFailure(
+                                                        f ->
+                                                                generateApiGatewayProxyErrorResponse(
+                                                                        500, f)));
 
         if (maybeValidRequest.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(400, maybeValidRequest.getFailure());
+            return maybeValidRequest.getFailure();
         }
 
         var createRequest = maybeValidRequest.getSuccess();
-
-        var auditEventStatus = sendAuthCodeVerifiedEvent(auditContext, userProfile, createRequest);
-        if (auditEventStatus.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
-        }
 
         var maybeMigrationErrorResponse =
                 mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
