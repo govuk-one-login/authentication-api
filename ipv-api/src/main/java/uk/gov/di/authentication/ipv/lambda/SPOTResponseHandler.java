@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import org.apache.logging.log4j.message.ObjectMessage;
+import software.amazon.awssdk.services.sqs.model.MessageSystemAttributeName;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -22,6 +24,7 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED;
@@ -87,6 +90,8 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                         logIds.getClientSessionId() != null
                                 && !logIds.getClientSessionId().isBlank());
 
+                logMessageMetadata(msg);
+
                 if (spotResponse.getStatus().equals(SPOTStatus.ACCEPTED)) {
                     LOG.info(
                             "SPOTResponse Status is {}. Adding CoreIdentityJWT to Dynamo",
@@ -140,6 +145,58 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                     Map.of());
         } catch (Exception e) {
             LOG.warn("Failed to emit SPOT latency metric, continuing as normal", e);
+        }
+    }
+
+    private void logMessageMetadata(SQSMessage msg) {
+        try {
+            var timeNowMs = NowHelper.now().toInstant().toEpochMilli();
+            var approximateFirstReceiveTimestampMs =
+                    Optional.ofNullable(
+                                    msg.getAttributes()
+                                            .get(
+                                                    MessageSystemAttributeName
+                                                            .APPROXIMATE_FIRST_RECEIVE_TIMESTAMP
+                                                            .toString()))
+                            .map(Long::parseLong)
+                            .orElse(0L);
+            var sentTimestampMs =
+                    Optional.ofNullable(
+                                    msg.getAttributes()
+                                            .get(
+                                                    MessageSystemAttributeName.SENT_TIMESTAMP
+                                                            .toString()))
+                            .map(Long::parseLong)
+                            .orElse(0L);
+            var approxReceiveCount =
+                    Optional.ofNullable(
+                                    msg.getAttributes()
+                                            .get(
+                                                    MessageSystemAttributeName
+                                                            .APPROXIMATE_RECEIVE_COUNT
+                                                            .toString()))
+                            .map(Long::parseLong)
+                            .orElse(1L);
+            var timeToDeliver = timeNowMs - sentTimestampMs;
+            var timeInQueue = timeNowMs - approximateFirstReceiveTimestampMs;
+
+            LOG.info(
+                    new ObjectMessage(
+                            Map.of(
+                                    "messageId",
+                                    msg.getMessageId(),
+                                    "ApproximateFirstReceiveTimestampMs",
+                                    approximateFirstReceiveTimestampMs,
+                                    "SentTimestampMs",
+                                    sentTimestampMs,
+                                    "ApproximateReceiveCount",
+                                    approxReceiveCount,
+                                    "deliveryTimeMs",
+                                    timeToDeliver,
+                                    "queuedTimeMs",
+                                    timeInQueue)));
+        } catch (Exception e) {
+            LOG.warn("Failed to emit SPOT message metadata log", e);
         }
     }
 }
