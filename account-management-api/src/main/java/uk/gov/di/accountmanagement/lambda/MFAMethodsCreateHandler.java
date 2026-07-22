@@ -206,21 +206,10 @@ public class MFAMethodsCreateHandler
 
         var backupMfaMethod = addBackupMfaResult.getSuccess();
 
-        var addCompletedResult =
-                sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, mfaMethodCreateRequest);
-
-        if (addCompletedResult.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure());
-        }
-
-        if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
-            var updatePhoneNumberResult =
-                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext, mfaMethodCreateRequest);
-
-            if (updatePhoneNumberResult.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(
-                        500, updatePhoneNumberResult.getFailure());
-            }
+        var auditResult =
+                sendSuccessAuditEvents(auditContext, mfaMethodCreateRequest, backupMfaMethod);
+        if (auditResult.isFailure()) {
+            return auditResult.getFailure();
         }
 
         var emailResult = sendUpdateEmailToUser(userProfile, input);
@@ -465,6 +454,26 @@ public class MFAMethodsCreateHandler
                                         "Failure {} when attempting to emit audit event: {}",
                                         f,
                                         auditEvent.name()));
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendSuccessAuditEvents(
+            AuditContext auditContext,
+            MfaMethodCreateRequest createRequest,
+            MFAMethod addedMethod) {
+        return sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, createRequest)
+                .flatMap(
+                        voidResult -> {
+                            if (addedMethod
+                                    .getMfaMethodType()
+                                    .equalsIgnoreCase(MFAMethodType.SMS.name())) {
+                                return sendAuditEvent(
+                                        AUTH_UPDATE_PHONE_NUMBER, auditContext, createRequest);
+                            } else {
+                                return Result.emptySuccess();
+                            }
+                        })
+                .mapFailure(
+                        auditFailure -> generateApiGatewayProxyErrorResponse(500, auditFailure));
     }
 
     private Result<APIGatewayProxyResponseEvent, Void> sendUpdateEmailToUser(
