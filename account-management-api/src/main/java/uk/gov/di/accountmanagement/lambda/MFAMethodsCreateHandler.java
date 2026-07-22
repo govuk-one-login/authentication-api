@@ -174,17 +174,16 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(400, maybeValidRequest.getFailure());
         }
 
-        MfaMethodCreateRequest mfaMethodCreateRequest = maybeValidRequest.getSuccess();
+        var createRequest = maybeValidRequest.getSuccess();
 
-        var auditEventStatus =
-                sendAuthCodeVerifiedEvent(auditContext, userProfile, mfaMethodCreateRequest);
+        var auditEventStatus = sendAuthCodeVerifiedEvent(auditContext, userProfile, createRequest);
         if (auditEventStatus.isFailure()) {
             return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
         }
 
         var maybeMigrationErrorResponse =
                 mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
-                        userProfile, LOG, input, mfaMethodCreateRequest.mfaMethod().method());
+                        userProfile, LOG, input, createRequest.mfaMethod().method());
 
         if (maybeMigrationErrorResponse.isPresent()) {
             return maybeMigrationErrorResponse.get();
@@ -192,19 +191,17 @@ public class MFAMethodsCreateHandler
 
         var addBackupMfaResult =
                 mfaMethodsService
-                        .addBackupMfa(userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod())
+                        .addBackupMfa(userProfile.getEmail(), createRequest.mfaMethod())
                         .mapFailure(
-                                mfaCreateFailureReason ->
-                                        handleCreateBackupMfaFailure(
-                                                mfaCreateFailureReason,
-                                                auditContext,
-                                                mfaMethodCreateRequest))
+                                failureReason ->
+                                        handleCreateFailure(
+                                                failureReason, auditContext, createRequest))
                         .flatTap(
                                 addedMethod ->
                                         sendSuccessAuditEvents(
-                                                auditContext, mfaMethodCreateRequest, addedMethod))
+                                                auditContext, createRequest, addedMethod))
                         .flatTap(addedMethod -> sendUpdateEmailToUser(userProfile, input))
-                        .tap(addedMethod -> emitSuccessMetric(mfaMethodCreateRequest));
+                        .tap(addedMethod -> emitSuccessMetric(createRequest));
 
         if (addBackupMfaResult.isFailure()) {
             return addBackupMfaResult.getFailure();
@@ -307,7 +304,7 @@ public class MFAMethodsCreateHandler
         return Result.success(mfaMethodCreateRequest);
     }
 
-    private APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(
+    private APIGatewayProxyResponseEvent handleCreateFailure(
             MfaCreateFailureReason failureReason,
             AuditContext auditContext,
             MfaMethodCreateRequest mfaMethodCreateRequest) {
