@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.identity.entity.IdentityProcessingEndState;
 import uk.gov.di.orchestration.identity.entity.LogIds;
 import uk.gov.di.orchestration.identity.entity.SPOTRequest;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
@@ -172,7 +172,7 @@ public class IdentitySPOTServiceTest {
             when(configurationService.isSyncWaitForSpotEnabled()).thenReturn(true);
             when(identityProgressService.pollForStatus(
                             CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST))
-                    .thenReturn(IdentityProgressStatus.ERROR);
+                    .thenReturn(IdentityProcessingEndState.ERROR);
 
             var redirectOpt =
                     service.waitForSpot(
@@ -188,7 +188,7 @@ public class IdentitySPOTServiceTest {
             when(configurationService.isSyncWaitForSpotEnabled()).thenReturn(true);
             when(identityProgressService.pollForStatus(
                             CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST))
-                    .thenReturn(IdentityProgressStatus.NO_ENTRY);
+                    .thenReturn(IdentityProcessingEndState.NO_ENTRY);
 
             var redirectOpt =
                     service.waitForSpot(
@@ -204,7 +204,7 @@ public class IdentitySPOTServiceTest {
             when(configurationService.isSyncWaitForSpotEnabled()).thenReturn(true);
             when(identityProgressService.pollForStatus(
                             CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST))
-                    .thenReturn(IdentityProgressStatus.COMPLETED);
+                    .thenReturn(IdentityProcessingEndState.COMPLETED);
 
             var redirectOpt =
                     service.waitForSpot(

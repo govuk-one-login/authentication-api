@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.identity.service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.identity.entity.IdentityProcessingEndState;
 import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -48,7 +49,7 @@ public class IdentityProgressService {
         this.maxRetries = (int) (configurationService.getSyncWaitForSpotTimeout() / DELAY_IN_MS);
     }
 
-    public IdentityProgressStatus pollForStatus(
+    public IdentityProcessingEndState pollForStatus(
             String clientSessionId, AuditContext auditContext, AuditableEvent auditableEvent)
             throws InterruptedException {
         var status = IdentityProgressStatus.PROCESSING;
@@ -80,7 +81,7 @@ public class IdentityProgressService {
                         status.toString()));
         auditService.submitAuditEvent(auditableEvent, auditContext);
 
-        return status;
+        return IdentityProcessingEndState.valueOf(status.name());
     }
 
     interface Sleeper {
