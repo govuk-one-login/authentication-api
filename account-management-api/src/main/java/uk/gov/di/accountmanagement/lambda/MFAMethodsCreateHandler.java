@@ -498,6 +498,8 @@ public class MFAMethodsCreateHandler
             return Result.failure(
                     generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR));
         }
+
+        return Result.emptySuccess();
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
