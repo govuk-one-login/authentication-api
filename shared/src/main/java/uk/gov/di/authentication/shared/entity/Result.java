@@ -48,6 +48,8 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
 
     Result<F, S> tap(Consumer<S> action);
 
+    Result<F, S> flatTap(Function<S, Result<F, ?>> action);
+
     Result<F, S> tapFailure(Consumer<F> action);
 
     record Failure<F, S>(F value) implements Result<F, S> {
@@ -93,6 +95,11 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
 
         @Override
         public Result<F, S> tap(Consumer<S> action) {
+            return this;
+        }
+
+        @Override
+        public Result<F, S> flatTap(Function<S, Result<F, ?>> action) {
             return this;
         }
 
@@ -147,6 +154,15 @@ public sealed interface Result<F, S> permits Result.Failure, Result.Success {
         @Override
         public Result<F, S> tap(Consumer<S> action) {
             action.accept(this.value());
+            return this;
+        }
+
+        @Override
+        public Result<F, S> flatTap(Function<S, Result<F, ?>> action) {
+            Result<F, ?> result = action.apply(value);
+            if (result.isFailure()) {
+                return new Failure<>(result.getFailure());
+            }
             return this;
         }
 
