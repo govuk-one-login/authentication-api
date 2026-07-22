@@ -186,27 +186,21 @@ public class MFAMethodsCreateHandler
             return maybeMigrationErrorResponse.get();
         }
 
-        var addBackupMfaResult =
-                mfaMethodsService
-                        .addBackupMfa(userProfile.getEmail(), createRequest.mfaMethod())
-                        .mapFailure(
-                                failureReason ->
-                                        handleCreateFailure(
-                                                failureReason, auditContext, createRequest))
-                        .flatTap(
-                                addedMethod ->
-                                        sendSuccessAuditEvents(
-                                                auditContext, createRequest, addedMethod))
-                        .flatTap(addedMethod -> sendUpdateEmailToUser(userProfile, input))
-                        .tap(addedMethod -> emitSuccessMetric(createRequest));
+        return mfaMethodsService
+                .addBackupMfa(userProfile.getEmail(), createRequest.mfaMethod())
+                .mapFailure(
+                        failureReason ->
+                                handleCreateFailure(failureReason, auditContext, createRequest))
+                .flatTap(
+                        addedMethod ->
+                                sendSuccessAuditEvents(auditContext, createRequest, addedMethod))
+                .flatTap(addedMethod -> sendUpdateEmailToUser(userProfile, input))
+                .tap(addedMethod -> emitSuccessMetric(createRequest))
+                .fold(failure -> failure, this::generateSuccessResponse);
+    }
 
-        if (addBackupMfaResult.isFailure()) {
-            return addBackupMfaResult.getFailure();
-        }
-
-        var backupMfaMethod = addBackupMfaResult.getSuccess();
-
-        var backupMfaMethodAsResponse = MfaMethodResponse.from(backupMfaMethod);
+    private APIGatewayProxyResponseEvent generateSuccessResponse(MFAMethod addedMethod) {
+        var backupMfaMethodAsResponse = MfaMethodResponse.from(addedMethod);
 
         if (backupMfaMethodAsResponse.isFailure()) {
             LOG.error(backupMfaMethodAsResponse.getFailure());
