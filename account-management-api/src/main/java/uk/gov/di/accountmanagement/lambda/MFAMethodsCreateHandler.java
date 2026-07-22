@@ -178,16 +178,8 @@ public class MFAMethodsCreateHandler
 
         var createRequest = maybeValidRequest.getSuccess();
 
-        var maybeMigrationErrorResponse =
-                mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
-                        userProfile, LOG, input, createRequest.mfaMethod().method());
-
-        if (maybeMigrationErrorResponse.isPresent()) {
-            return maybeMigrationErrorResponse.get();
-        }
-
-        return mfaMethodsService
-                .addBackupMfa(userProfile.getEmail(), createRequest.mfaMethod())
+        return migrateMfaMethods(userProfile, input, createRequest)
+                .flatMap(mfaMethodsService.addBackupMfa(userProfile.getEmail(), createRequest.mfaMethod())
                 .mapFailure(
                         failureReason ->
                                 handleCreateFailure(failureReason, auditContext, createRequest))
@@ -197,6 +189,18 @@ public class MFAMethodsCreateHandler
                 .flatTap(addedMethod -> sendUpdateEmailToUser(userProfile, input))
                 .tap(addedMethod -> emitSuccessMetric(createRequest))
                 .fold(failure -> failure, this::generateSuccessResponse);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> migrateMfaMethods(UserProfile userProfile, APIGatewayProxyRequestEvent input, MfaMethodCreateRequest createRequest) {
+        var maybeMigrationErrorResponse =
+                mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                        userProfile, LOG, input, createRequest.mfaMethod().method());
+
+        if (maybeMigrationErrorResponse.isPresent()) {
+            return Result.failure(maybeMigrationErrorResponse.get());
+        } else {
+            return Result.emptySuccess();
+        }
     }
 
     private APIGatewayProxyResponseEvent generateSuccessResponse(MFAMethod addedMethod) {
