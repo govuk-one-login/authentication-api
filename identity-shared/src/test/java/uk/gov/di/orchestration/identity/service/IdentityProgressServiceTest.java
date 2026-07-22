@@ -3,7 +3,7 @@ package uk.gov.di.orchestration.identity.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.identity.entity.IdentityProcessingEndState;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -53,7 +53,7 @@ class IdentityProgressServiceTest {
                 identityProgressService.pollForStatus(
                         CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
 
-        assertEquals(IdentityProgressStatus.COMPLETED, status);
+        assertEquals(IdentityProcessingEndState.COMPLETED, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -69,7 +69,7 @@ class IdentityProgressServiceTest {
                 identityProgressService.pollForStatus(
                         CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
 
-        assertEquals(IdentityProgressStatus.COMPLETED, status);
+        assertEquals(IdentityProcessingEndState.COMPLETED, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -83,7 +83,7 @@ class IdentityProgressServiceTest {
                 identityProgressService.pollForStatus(
                         CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
 
-        assertEquals(IdentityProgressStatus.NO_ENTRY, status);
+        assertEquals(IdentityProcessingEndState.NO_ENTRY, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -98,7 +98,7 @@ class IdentityProgressServiceTest {
                 identityProgressService.pollForStatus(
                         CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
 
-        assertEquals(IdentityProgressStatus.ERROR, status);
+        assertEquals(IdentityProcessingEndState.ERROR, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -112,7 +112,7 @@ class IdentityProgressServiceTest {
                 identityProgressService.pollForStatus(
                         CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
 
-        assertEquals(IdentityProgressStatus.ERROR, status);
+        assertEquals(IdentityProcessingEndState.ERROR, status);
         verifyCloudwatchMetricIncrements(status);
         verifyAuditEventSubmitted();
     }
@@ -129,7 +129,7 @@ class IdentityProgressServiceTest {
         return Optional.of(new OrchIdentityCredentials().withCoreIdentityJWT("test-jwt"));
     }
 
-    private void verifyCloudwatchMetricIncrements(IdentityProgressStatus status) {
+    private void verifyCloudwatchMetricIncrements(IdentityProcessingEndState status) {
         verify(metrics)
                 .increment(
                         "ProcessingIdentity",

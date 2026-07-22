@@ -6,7 +6,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
+import uk.gov.di.orchestration.identity.entity.IdentityProcessingEndState;
 import uk.gov.di.orchestration.identity.entity.LogIds;
 import uk.gov.di.orchestration.identity.entity.SPOTClaims;
 import uk.gov.di.orchestration.identity.entity.SPOTRequest;
@@ -102,18 +102,18 @@ public class IdentitySPOTService {
             var status =
                     identityProgressService.pollForStatus(
                             clientSessionId, auditContext, auditableEvent);
-            if (status == IdentityProgressStatus.NO_ENTRY) {
+            if (status == IdentityProcessingEndState.NO_ENTRY) {
                 return Optional.of(
                         RedirectService.redirectToFrontendErrorPageWithErrorLog(
                                 frontend.errorURI(),
                                 new Error("Identity processing returned NO_ENTRY")));
             }
-            if (status == IdentityProgressStatus.ERROR) {
+            if (status == IdentityProcessingEndState.ERROR) {
                 return Optional.of(
                         RedirectService.redirectToFrontendErrorPageWithErrorLog(
                                 frontend.errorURI(), new Error("Identity processing failed")));
             }
-            if (status == IdentityProgressStatus.COMPLETED) {
+            if (status == IdentityProcessingEndState.COMPLETED) {
                 return Optional.empty();
             }
         } else {
