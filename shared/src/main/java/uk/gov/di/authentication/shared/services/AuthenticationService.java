@@ -107,4 +107,6 @@ public interface AuthenticationService {
             String email, String mfaMethodIdentifier);
 
     void setMfaIdentifierForNonMigratedSmsMethod(String email, String smsMfaIdentifier);
+
+    void renewLastSkippedAddingPasskeyTimestamp(String email);
 }
