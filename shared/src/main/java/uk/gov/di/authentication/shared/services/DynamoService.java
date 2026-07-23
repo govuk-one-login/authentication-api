@@ -1064,4 +1064,15 @@ public class DynamoService implements AuthenticationService {
     private static String hashPassword(String password) {
         return Argon2EncoderHelper.argon2Hash(password);
     }
+
+    @Override
+    public void renewLastSkippedAddingPasskeyTimestamp(String email) {
+        dynamoUserProfileTable.updateItem(
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withLastSkippedAddingPasskey(LocalDateTime.now().toString()));
+    }
 }

@@ -6,9 +6,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jspecify.annotations.NonNull;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -27,7 +27,6 @@ import static uk.gov.di.audit.AuditContext.emptyAuditContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
@@ -88,15 +87,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UserContext userContext) {
 
         AuthSessionItem authSession = userContext.getAuthSession();
-
-        String persistentSessionId =
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
-
         LogLineHelper.attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-
         LOG.info("Processing request");
-
-        String ipAddress = IpAddressHelper.extractIpAddress(input);
 
         if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");
@@ -106,37 +98,57 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                             userContext.getClientSessionId(), userContext.getTxmaAuditEncoded()));
         }
 
-        AuditableEvent auditableEvent;
+        var auditContext = buildAuditContext(input, userContext, authSession);
+
+        switch (request.getUpdateProfileType()) {
+            case UPDATE_TERMS_CONDS -> {
+                authenticationService.updateTermsAndConditions(
+                        request.getEmail(), configurationService.getTermsAndConditionsVersion());
+                LOG.info(
+                        "Updated terms and conditions for Version: {}",
+                        configurationService.getTermsAndConditionsVersion());
+                auditService.submitAuditEvent(
+                        AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContext);
+            }
+            case SKIP_ADDING_PASSKEY -> {
+                authenticationService.renewLastSkippedAddingPasskeyTimestamp(request.getEmail());
+                LOG.info("Renewed lastSkippedAddingPasskey timestamp");
+                // TODO - AUT-5464 - Add the audit event here
+            }
+            default -> {
+                LOG.error(
+                        "Encountered unexpected error while processing session: {}",
+                        userContext.getAuthSession().getSessionId());
+                return generateErrorResponse(
+                        ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
+            }
+        }
+
+        return generateEmptySuccessApiGatewayResponse();
+    }
+
+    private static @NonNull AuditContext buildAuditContext(
+            APIGatewayProxyRequestEvent input,
+            UserContext userContext,
+            AuthSessionItem authSession) {
+        String persistentSessionId =
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+        String ipAddress = IpAddressHelper.extractIpAddress(input);
+
         String auditablePhoneNumber =
                 userContext
                         .getUserProfile()
                         .map(UserProfile::getPhoneNumber)
                         .orElse(AuditService.UNKNOWN);
-        var auditContext =
-                auditContextFromUserContext(
-                        userContext,
-                        authSession.getInternalCommonSubjectId(),
-                        authSession.getEmailAddress(),
-                        ipAddress,
-                        auditablePhoneNumber,
-                        persistentSessionId);
 
-        if (request.getUpdateProfileType().equals(UPDATE_TERMS_CONDS)) {
-            authenticationService.updateTermsAndConditions(
-                    request.getEmail(), configurationService.getTermsAndConditionsVersion());
-            auditableEvent = AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
-            LOG.info(
-                    "Updated terms and conditions for Version: {}",
-                    configurationService.getTermsAndConditionsVersion());
-        } else {
-            LOG.error(
-                    "Encountered unexpected error while processing session: {}",
-                    userContext.getAuthSession().getSessionId());
-            return generateErrorResponse(ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
-        }
-
-        auditService.submitAuditEvent(auditableEvent, auditContext);
-        return generateEmptySuccessApiGatewayResponse();
+        return auditContextFromUserContext(
+                userContext,
+                authSession.getInternalCommonSubjectId(),
+                authSession.getEmailAddress(),
+                ipAddress,
+                auditablePhoneNumber,
+                persistentSessionId);
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(

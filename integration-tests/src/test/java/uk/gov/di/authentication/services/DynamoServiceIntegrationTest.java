@@ -9,6 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.MockedStatic;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -37,6 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mockStatic;
 
 class DynamoServiceIntegrationTest {
 
@@ -984,6 +987,28 @@ class DynamoServiceIntegrationTest {
         assertThrows(
                 ConditionalCheckFailedException.class,
                 () -> userStore.signUp("duplicate@example.com", "password-2"));
+    }
+
+    @Test
+    void shouldUpdateLastSkippedAddingPasskeyToTimestampNow() {
+        // Arrange
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        LocalDateTime fixedDateTime = LocalDateTime.of(2026, 1, 1, 0, 0);
+
+        try (MockedStatic<LocalDateTime> mockedLocalDateTime =
+                mockStatic(LocalDateTime.class, CALLS_REAL_METHODS)) {
+            mockedLocalDateTime.when(LocalDateTime::now).thenReturn(fixedDateTime);
+
+            // Act
+            dynamoService.renewLastSkippedAddingPasskeyTimestamp(TEST_EMAIL);
+
+            // Assert
+            UserProfile updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+
+            assertThat(
+                    updatedUserProfile.getLastSkippedAddingPasskey(),
+                    equalTo(fixedDateTime.toString()));
+        }
     }
 
     private void signUpWithPhoneNumber(String email, String subjectId, String phoneNumber) {
