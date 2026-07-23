@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -106,7 +105,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                             userContext.getClientSessionId(), userContext.getTxmaAuditEncoded()));
         }
 
-        AuditableEvent auditableEvent;
         String auditablePhoneNumber =
                 userContext
                         .getUserProfile()
@@ -124,10 +122,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         if (request.getUpdateProfileType().equals(UPDATE_TERMS_CONDS)) {
             authenticationService.updateTermsAndConditions(
                     request.getEmail(), configurationService.getTermsAndConditionsVersion());
-            auditableEvent = AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
             LOG.info(
                     "Updated terms and conditions for Version: {}",
                     configurationService.getTermsAndConditionsVersion());
+            auditService.submitAuditEvent(AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContext);
         } else {
             LOG.error(
                     "Encountered unexpected error while processing session: {}",
@@ -135,7 +133,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             return generateErrorResponse(ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
         }
 
-        auditService.submitAuditEvent(auditableEvent, auditContext);
         return generateEmptySuccessApiGatewayResponse();
     }
 
