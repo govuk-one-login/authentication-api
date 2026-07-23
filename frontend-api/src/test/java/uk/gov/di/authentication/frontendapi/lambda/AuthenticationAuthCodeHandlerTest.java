@@ -424,6 +424,8 @@ class AuthenticationAuthCodeHandlerTest {
                 hasBody(
                         objectMapper.writeValueAsString(
                                 ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR)));
+        verify(cloudwatchMetricsService, times(1))
+                .incrementCounter("EnhancedAuthCodeBlocked", Map.of("Environment", "test"));
         verify(dynamoAuthCodeService, never())
                 .saveAuthCode(any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(), any());
     }

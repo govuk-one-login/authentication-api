@@ -107,6 +107,9 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 LOG.warn("Not permitted to issue auth code");
 
                 if (configurationService.isEnhancedAuthCodeProtectionEnabled()) {
+                    cloudwatchMetricsService.incrementCounter(
+                            CloudwatchMetrics.ENHANCED_AUTH_CODE_BLOCKED.getValue(),
+                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
                     return generateApiGatewayProxyErrorResponse(
                             500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
                 } else {
