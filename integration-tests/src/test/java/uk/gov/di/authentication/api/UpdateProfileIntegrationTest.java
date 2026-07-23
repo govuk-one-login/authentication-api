@@ -14,6 +14,7 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
+import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.SKIP_ADDING_PASSKEY;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -48,6 +49,26 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 List.of(
                         AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
                         AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE));
+    }
+
+    @Test
+    void shouldCallUpdateProfileToRenewLastSkippedAddingPasskeyTimestampAndReturn204() {
+        String sessionId = IdGenerator.generate();
+        String clientSessionId = IdGenerator.generate();
+        setUpTest(sessionId);
+
+        UpdateProfileRequest request = new UpdateProfileRequest(EMAIL_ADDRESS, SKIP_ADDING_PASSKEY);
+
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId, clientSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTH_UPDATE_PROFILE_REQUEST_RECEIVED));
+        // TODO - AUT-5464 - Add AUTH_PASSKEY_REGISTRATION_PROMPT_SKIPPED to List
     }
 
     private void setUpTest(String sessionId) {
