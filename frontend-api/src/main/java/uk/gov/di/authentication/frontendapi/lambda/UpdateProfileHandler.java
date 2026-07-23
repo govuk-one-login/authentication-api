@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jspecify.annotations.NonNull;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -26,7 +27,6 @@ import static uk.gov.di.audit.AuditContext.emptyAuditContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
@@ -87,15 +87,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UserContext userContext) {
 
         AuthSessionItem authSession = userContext.getAuthSession();
-
-        String persistentSessionId =
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
-
         LogLineHelper.attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-
         LOG.info("Processing request");
-
-        String ipAddress = IpAddressHelper.extractIpAddress(input);
 
         if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");
@@ -105,19 +98,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                             userContext.getClientSessionId(), userContext.getTxmaAuditEncoded()));
         }
 
-        String auditablePhoneNumber =
-                userContext
-                        .getUserProfile()
-                        .map(UserProfile::getPhoneNumber)
-                        .orElse(AuditService.UNKNOWN);
-        var auditContext =
-                auditContextFromUserContext(
-                        userContext,
-                        authSession.getInternalCommonSubjectId(),
-                        authSession.getEmailAddress(),
-                        ipAddress,
-                        auditablePhoneNumber,
-                        persistentSessionId);
+        var auditContext = buildAuditContext(input, userContext, authSession);
 
         switch (request.getUpdateProfileType()) {
             case UPDATE_TERMS_CONDS -> {
@@ -139,6 +120,30 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         }
 
         return generateEmptySuccessApiGatewayResponse();
+    }
+
+    private static @NonNull AuditContext buildAuditContext(
+            APIGatewayProxyRequestEvent input,
+            UserContext userContext,
+            AuthSessionItem authSession) {
+        String persistentSessionId =
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+        String ipAddress = IpAddressHelper.extractIpAddress(input);
+
+        String auditablePhoneNumber =
+                userContext
+                        .getUserProfile()
+                        .map(UserProfile::getPhoneNumber)
+                        .orElse(AuditService.UNKNOWN);
+
+        return auditContextFromUserContext(
+                userContext,
+                authSession.getInternalCommonSubjectId(),
+                authSession.getEmailAddress(),
+                ipAddress,
+                auditablePhoneNumber,
+                persistentSessionId);
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
