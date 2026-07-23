@@ -54,9 +54,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -95,9 +93,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -143,9 +139,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -253,9 +247,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -347,9 +339,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -441,9 +431,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -535,9 +523,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -631,9 +617,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -751,9 +735,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
@@ -816,9 +798,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          develocity-injection-enabled: false
           add-job-summary: never
-          dependency-graph: disabled
           cache-read-only: false
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
