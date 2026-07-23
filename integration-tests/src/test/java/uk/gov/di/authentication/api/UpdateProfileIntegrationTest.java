@@ -34,8 +34,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         String clientSessionId = IdGenerator.generate();
         setUpTest(sessionId);
 
-        UpdateProfileRequest request =
-                new UpdateProfileRequest(EMAIL_ADDRESS, UPDATE_TERMS_CONDS, String.valueOf(true));
+        UpdateProfileRequest request = new UpdateProfileRequest(EMAIL_ADDRESS, UPDATE_TERMS_CONDS);
 
         var response =
                 makeRequest(

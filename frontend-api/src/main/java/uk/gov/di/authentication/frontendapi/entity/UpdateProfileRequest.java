@@ -12,25 +12,14 @@ public class UpdateProfileRequest extends BaseFrontendRequest {
     @Required
     private UpdateProfileType updateProfileType;
 
-    @SerializedName("profileInformation")
-    @Expose
-    @Required
-    private String profileInformation;
-
     public UpdateProfileRequest() {}
 
-    public UpdateProfileRequest(
-            String email, UpdateProfileType updateProfileType, String profileInformation) {
+    public UpdateProfileRequest(String email, UpdateProfileType updateProfileType) {
         this.email = email;
         this.updateProfileType = updateProfileType;
-        this.profileInformation = profileInformation;
     }
 
     public UpdateProfileType getUpdateProfileType() {
         return updateProfileType;
-    }
-
-    public String getProfileInformation() {
-        return profileInformation;
     }
 }
