@@ -110,6 +110,11 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 auditService.submitAuditEvent(
                         AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContext);
             }
+            case SKIP_ADDING_PASSKEY -> {
+                authenticationService.renewLastSkippedAddingPasskeyTimestamp(request.getEmail());
+                LOG.info("Renewed lastSkippedAddingPasskey timestamp");
+                // TODO - AUT-5464 - Add the audit event here
+            }
             default -> {
                 LOG.error(
                         "Encountered unexpected error while processing session: {}",
