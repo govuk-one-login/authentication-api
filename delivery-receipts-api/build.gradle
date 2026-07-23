@@ -8,10 +8,10 @@ version = "unspecified"
 
 dependencies {
     implementation libs.govUkNotify,
-            libs.bundles.awsLambda,
-            libs.gson,
-            libs.libphonenumber,
-            libs.awsCloudwatchEmf
+    libs.bundles.awsLambda,
+    libs.gson,
+    libs.libphonenumber,
+    libs.awsCloudwatchEmf
 
     implementation project(":shared")
 

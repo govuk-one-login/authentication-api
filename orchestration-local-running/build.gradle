@@ -8,17 +8,17 @@ version = "unspecified"
 
 dependencies {
     implementation libs.javalin,
-            libs.bundles.awsDynamoDb,
-            libs.bundles.awsLambda,
-            libs.awsKms,
-            libs.awsSqs,
-            libs.awsSsm,
-            libs.gson,
-            project(":orchestration-shared"),
-            project(":oidc-api"),
-            project(":ipv-api"),
-            project(":doc-checking-app-api"),
-            project(":client-registry-api")
+    libs.bundles.awsDynamoDb,
+    libs.bundles.awsLambda,
+    libs.awsKms,
+    libs.awsSqs,
+    libs.awsSsm,
+    libs.gson,
+    project(":orchestration-shared"),
+    project(":oidc-api"),
+    project(":ipv-api"),
+    project(":doc-checking-app-api"),
+    project(":client-registry-api")
     project(":sis-api")
 }
 

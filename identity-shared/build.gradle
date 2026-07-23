@@ -8,8 +8,8 @@ version = "unspecified"
 
 dependencies {
     compileOnly libs.bundles.awsLambda,
-            libs.awsSqs,
-            libs.bundles.awsDynamoDb
+    libs.awsSqs,
+    libs.bundles.awsDynamoDb
 
     implementation libs.gson,
             libs.bundles.nimbus,

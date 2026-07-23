@@ -8,9 +8,9 @@ version = "unspecified"
 
 dependencies {
     testImplementation libs.bundles.nimbus,
-            libs.bundles.test,
-            libs.bundles.awsLambda,
-            libs.bundles.lettuce
+    libs.bundles.test,
+    libs.bundles.awsLambda,
+    libs.bundles.lettuce
 
     implementation project(":shared"), noXray
     testImplementation project(":delivery-receipts-api"), noXray
@@ -53,8 +53,8 @@ test {
 
     doLast {
         tasks.getByName("jacocoTestReport").sourceDirectories.from(
-                project(":delivery-receipts-api").sourceSets.main.java,
-                project(":shared").sourceSets.main.java)
+        project(":delivery-receipts-api").sourceSets.main.java,
+        project(":shared").sourceSets.main.java)
 
         tasks.getByName("jacocoTestReport").classDirectories.from(
                 project(":delivery-receipts-api").sourceSets.main.output,

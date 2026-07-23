@@ -10,8 +10,8 @@ File terraformDir = new File(project.rootDir, "ci/terraform/utils")
 
 dependencies {
     compileOnly libs.bundles.awsLambda,
-            libs.awsS3,
-            libs.bundles.awsDynamoDb
+    libs.awsS3,
+    libs.bundles.awsDynamoDb
 
     implementation project(":shared"),
             libs.govUkNotify,

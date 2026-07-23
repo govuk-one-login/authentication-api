@@ -11,9 +11,9 @@ File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
 
 dependencies {
     compileOnly libs.bundles.awsLambda,
-            libs.bundles.awsDynamoDb,
-            libs.awsSns,
-            libs.awsKms
+    libs.bundles.awsDynamoDb,
+    libs.awsSns,
+    libs.awsKms
 
     implementation libs.gson,
             libs.bundles.nimbus,
