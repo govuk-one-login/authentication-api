@@ -119,18 +119,24 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         auditablePhoneNumber,
                         persistentSessionId);
 
-        if (request.getUpdateProfileType().equals(UPDATE_TERMS_CONDS)) {
-            authenticationService.updateTermsAndConditions(
-                    request.getEmail(), configurationService.getTermsAndConditionsVersion());
-            LOG.info(
-                    "Updated terms and conditions for Version: {}",
-                    configurationService.getTermsAndConditionsVersion());
-            auditService.submitAuditEvent(AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContext);
-        } else {
-            LOG.error(
-                    "Encountered unexpected error while processing session: {}",
-                    userContext.getAuthSession().getSessionId());
-            return generateErrorResponse(ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
+        switch (request.getUpdateProfileType()) {
+            case UPDATE_TERMS_CONDS -> {
+                authenticationService.updateTermsAndConditions(
+                        request.getEmail(), configurationService.getTermsAndConditionsVersion());
+                LOG.info(
+                        "Updated terms and conditions for Version: {}",
+                        configurationService.getTermsAndConditionsVersion());
+                auditService.submitAuditEvent(
+                        AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContext);
+            }
+            default -> {
+                LOG.error(
+                        "Unexpected UpdateProfileType '{}' while processing session '{}'",
+                        request.getUpdateProfileType().toString(),
+                        userContext.getAuthSession().getSessionId());
+                return generateErrorResponse(
+                        ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
+            }
         }
 
         return generateEmptySuccessApiGatewayResponse();
