@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.identity.entity.AuditEventConfiguration;
-import uk.gov.di.orchestration.identity.entity.IdentityTokenService;
+import uk.gov.di.orchestration.identity.service.IdentityTokenService;
 import uk.gov.di.orchestration.identity.testsupport.TestAuditEvent;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
