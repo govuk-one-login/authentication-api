@@ -136,7 +136,8 @@ public class IPVAuthorisationService {
             String clientSessionId,
             String emailAddress,
             List<String> vtr,
-            Boolean reproveIdentity) {
+            Boolean reproveIdentity,
+            boolean userRequestedUpdate) {
         LOG.info("Generating request JWT");
         var jwtID = IdGenerator.generate();
         var expiryDate = nowClock.nowPlus(3, ChronoUnit.MINUTES);
@@ -163,6 +164,9 @@ public class IPVAuthorisationService {
         if (configurationService.isAccountInterventionServiceActionEnabled()
                 && reproveIdentity != null) {
             claimsBuilder.claim("reprove_identity", reproveIdentity);
+        }
+        if (userRequestedUpdate) {
+            claimsBuilder.claim("update_identity", true);
         }
         claimsBuilder.claim("claims", claimsRequest.toJSONObject());
         LOG.info("Encrypted request JWT has been generated");

@@ -319,7 +319,8 @@ class IPVAuthorisationServiceTest {
                         "journey-id",
                         "test@test.com",
                         List.of("P2", "P1"),
-                        true);
+                        true,
+                        false);
             }
             var captor = ArgumentCaptor.forClass(JWTClaimsSet.class);
             verify(orchJwtService)
@@ -359,6 +360,7 @@ class IPVAuthorisationServiceTest {
                         "",
                         "",
                         emptyList(),
+                        false,
                         false);
             }
             verify(orchJwtService)
@@ -391,6 +393,7 @@ class IPVAuthorisationServiceTest {
                         "",
                         "",
                         emptyList(),
+                        false,
                         false);
             }
             verify(orchJwtService)
@@ -413,11 +416,34 @@ class IPVAuthorisationServiceTest {
                         "",
                         "",
                         emptyList(),
-                        null);
+                        null,
+                        false);
             }
             verify(orchJwtService)
                     .signAndEncryptJWT(
                             argThat(claims -> !claims.getClaims().containsKey("reprove_identity")),
+                            eq(IPV_SIGNING_KEY_ID),
+                            eq(publicEncKey.toRSAPublicKey()));
+        }
+
+        @Test
+        void shouldConstructJWTWithUpdateIdentityClaimIfUpdateIdentityIsTrue() throws Exception {
+            try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
+                mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
+                authorisationService.constructRequestJWT(
+                        new State("state"),
+                        new Scope(OIDCScopeValue.OPENID),
+                        new Subject("subject"),
+                        new ClaimsSetRequest(),
+                        "",
+                        "",
+                        emptyList(),
+                        false,
+                        true);
+            }
+            verify(orchJwtService)
+                    .signAndEncryptJWT(
+                            argThat(claims -> claims.getClaims().containsKey("update_identity")),
                             eq(IPV_SIGNING_KEY_ID),
                             eq(publicEncKey.toRSAPublicKey()));
         }

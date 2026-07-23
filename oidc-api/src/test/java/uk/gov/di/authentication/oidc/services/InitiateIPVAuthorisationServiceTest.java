@@ -42,8 +42,6 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -165,9 +163,10 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(Subject.class),
                         eq(claimsSetRequest),
                         eq(CLIENT_SESSION_ID),
-                        anyString(),
+                        eq(EMAIL_ADDRESS),
                         eq(List.of("P0", "P2")),
-                        anyBoolean()))
+                        eq(false),
+                        eq(false)))
                 .thenReturn(encryptedJWT);
 
         var response =
@@ -200,7 +199,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
                         eq(List.of("P0", "P2")),
-                        eq(REPROVE_IDENTITY));
+                        eq(REPROVE_IDENTITY),
+                        eq(false));
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
@@ -249,7 +249,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
                         eq(List.of("P0", "P2")),
-                        eq(REPROVE_IDENTITY));
+                        eq(REPROVE_IDENTITY),
+                        eq(false));
 
         assertEquals(
                 claimsSetRequestWithStorageTokenClaim.toJSONString(),

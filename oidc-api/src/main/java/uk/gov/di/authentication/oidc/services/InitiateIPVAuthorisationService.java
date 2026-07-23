@@ -93,7 +93,8 @@ public class InitiateIPVAuthorisationService {
                         Optional.ofNullable(clientSessionId).orElse("unknown"),
                         userInfo.getEmailAddress(),
                         levelsOfConfidence,
-                        reproveIdentity);
+                        reproveIdentity,
+                        false);
 
         var authRequestBuilder =
                 new AuthorizationRequest.Builder(
