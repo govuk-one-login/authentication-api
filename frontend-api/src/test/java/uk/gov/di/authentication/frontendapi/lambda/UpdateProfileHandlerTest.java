@@ -29,8 +29,8 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_ERROR;
@@ -53,11 +53,9 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 class UpdateProfileHandlerTest {
 
-    private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
-    private static final String COOKIE = "Cookie";
 
     private final Context context = mock(Context.class);
     private UpdateProfileHandler handler;
@@ -127,8 +125,8 @@ class UpdateProfileHandlerTest {
 
         var body =
                 format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        EMAIL, UPDATE_TERMS_CONDS, UPDATED_TERMS_AND_CONDITIONS_VALUE);
+                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\" }",
+                        EMAIL, UPDATE_TERMS_CONDS);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
@@ -152,8 +150,8 @@ class UpdateProfileHandlerTest {
 
         var body =
                 format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        EMAIL, UPDATE_TERMS_CONDS, UPDATED_TERMS_AND_CONDITIONS_VALUE);
+                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\" }",
+                        EMAIL, UPDATE_TERMS_CONDS);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
@@ -175,17 +173,13 @@ class UpdateProfileHandlerTest {
     void shouldReturn400WhenRequestIsMissingParameters() {
         usingValidSession();
 
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        EMAIL, UPDATE_TERMS_CONDS);
+        var body = format("{ \"email\": \"%s\" }", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-        verify(authenticationService, never())
-                .updatePhoneNumber(eq(EMAIL), eq(CommonTestVariables.UK_MOBILE_NUMBER));
+        verifyNoInteractions(authenticationService);
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
@@ -197,10 +191,7 @@ class UpdateProfileHandlerTest {
     @Test
     void checkUpdateProfileRequestErrorAuditEventStillEmittedWhenTICFHeaderNotProvided() {
         usingValidSession();
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        EMAIL, UPDATE_TERMS_CONDS);
+        var body = format("{ \"email\": \"%s\" }", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
 
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
@@ -225,8 +216,7 @@ class UpdateProfileHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
-        var response = handler.handleRequest(event, context);
-        return response;
+        return handler.handleRequest(event, context);
     }
 
     private UserProfile generateUserProfile() {
