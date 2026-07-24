@@ -5,7 +5,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.identity.entity.IdentityProcessingEndState;
 import uk.gov.di.orchestration.identity.entity.IdentityProgressStatus;
-import uk.gov.di.orchestration.shared.domain.AuditableEvent;
+import uk.gov.di.orchestration.identity.entity.SPOTAuditableEvent;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
@@ -50,8 +50,7 @@ public class IdentityProgressService {
     }
 
     public IdentityProcessingEndState pollForStatus(
-            String clientSessionId, AuditContext auditContext, AuditableEvent auditableEvent)
-            throws InterruptedException {
+            String clientSessionId, AuditContext auditContext) throws InterruptedException {
         var status = IdentityProgressStatus.PROCESSING;
         var attempts = 1;
         while (status == IdentityProgressStatus.PROCESSING) {
@@ -79,7 +78,7 @@ public class IdentityProgressService {
                         configurationService.getEnvironment(),
                         "Status",
                         status.toString()));
-        auditService.submitAuditEvent(auditableEvent, auditContext);
+        auditService.submitAuditEvent(SPOTAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
 
         return IdentityProcessingEndState.valueOf(status.name());
     }
