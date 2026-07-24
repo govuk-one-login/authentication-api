@@ -23,7 +23,7 @@ public record ExternalTICFCRIRequest(
         @Expose String passkey) {
 
     public static ExternalTICFCRIRequest fromInternalRequest(
-            InternalTICFCRIRequest internalRequest, boolean supportPasskeys) {
+            InternalTICFCRIRequest internalRequest) {
         boolean passwordResetSuccess =
                 internalRequest.resetPasswordState().equals(ResetPasswordState.SUCCEEDED);
         boolean reportablePasswordAttempted =
@@ -56,7 +56,7 @@ public record ExternalTICFCRIRequest(
                 sanitisedMfaMethodType != null
                         ? Collections.singletonList(sanitisedMfaMethodType)
                         : null,
-                internalRequest.hasVerifiedWithPasskey() && supportPasskeys ? "Y" : null);
+                internalRequest.hasVerifiedWithPasskey() ? "Y" : null);
     }
 
     @Override

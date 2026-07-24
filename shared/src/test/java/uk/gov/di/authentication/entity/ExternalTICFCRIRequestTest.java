@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.entity;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -368,38 +367,6 @@ class ExternalTICFCRIRequestTest {
     @MethodSource("ticfParametersSource")
     void shouldCorrectlyBeConstructedFromInternalRequest(
             InternalTICFCRIRequest provided, ExternalTICFCRIRequest expected) {
-        assertEquals(expected, ExternalTICFCRIRequest.fromInternalRequest(provided, true));
-    }
-
-    @Test
-    void shouldNotSendPasskeyIfPasskeysNotSupported() {
-        var userSignedInWithPasskeyInternalTicfRequest =
-                new InternalTICFCRIRequest(
-                        "test-sub",
-                        List.of("Cl.Cm"),
-                        "test-journey-id",
-                        true,
-                        AccountState.EXISTING,
-                        ResetPasswordState.NONE,
-                        ResetMfaState.NONE,
-                        MFAMethodType.NONE,
-                        true);
-
-        var expectedExternalTicfCriRequest =
-                new ExternalTICFCRIRequest(
-                        "test-sub",
-                        List.of("Cl.Cm"),
-                        "test-journey-id",
-                        "Y",
-                        null,
-                        null,
-                        null,
-                        null,
-                        null);
-
-        assertEquals(
-                ExternalTICFCRIRequest.fromInternalRequest(
-                        userSignedInWithPasskeyInternalTicfRequest, false),
-                expectedExternalTicfCriRequest);
+        assertEquals(expected, ExternalTICFCRIRequest.fromInternalRequest(provided));
     }
 }
