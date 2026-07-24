@@ -147,7 +147,6 @@ class CheckUserExistsHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(false);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
-        when(configurationService.supportPasskeys()).thenReturn(false);
 
         handler =
                 new CheckUserExistsHandler(
@@ -293,13 +292,12 @@ class CheckUserExistsHandlerTest {
         @ParameterizedTest
         void shouldIncludeWhetherTheUserHasAnActivePasskeyOnAuthCheckUserKnownEmail(
                 Boolean hasActivePasskey) {
-            when(configurationService.supportPasskeys()).thenReturn(true);
             when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID(), SESSION_ID))
                     .thenReturn(Result.success((hasActivePasskey)));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));
 
-            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS, true), context);
 
             assertThat(result, hasStatus(200));
             verify(auditService)
@@ -647,17 +645,15 @@ class CheckUserExistsHandlerTest {
 
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
-        void shouldReturnResultOfHasActivePasskeysWhenFeatureFlagIsOn(boolean hasActivePasskey)
-                throws Json.JsonException {
-            when(configurationService.supportPasskeys()).thenReturn(true);
-
+        void shouldReturnResultOfHasActivePasskeysWhenSupportPasskeyUsageIsTrue(
+                boolean hasActivePasskey) throws Json.JsonException {
             MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
             when(passkeysService.hasActivePasskey(userProfile.getPublicSubjectID(), SESSION_ID))
                     .thenReturn(Result.success(hasActivePasskey));
 
-            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS, true), context);
 
             assertThat(result, hasStatus(200));
             var checkUserExistsResponse =
@@ -692,8 +688,6 @@ class CheckUserExistsHandlerTest {
         @Test
         void shouldReturnNullForHasActivePasskeyIfPasskeysServiceReturnsFailure()
                 throws Json.JsonException {
-            when(configurationService.supportPasskeys()).thenReturn(true);
-
             MFAMethod mfaMethod = verifiedMfaMethod(MFAMethodType.SMS, true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod)));
@@ -703,7 +697,7 @@ class CheckUserExistsHandlerTest {
                             Result.failure(
                                     PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE));
 
-            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS, true), context);
 
             assertThat(result, hasStatus(200));
             var checkUserExistsResponse =
@@ -734,6 +728,70 @@ class CheckUserExistsHandlerTest {
                             AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
                             pair("number_of_attempts_user_allowed_to_login", 5));
         }
+    }
+
+    @Test
+    void shouldLowercaseEmailFromRequestBeforeLookup() throws Json.JsonException {
+        authSessionExists();
+        var mixedCaseEmail = "Joe.Bloggs@Digital.Cabinet-Office.Gov.UK";
+        setupUserProfileAndClient(Optional.empty());
+
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withHeaders(VALID_HEADERS)
+                        .withBody(
+                                format(
+                                        "{\"email\": \"%s\", \"supportPasskeyUsage\": false}",
+                                        mixedCaseEmail))
+                        .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        var checkUserExistsResponse =
+                objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+        assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
+        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL_ADDRESS);
+    }
+
+    @Test
+    void shouldDefaultSupportPasskeyUsageToFalseWhenNotInRequestBody() throws Json.JsonException {
+        authSessionExists();
+        var userProfile =
+                generateUserProfile().withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
+        setupUserProfileAndClient(Optional.of(userProfile));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withHeaders(VALID_HEADERS)
+                        .withBody(format("{\"email\": \"%s\"}", EMAIL_ADDRESS))
+                        .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        var checkUserExistsResponse =
+                objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+        assertNull(checkUserExistsResponse.hasActivePasskey());
+        verifyNoInteractions(passkeysService);
+    }
+
+    @Test
+    void shouldReturn400WhenRequestBodyIsNull() {
+        authSessionExists();
+
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withHeaders(VALID_HEADERS)
+                        .withBody(null)
+                        .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
     }
 
     @Test
@@ -846,9 +904,17 @@ class CheckUserExistsHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent userExistsRequest(String email) {
+        return userExistsRequest(email, false);
+    }
+
+    private APIGatewayProxyRequestEvent userExistsRequest(
+            String email, boolean supportPasskeyUsage) {
         return new APIGatewayProxyRequestEvent()
                 .withHeaders(VALID_HEADERS)
-                .withBody(format("{\"email\": \"%s\" }", email))
+                .withBody(
+                        format(
+                                "{\"email\": \"%s\", \"supportPasskeyUsage\": %s}",
+                                email, supportPasskeyUsage))
                 .withRequestContext(contextWithSourceIp(IP_ADDRESS));
     }
 
