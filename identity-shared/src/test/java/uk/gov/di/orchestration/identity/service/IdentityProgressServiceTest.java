@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.identity.entity.IdentityProcessingEndState;
+import uk.gov.di.orchestration.identity.entity.SPOTAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.OrchIdentityCredentials;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -17,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.identity.testsupport.TestAuditEvent.TEST_PROCESSING_IDENTITY_REQUEST;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.sharedtest.helper.Constants.ENVIRONMENT;
 
@@ -49,9 +49,7 @@ class IdentityProgressServiceTest {
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(credentialsCompleted());
 
-        var status =
-                identityProgressService.pollForStatus(
-                        CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
+        var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
         assertEquals(IdentityProcessingEndState.COMPLETED, status);
         verifyCloudwatchMetricIncrements(status);
@@ -65,9 +63,7 @@ class IdentityProgressServiceTest {
                 .thenReturn(credentialsProcessing())
                 .thenReturn(credentialsCompleted());
 
-        var status =
-                identityProgressService.pollForStatus(
-                        CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
+        var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
         assertEquals(IdentityProcessingEndState.COMPLETED, status);
         verifyCloudwatchMetricIncrements(status);
@@ -79,9 +75,7 @@ class IdentityProgressServiceTest {
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(credentialsNotFound());
 
-        var status =
-                identityProgressService.pollForStatus(
-                        CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
+        var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
         assertEquals(IdentityProcessingEndState.NO_ENTRY, status);
         verifyCloudwatchMetricIncrements(status);
@@ -94,9 +88,7 @@ class IdentityProgressServiceTest {
                 .thenReturn(credentialsProcessing())
                 .thenReturn(credentialsNotFound());
 
-        var status =
-                identityProgressService.pollForStatus(
-                        CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
+        var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
         assertEquals(IdentityProcessingEndState.ERROR, status);
         verifyCloudwatchMetricIncrements(status);
@@ -108,9 +100,7 @@ class IdentityProgressServiceTest {
         when(dynamoIdentityService.getIdentityCredentials(CLIENT_SESSION_ID))
                 .thenReturn(credentialsProcessing());
 
-        var status =
-                identityProgressService.pollForStatus(
-                        CLIENT_SESSION_ID, auditContext, TEST_PROCESSING_IDENTITY_REQUEST);
+        var status = identityProgressService.pollForStatus(CLIENT_SESSION_ID, auditContext);
 
         assertEquals(IdentityProcessingEndState.ERROR, status);
         verifyCloudwatchMetricIncrements(status);
@@ -141,6 +131,7 @@ class IdentityProgressServiceTest {
     }
 
     private void verifyAuditEventSubmitted() {
-        verify(auditService).submitAuditEvent(TEST_PROCESSING_IDENTITY_REQUEST, auditContext);
+        verify(auditService)
+                .submitAuditEvent(SPOTAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
     }
 }

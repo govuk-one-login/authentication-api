@@ -15,6 +15,7 @@ import uk.gov.di.orchestration.identity.entity.SPOTRequest;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -37,7 +38,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.identity.testsupport.TestAuditEvent.TEST_PROCESSING_IDENTITY_REQUEST;
+import static uk.gov.di.orchestration.identity.entity.SPOTAuditableEvent.IPV_SPOT_REQUESTED;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class IdentitySPOTServiceTest {
@@ -48,6 +49,7 @@ public class IdentitySPOTServiceTest {
     private final IdentityProgressService identityProgressService =
             mock(IdentityProgressService.class);
     private final AuthFrontend frontend = mock(AuthFrontend.class);
+    private final AuditService auditService = mock(AuditService.class);
     private static final URI OIDC_TRUSTMARK_URI = URI.create("https://base-url.com/trustmark");
     private static final UserInfo P2_VOT_USER_IDENTITY_USER_INFO =
             new UserInfo(
@@ -91,7 +93,8 @@ public class IdentitySPOTServiceTest {
                         oidcAPI,
                         objectMapper,
                         identityProgressService,
-                        frontend);
+                        frontend,
+                        auditService);
     }
 
     @Nested
@@ -105,7 +108,8 @@ public class IdentitySPOTServiceTest {
                     AUTH_USER_INFO,
                     SUBJECT,
                     P2_VOT_USER_IDENTITY_USER_INFO,
-                    CLIENT_ID.getValue());
+                    CLIENT_ID.getValue(),
+                    AUDIT_CONTEXT);
 
             assertThat(
                     logging.events(),
@@ -121,6 +125,7 @@ public class IdentitySPOTServiceTest {
             assertThat(
                     logging.events(),
                     hasItem(withMessageContaining("SPOT request placed on queue")));
+            verify(auditService).submitAuditEvent(IPV_SPOT_REQUESTED, AUDIT_CONTEXT);
         }
 
         @Test
@@ -139,13 +144,15 @@ public class IdentitySPOTServiceTest {
                                             AUTH_USER_INFO,
                                             SUBJECT,
                                             P2_VOT_USER_IDENTITY_USER_INFO,
-                                            CLIENT_ID.getValue()),
+                                            CLIENT_ID.getValue(),
+                                            AUDIT_CONTEXT),
                             "Expected to throw JsonException");
 
             assertThat(
                     logging.events(),
                     hasItem(withMessageContaining("Constructing SPOT request ready to queue")));
             verifyNoInteractions(spotSqsClient);
+            verifyNoInteractions(auditService);
             assertEquals("json-exception", exception.getMessage());
         }
     }
@@ -157,9 +164,7 @@ public class IdentitySPOTServiceTest {
         void shouldRedirectToFrontendWhenSyncWaitForSPOTDisabled() throws Exception {
             when(configurationService.isSyncWaitForSpotEnabled()).thenReturn(false);
 
-            var redirectOpt =
-                    service.waitForSpot(
-                            CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST);
+            var redirectOpt = service.waitForSpot(CLIENT_SESSION_ID, AUDIT_CONTEXT);
 
             assertTrue(redirectOpt.isPresent());
             var redirect = redirectOpt.get();
@@ -170,13 +175,10 @@ public class IdentitySPOTServiceTest {
         @Test
         void shouldRedirectToFrontendErrorPageWhenSyncWaitForSPOTReturnsError() throws Exception {
             when(configurationService.isSyncWaitForSpotEnabled()).thenReturn(true);
-            when(identityProgressService.pollForStatus(
-                            CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST))
+            when(identityProgressService.pollForStatus(CLIENT_SESSION_ID, AUDIT_CONTEXT))
                     .thenReturn(IdentityProcessingEndState.ERROR);
 
-            var redirectOpt =
-                    service.waitForSpot(
-                            CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST);
+            var redirectOpt = service.waitForSpot(CLIENT_SESSION_ID, AUDIT_CONTEXT);
 
             assertTrue(redirectOpt.isPresent());
             var redirect = redirectOpt.get();
@@ -186,13 +188,10 @@ public class IdentitySPOTServiceTest {
         @Test
         void shouldRedirectToFrontendErrorPageWhenSyncWaitForSPOTReturnsNoEntry() throws Exception {
             when(configurationService.isSyncWaitForSpotEnabled()).thenReturn(true);
-            when(identityProgressService.pollForStatus(
-                            CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST))
+            when(identityProgressService.pollForStatus(CLIENT_SESSION_ID, AUDIT_CONTEXT))
                     .thenReturn(IdentityProcessingEndState.NO_ENTRY);
 
-            var redirectOpt =
-                    service.waitForSpot(
-                            CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST);
+            var redirectOpt = service.waitForSpot(CLIENT_SESSION_ID, AUDIT_CONTEXT);
 
             assertTrue(redirectOpt.isPresent());
             var redirect = redirectOpt.get();
@@ -202,13 +201,10 @@ public class IdentitySPOTServiceTest {
         @Test
         void shouldNotRedirectYetWhenSyncWaitForSPOTReturnsCompleted() throws Exception {
             when(configurationService.isSyncWaitForSpotEnabled()).thenReturn(true);
-            when(identityProgressService.pollForStatus(
-                            CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST))
+            when(identityProgressService.pollForStatus(CLIENT_SESSION_ID, AUDIT_CONTEXT))
                     .thenReturn(IdentityProcessingEndState.COMPLETED);
 
-            var redirectOpt =
-                    service.waitForSpot(
-                            CLIENT_SESSION_ID, AUDIT_CONTEXT, TEST_PROCESSING_IDENTITY_REQUEST);
+            var redirectOpt = service.waitForSpot(CLIENT_SESSION_ID, AUDIT_CONTEXT);
 
             assertTrue(redirectOpt.isEmpty());
         }

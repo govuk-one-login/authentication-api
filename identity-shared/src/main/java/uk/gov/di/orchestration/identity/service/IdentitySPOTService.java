@@ -12,10 +12,10 @@ import uk.gov.di.orchestration.identity.entity.SPOTClaims;
 import uk.gov.di.orchestration.identity.entity.SPOTRequest;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.orchestration.identity.entity.SPOTAuditableEvent.IPV_SPOT_REQUESTED;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
@@ -35,6 +36,7 @@ public class IdentitySPOTService {
     private final SerializationService objectMapper;
     private final IdentityProgressService identityProgressService;
     private final AuthFrontend frontend;
+    private final AuditService auditService;
 
     public IdentitySPOTService(
             ConfigurationService configurationService,
@@ -42,13 +44,15 @@ public class IdentitySPOTService {
             OidcAPI oidcApi,
             SerializationService objectMapper,
             IdentityProgressService identityProgressService,
-            AuthFrontend frontend) {
+            AuthFrontend frontend,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.spotSqsClient = spotSqsClient;
         this.oidcApi = oidcApi;
         this.objectMapper = objectMapper;
         this.identityProgressService = identityProgressService;
         this.frontend = frontend;
+        this.auditService = auditService;
     }
 
     public void queueSPOTRequest(
@@ -57,7 +61,8 @@ public class IdentitySPOTService {
             UserInfo authUserInfo,
             Subject pairwiseSubject,
             UserInfo userIdentityUserInfo,
-            String clientId) {
+            String clientId,
+            AuditContext auditContext) {
         LOG.info("Constructing SPOT request ready to queue");
         var spotClaimsBuilder =
                 SPOTClaims.builder()
@@ -87,6 +92,7 @@ public class IdentitySPOTService {
         if (configurationService.isNewSpotRequestQueueWritingEnabled()) {
             spotSqsClient.send(spotRequestString);
         }
+        auditService.submitAuditEvent(IPV_SPOT_REQUESTED, auditContext);
         LOG.info("SPOT request placed on queue");
     }
 
@@ -96,12 +102,9 @@ public class IdentitySPOTService {
     // We return an empty optional for a successful sync wait for spot
     //  so we can check for interventions, generate an auth code, and emit audit events + metrics
     public Optional<APIGatewayProxyResponseEvent> waitForSpot(
-            String clientSessionId, AuditContext auditContext, AuditableEvent auditableEvent)
-            throws InterruptedException {
+            String clientSessionId, AuditContext auditContext) throws InterruptedException {
         if (configurationService.isSyncWaitForSpotEnabled()) {
-            var status =
-                    identityProgressService.pollForStatus(
-                            clientSessionId, auditContext, auditableEvent);
+            var status = identityProgressService.pollForStatus(clientSessionId, auditContext);
             if (status == IdentityProcessingEndState.NO_ENTRY) {
                 return Optional.of(
                         RedirectService.redirectToFrontendErrorPageWithErrorLog(
