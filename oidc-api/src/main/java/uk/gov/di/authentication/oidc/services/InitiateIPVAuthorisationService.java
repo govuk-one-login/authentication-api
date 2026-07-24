@@ -71,7 +71,8 @@ public class InitiateIPVAuthorisationService {
             String clientSessionId,
             String persistentSessionCookieId,
             Boolean reproveIdentity,
-            List<String> levelsOfConfidence) {
+            List<String> levelsOfConfidence,
+            boolean updateIdentity) {
         if (!configurationService.isIdentityEnabled()) {
             LOG.error("Identity is not enabled");
             throw new RuntimeException("Identity is not enabled");
@@ -94,7 +95,7 @@ public class InitiateIPVAuthorisationService {
                         userInfo.getEmailAddress(),
                         levelsOfConfidence,
                         reproveIdentity,
-                        false);
+                        updateIdentity);
 
         var authRequestBuilder =
                 new AuthorizationRequest.Builder(
