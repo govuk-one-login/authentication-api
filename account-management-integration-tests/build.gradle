@@ -62,15 +62,6 @@ test {
         showStandardStreams = false
     }
 
-    doLast {
-        tasks.getByName("jacocoTestReport").sourceDirectories.from(
-                project(":account-management-api").sourceSets.main.java,
-                project(":shared").sourceSets.main.java)
-
-        tasks.getByName("jacocoTestReport").classDirectories.from(
-                project(":account-management-api").sourceSets.main.output,
-                project(":shared").sourceSets.main.output)
-    }
     dependsOn ":composeUp"
     finalizedBy ":composeDown"
 }
@@ -79,4 +70,10 @@ jacocoTestReport {
     reports {
         xml.required = true
     }
+    sourceDirectories.from(
+            project(":account-management-api").sourceSets.main.java,
+            project(":shared").sourceSets.main.java)
+    classDirectories.from(
+            project(":account-management-api").sourceSets.main.output,
+            project(":shared").sourceSets.main.output)
 }

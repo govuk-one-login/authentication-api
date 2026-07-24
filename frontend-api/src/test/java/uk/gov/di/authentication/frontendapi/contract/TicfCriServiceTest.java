@@ -3,7 +3,6 @@ package uk.gov.di.authentication.frontendapi.contract;
 import au.com.dius.pact.consumer.MockServer;
 import au.com.dius.pact.consumer.dsl.DslPart;
 import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
-import au.com.dius.pact.consumer.junit.MockServerConfig;
 import au.com.dius.pact.consumer.junit5.PactConsumerTest;
 import au.com.dius.pact.consumer.junit5.PactTestFor;
 import au.com.dius.pact.core.model.PactSpecVersion;
@@ -34,7 +33,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 @PactConsumerTest
-@MockServerConfig(hostInterface = "localhost", port = "1234")
 class TicfCriServiceTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
