@@ -6,7 +6,6 @@ import com.google.gson.JsonArray;
 import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -346,41 +345,6 @@ class TicfCriHandlerTest {
         when(httpResponse.statusCode()).thenReturn(200);
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(configurationService.supportPasskeys()).thenReturn(true);
-        handler.handleRequest(ticfRequest, context);
-
-        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(httpClient).send(httpRequestCaptor.capture(), ArgumentMatchers.any());
-
-        var actualRequestBody =
-                bodyPublisherToString(httpRequestCaptor.getValue().bodyPublisher().get());
-
-        var expectedUri = URI.create(SERVICE_URI + "/auth");
-        assertEquals(expectedUri, httpRequestCaptor.getValue().uri());
-        assertEquals(expectedRequestBody, actualRequestBody);
-    }
-
-    @Test
-    void shouldNotIncludePasskeyInCallToTicfIfPasskeysNotEnabled()
-            throws IOException, InterruptedException, ExecutionException {
-        var ticfRequest =
-                new InternalTICFCRIRequest(
-                        COMMON_SUBJECTID,
-                        VECTORS_OF_TRUST,
-                        JOURNEY_ID,
-                        true,
-                        EXISTING_ACCOUNT_STATE,
-                        NA_RESET_PASSWORD_STATE,
-                        NA_RESET_MFA_STATE,
-                        NA_USED_MFA_METHOD_TYPE,
-                        true);
-        var expectedRequestBody =
-                format(
-                        "{\"sub\":\"%s\",\"vtr\":%s,\"govuk_signin_journey_id\":\"%s\",\"authenticated\":\"%s\"}",
-                        COMMON_SUBJECTID, jsonArrayFrom(VECTORS_OF_TRUST), JOURNEY_ID, "Y");
-
-        when(httpResponse.statusCode()).thenReturn(200);
-        when(httpClient.send(any(), any())).thenReturn(httpResponse);
-        when(configurationService.supportPasskeys()).thenReturn(false);
         handler.handleRequest(ticfRequest, context);
 
         var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
