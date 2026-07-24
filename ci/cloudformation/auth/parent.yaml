@@ -483,7 +483,7 @@ Mappings:
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       internationalNumberSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/29a0ed62-d58d-4361-8f5d-8f2580848d03
-      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c8a62e1f-eec6-47c3-b4e3-b7b455b58b75
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c8a62e1f-eec6-47c3-b4e3-b7b455b58b75
       frontendApiFMSTagValue: "authfrontendbuild"
       frontendBaseUrl: https://signin.build.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
@@ -634,7 +634,7 @@ Mappings:
       internalApiNewInternationalSmsEnabled: false
       internationalSmsSendingEnabled: true
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
-      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/0d7dd107-1937-4573-ac38-1abb8f58cc0c
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0d7dd107-1937-4573-ac38-1abb8f58cc0c
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
@@ -708,7 +708,7 @@ Mappings:
       internalApiNewInternationalSmsEnabled: false
       internationalSmsSendingEnabled: true
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
-      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/102bf244-2608-49f8-94f7-5faffa346c9e
+      amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/102bf244-2608-49f8-94f7-5faffa346c9e
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMaxConcurrency: 10
