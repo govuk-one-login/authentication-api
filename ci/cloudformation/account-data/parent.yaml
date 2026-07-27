@@ -183,13 +183,13 @@ Mappings:
       amcClientId: auth
   LambdaConfiguration:
     passkeys-create:
-      RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/GICdkgE"
     passkeys-retrieve:
-      RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/GICdkgE"
     passkeys-update:
-      RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/GICdkgE"
     passkeys-delete:
-      RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/GICdkgE"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
