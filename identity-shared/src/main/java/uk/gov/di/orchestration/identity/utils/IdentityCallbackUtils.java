@@ -1,5 +1,7 @@
 package uk.gov.di.orchestration.identity.utils;
 
+import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
@@ -8,10 +10,17 @@ import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
+import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
+import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 
 public class IdentityCallbackUtils {
     private IdentityCallbackUtils() {}
@@ -62,5 +71,25 @@ public class IdentityCallbackUtils {
             LOG.error("Error when attempting to call user-identity endpoint", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public static Optional<ErrorObject> validateUserIdentityResponse(
+            UserInfo userIdentityUserInfo,
+            List<LevelOfConfidence> requestedLoCs,
+            String trustmarkURL)
+            throws IdentityCallbackException {
+        LOG.info("Validating userinfo response");
+        for (LevelOfConfidence loc : requestedLoCs) {
+            if (loc.getValue().equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
+
+                if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+                    LOG.warn("VTM does not contain expected trustmark URL");
+                    throw new IdentityCallbackException("Identity trustmark is invalid");
+                }
+                return Optional.empty();
+            }
+        }
+        LOG.warn("User identity response missing vot or vot not in vtr list.");
+        return Optional.of(OAuth2Error.ACCESS_DENIED);
     }
 }
