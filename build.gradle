@@ -58,8 +58,8 @@ subprojects {
         dependencies {
             constraints {
                 // Netty constraints
-                classpath('io.netty:netty-codec-http:[4.1.133.Final,)') {
-                    because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http:4.1.133.Final and higher'
+                classpath('io.netty:netty-codec-http:[4.1.136.Final,)') {
+                    because 'Multiple CVEs (SPDY memory exhaustion, ByteBuf leak, CORS bypass) fixed in 4.1.136.Final'
                 }
 
                 classpath('io.netty:netty-codec-dns:[4.2.13.Final,5.0)') {
@@ -74,12 +74,12 @@ subprojects {
                     because 'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
                 }
 
-                classpath('io.netty:netty-codec-http2:[4.1.135.Final,4.2.0)') {
-                    because 'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
+                classpath('io.netty:netty-codec-http2:[4.1.136.Final,4.2.0)') {
+                    because 'Host Header dedup bypass fixed in io.netty:netty-codec-http2:4.1.136.Final'
                 }
 
-                classpath('io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
-                    because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
+                classpath('io.netty:netty-codec:[4.1.136.Final,4.2.0)') {
+                    because 'Bzip2Decoder infinite loop fixed in io.netty:netty-codec:4.1.136.Final'
                 }
 
                 classpath('io.netty:netty-handler-proxy:[4.1.133.Final,4.2.0)') {
@@ -143,6 +143,17 @@ subprojects {
         exclude group: 'org.apache.commons', module: 'commons-io'
     }
 
+    configurations.configureEach {
+        resolutionStrategy.componentSelection {
+            // Reject Netty 5.x alpha versions to prevent conflict resolution from picking them
+            all { selection ->
+                if (selection.candidate.group == 'io.netty' && selection.candidate.version.startsWith('5.')) {
+                    selection.reject('Netty 5.x is alpha and incompatible with the 4.1.x/4.2.x modules used in this project')
+                }
+            }
+        }
+    }
+
     // Check dependencies using:
     //
     // ./gradlew :frontend-api:dependencyInsight --dependency guava  --configuration testRuntimeClasspath
@@ -155,8 +166,8 @@ subprojects {
             configurations.configureEach { conf ->
                 if (!conf.canBeConsumed && !conf.canBeResolved) {
                     // Netty constraints
-                    add(conf.name, 'io.netty:netty-codec-http:[4.1.133.Final,)') {
-                        because 'CVE-2026-42587 is fixed in io.netty:netty-codec-http:4.1.133.Final and higher'
+                    add(conf.name, 'io.netty:netty-codec-http:[4.1.136.Final,)') {
+                        because 'Multiple CVEs (SPDY memory exhaustion, ByteBuf leak, CORS bypass) fixed in 4.1.136.Final'
                     }
 
                     add(conf.name, 'io.netty:netty-codec-dns:[4.2.13.Final,5.0)') {
@@ -171,12 +182,12 @@ subprojects {
                         because 'CVE-2026-45674 is fixed in io.netty:netty-handler:4.2.15.Final and higher'
                     }
 
-                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.135.Final,4.2.0)') {
-                        because 'CVE-2026-48043 is fixed in io.netty:netty-codec-http2:4.1.135.Final and higher'
+                    add(conf.name, 'io.netty:netty-codec-http2:[4.1.136.Final,4.2.0)') {
+                        because 'Host Header dedup bypass fixed in io.netty:netty-codec-http2:4.1.136.Final'
                     }
 
-                    add(conf.name, 'io.netty:netty-codec:[4.1.125.Final,4.2.0)') {
-                        because 'CVE-2025-58057 is fixed in io.netty:netty-codec:4.1.125.Final and higher'
+                    add(conf.name, 'io.netty:netty-codec:[4.1.136.Final,4.2.0)') {
+                        because 'Bzip2Decoder infinite loop fixed in io.netty:netty-codec:4.1.136.Final'
                     }
 
                     add(conf.name, 'io.netty:netty-transport-native-epoll:[4.2.15.Final,5.0)') {
