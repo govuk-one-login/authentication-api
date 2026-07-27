@@ -182,6 +182,8 @@ Mappings:
       frontendBaseUrl: https://signin.account.gov.uk
       amcClientId: auth
   LambdaConfiguration:
+    account-delete:
+      RunbookLink: "" # TODO: must be populated when runbook is created
     passkeys-create:
       RunbookLink: "https://govukverify.atlassian.net/wiki/x/GICdkgE"
     passkeys-retrieve:
