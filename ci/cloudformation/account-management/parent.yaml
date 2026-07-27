@@ -640,9 +640,9 @@ Mappings:
     send-otp-notification:
       RunbookLink: "https://govukverify.atlassian.net/wiki/x/HIHpRQE"
     passkeys-retrieve-proxy:
-      RunbookLink: "https://govukverify.atlassian.net/wiki/x/FgCrsQ"
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/GICdkgE"
     passkeys-delete-proxy:
-      RunbookLink: "https://govukverify.atlassian.net/wiki/x/FgCrsQ"
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/GICdkgE"
     mfa-reset-authorize:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     mfa-reset-jar-jwk:
