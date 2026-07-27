@@ -8,7 +8,7 @@ version = "unspecified"
 
 dependencies {
     compileOnly libs.bundles.awsLambda,
-            libs.bundles.awsDynamoDb
+    libs.bundles.awsDynamoDb
 
     implementation project(":shared"),
             libs.gson

@@ -10,12 +10,12 @@ File terraformDir = new File(project.rootDir, "ci/terraform/account-management")
 
 dependencies {
     compileOnly libs.bundles.awsLambda,
-            libs.awsSqs,
-            libs.awsSsm,
-            libs.awsSns,
-            libs.awsS3,
-            libs.bundles.awsDynamoDb,
-            libs.awsSecretsManager
+    libs.awsSqs,
+    libs.awsSsm,
+    libs.awsSns,
+    libs.awsS3,
+    libs.bundles.awsDynamoDb,
+    libs.awsSecretsManager
 
     implementation libs.bundles.nimbus,
             libs.govUkNotify,

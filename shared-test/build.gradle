@@ -7,19 +7,19 @@ version = "unspecified"
 
 dependencies {
     implementation libs.bundles.test,
-            libs.bundles.awsLambda,
-            libs.bundles.apache,
-            libs.bundles.nimbus,
-            libs.bundles.lettuce,
-            libs.bundles.awsDynamoDb,
-            libs.awsKms,
-            libs.awsSns,
-            libs.awsS3,
-            libs.awsSqs,
-            libs.awsSsm,
-            libs.awsCloudwatchEmf,
-            libs.gson,
-            libs.jettyServer
+    libs.bundles.awsLambda,
+    libs.bundles.apache,
+    libs.bundles.nimbus,
+    libs.bundles.lettuce,
+    libs.bundles.awsDynamoDb,
+    libs.awsKms,
+    libs.awsSns,
+    libs.awsS3,
+    libs.awsSqs,
+    libs.awsSsm,
+    libs.awsCloudwatchEmf,
+    libs.gson,
+    libs.jettyServer
 
     implementation project(":shared")
     implementation project(":frontend-api")

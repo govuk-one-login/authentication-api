@@ -8,16 +8,16 @@ version = "unspecified"
 
 dependencies {
     testImplementation libs.bouncyCastle,
-            libs.bundles.apache,
-            libs.bundles.nimbus,
-            libs.gson,
-            libs.bundles.test,
-            libs.awsKms,
-            libs.awsSqs,
-            libs.awsSsm,
-            libs.bundles.awsDynamoDb,
-            libs.bundles.awsLambda,
-            libs.libphonenumber
+    libs.bundles.apache,
+    libs.bundles.nimbus,
+    libs.gson,
+    libs.bundles.test,
+    libs.awsKms,
+    libs.awsSqs,
+    libs.awsSsm,
+    libs.bundles.awsDynamoDb,
+    libs.bundles.awsLambda,
+    libs.libphonenumber
 
     implementation project(':audit-events')
 
@@ -51,8 +51,8 @@ test {
 
     doLast {
         tasks.getByName("jacocoTestReport").sourceDirectories.from(
-                project(":account-data-api").sourceSets.main.java,
-                project(":shared").sourceSets.main.java)
+        project(":account-data-api").sourceSets.main.java,
+        project(":shared").sourceSets.main.java)
 
         tasks.getByName("jacocoTestReport").classDirectories.from(
                 project(":account-data-api").sourceSets.main.output,

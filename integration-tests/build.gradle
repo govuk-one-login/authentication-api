@@ -9,18 +9,18 @@ version = "unspecified"
 
 dependencies {
     testImplementation libs.bundles.test,
-            libs.bundles.apache,
-            libs.gson,
-            libs.bundles.nimbus,
-            libs.bouncyCastle,
-            libs.awsSqs,
-            libs.awsKms,
-            libs.awsS3,
-            libs.awsCloudwatchEmf,
-            libs.bundles.awsDynamoDb,
-            libs.bundles.lettuce,
-            libs.bundles.awsLambda,
-            libs.pactProvider
+    libs.bundles.apache,
+    libs.gson,
+    libs.bundles.nimbus,
+    libs.bouncyCastle,
+    libs.awsSqs,
+    libs.awsKms,
+    libs.awsS3,
+    libs.awsCloudwatchEmf,
+    libs.bundles.awsDynamoDb,
+    libs.bundles.lettuce,
+    libs.bundles.awsLambda,
+    libs.pactProvider
 
     implementation project(":shared"), noXray
     implementation project(":orchestration-shared"), noXray
@@ -78,11 +78,11 @@ test {
 
     doLast {
         tasks.getByName("jacocoTestReport").sourceDirectories.from(
-                project(":frontend-api").sourceSets.main.java,
-                project(":oidc-api").sourceSets.main.java,
-                project(":client-registry-api").sourceSets.main.java,
-                project(":shared").sourceSets.main.java,
-                project(":utils").sourceSets.main.java)
+        project(":frontend-api").sourceSets.main.java,
+        project(":oidc-api").sourceSets.main.java,
+        project(":client-registry-api").sourceSets.main.java,
+        project(":shared").sourceSets.main.java,
+        project(":utils").sourceSets.main.java)
 
         tasks.getByName("jacocoTestReport").classDirectories.from(
                 project(":client-registry-api").sourceSets.main.output,

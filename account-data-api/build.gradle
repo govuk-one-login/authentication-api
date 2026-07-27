@@ -9,13 +9,13 @@ version = 'unspecified'
 dependencies {
 
     compileOnly libs.bundles.awsLambda,
-            libs.awsSqs,
-            libs.awsSsm,
-            libs.awsSns,
-            libs.awsS3,
-            libs.bundles.awsDynamoDb,
-            libs.awsKms,
-            libs.awsSecretsManager
+    libs.awsSqs,
+    libs.awsSsm,
+    libs.awsSns,
+    libs.awsS3,
+    libs.bundles.awsDynamoDb,
+    libs.awsKms,
+    libs.awsSecretsManager
 
     implementation project(path: ':shared')
     implementation project(':audit-events')
