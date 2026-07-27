@@ -973,7 +973,8 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 eq(reproveIdentity),
-                                any());
+                                any(),
+                                eq(false));
                 verifyNoInteractions(logoutService);
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
@@ -1025,7 +1026,8 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 eq(reproveIdentity),
-                                any());
+                                any(),
+                                eq(false));
                 verifyNoInteractions(logoutService);
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));
@@ -1077,7 +1079,8 @@ class AuthenticationCallbackHandlerTest {
                                 any(),
                                 any(),
                                 eq(reproveIdentity),
-                                any());
+                                any(),
+                                eq(false));
                 verifyNoInteractions(logoutService);
                 verify(orchSessionService, times(2))
                         .updateSession(argThat(OrchSessionItem::getAuthenticated));

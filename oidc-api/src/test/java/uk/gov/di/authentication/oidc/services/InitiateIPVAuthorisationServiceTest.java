@@ -42,8 +42,6 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -71,6 +69,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final String RP_PAIRWISE_ID = "urn:fdc:gov.uk:2022:dkjfshsdkjh";
     private static final String IP_ADDRESS = "123.123.123.123";
     private static final Boolean REPROVE_IDENTITY = true;
+    private static final boolean UPDATE_IDENTITY = false;
     private static final String SERIALIZED_JWT =
             "eyJraWQiOiIwOWRkYjY1ZWIzY2U0MWEzYjczYTJhOTM0ZTM5NDg4NmQyYTIyYjU0ZmQwMzVmYWJlZWM3YWMxYzllYzliNzBiIiwiYWxnIjoiRVMyNTYifQ.eyJhdWQiOlsiaHR0cHM6Ly9jcmVkZW50aWFsLXN0b3JlLnRlc3QuYWNjb3VudC5nb3YudWsiLCJodHRwczovL2lkZW50aXR5LnRlc3QuYWNjb3VudC5nb3YudWsiXSwic3ViIjoia3NFUjVWcDRuZU1ONWM2WHJlSV9uUDhGNFZuc2VqS2x1b3BOX05mZjlfNCIsImlzcyI6Imh0dHBzOi8vb2lkYy50ZXN0LmFjY291bnQuZ292LnVrLyIsImV4cCI6MTcwOTA1MTE2MywiaWF0IjoxNzA5MDQ3NTYzLCJqdGkiOiJkZmNjZjc1MS1iZTU1LTRkZjQtYWEzZi1hOTkzMTkzZDUyMTYifQ.rpZ2IqMwlFLbZ8a7En-EuQ480zcorvNd-GZcwjlxlK3Twq9J1GNiuj9teSLINP_zmeirx7Y8p3DUYWk_hyRhww";
 
@@ -148,7 +147,8 @@ public class InitiateIPVAuthorisationServiceTest {
                                         CLIENT_SESSION_ID,
                                         PERSISTENT_SESSION_ID,
                                         REPROVE_IDENTITY,
-                                        LEVELS_OF_CONFIDENCE),
+                                        LEVELS_OF_CONFIDENCE,
+                                        UPDATE_IDENTITY),
                         "Expected to throw exception");
 
         assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
@@ -165,9 +165,10 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(Subject.class),
                         eq(claimsSetRequest),
                         eq(CLIENT_SESSION_ID),
-                        anyString(),
+                        eq(EMAIL_ADDRESS),
                         eq(List.of("P0", "P2")),
-                        anyBoolean()))
+                        eq(true),
+                        eq(false)))
                 .thenReturn(encryptedJWT);
 
         var response =
@@ -181,7 +182,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         CLIENT_SESSION_ID,
                         PERSISTENT_SESSION_ID,
                         REPROVE_IDENTITY,
-                        LEVELS_OF_CONFIDENCE);
+                        LEVELS_OF_CONFIDENCE,
+                        UPDATE_IDENTITY);
 
         assertThat(response, hasStatus(302));
         String redirectLocation = response.getHeaders().get("Location");
@@ -200,7 +202,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
                         eq(List.of("P0", "P2")),
-                        eq(REPROVE_IDENTITY));
+                        eq(REPROVE_IDENTITY),
+                        eq(false));
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
@@ -234,7 +237,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         CLIENT_SESSION_ID,
                         PERSISTENT_SESSION_ID,
                         REPROVE_IDENTITY,
-                        LEVELS_OF_CONFIDENCE);
+                        LEVELS_OF_CONFIDENCE,
+                        UPDATE_IDENTITY);
 
         assertThat(response, hasStatus(302));
         verify(tokenService).generateStorageToken(any(Subject.class));
@@ -249,7 +253,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
                         eq(List.of("P0", "P2")),
-                        eq(REPROVE_IDENTITY));
+                        eq(REPROVE_IDENTITY),
+                        eq(false));
 
         assertEquals(
                 claimsSetRequestWithStorageTokenClaim.toJSONString(),

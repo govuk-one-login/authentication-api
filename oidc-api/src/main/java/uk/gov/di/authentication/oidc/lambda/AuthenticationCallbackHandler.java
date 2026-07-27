@@ -511,7 +511,8 @@ public class AuthenticationCallbackHandler
                             persistentSessionId,
                             reproveIdentity,
                             VectorOfTrust.getRequestedLevelsOfConfidence(
-                                    orchClientSession.getVtrList()));
+                                    orchClientSession.getVtrList()),
+                            false);
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
