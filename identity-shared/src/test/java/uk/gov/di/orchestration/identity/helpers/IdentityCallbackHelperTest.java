@@ -68,6 +68,7 @@ public class IdentityCallbackHelperTest {
     private final OidcAPI oidcApi = mock(OidcAPI.class);
     private final AuditEventConfiguration auditEventConfiguration =
             new AuditEventConfiguration(
+                    TestAuditEvent.TEST_UNSUCCESSFUL_AUTH_RESPONSE_RECEIVED,
                     TestAuditEvent.TEST_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                     TestAuditEvent.TEST_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
     private final TxmaAuditUser user = mock(TxmaAuditUser.class);
