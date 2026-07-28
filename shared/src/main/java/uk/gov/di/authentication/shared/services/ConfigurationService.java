@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
+import uk.gov.di.authentication.shared.configuration.DynamoConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
 
@@ -31,7 +32,8 @@ import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.entity.Environment.INTEGRATION;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
 
-public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
+public class ConfigurationService
+        implements BaseLambdaConfiguration, AuditPublisherConfiguration, DynamoConfiguration {
 
     private static final Logger LOG = LogManager.getLogger(ConfigurationService.class);
     public static final String FEATURE_SWITCH_OFF = "false";

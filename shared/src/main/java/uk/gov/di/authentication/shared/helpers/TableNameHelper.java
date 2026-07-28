@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.shared.helpers;
 
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.configuration.DynamoConfiguration;
 
 import java.util.Optional;
 
@@ -9,7 +9,7 @@ public class TableNameHelper {
     private TableNameHelper() {}
 
     public static String getFullTableName(
-            String tableName, ConfigurationService configurationService) {
+            String tableName, DynamoConfiguration configurationService) {
         Optional<String> authDynamoArnPrefix = configurationService.getDynamoArnPrefix();
         if (authDynamoArnPrefix.isPresent()) {
             return authDynamoArnPrefix.get()

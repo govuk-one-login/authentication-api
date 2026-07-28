@@ -17,6 +17,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import uk.gov.di.authentication.shared.configuration.DynamoConfiguration;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
@@ -65,7 +66,7 @@ public class DynamoService implements AuthenticationService {
     private static final String TEST_USER_INDEX_NAME = "TestUserIndex";
     private static final Logger LOG = LogManager.getLogger(DynamoService.class);
 
-    public DynamoService(ConfigurationService configurationService) {
+    public DynamoService(DynamoConfiguration configurationService) {
         String userProfileTableName =
                 TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
         String userCredentialsTableName =

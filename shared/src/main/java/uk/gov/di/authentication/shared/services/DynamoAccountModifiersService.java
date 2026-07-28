@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import uk.gov.di.authentication.shared.configuration.DynamoConfiguration;
 import uk.gov.di.authentication.shared.entity.AccountModifiers;
 import uk.gov.di.authentication.shared.entity.AccountRecovery;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -8,7 +9,7 @@ import java.util.Optional;
 
 public class DynamoAccountModifiersService extends BaseDynamoService<AccountModifiers> {
 
-    public DynamoAccountModifiersService(ConfigurationService configurationService) {
+    public DynamoAccountModifiersService(DynamoConfiguration configurationService) {
         super(AccountModifiers.class, "account-modifiers", configurationService);
     }
 
