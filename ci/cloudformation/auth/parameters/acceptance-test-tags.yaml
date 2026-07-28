@@ -19,8 +19,7 @@ Mappings:
     build:
       tags: >-
         @UI and not (@under-development or @ReauthMultiTabLogout or
-        @AcceptInternationalNumbers or @InternationalSmsSendingDisabled
-        or @PasskeysEnabled or @PasskeyUsageEnabled)
+        @AcceptInternationalNumbers or @InternationalSmsSendingDisabled)
     staging:
       tags: >-
         @UI and not (@under-development or @AccountInterventions or @ReauthMultiTabLogout or
