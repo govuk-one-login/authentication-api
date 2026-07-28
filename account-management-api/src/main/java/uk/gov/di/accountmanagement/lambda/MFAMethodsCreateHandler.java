@@ -141,8 +141,89 @@ public class MFAMethodsCreateHandler
                 () -> mfaMethodsHandler(input, context));
     }
 
-    private Result<APIGatewayProxyResponseEvent, UserProfile>
-            getUserProfileWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
+    private APIGatewayProxyResponseEvent mfaMethodsHandler(
+            APIGatewayProxyRequestEvent input, Context context) {
+
+        addSessionIdToLogs(input);
+
+        var maybePassedGuardConditions = getUserDetailsWhenGuardConditionsPassed(input);
+
+        if (maybePassedGuardConditions.isFailure()) {
+            return maybePassedGuardConditions.getFailure();
+        }
+
+        LOG.info("Request passed guard conditions");
+
+        var userDetails = maybePassedGuardConditions.getSuccess();
+        var userProfile = userDetails.userProfile;
+        var auditContext = userDetails.auditContext;
+
+        var maybeValidRequest =
+                validateRequestAndCode(input, userProfile, auditContext)
+                        .mapFailure(
+                                errorResponse ->
+                                        generateApiGatewayProxyErrorResponse(400, errorResponse))
+                        .flatTap(
+                                createRequest ->
+                                        sendAuthCodeVerifiedEvent(
+                                                        auditContext, userProfile, createRequest)
+                                                .mapFailure(
+                                                        f ->
+                                                                generateApiGatewayProxyErrorResponse(
+                                                                        500, f)));
+
+        if (maybeValidRequest.isFailure()) {
+            return maybeValidRequest.getFailure();
+        }
+
+        var createRequest = maybeValidRequest.getSuccess();
+
+        return migrateMfaMethods(userProfile, input, createRequest)
+                .flatMap(mfaMethodsService.addBackupMfa(userProfile.getEmail(), createRequest.mfaMethod())
+                .mapFailure(
+                        failureReason ->
+                                handleCreateFailure(failureReason, auditContext, createRequest))
+                .flatTap(
+                        addedMethod ->
+                                sendSuccessAuditEvents(auditContext, createRequest, addedMethod))
+                .flatTap(addedMethod -> sendUpdateEmailToUser(userProfile, input))
+                .tap(addedMethod -> emitSuccessMetric(createRequest))
+                .fold(failure -> failure, this::generateSuccessResponse);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> migrateMfaMethods(UserProfile userProfile, APIGatewayProxyRequestEvent input, MfaMethodCreateRequest createRequest) {
+        var maybeMigrationErrorResponse =
+                mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
+                        userProfile, LOG, input, createRequest.mfaMethod().method());
+
+        if (maybeMigrationErrorResponse.isPresent()) {
+            return Result.failure(maybeMigrationErrorResponse.get());
+        } else {
+            return Result.emptySuccess();
+        }
+    }
+
+    private APIGatewayProxyResponseEvent generateSuccessResponse(MFAMethod addedMethod) {
+        var backupMfaMethodAsResponse = MfaMethodResponse.from(addedMethod);
+
+        if (backupMfaMethodAsResponse.isFailure()) {
+            LOG.error(backupMfaMethodAsResponse.getFailure());
+            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
+        }
+
+        try {
+            return generateApiGatewayProxyResponse(
+                    200, backupMfaMethodAsResponse.getSuccess(), true);
+        } catch (Json.JsonException e) {
+            LOG.error("Failed to build successful response: ", e);
+            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
+        }
+    }
+
+    private record UserDetails(UserProfile userProfile, AuditContext auditContext) {}
+
+    private Result<APIGatewayProxyResponseEvent, UserDetails>
+            getUserDetailsWhenGuardConditionsPassed(APIGatewayProxyRequestEvent input) {
         var subject = input.getPathParameters().get("publicSubjectId");
 
         if (subject == null) {
@@ -171,10 +252,22 @@ public class MFAMethodsCreateHandler
                     generateApiGatewayProxyErrorResponse(401, ErrorResponse.INVALID_PRINCIPAL));
         }
 
-        return Result.success(userProfile);
+        var auditContextResult =
+                accountManagementAuditContext(
+                        configurationService, dynamoService, input, userProfile);
+        if (auditContextResult.isFailure()) {
+            LOG.error(
+                    "Error when building audit context for with error code {}. No events raised",
+                    auditContextResult.getFailure());
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(
+                            500, ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT));
+        }
+
+        return Result.success(new UserDetails(userProfile, auditContextResult.getSuccess()));
     }
 
-    private Result<ErrorResponse, MfaMethodCreateRequest> validateRequest(
+    private Result<ErrorResponse, MfaMethodCreateRequest> validateRequestAndCode(
             APIGatewayProxyRequestEvent input, UserProfile userProfile, AuditContext auditContext) {
         MfaMethodCreateRequest mfaMethodCreateRequest = null;
 
@@ -220,138 +313,15 @@ public class MFAMethodsCreateHandler
         return Result.success(mfaMethodCreateRequest);
     }
 
-    private APIGatewayProxyResponseEvent mfaMethodsHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
-
-        addSessionIdToLogs(input);
-
-        var maybePassedGuardConditions = getUserProfileWhenGuardConditionsPassed(input);
-
-        if (maybePassedGuardConditions.isFailure()) {
-            return maybePassedGuardConditions.getFailure();
+    private APIGatewayProxyResponseEvent handleCreateFailure(
+            MfaCreateFailureReason failureReason,
+            AuditContext auditContext,
+            MfaMethodCreateRequest mfaMethodCreateRequest) {
+        var addFailedAuditStatus =
+                sendAuditEvent(AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
+        if (addFailedAuditStatus.isFailure()) {
+            return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
         }
-
-        LOG.info("Request passed guard conditions");
-
-        var userProfile = maybePassedGuardConditions.getSuccess();
-
-        var auditContextResult =
-                accountManagementAuditContext(
-                        configurationService, dynamoService, input, userProfile);
-        if (auditContextResult.isFailure()) {
-            LOG.error(
-                    "Error when building audit context for with error code {}. No events raised",
-                    auditContextResult.getFailure());
-            return generateApiGatewayProxyErrorResponse(
-                    500, ErrorResponse.FAILED_TO_RAISE_AUDIT_EVENT);
-        }
-        var auditContext = auditContextResult.getSuccess();
-
-        var maybeValidRequest = validateRequest(input, userProfile, auditContext);
-
-        if (maybeValidRequest.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(400, maybeValidRequest.getFailure());
-        }
-
-        MfaMethodCreateRequest mfaMethodCreateRequest = maybeValidRequest.getSuccess();
-
-        var auditEventStatus =
-                sendAuthCodeVerifiedEvent(auditContext, userProfile, mfaMethodCreateRequest);
-        if (auditEventStatus.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(500, auditEventStatus.getFailure());
-        }
-
-        var maybeMigrationErrorResponse =
-                mfaMethodsMigrationService.migrateMfaCredentialsForUserIfRequired(
-                        userProfile, LOG, input, mfaMethodCreateRequest.mfaMethod().method());
-
-        if (maybeMigrationErrorResponse.isPresent()) {
-            return maybeMigrationErrorResponse.get();
-        }
-
-        Result<MfaCreateFailureReason, MFAMethod> addBackupMfaResult =
-                mfaMethodsService.addBackupMfa(
-                        userProfile.getEmail(), mfaMethodCreateRequest.mfaMethod());
-
-        if (addBackupMfaResult.isFailure()) {
-            var addFailedAuditStatus =
-                    sendAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (addFailedAuditStatus.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
-            }
-            return handleCreateBackupMfaFailure(addBackupMfaResult.getFailure());
-        }
-
-        var backupMfaMethod = addBackupMfaResult.getSuccess();
-        var backupMfaMethodAsResponse = MfaMethodResponse.from(backupMfaMethod);
-
-        if (backupMfaMethodAsResponse.isFailure()) {
-            LOG.error(backupMfaMethodAsResponse.getFailure());
-            var addFailedAuditStatus =
-                    sendAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED, auditContext, mfaMethodCreateRequest);
-            if (addFailedAuditStatus.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(500, addFailedAuditStatus.getFailure());
-            }
-            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
-        }
-
-        var addCompletedResult =
-                sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, mfaMethodCreateRequest);
-
-        if (addCompletedResult.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure());
-        }
-
-        if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
-            var updatePhoneNumberResult =
-                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext, mfaMethodCreateRequest);
-
-            if (updatePhoneNumberResult.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(
-                        500, updatePhoneNumberResult.getFailure());
-            }
-        }
-
-        LocaleHelper.SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
-
-        LOG.info("Backup method added successfully. Adding confirmation message to SQS queue");
-
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        userProfile.getEmail(), NotificationType.BACKUP_METHOD_ADDED, userLanguage);
-
-        try {
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            LOG.info("Message successfully added to queue. Generating successful response");
-        } catch (Json.JsonException e) {
-            LOG.error("Failed to add message to queue: ", e);
-            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
-        }
-
-        cloudwatchMetricsService.incrementMfaMethodCounter(
-                configurationService.getEnvironment(),
-                "CreateMfaMethod",
-                "SUCCESS",
-                ACCOUNT_MANAGEMENT,
-                mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString(),
-                PriorityIdentifier.BACKUP);
-
-        try {
-            return generateApiGatewayProxyResponse(
-                    200, backupMfaMethodAsResponse.getSuccess(), true);
-        } catch (Json.JsonException e) {
-            LOG.error("Failed to build successful response: ", e);
-            return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
-        }
-    }
-
-    private static APIGatewayProxyResponseEvent handleCreateBackupMfaFailure(
-            MfaCreateFailureReason failureReason) {
         return switch (failureReason) {
             case BACKUP_AND_DEFAULT_METHOD_ALREADY_EXIST -> generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.MFA_METHOD_COUNT_LIMIT_REACHED);
@@ -484,6 +454,61 @@ public class MFAMethodsCreateHandler
                                         "Failure {} when attempting to emit audit event: {}",
                                         f,
                                         auditEvent.name()));
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendSuccessAuditEvents(
+            AuditContext auditContext,
+            MfaMethodCreateRequest createRequest,
+            MFAMethod addedMethod) {
+        return sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, createRequest)
+                .flatMap(
+                        voidResult -> {
+                            if (addedMethod
+                                    .getMfaMethodType()
+                                    .equalsIgnoreCase(MFAMethodType.SMS.name())) {
+                                return sendAuditEvent(
+                                        AUTH_UPDATE_PHONE_NUMBER, auditContext, createRequest);
+                            } else {
+                                return Result.emptySuccess();
+                            }
+                        })
+                .mapFailure(
+                        auditFailure -> generateApiGatewayProxyErrorResponse(500, auditFailure));
+    }
+
+    private void emitSuccessMetric(MfaMethodCreateRequest mfaMethodCreateRequest) {
+        cloudwatchMetricsService.incrementMfaMethodCounter(
+                configurationService.getEnvironment(),
+                "CreateMfaMethod",
+                "SUCCESS",
+                ACCOUNT_MANAGEMENT,
+                mfaMethodCreateRequest.mfaMethod().method().mfaMethodType().toString(),
+                PriorityIdentifier.BACKUP);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendUpdateEmailToUser(
+            UserProfile userProfile, APIGatewayProxyRequestEvent input) {
+        LocaleHelper.SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
+
+        LOG.info("Backup method added successfully. Adding confirmation message to SQS queue");
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        userProfile.getEmail(), NotificationType.BACKUP_METHOD_ADDED, userLanguage);
+
+        try {
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOG.info("Message successfully added to queue. Generating successful response");
+        } catch (Json.JsonException e) {
+            LOG.error("Failed to add message to queue: ", e);
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR));
+        }
+
+        return Result.emptySuccess();
     }
 
     private void addSessionIdToLogs(APIGatewayProxyRequestEvent input) {
