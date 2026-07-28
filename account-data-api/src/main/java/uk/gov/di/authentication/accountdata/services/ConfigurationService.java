@@ -53,4 +53,8 @@ public class ConfigurationService implements DynamoConfiguration {
     public String getAuthToAccountDataApiAudience() {
         return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "");
     }
+
+    public String getInternalSectorUri() {
+        return System.getenv().getOrDefault("INTERNAL_SECTOR_URI", "");
+    }
 }

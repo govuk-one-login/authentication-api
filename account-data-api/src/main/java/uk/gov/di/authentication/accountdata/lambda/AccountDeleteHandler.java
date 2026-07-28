@@ -7,9 +7,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.accountdata.services.AccountDeleteDynamoService;
 import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.Optional;
@@ -24,18 +26,23 @@ public class AccountDeleteHandler
 
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
+    private final AccountDeleteDynamoService accountDeleteDynamoService;
 
     private static final Logger LOG = LogManager.getLogger(AccountDeleteHandler.class);
 
     public AccountDeleteHandler(
-            ConfigurationService configurationService, DynamoService dynamoService) {
+            ConfigurationService configurationService,
+            DynamoService dynamoService,
+            AccountDeleteDynamoService accountDeleteDynamoService) {
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
+        this.accountDeleteDynamoService = accountDeleteDynamoService;
     }
 
     public AccountDeleteHandler() {
         this.configurationService = new ConfigurationService();
         this.dynamoService = new DynamoService(configurationService);
+        this.accountDeleteDynamoService = new AccountDeleteDynamoService(configurationService);
     }
 
     @Override
@@ -62,6 +69,22 @@ public class AccountDeleteHandler
 
         if (maybeUserProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
+        }
+        UserProfile userProfile = maybeUserProfile.get();
+
+        try {
+            String internalPairwiseSubject =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                    userProfile,
+                                    configurationService.getInternalSectorUri(),
+                                    dynamoService)
+                            .getValue();
+
+            accountDeleteDynamoService.deleteAccount(
+                    userProfile.getEmail(), internalPairwiseSubject, publicSubjectId);
+        } catch (Exception e) {
+            LOG.error("Failed to delete account", e);
+            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
 
         return generateEmptySuccessApiGatewayResponse();

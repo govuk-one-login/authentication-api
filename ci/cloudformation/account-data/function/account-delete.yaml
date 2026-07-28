@@ -23,11 +23,24 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
+          INTERNAL_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
       LoggingConfig:
         LogGroup: !Ref AccountDeleteFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserProfileTableReadAccessPolicy
+        - !Ref DynamoUserProfileDeleteAccessPolicy
+        - !Ref DynamoUserCredentialsDeleteAccessPolicy
+        - !Ref DynamoAccountModifiersReadAccessPolicy
+        - !Ref DynamoAccountModifiersDeleteAccessPolicy
+        - !Ref DynamoAuthenticatorTableReadAccessPolicy
+        - !Ref DynamoAuthenticatorTableDeleteAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
