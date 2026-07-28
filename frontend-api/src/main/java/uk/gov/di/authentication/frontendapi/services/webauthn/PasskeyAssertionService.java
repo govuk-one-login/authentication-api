@@ -140,9 +140,9 @@ public class PasskeyAssertionService {
                         assertionResult.isBackedUp(),
                         passkeyCredentialDeviceTypeFrom(assertionResult),
                         "Passkey assertion result was not successful");
-        var alllowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
+        var allowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
         var credentialId = publicKeyCredential.getId().getBase64Url();
-        emitVerificationFailedEvent(auditContext, alllowedCredentials, credentialId, passkeyDetail);
+        emitVerificationFailedEvent(auditContext, allowedCredentials, credentialId, passkeyDetail);
     }
 
     @SuppressWarnings("deprecation")
