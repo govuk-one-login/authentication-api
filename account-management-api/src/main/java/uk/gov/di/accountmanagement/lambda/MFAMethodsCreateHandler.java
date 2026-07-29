@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
@@ -60,12 +59,14 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.entity.AuthenticationMethod.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_OTP;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -458,39 +459,27 @@ public class MFAMethodsCreateHandler
 
     private Result<APIGatewayProxyResponseEvent, Void> sendSuccessfulAddEvents(
             AuditContext auditContext,
-            MfaMethodCreateRequest mfaMethodCreateRequest,
+            MfaMethodCreateRequest createRequest,
             MFAMethod addedMethod) {
-        var addCompletedResult =
-                sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, mfaMethodCreateRequest);
-
-        if (addCompletedResult.isFailure()) {
-            return Result.failure(
-                    generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure()));
-        }
-
-        if (addedMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
-            var updatePhoneNumberResult =
-                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext, mfaMethodCreateRequest);
-
-            if (updatePhoneNumberResult.isFailure()) {
-                return Result.failure(
-                        generateApiGatewayProxyErrorResponse(
-                                500, updatePhoneNumberResult.getFailure()));
-            }
-        }
-
-        if (addedMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.AUTH_APP.name())) {
-            var updateAuthAppResult =
-                    sendAuditEvent(
-                            AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, mfaMethodCreateRequest);
-
-            if (updateAuthAppResult.isFailure()) {
-                return Result.failure(
-                        generateApiGatewayProxyErrorResponse(
-                                500, updateAuthAppResult.getFailure()));
-            }
-        }
-        return Result.emptySuccess();
+        return sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, createRequest)
+                .flatMap(
+                        success -> {
+                            var mfaMethodType = addedMethod.getMfaMethodType();
+                            if (mfaMethodType.equalsIgnoreCase(SMS.name())) {
+                                return sendAuditEvent(
+                                        AUTH_UPDATE_PHONE_NUMBER, auditContext, createRequest);
+                            } else if (mfaMethodType.equalsIgnoreCase(AUTH_APP.name())) {
+                                return sendAuditEvent(
+                                        AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, createRequest);
+                            } else {
+                                LOG.warn(
+                                        "Attempted to send success event for unknown mfa type {}",
+                                        mfaMethodType);
+                                return Result.emptySuccess();
+                            }
+                        })
+                .mapFailure(
+                        errorResponse -> generateApiGatewayProxyErrorResponse(500, errorResponse));
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(
