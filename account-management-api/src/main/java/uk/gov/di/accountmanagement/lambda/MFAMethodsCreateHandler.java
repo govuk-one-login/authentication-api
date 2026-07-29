@@ -50,6 +50,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
@@ -297,21 +298,11 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
-        var addCompletedResult =
-                sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, mfaMethodCreateRequest);
+        var auditResult =
+                sendSuccessfulAddEvents(auditContext, mfaMethodCreateRequest, backupMfaMethod);
 
-        if (addCompletedResult.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure());
-        }
-
-        if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
-            var updatePhoneNumberResult =
-                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext, mfaMethodCreateRequest);
-
-            if (updatePhoneNumberResult.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(
-                        500, updatePhoneNumberResult.getFailure());
-            }
+        if (auditResult.isFailure()) {
+            return auditResult.getFailure();
         }
 
         LocaleHelper.SupportedLanguage userLanguage =
@@ -377,7 +368,8 @@ public class MFAMethodsCreateHandler
             case AUTH_MFA_METHOD_ADD_COMPLETED,
                     AUTH_UPDATE_PHONE_NUMBER,
                     AUTH_MFA_METHOD_ADD_FAILED,
-                    AUTH_INVALID_CODE_SENT -> new AuditService.MetadataPair[] {
+                    AUTH_INVALID_CODE_SENT,
+                    AUTH_UPDATE_PROFILE_AUTH_APP -> new AuditService.MetadataPair[] {
                 ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR, mfaTypePair, mfaMethodPair
             };
             case AUTH_CODE_VERIFIED -> {
@@ -462,6 +454,43 @@ public class MFAMethodsCreateHandler
         }
 
         return Result.success(null);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendSuccessfulAddEvents(
+            AuditContext auditContext,
+            MfaMethodCreateRequest mfaMethodCreateRequest,
+            MFAMethod addedMethod) {
+        var addCompletedResult =
+                sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, mfaMethodCreateRequest);
+
+        if (addCompletedResult.isFailure()) {
+            return Result.failure(
+                    generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure()));
+        }
+
+        if (addedMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
+            var updatePhoneNumberResult =
+                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext, mfaMethodCreateRequest);
+
+            if (updatePhoneNumberResult.isFailure()) {
+                return Result.failure(
+                        generateApiGatewayProxyErrorResponse(
+                                500, updatePhoneNumberResult.getFailure()));
+            }
+        }
+
+        if (addedMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.AUTH_APP.name())) {
+            var updateAuthAppResult =
+                    sendAuditEvent(
+                            AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, mfaMethodCreateRequest);
+
+            if (updateAuthAppResult.isFailure()) {
+                return Result.failure(
+                        generateApiGatewayProxyErrorResponse(
+                                500, updateAuthAppResult.getFailure()));
+            }
+        }
+        return Result.emptySuccess();
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(

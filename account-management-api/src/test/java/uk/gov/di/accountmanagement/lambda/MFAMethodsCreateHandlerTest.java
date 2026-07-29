@@ -62,12 +62,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.constants.AccountManagementConstants.AUDIT_EVENT_COMPONENT_ID_HOME;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.PERSISTENT_ID;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.SESSION_ID;
@@ -315,6 +317,8 @@ class MFAMethodsCreateHandlerTest {
                             pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
                             pair("mfa-type", SMS.name()),
                             pair("mfa-method", BACKUP.name().toLowerCase()));
+
+            verifyNoMoreInteractions(auditService);
         }
 
         @Test
@@ -399,14 +403,28 @@ class MFAMethodsCreateHandlerTest {
             assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
             assertEquals(AUDIT_EVENT_COMPONENT_ID_HOME, authCodeVerifiedEvent.componentId());
 
+            var expectedMetadataPairs =
+                    List.of(
+                                    pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
+                                    pair("mfa-type", AUTH_APP.name()),
+                                    pair("mfa-method", BACKUP.name().toLowerCase()))
+                            .toArray(AuditService.MetadataPair[]::new);
+
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_MFA_METHOD_ADD_COMPLETED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(null),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
-                            pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
-                            pair("mfa-type", AUTH_APP.name()),
-                            pair("mfa-method", BACKUP.name().toLowerCase()));
+                            expectedMetadataPairs);
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_UPDATE_PROFILE_AUTH_APP,
+                            BASE_AUDIT_CONTEXT.withPhoneNumber(null),
+                            AUDIT_EVENT_COMPONENT_ID_HOME,
+                            expectedMetadataPairs);
+
+            verifyNoMoreInteractions(auditService);
         }
 
         @Test
