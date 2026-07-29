@@ -68,8 +68,6 @@ public class PasskeyAssertionService {
         try {
             credential = jsonParser.parsePublicKeyCredential(publicKeyCredentialJson);
         } catch (Exception e) {
-            var failureReason = "Public key credential in request failed to parse";
-            emitAuthPasskeyVerificationFailedEvent(auditContext, failureReason, Optional.empty());
             return Result.failure(FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR);
         }
 
@@ -77,9 +75,6 @@ public class PasskeyAssertionService {
         try {
             assertionRequest = jsonParser.parseAssertionRequest(assertionRequestJson);
         } catch (Exception e) {
-            var failureReason = "Assertion request stored in session failed to parse";
-            emitAuthPasskeyVerificationFailedEvent(
-                    auditContext, failureReason, Optional.of(credential));
             return Result.failure(
                     FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
         }
@@ -110,19 +105,6 @@ public class PasskeyAssertionService {
                 auditContext, assertionRequest, assertionResult, credential, publicSubjectId);
 
         return Result.success(assertionResult);
-    }
-
-    private void emitAuthPasskeyVerificationFailedEvent(
-            AuditContext auditContext,
-            String failureReason,
-            Optional<
-                            PublicKeyCredential<
-                                    AuthenticatorAssertionResponse,
-                                    ClientAssertionExtensionOutputs>>
-                    maybePublicKeyCredential) {
-        var passkeyDetail = PasskeyDetail.verificationCouldNotProceed(failureReason);
-        var credentialId = maybePublicKeyCredential.map(c -> c.getId().getBase64Url()).orElse(null);
-        emitVerificationFailedEvent(auditContext, null, credentialId, passkeyDetail);
     }
 
     private void emitAuthPasskeyVerificationFailedEventForAssertionError(
@@ -158,9 +140,9 @@ public class PasskeyAssertionService {
                         assertionResult.isBackedUp(),
                         passkeyCredentialDeviceTypeFrom(assertionResult),
                         "Passkey assertion result was not successful");
-        var alllowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
+        var allowedCredentials = passkeyAllowedCredentialsFrom(assertionRequest);
         var credentialId = publicKeyCredential.getId().getBase64Url();
-        emitVerificationFailedEvent(auditContext, alllowedCredentials, credentialId, passkeyDetail);
+        emitVerificationFailedEvent(auditContext, allowedCredentials, credentialId, passkeyDetail);
     }
 
     @SuppressWarnings("deprecation")

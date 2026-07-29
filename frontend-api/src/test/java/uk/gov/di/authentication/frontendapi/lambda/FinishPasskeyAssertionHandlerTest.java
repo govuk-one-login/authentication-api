@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.FinishPasskeyAssertionFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.passkeys.PasskeyUpdateError;
 import uk.gov.di.authentication.frontendapi.services.passkeys.PasskeysService;
@@ -28,6 +28,7 @@ import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import java.time.Clock;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -320,11 +321,10 @@ class FinishPasskeyAssertionHandlerTest {
             assertThat(response, hasJsonBody(ErrorResponse.PASSKEY_ASSERTION_FAILED));
         }
 
-        @ParameterizedTest
-        @EnumSource(FinishPasskeyAssertionFailureReason.class)
-        void shouldEmitVerificationFailureMetricWhenAssertionFailsForAnyReason(
-                FinishPasskeyAssertionFailureReason failureReason) {
+        @Test
+        void shouldEmitVerificationFailureMetricWhenAssertionFails() {
             // Given
+            var failureReason = FinishPasskeyAssertionFailureReason.ASSERTION_FAILED_ERROR;
             when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
                     .thenReturn(Result.failure(failureReason));
 
@@ -348,6 +348,30 @@ class FinishPasskeyAssertionHandlerTest {
             verify(cloudwatchMetricsService, never())
                     .incrementCounter(eq(PASSKEY_VERIFICATION_SUCCESSFUL), anyMap());
         }
+    }
+
+    private static Stream<FinishPasskeyAssertionFailureReason>
+            unexpectedPasskeyVerificationFailures() {
+        return Stream.of(
+                FinishPasskeyAssertionFailureReason.ERROR_UPDATING_PASSKEY_RECORD,
+                FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR,
+                FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR);
+    }
+
+    @ParameterizedTest
+    @MethodSource("unexpectedPasskeyVerificationFailures")
+    void shouldNotEmitVerificationFailureMetricWhenAssertionFailsForUnexpectedReason(
+            FinishPasskeyAssertionFailureReason failureReason) {
+        // Given
+        when(passkeyAssertionService.finishAssertion(any(), any(), any(), any()))
+                .thenReturn(Result.failure(failureReason));
+
+        // When
+        handler.handleRequest(finishPasskeyAssertionRequest(), context);
+
+        // Then
+        verify(cloudwatchMetricsService, never())
+                .incrementCounter(eq(PASSKEY_VERIFICATION_FAILED), anyMap());
     }
 
     private APIGatewayProxyRequestEvent finishPasskeyAssertionRequest(String body) {

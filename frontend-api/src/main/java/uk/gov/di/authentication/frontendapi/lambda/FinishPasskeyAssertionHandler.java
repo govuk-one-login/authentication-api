@@ -194,11 +194,24 @@ public class FinishPasskeyAssertionHandler
                         .build();
         userActionsManager.incorrectPasskeyReceived(null, permissionContext);
 
-        var metricsDimensions =
-                Map.ofEntries(
-                        Map.entry(ENVIRONMENT.getValue(), configurationService.getEnvironment()),
-                        Map.entry(FAILURE_REASON.getValue(), failureReason.getValue()));
-        cloudwatchMetricsService.incrementCounter(PASSKEY_VERIFICATION_FAILED, metricsDimensions);
+        switch (failureReason) {
+            case ASSERTION_FAILED_ERROR -> {
+                LOG.info("Passkey verification failed due to assertion failure");
+                var metricsDimensions =
+                        Map.ofEntries(
+                                Map.entry(
+                                        ENVIRONMENT.getValue(),
+                                        configurationService.getEnvironment()),
+                                Map.entry(FAILURE_REASON.getValue(), failureReason.getValue()));
+                cloudwatchMetricsService.incrementCounter(
+                        PASSKEY_VERIFICATION_FAILED, metricsDimensions);
+            }
+            case PARSING_PKC_ERROR,
+                    ERROR_UPDATING_PASSKEY_RECORD,
+                    PARSING_ASSERTION_REQUEST_ERROR -> LOG.error(
+                    "Unexpected error when attempting to verify passkey assertion, {}",
+                    failureReason.getValue());
+        }
 
         return null;
     }

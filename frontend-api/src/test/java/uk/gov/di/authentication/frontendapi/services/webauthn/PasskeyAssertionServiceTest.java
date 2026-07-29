@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -210,32 +211,13 @@ class PasskeyAssertionServiceTest {
                 assertEquals(
                         FinishPasskeyAssertionFailureReason.PARSING_ASSERTION_REQUEST_ERROR,
                         actualFailureReason);
-
-                verifyAuditEventEmittedWithName(VERIFICATION_FAILED_EVENT_NAME);
-            }
-
-            @Test
-            void shouldEmitAuditEventWhenAssertionRequestParsingFails()
-                    throws IOException, Base64UrlException {
-                // Given
-                var pkc = setupPublicKeyCredential(CREDENTIAL_ID);
-                when(jsonParser.parsePublicKeyCredential(any())).thenReturn(pkc);
-                when(jsonParser.parseAssertionRequest(any()))
-                        .thenThrow(JsonProcessingException.class);
-
-                // When
-                passkeyAssertionService
-                        .finishAssertion("", "", AUDIT_CONTEXT, TEST_PUBLIC_SUBJECT_ID)
-                        .getFailure();
-
-                // Then
-                var expectedPasskeyDetail =
-                        PasskeyDetail.verificationCouldNotProceed(
-                                "Assertion request stored in session failed to parse");
-                var expectedRestrictedPasskeySection =
-                        new RestrictedPasskeySection(null, CREDENTIAL_ID);
-                verifyVerificationFailedAuditEventEmitted(
-                        expectedPasskeyDetail, expectedRestrictedPasskeySection);
+                verify(structuredAuditService, never())
+                        .submitAuditEvent(
+                                argThat(
+                                        auditEvent ->
+                                                auditEvent
+                                                        .eventName()
+                                                        .equals(VERIFICATION_FAILED_EVENT_NAME)));
             }
 
             @Test
@@ -254,28 +236,13 @@ class PasskeyAssertionServiceTest {
                 // Then
                 assertEquals(
                         FinishPasskeyAssertionFailureReason.PARSING_PKC_ERROR, actualFailureReason);
-                verifyAuditEventEmittedWithName(VERIFICATION_FAILED_EVENT_NAME);
-            }
-
-            @Test
-            void shouldEmitRelevantAuditEventWhenPKCParsingFails() throws IOException {
-                // Given
-                when(jsonParser.parseAssertionRequest(any()))
-                        .thenReturn(mock(AssertionRequest.class));
-                when(jsonParser.parsePublicKeyCredential(any())).thenThrow(IOException.class);
-
-                // When
-                passkeyAssertionService
-                        .finishAssertion("", "", AUDIT_CONTEXT, TEST_PUBLIC_SUBJECT_ID)
-                        .getFailure();
-
-                // Then
-                var expectedPasskeyDetail =
-                        PasskeyDetail.verificationCouldNotProceed(
-                                "Public key credential in request failed to parse");
-                var expectedRestrictedPasskeySection = new RestrictedPasskeySection(null, null);
-                verifyVerificationFailedAuditEventEmitted(
-                        expectedPasskeyDetail, expectedRestrictedPasskeySection);
+                verify(structuredAuditService, never())
+                        .submitAuditEvent(
+                                argThat(
+                                        auditEvent ->
+                                                auditEvent
+                                                        .eventName()
+                                                        .equals(VERIFICATION_FAILED_EVENT_NAME)));
             }
 
             @Test
