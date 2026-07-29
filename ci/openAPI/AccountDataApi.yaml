@@ -250,6 +250,76 @@ paths:
                     code: 5000
                     message: "Internal server error"
 
+  /accounts/{publicSubjectId}:
+    parameters:
+      - name: publicSubjectId
+        in: path
+        description: Public Subject ID
+        required: true
+        schema:
+          type: string
+    delete:
+      security:
+        - authorise-access-token: []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST"
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AccountDeleteFunction.Arn}:active/invocations"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+      tags:
+        - Account
+      summary: Delete a user account
+      description: Delete all data associated with a user account
+      responses:
+        "204":
+          description: Account deleted successfully
+        "400":
+          description: Bad request - missing path parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                missing_subject_id:
+                  value:
+                    code: 1001
+                    message: "Request is missing parameters"
+        "403":
+          description: Forbidden - scope or subject ID mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                unauthorized_request:
+                  value:
+                    code: 4010
+                    message: "Unauthorized request"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                user_not_found:
+                  value:
+                    code: 1056
+                    message: "User not found or no match"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                internal_server_error:
+                  value:
+                    code: 5000
+                    message: "Internal server error"
+
 components:
   securitySchemes:
     authorise-access-token:
