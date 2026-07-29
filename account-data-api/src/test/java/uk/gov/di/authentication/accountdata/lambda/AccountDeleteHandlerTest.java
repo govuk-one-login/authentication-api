@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.contextWithSourceIp;
 
 class AccountDeleteHandlerTest {
     private static final String TEST_PUBLIC_SUBJECT = new Subject().getValue();
@@ -46,6 +47,7 @@ class AccountDeleteHandlerTest {
                     TEST_INTERNAL_SUBJECT,
                     URI.create(TEST_INTERNAL_SECTOR_URI).getHost(),
                     TEST_SALT);
+    private static final String IP_ADDRESS = "192.0.2.0/24";
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
@@ -64,9 +66,7 @@ class AccountDeleteHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn(TEST_INTERNAL_SECTOR_URI);
         when(dynamoService.getOrGenerateSalt(TEST_USER_PROFILE)).thenReturn(TEST_SALT);
 
-        var request =
-                new APIGatewayProxyRequestEvent()
-                        .withPathParameters(Map.of(PUBLIC_SUBJECT_ID_KEY, TEST_PUBLIC_SUBJECT));
+        var request = accountDeleteRequest(TEST_PUBLIC_SUBJECT, TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(request, context);
 
@@ -80,9 +80,7 @@ class AccountDeleteHandlerTest {
         when(dynamoService.getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT))
                 .thenReturn(Optional.empty());
 
-        var request =
-                new APIGatewayProxyRequestEvent()
-                        .withPathParameters(Map.of(PUBLIC_SUBJECT_ID_KEY, TEST_PUBLIC_SUBJECT));
+        var request = accountDeleteRequest(TEST_PUBLIC_SUBJECT, TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(request, context);
 
@@ -98,13 +96,45 @@ class AccountDeleteHandlerTest {
     @ParameterizedTest
     @MethodSource("invalidPathParameters")
     void shouldReturn400IfPathParameterIsInvalid(Map<String, String> pathParameters) {
-        var request = new APIGatewayProxyRequestEvent().withPathParameters(pathParameters);
+        var requestContext = contextWithSourceIp(IP_ADDRESS);
+        requestContext.setAuthorizer(
+                Map.of("principalId", "any-subject", "scope", "account-delete"));
+        var request =
+                new APIGatewayProxyRequestEvent()
+                        .withRequestContext(requestContext)
+                        .withPathParameters(pathParameters);
 
         var result = handler.handleRequest(request, context);
 
         assertEquals(
                 "{\"code\":1001,\"message\":\"Request is missing parameters\"}", result.getBody());
         assertThat(result, hasStatus(400));
+    }
+
+    @Test
+    void shouldReturn403WhenSubjectIdDoesNotMatchAuthorizer() {
+        var request = accountDeleteRequest(TEST_PUBLIC_SUBJECT, "another-subject-id");
+
+        var result = handler.handleRequest(request, context);
+
+        assertEquals("{\"code\":4010,\"message\":\"Unauthorized request\"}", result.getBody());
+        assertThat(result, hasStatus(403));
+    }
+
+    @Test
+    void shouldReturn403WhenScopeDoesNotMatchEndpoint() {
+        var requestContext = contextWithSourceIp(IP_ADDRESS);
+        requestContext.setAuthorizer(
+                Map.of("principalId", TEST_PUBLIC_SUBJECT, "scope", "passkey-delete"));
+        var request =
+                new APIGatewayProxyRequestEvent()
+                        .withRequestContext(requestContext)
+                        .withPathParameters(Map.of(PUBLIC_SUBJECT_ID_KEY, TEST_PUBLIC_SUBJECT));
+
+        var result = handler.handleRequest(request, context);
+
+        assertEquals("{\"code\":4010,\"message\":\"Unauthorized request\"}", result.getBody());
+        assertThat(result, hasStatus(403));
     }
 
     @Test
@@ -117,13 +147,20 @@ class AccountDeleteHandlerTest {
                 .when(accountDeleteDynamoService)
                 .deleteAccount(anyString(), anyString(), anyString());
 
-        var request =
-                new APIGatewayProxyRequestEvent()
-                        .withPathParameters(Map.of(PUBLIC_SUBJECT_ID_KEY, TEST_PUBLIC_SUBJECT));
+        var request = accountDeleteRequest(TEST_PUBLIC_SUBJECT, TEST_PUBLIC_SUBJECT);
 
         var result = handler.handleRequest(request, context);
 
         assertEquals("{\"code\":5000,\"message\":\"Internal server error\"}", result.getBody());
         assertThat(result, hasStatus(500));
+    }
+
+    private APIGatewayProxyRequestEvent accountDeleteRequest(
+            String publicSubjectId, String principalId) {
+        var requestContext = contextWithSourceIp(IP_ADDRESS);
+        requestContext.setAuthorizer(Map.of("principalId", principalId, "scope", "account-delete"));
+        return new APIGatewayProxyRequestEvent()
+                .withRequestContext(requestContext)
+                .withPathParameters(Map.of(PUBLIC_SUBJECT_ID_KEY, publicSubjectId));
     }
 }

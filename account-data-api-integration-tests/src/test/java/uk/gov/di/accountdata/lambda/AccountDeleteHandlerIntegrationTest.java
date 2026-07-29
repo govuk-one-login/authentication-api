@@ -81,7 +81,7 @@ class AccountDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of(PUBLIC_SUBJECT_ID_KEY, publicSubjectId),
-                        Collections.emptyMap());
+                        Map.of("principalId", publicSubjectId, "scope", "account-delete"));
 
         assertThat(result.getStatusCode(), equalTo(204));
         assertNull(dynamoService.getUserProfileByEmail(TEST_EMAIL));
@@ -106,7 +106,7 @@ class AccountDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of(PUBLIC_SUBJECT_ID_KEY, publicSubjectId),
-                        Collections.emptyMap());
+                        Map.of("principalId", publicSubjectId, "scope", "account-delete"));
 
         assertThat(result.getStatusCode(), equalTo(204));
         assertNull(dynamoService.getUserProfileByEmail(TEST_EMAIL));
@@ -121,7 +121,11 @@ class AccountDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Map.of(PUBLIC_SUBJECT_ID_KEY, "non-existent-subject-id"),
-                        Collections.emptyMap());
+                        Map.of(
+                                "principalId",
+                                "non-existent-subject-id",
+                                "scope",
+                                "account-delete"));
 
         assertEquals(
                 "{\"code\":1056,\"message\":\"User not found or no match\"}", result.getBody());
