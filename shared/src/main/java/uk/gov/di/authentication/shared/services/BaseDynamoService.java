@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+import uk.gov.di.authentication.shared.configuration.DynamoConfiguration;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 
 import java.util.Optional;
@@ -23,7 +24,7 @@ public class BaseDynamoService<T> {
     private final DynamoDbClient client;
 
     public BaseDynamoService(
-            Class<T> objectClass, String table, ConfigurationService configurationService) {
+            Class<T> objectClass, String table, DynamoConfiguration configurationService) {
         var tableName = TableNameHelper.getFullTableName(table, configurationService);
         client = createDynamoClient(configurationService);
         var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();

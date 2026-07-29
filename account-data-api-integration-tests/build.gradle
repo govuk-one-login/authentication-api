@@ -44,6 +44,7 @@ test {
     environment "AWS_SECRET_ACCESS_KEY", "mocksecretkey"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
+    environment "INTERNAL_SECTOR_URI", "https://test.account.gov.uk"
 
     testLogging {
         showStandardStreams = false

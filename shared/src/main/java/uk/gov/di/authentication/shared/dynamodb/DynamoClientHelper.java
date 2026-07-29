@@ -6,12 +6,12 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.configuration.DynamoConfiguration;
 
 import java.net.URI;
 
 public class DynamoClientHelper {
-    public static DynamoDbClient createDynamoClient(ConfigurationService configurationService) {
+    public static DynamoDbClient createDynamoClient(DynamoConfiguration configurationService) {
         var dynamoDbClientBuilder =
                 DynamoDbClient.builder()
                         .credentialsProvider(DefaultCredentialsProvider.builder().build())
@@ -24,7 +24,7 @@ public class DynamoClientHelper {
     }
 
     public static DynamoDbEnhancedClient createDynamoEnhancedClient(
-            ConfigurationService configurationService) {
+            DynamoConfiguration configurationService) {
         var dynamoDbClient = createDynamoClient(configurationService);
         return DynamoDbEnhancedClient.builder().dynamoDbClient(dynamoDbClient).build();
     }

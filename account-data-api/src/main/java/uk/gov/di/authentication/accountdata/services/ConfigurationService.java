@@ -2,12 +2,13 @@ package uk.gov.di.authentication.accountdata.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.configuration.DynamoConfiguration;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Optional;
 
-public class ConfigurationService {
+public class ConfigurationService implements DynamoConfiguration {
     private static final Logger LOG =
             LogManager.getLogger(
                     uk.gov.di.authentication.shared.services.ConfigurationService.class);
@@ -51,5 +52,9 @@ public class ConfigurationService {
 
     public String getAuthToAccountDataApiAudience() {
         return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "");
+    }
+
+    public String getInternalSectorUri() {
+        return System.getenv().getOrDefault("INTERNAL_SECTOR_URI", "");
     }
 }
