@@ -1,5 +1,0 @@
-{
-  "transform": {
-    "^.+\\.(js|jsx)$": "babel-jest"
-  }
-}

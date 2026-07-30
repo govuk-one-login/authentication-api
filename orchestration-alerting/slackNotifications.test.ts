@@ -1,29 +1,61 @@
-import * as slackNotifications from "./slackNotifications";
-describe("Slack alerts tests", () => {
-  const SLACK_CHANNEL_ID = "test-slack-channel-id";
-  const PAGERDUTY_CHANNEL_ID = "test-pagerduty-channel-id";
-  const PAGERDUTY_CHANNEL_PARAM = "pagerduty-slack-channel-id";
-  const sendAlertToSlackMock = jest.fn();
+import { Context, SNSEvent } from "aws-lambda";
+import {
+  handler,
+  sendAlertToSlack,
+  AlarmData,
+  SlackMessage,
+} from "./slackNotifications";
+import { GetParameterCommand } from "@aws-sdk/client-ssm";
 
-  beforeEach(() => {
-    process.env.DEPLOY_ENVIRONMENT = "dev";
-    delete process.env.SLACK_CHANNEL_PARAM;
-    slackNotifications.sendAlertToSlack = sendAlertToSlackMock;
-    slackNotifications.getParameter = jest.fn((param) => {
+const SLACK_CHANNEL_ID = "test-slack-channel-id";
+const PAGERDUTY_CHANNEL_ID = "test-pagerduty-channel-id";
+const PAGERDUTY_CHANNEL_PARAM = "pagerduty-slack-channel-id";
+const SLACK_WEBOOK_URL = "test-webhook-url";
+
+vi.mock("@aws-sdk/client-ssm", () => ({
+  SSMClient: class {
+    send = (command: GetParameterCommand) => {
+      let value = "";
+      const param = command.input.Name;
       if (param === PAGERDUTY_CHANNEL_PARAM) {
-        return PAGERDUTY_CHANNEL_ID;
+        value = PAGERDUTY_CHANNEL_ID;
       }
       if (
         param === "dev-slack-channel-id" ||
         param === "production-slack-channel-id"
       ) {
-        return SLACK_CHANNEL_ID;
+        value = SLACK_CHANNEL_ID;
       }
-      return Promise.reject();
-    });
+      if (
+        param === "dev-slack-hook-url" ||
+        param === "production-slack-hook-url"
+      ) {
+        value = SLACK_WEBOOK_URL;
+      }
+      return { Parameter: { Value: value } };
+    };
+  },
+  GetParameterCommand: class {
+    input: { Name: string };
+    constructor(input: { Name: string }) {
+      this.input = input;
+    }
+  },
+}));
+
+const mockFetch = vi
+  .fn()
+  .mockResolvedValue({ text: () => Promise.resolve("ok") });
+vi.stubGlobal("fetch", mockFetch);
+
+describe("Slack alerts tests", () => {
+  beforeEach(() => {
+    process.env.DEPLOY_ENVIRONMENT = "dev";
+    process.env.SLACK_CHANNEL_PARAM = "";
   });
+
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("Creates a slack message with alarm description and account", async () => {
@@ -31,11 +63,12 @@ describe("Slack alerts tests", () => {
       AlarmDescription: "This is a test alarm. ACCOUNT: test-aws-account",
       AlarmName: "test-alarm",
       NewStateValue: "OK",
+      AWSAccountId: "test-acc-id",
     });
 
-    await slackNotifications.handler(message);
+    await handler(message, {} as Context);
 
-    expect(sendAlertToSlackMock).toHaveBeenCalledWith({
+    expectSlackMessageSent({
       attachments: [
         {
           fallback: "This is a test alarm.",
@@ -67,11 +100,12 @@ describe("Slack alerts tests", () => {
         "This is a test alarm. ACCOUNT: test-aws-account. Runbook: http://example.com",
       AlarmName: "test-alarm",
       NewStateValue: "OK",
+      AWSAccountId: "test-acc-id",
     });
 
-    await slackNotifications.handler(message);
+    await handler(message, {} as Context);
 
-    expect(sendAlertToSlackMock).toHaveBeenCalledWith({
+    expectSlackMessageSent({
       attachments: [
         {
           fallback: "This is a test alarm.",
@@ -109,11 +143,12 @@ describe("Slack alerts tests", () => {
         "This is a test pagerduty alarm. ACCOUNT: test-aws-account. Runbook: http://example.com",
       AlarmName: "test-pagerduty-alarm",
       NewStateValue: "ALARM",
+      AWSAccountId: "test-acc-id",
     });
 
-    await slackNotifications.handler(message);
+    await handler(message, {} as Context);
 
-    expect(sendAlertToSlackMock).toHaveBeenCalledWith({
+    expectSlackMessageSent({
       attachments: [
         {
           fallback:
@@ -157,11 +192,12 @@ describe("Slack alerts tests", () => {
         "This is a test pagerduty alarm. ACCOUNT: test-aws-account. Runbook: http://example.com",
       AlarmName: "test-pagerduty-alarm",
       NewStateValue: "OK",
+      AWSAccountId: "test-acc-id",
     });
 
-    await slackNotifications.handler(message);
+    await handler(message, {} as Context);
 
-    expect(sendAlertToSlackMock).toHaveBeenCalledWith({
+    expectSlackMessageSent({
       attachments: [
         {
           fallback:
@@ -203,11 +239,12 @@ describe("Slack alerts tests", () => {
       AlarmDescription: "This is a test alarm. ACCOUNT: test-aws-account",
       AlarmName: "test-alarm",
       NewStateValue: "OK",
+      AWSAccountId: "test-acc-id",
     });
 
-    await slackNotifications.handler(message);
+    await handler(message, {} as Context);
 
-    expect(sendAlertToSlackMock).toHaveBeenCalledWith({
+    expectSlackMessageSent({
       attachments: [
         {
           fallback: "This is a test alarm.",
@@ -233,15 +270,37 @@ describe("Slack alerts tests", () => {
     });
   });
 
-  const createSnsMessage = function (alarm) {
+  const createSnsMessage = function (alarm: AlarmData): SNSEvent {
     return {
       Records: [
         {
           Sns: {
             Message: JSON.stringify(alarm),
+            SignatureVersion: "",
+            Timestamp: "",
+            Signature: "",
+            SigningCertUrl: "",
+            MessageId: "",
+            MessageAttributes: {},
+            Type: "",
+            UnsubscribeUrl: "",
+            TopicArn: "",
           },
+          EventVersion: "",
+          EventSubscriptionArn: "",
+          EventSource: "",
         },
       ],
     };
+  };
+
+  const expectSlackMessageSent = (message: SlackMessage) => {
+    expect(mockFetch).toHaveBeenCalledWith(SLACK_WEBOOK_URL, {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(message),
+    });
   };
 });

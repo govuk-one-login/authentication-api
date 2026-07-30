@@ -7326,6 +7326,17 @@ Resources:
             Topic: !Ref SlackEvents
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - slackNotifications.ts
+        External:
+          - "@aws-sdk/client-ssm"
+        Minify: true
+        Sourcemap: true
+        Target: es2022
+        UseNpmCi: True
 
   SlackNotificationsPermission:
     Condition: IsNotProduction
@@ -7447,6 +7458,17 @@ Resources:
             Topic: !Ref OrchProdSlackEvents
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - slackNotifications.ts
+        External:
+          - "@aws-sdk/client-ssm"
+        Minify: true
+        Sourcemap: true
+        Target: es2022
+        UseNpmCi: True
 
   OrchProdSlackNotificationsPermission:
     Condition: IsProduction
@@ -7549,6 +7571,17 @@ Resources:
             Topic: !Ref SecondLineSlackEvents
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        EntryPoints:
+          - slackNotifications.ts
+        External:
+          - "@aws-sdk/client-ssm"
+        Minify: true
+        Sourcemap: true
+        Target: es2022
+        UseNpmCi: True
 
   SecondLineSlackNotificationsPermission:
     Condition: IsProduction
