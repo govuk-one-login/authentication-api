@@ -2,7 +2,7 @@
   "name": "orchestration-alerting",
   "version": "1.0.0",
   "scripts": {
-    "test": "jest --silent"
+    "test": "vitest run --silent"
   },
   "type": "module",
   "description": "Package for sending slack alerts",
@@ -10,7 +10,7 @@
     "@aws-sdk/client-ssm": "3.994.0",
     "@types/aws-lambda": "^8.10.162",
     "@types/node": "^26.1.2",
-    "jest": "^30.1.3"
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@babel/plugin-transform-modules-commonjs": "^7.27.1",
