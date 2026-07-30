@@ -49,17 +49,24 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     outputs:
-      data: ${{ steps.fetch-pr-metadata.outputs.escaped-json }}
-      shell: ${{ steps.fetch-pr-metadata.outputs.shell }}
+      data: ${{ steps.build-metadata.outputs.metadata }}
     steps:
-      - name: Fetch PR Metadata
-        uses: govuk-one-login/authentication-artifact-metadata-action@1184fbdf9626b4485932595462b7bb6efc3d501e
-        id: fetch-pr-metadata
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          shell: bash
+          fetch-depth: 1
+      - name: Build artifact metadata
+        id: build-metadata
+        env:
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          COMMIT_MSG="$(echo "${HEAD_COMMIT_MESSAGE:-$(git log -1 --format=%s)}" | sed 's/[^[:print:]]//g' | cut -c1-100)"
+          SUMMARY="${SHORT_SHA}: ${COMMIT_MSG}"
+          METADATA="commitsha=${{ github.sha }},commitmessage=${COMMIT_MSG},repository=${{ github.repository }},repo_owner=${{ github.repository_owner }},repo_name=${{ github.event.repository.name }},codepipeline-artifact-revision-summary=${SUMMARY}"
+          echo "metadata=${METADATA}" >> "$GITHUB_OUTPUT"
+        shell: bash
 
   build-cache:
     name: Set up build cache
@@ -201,6 +208,7 @@ jobs:
         shell: bash
         env:
           ARTIFACT_BUCKET: ${{ needs.set-up.outputs.artifact_bucket }}
+          METADATA: ${{ needs.pr-data.outputs.data }}
         run: |
           echo "::group::Zip all promotion artifacts"
           zip -r authentication-api.zip .
@@ -211,7 +219,7 @@ jobs:
             --bucket "${ARTIFACT_BUCKET}" \
             --key authentication-api.zip \
             --body authentication-api.zip \
-            --metadata ${{ needs.pr-data.outputs.data}} \
+            --metadata "${METADATA}" \
             --query VersionId --output text)"
           echo "::endgroup::"
           echo "::notice title=Final artifact uploaded to S3::object: authentication-api.zip, version: $OBJECT_VERSION"
