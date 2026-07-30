@@ -17,7 +17,8 @@
     "babel-plugin-explicit-exports-references": "^1.0.2"
   },
   "overrides": {
-    "fast-xml-parser": ">=5.7.3"
+    "fast-xml-parser": ">=5.7.3",
+    "brace-expansion": ">=2.1.2"
   },
   "engines": {
     "node": "24.15.x"
