@@ -17,6 +17,5 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["*.ts"],
-  "exclude": ["src/tests", "coverage", "src/**/**/tests"]
+  "include": ["*.ts"]
 }

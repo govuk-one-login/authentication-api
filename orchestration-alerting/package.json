@@ -6,16 +6,13 @@
   },
   "type": "module",
   "description": "Package for sending slack alerts",
+  "dependencies": {
+    "@aws-sdk/client-ssm": "3.994.0"
+  },
   "devDependencies": {
-    "@aws-sdk/client-ssm": "3.994.0",
     "@types/aws-lambda": "^8.10.162",
     "@types/node": "^26.1.2",
     "vitest": "^4.1.10"
-  },
-  "dependencies": {
-    "@babel/plugin-transform-modules-commonjs": "^7.27.1",
-    "@babel/preset-env": "^7.28.3",
-    "babel-plugin-explicit-exports-references": "^1.0.2"
   },
   "overrides": {
     "fast-xml-parser": ">=5.7.3",
