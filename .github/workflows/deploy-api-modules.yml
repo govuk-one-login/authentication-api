@@ -76,7 +76,11 @@ jobs:
           COMMIT_MSG="$(echo "${HEAD_COMMIT_MESSAGE}" | sed 's/[^[:print:]]//g' | cut -c1-100)"
           SUMMARY="${SHORT_SHA}: ${COMMIT_MSG}"
           METADATA="commitsha=${{ github.sha }},commitmessage=${COMMIT_MSG},repository=${{ github.repository }},repo_owner=${{ github.repository_owner }},repo_name=${{ github.event.repository.name }},codepipeline-artifact-revision-summary=${SUMMARY}"
-          echo "metadata=${METADATA}" >> "$GITHUB_OUTPUT"
+          {
+            echo "metadata<<EOF"
+            echo "${METADATA}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
         shell: bash
 
   build-cache:
