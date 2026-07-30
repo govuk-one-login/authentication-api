@@ -8,6 +8,8 @@
   "description": "Package for sending slack alerts",
   "devDependencies": {
     "@aws-sdk/client-ssm": "3.994.0",
+    "@types/aws-lambda": "^8.10.162",
+    "@types/node": "^26.1.2",
     "jest": "^30.1.3"
   },
   "dependencies": {

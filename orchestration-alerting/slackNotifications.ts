@@ -1,14 +1,31 @@
 import { SSMClient, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { Context, SNSEvent } from "aws-lambda";
 const ssmClient = new SSMClient();
 
-export const getParameter = async (parameterName) => {
+export type AlarmData = {
+  AlarmName: string;
+  AlarmDescription: string;
+  AWSAccountId: string;
+  NewStateValue: "ALARM" | "OK";
+};
+
+export type SlackMessage = {
+  attachments: object[];
+  channel: string;
+};
+
+export const getParameter = async (parameterName: string) => {
   const getParameterCommand = new GetParameterCommand({
     Name: parameterName,
   });
-  return (await ssmClient.send(getParameterCommand)).Parameter.Value;
+  return (await ssmClient.send(getParameterCommand))?.Parameter?.Value;
 };
 
-const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
+const formatMessage = async (
+  snsMessage: AlarmData,
+  colorCode: string,
+  snsMessageFooter: string,
+): Promise<SlackMessage> => {
   var descriptionAndAccount = snsMessage.AlarmDescription.split("ACCOUNT:");
   var runbook = null;
   var account = snsMessage.AWSAccountId;
@@ -53,6 +70,10 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
       short: false,
     });
   }
+  const slackChannel = await getSlackChannel();
+  if (!slackChannel) {
+    throw new Error("No slack channel found");
+  }
   return {
     attachments: [
       {
@@ -64,13 +85,20 @@ const formatMessage = (snsMessage, colorCode, snsMessageFooter) => {
         footer: snsMessageFooter,
       },
     ],
+    channel: slackChannel,
   };
 };
 
-export const sendAlertToSlack = async function (messageRequestBody) {
+export const sendAlertToSlack = async function (
+  messageRequestBody: SlackMessage,
+) {
   const slackHookUrl =
     process.env.SLACK_WEBHOOK_URL ||
     (await getParameter(process.env.DEPLOY_ENVIRONMENT + "-slack-hook-url"));
+  if (!slackHookUrl) {
+    console.log("No slack hook URL found");
+    return;
+  }
   const messageRequest = {
     method: "post",
     headers: {
@@ -79,7 +107,6 @@ export const sendAlertToSlack = async function (messageRequestBody) {
     body: JSON.stringify(messageRequestBody),
   };
   try {
-    // eslint-disable-next-line no-undef
     const response = await fetch(slackHookUrl, messageRequest);
     const message = await response.text();
     console.log(message);
@@ -101,7 +128,7 @@ const getSlackChannel = async function () {
 };
 
 // eslint-disable-next-line no-unused-vars
-export const handler = async function (event, context) {
+export const handler = async function (event: SNSEvent, _context: Context) {
   console.log("Alert lambda triggered");
   let colorCode = process.env.ERROR_COLOR || "#C70039";
   let snsMessageFooter = process.env.MESSAGE_FOOTER || "GOV.UK Sign In alert";
@@ -110,13 +137,11 @@ export const handler = async function (event, context) {
   if (snsMessage.NewStateValue === "OK") {
     colorCode = process.env.OK_COLOR || "#36a64f";
   }
-  const messageRequestBody = formatMessage(
+  const messageRequestBody = await formatMessage(
     snsMessage,
     colorCode,
     snsMessageFooter,
   );
-
-  messageRequestBody.channel = await getSlackChannel();
 
   console.log("Sending alert to slack");
   await sendAlertToSlack(messageRequestBody);

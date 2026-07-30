@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
+    "noImplicitAny": true,
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "rootDir": "/",
+    "outDir": "dist",
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "typeRoots": ["@types", "node_modules/@types", "node_modules"],
+    "types": ["node", "vitest/globals"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["*.ts"],
+  "exclude": ["src/tests", "coverage", "src/**/**/tests"]
+}
