@@ -18,7 +18,8 @@
   },
   "overrides": {
     "fast-xml-parser": ">=5.7.3",
-    "brace-expansion": ">=2.1.2"
+    "brace-expansion": ">=2.1.2",
+    "js-yaml": ">=4.3.0"
   },
   "engines": {
     "node": "24.15.x"
