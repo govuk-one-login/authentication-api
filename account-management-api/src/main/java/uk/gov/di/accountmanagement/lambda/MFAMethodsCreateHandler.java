@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
@@ -50,6 +49,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_COMPLETED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR;
 import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.entity.Environment.PRODUCTION;
@@ -59,12 +59,14 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_NOTIFICATION_TYPE;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.entity.AuthenticationMethod.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.DEFAULT_MFA_ALREADY_EXISTS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_OTP;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REQUEST_MISSING_PARAMS;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -297,21 +299,11 @@ public class MFAMethodsCreateHandler
             return generateApiGatewayProxyErrorResponse(500, UNEXPECTED_ACCT_MGMT_ERROR);
         }
 
-        var addCompletedResult =
-                sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, mfaMethodCreateRequest);
+        var auditResult =
+                sendSuccessfulAddEvents(auditContext, mfaMethodCreateRequest, backupMfaMethod);
 
-        if (addCompletedResult.isFailure()) {
-            return generateApiGatewayProxyErrorResponse(500, addCompletedResult.getFailure());
-        }
-
-        if (backupMfaMethod.getMfaMethodType().equalsIgnoreCase(MFAMethodType.SMS.name())) {
-            var updatePhoneNumberResult =
-                    sendAuditEvent(AUTH_UPDATE_PHONE_NUMBER, auditContext, mfaMethodCreateRequest);
-
-            if (updatePhoneNumberResult.isFailure()) {
-                return generateApiGatewayProxyErrorResponse(
-                        500, updatePhoneNumberResult.getFailure());
-            }
+        if (auditResult.isFailure()) {
+            return auditResult.getFailure();
         }
 
         LocaleHelper.SupportedLanguage userLanguage =
@@ -377,7 +369,8 @@ public class MFAMethodsCreateHandler
             case AUTH_MFA_METHOD_ADD_COMPLETED,
                     AUTH_UPDATE_PHONE_NUMBER,
                     AUTH_MFA_METHOD_ADD_FAILED,
-                    AUTH_INVALID_CODE_SENT -> new AuditService.MetadataPair[] {
+                    AUTH_INVALID_CODE_SENT,
+                    AUTH_UPDATE_PROFILE_AUTH_APP -> new AuditService.MetadataPair[] {
                 ACCOUNT_MANAGEMENT_JOURNEY_TYPE_PAIR, mfaTypePair, mfaMethodPair
             };
             case AUTH_CODE_VERIFIED -> {
@@ -462,6 +455,31 @@ public class MFAMethodsCreateHandler
         }
 
         return Result.success(null);
+    }
+
+    private Result<APIGatewayProxyResponseEvent, Void> sendSuccessfulAddEvents(
+            AuditContext auditContext,
+            MfaMethodCreateRequest createRequest,
+            MFAMethod addedMethod) {
+        return sendAuditEvent(AUTH_MFA_METHOD_ADD_COMPLETED, auditContext, createRequest)
+                .flatMap(
+                        success -> {
+                            var mfaMethodType = addedMethod.getMfaMethodType();
+                            if (mfaMethodType.equalsIgnoreCase(SMS.name())) {
+                                return sendAuditEvent(
+                                        AUTH_UPDATE_PHONE_NUMBER, auditContext, createRequest);
+                            } else if (mfaMethodType.equalsIgnoreCase(AUTH_APP.name())) {
+                                return sendAuditEvent(
+                                        AUTH_UPDATE_PROFILE_AUTH_APP, auditContext, createRequest);
+                            } else {
+                                LOG.warn(
+                                        "Attempted to send success event for unknown mfa type {}",
+                                        mfaMethodType);
+                                return Result.emptySuccess();
+                            }
+                        })
+                .mapFailure(
+                        errorResponse -> generateApiGatewayProxyErrorResponse(500, errorResponse));
     }
 
     private Result<ErrorResponse, Void> sendAuditEvent(

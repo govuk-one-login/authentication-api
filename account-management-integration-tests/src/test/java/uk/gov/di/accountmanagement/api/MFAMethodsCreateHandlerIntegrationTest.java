@@ -46,6 +46,7 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_ADD_FAILED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_MFA_METHOD_MIGRATION_ATTEMPTED;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.BACKUP_METHOD_ADDED;
 import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.accountmanagement.testsupport.AuditTestConstants.EXTENSIONS_MFA_METHOD;
@@ -373,7 +374,8 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                     List.of(
                             AUTH_CODE_VERIFIED,
                             AUTH_MFA_METHOD_MIGRATION_ATTEMPTED,
-                            AUTH_MFA_METHOD_ADD_COMPLETED);
+                            AUTH_MFA_METHOD_ADD_COMPLETED,
+                            AUTH_UPDATE_PROFILE_AUTH_APP);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
@@ -392,6 +394,13 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
             eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
+
+            Map<String, String> updateProfileAuthAppAttributes = new HashMap<>();
+            updateProfileAuthAppAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            updateProfileAuthAppAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            updateProfileAuthAppAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            eventExpectations.put(
+                    AUTH_UPDATE_PROFILE_AUTH_APP.name(), updateProfileAuthAppAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
         }
@@ -449,7 +458,10 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertEquals(expectedResponse, response.getBody());
 
             List<AuditableEvent> expectedEvents =
-                    List.of(AUTH_CODE_VERIFIED, AUTH_MFA_METHOD_ADD_COMPLETED);
+                    List.of(
+                            AUTH_CODE_VERIFIED,
+                            AUTH_MFA_METHOD_ADD_COMPLETED,
+                            AUTH_UPDATE_PROFILE_AUTH_APP);
 
             Map<String, Map<String, String>> eventExpectations = new HashMap<>();
 
@@ -464,6 +476,13 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             addCompletedAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
             addCompletedAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
             eventExpectations.put(AUTH_MFA_METHOD_ADD_COMPLETED.name(), addCompletedAttributes);
+
+            Map<String, String> updateProfileAuthAppAttributes = new HashMap<>();
+            updateProfileAuthAppAttributes.put(EXTENSIONS_JOURNEY_TYPE, ACCOUNT_MANAGEMENT.name());
+            updateProfileAuthAppAttributes.put(EXTENSIONS_MFA_TYPE, AUTH_APP.name());
+            updateProfileAuthAppAttributes.put(EXTENSIONS_MFA_METHOD, BACKUP.name().toLowerCase());
+            eventExpectations.put(
+                    AUTH_UPDATE_PROFILE_AUTH_APP.name(), updateProfileAuthAppAttributes);
 
             verifyAuditEvents(expectedEvents, eventExpectations);
         }
