@@ -3,8 +3,6 @@ package uk.gov.di.orchestration.identity.helpers;
 import com.nimbusds.common.contenttype.ContentType;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.TokenErrorResponse;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
@@ -17,19 +15,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.identity.entity.AuditEventConfiguration;
 import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
 import uk.gov.di.orchestration.identity.service.IdentityTokenService;
-import uk.gov.di.orchestration.identity.testsupport.TestAuditEvent;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
-import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
-import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.io.IOException;
@@ -39,23 +31,18 @@ import java.util.List;
 import java.util.Map;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED;
-import static org.apache.logging.log4j.Level.ERROR;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withLevelAndMessageContaining;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class IdentityCallbackHelperTest {
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
-    private static final String CLIENT_ID = "test-client-id";
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
     private static final URI TRUSTMARK_URI = URI.create("https://oidc.com/trustmark");
     private static final Subject SUBJECT =
@@ -63,73 +50,19 @@ public class IdentityCallbackHelperTest {
     private static final URI BACKEND_URI = URI.create("http://test-backend-uri");
     private final IdentityTokenService identityTokenService = mock(IdentityTokenService.class);
     private final CommonFrontend frontend = mock(CommonFrontend.class);
-    private final AuditService auditService = mock(AuditService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final OidcAPI oidcApi = mock(OidcAPI.class);
-    private final AuditEventConfiguration auditEventConfiguration =
-            new AuditEventConfiguration(
-                    TestAuditEvent.TEST_UNSUCCESSFUL_AUTH_RESPONSE_RECEIVED,
-                    TestAuditEvent.TEST_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                    TestAuditEvent.TEST_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-    private final TxmaAuditUser user = mock(TxmaAuditUser.class);
     private IdentityCallbackHelper helper;
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(IdentityCallbackHelper.class);
 
-    @RegisterExtension
-    private final CaptureLoggingExtension redirectLogging =
-            new CaptureLoggingExtension(RedirectService.class);
-
     @BeforeEach
     void setUp() {
-        helper =
-                new IdentityCallbackHelper(
-                        identityTokenService,
-                        auditService,
-                        auditEventConfiguration,
-                        frontend,
-                        dynamoIdentityService,
-                        oidcApi);
+        helper = new IdentityCallbackHelper(frontend, dynamoIdentityService, oidcApi);
         when(frontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(oidcApi.trustmarkURI()).thenReturn(TRUSTMARK_URI);
-    }
-
-    @Nested
-    class MakeTokenRequest {
-        @Test
-        void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful() {
-            withUnsuccessfulTokenResponse();
-
-            var response = helper.makeTokenRequest(AUTH_CODE.toString(), CLIENT_ID, user);
-
-            assertTrue(response.isPresent());
-            assertThat(
-                    response.get().getHeaders().get("Location"),
-                    startsWith(FRONT_END_ERROR_URI.toString()));
-
-            assertAuditEventSent(TestAuditEvent.TEST_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-            verifyNoMoreInteractions(auditService);
-
-            assertThat(
-                    redirectLogging.events(),
-                    hasItem(
-                            withLevelAndMessageContaining(
-                                    ERROR,
-                                    "Redirecting to frontend error page: " + FRONT_END_ERROR_URI)));
-        }
-
-        @Test
-        void shouldNotRedirectWhenTokenResponseIsSuccessful() {
-            withSuccessfulTokenResponse();
-
-            var response = helper.makeTokenRequest(AUTH_CODE.toString(), CLIENT_ID, user);
-
-            assertTrue(response.isEmpty());
-            assertAuditEventSent(TestAuditEvent.TEST_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-            verifyNoMoreInteractions(auditService);
-        }
     }
 
     @Nested
@@ -425,22 +358,5 @@ public class IdentityCallbackHelperTest {
 
             assertTrue(result.isEmpty());
         }
-    }
-
-    private void withSuccessfulTokenResponse() {
-        var successfulTokenResponse =
-                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
-        when(identityTokenService.getToken(AUTH_CODE.toString()))
-                .thenReturn(successfulTokenResponse);
-    }
-
-    private void withUnsuccessfulTokenResponse() {
-        var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("error"));
-        when(identityTokenService.getToken(AUTH_CODE.toString()))
-                .thenReturn(unsuccessfulTokenResponse);
-    }
-
-    private void assertAuditEventSent(AuditableEvent auditEvent) {
-        verify(auditService).submitAuditEvent(auditEvent, CLIENT_ID, user);
     }
 }

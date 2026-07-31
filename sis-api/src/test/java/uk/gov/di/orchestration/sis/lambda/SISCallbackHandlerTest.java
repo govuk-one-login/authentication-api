@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.TokenErrorResponse;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -69,7 +70,9 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
+import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 
 public class SISCallbackHandlerTest {
     private final Context context = mock(Context.class);
@@ -131,6 +134,14 @@ public class SISCallbackHandlerTest {
                             RP_STATE,
                             null)
                     .toURI();
+    private static final APIGatewayProxyResponseEvent genericErrorRedirect =
+            RedirectService.redirectToFrontendErrorPageWithErrorLog(
+                    FRONT_END_ERROR_URI, new Error("error"));
+    private static final AccessTokenResponse SUCCESSFUL_TOKEN_RESPONSE =
+            new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
+    private static final TokenErrorResponse UNSUCCESSFUL_TOKEN_RESPONSE =
+            new TokenErrorResponse(new ErrorObject("token error"));
+    private static final URI SIS_BACKEND_URI = URI.create("http://sis-backend");
 
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
@@ -157,9 +168,7 @@ public class SISCallbackHandlerTest {
     @BeforeEach
     void setup() {
         when(identityCallbackHelper.redirectToFrontendErrorPageWithErrorLog(any(Throwable.class)))
-                .thenReturn(
-                        RedirectService.redirectToFrontendErrorPageWithErrorLog(
-                                FRONT_END_ERROR_URI, new Error("error")));
+                .thenReturn(genericErrorRedirect);
         when(identityCallbackHelper.redirectToFrontendErrorPageForNoSession(any(Exception.class)))
                 .thenReturn(
                         RedirectService.redirectToFrontendErrorPageWithErrorLog(
@@ -375,6 +384,20 @@ public class SISCallbackHandlerTest {
         }
     }
 
+    @Test
+    void shouldRedirectToErrorPageWhenTokenResponseIsUnsuccessful() throws Exception {
+        var request = createRequestEvent();
+        usingValidIdentityContext(request);
+        mockUnsuccessfulTokenResponse();
+
+        var response = handler.handleRequest(request, context);
+
+        assertDoesRedirectToPage(response, FRONT_END_ERROR_URI.toString());
+        assertAuditEventSubmitted(ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
+        assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyNoMoreInteractions(auditService);
+    }
+
     private APIGatewayProxyRequestEvent createRequestEvent() {
         return createRequestEvent(Map.of());
     }
@@ -468,6 +491,11 @@ public class SISCallbackHandlerTest {
                                         null,
                                         Map.of("Location", FRONT_END_AIS_LOGOUT_URL),
                                         null)));
+    }
+
+    private void mockUnsuccessfulTokenResponse() {
+        when(sisAuthorisationService.getToken(AUTH_CODE.getValue()))
+                .thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
     }
 
     private void assertDoesRedirectToPage(APIGatewayProxyResponseEvent response, String page) {
