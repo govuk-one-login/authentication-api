@@ -12,6 +12,7 @@ public class InactiveAccountTrackerItem {
     private String commonSubjectId;
     private String publicSubjectId;
     private String emailAddress;
+    private String emailAddressLastUpdated;
     private String userLastActive;
     private String status = "pending";
     private String statusLastUpdated;
@@ -76,6 +77,20 @@ public class InactiveAccountTrackerItem {
 
     public InactiveAccountTrackerItem withEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
+        return this;
+    }
+
+    @DynamoDbAttribute("emailAddressLastUpdated")
+    public String getEmailAddressLastUpdated() {
+        return emailAddressLastUpdated;
+    }
+
+    public void setEmailAddressLastUpdated(String emailAddressLastUpdated) {
+        this.emailAddressLastUpdated = emailAddressLastUpdated;
+    }
+
+    public InactiveAccountTrackerItem withEmailAddressLastUpdated(String emailAddressLastUpdated) {
+        this.emailAddressLastUpdated = emailAddressLastUpdated;
         return this;
     }
 

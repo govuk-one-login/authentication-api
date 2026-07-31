@@ -150,6 +150,9 @@ class InactiveAccountDataExportHelperTest {
         assertEquals("subject-123", result.getCommonSubjectId());
         assertEquals("public-456", result.getPublicSubjectId());
         assertEquals("test@example.com", result.getEmailAddress());
+        assertEquals("2021-07-17T10:30:00.123456", result.getEmailAddressLastUpdated());
+        assertEquals("AUTH_BACKFILL", result.getEmailAddressSource());
+        assertEquals("UserProfile.Email", result.getEmailAddressSourceId());
         assertEquals("2021-07-17T10:30:00.123456", result.getUserLastActive());
         assertEquals("pending", result.getStatus());
         assertEquals("AUTH_BACKFILL", result.getUserLastActiveSource());

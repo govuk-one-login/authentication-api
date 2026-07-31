@@ -165,12 +165,14 @@ public class InactiveAccountDataExportHelper {
         }
 
         var currentTimestamp = NowHelper.toTimestampString(NowHelper.now());
+        String profileUpdated = getStringAttribute(userProfileItem, "Updated");
 
         return new InactiveAccountTrackerItem()
                 .withDateForDeletion(dateForDeletion)
                 .withCommonSubjectId(subjectId)
                 .withPublicSubjectId(publicSubjectId)
                 .withEmailAddress(email)
+                .withEmailAddressLastUpdated(profileUpdated)
                 .withStatusLastUpdated(currentTimestamp)
                 .withUserLastActive(lastActiveTimestamp)
                 .withUserLastActiveSourceId(lastActiveSourceId)
