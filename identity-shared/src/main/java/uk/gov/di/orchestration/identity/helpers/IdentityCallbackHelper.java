@@ -183,4 +183,14 @@ public class IdentityCallbackHelper {
         LOG.warn("User identity response missing vot or vot not in vtr list.");
         return Optional.of(OAuth2Error.ACCESS_DENIED);
     }
+
+    public APIGatewayProxyResponseEvent redirectToFrontendErrorPageWithErrorLog(Throwable error) {
+        return RedirectService.redirectToFrontendErrorPageWithErrorLog(frontend.errorURI(), error);
+    }
+
+    public APIGatewayProxyResponseEvent redirectToFrontendErrorPageForNoSession(
+            Exception exception) {
+        return RedirectService.redirectToFrontendErrorPageForNoSession(
+                frontend.sessionEndedURI(), exception);
+    }
 }
