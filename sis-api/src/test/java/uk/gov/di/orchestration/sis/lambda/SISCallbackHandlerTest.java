@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -177,6 +178,16 @@ public class SISCallbackHandlerTest {
         assertDoesRedirectToPage(response, REDIRECT_URI.toString());
         assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         verifyNoMoreInteractions(auditService);
+    }
+
+    @Test
+    void shouldRedirectToErrorPageWhenAuthRequestParamsInvalid() throws Exception {
+        var request = createRequestEvent();
+        when(identityContextService.buildContext(request))
+                .thenThrow(new ParseException("Auth request failed to parse"));
+
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToPage(response, FRONT_END_ERROR_URI.toString());
     }
 
     private APIGatewayProxyRequestEvent createRequestEvent() {
