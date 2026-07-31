@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
@@ -30,12 +31,14 @@ import uk.gov.di.orchestration.sis.service.SISAuthorisationService;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
+import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 
 public class SISCallbackHandler
@@ -126,6 +129,8 @@ public class SISCallbackHandler
             if (validationRedirectOpt.isPresent()) {
                 return validationRedirectOpt.get();
             }
+            auditService.submitAuditEvent(
+                    ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
         } catch (IdentityCallbackException e) {
             return identityCallbackHelper.redirectToFrontendErrorPageWithErrorLog(e);
         } catch (NoSessionException e) {
@@ -200,6 +205,15 @@ public class SISCallbackHandler
                                         identityContext.orchClientSessionItem().getVtrList()),
                                 validationError.userRequestedUpdate()));
             }
+            var aisIntervention =
+                    endOfJourneyService.getAndCheckForIntervention(
+                            identityContext.orchSessionItem(), auditContext, user, identityContext.clientRegistry().getClientID(), false);
+            if (aisIntervention.isPresent()) {
+                return aisIntervention;
+            }
+            return Optional.ofNullable(endOfJourneyService.generateAuthenticationErrorResponse(
+                    identityContext.authRequest(),
+                    new ErrorObject(ACCESS_DENIED_CODE, validationError.errorDescription())));
         }
         return Optional.empty();
     }

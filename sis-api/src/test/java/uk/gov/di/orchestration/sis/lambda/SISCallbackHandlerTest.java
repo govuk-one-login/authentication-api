@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -12,6 +13,7 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -22,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.services.InitiateIPVAuthorisationService;
+import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserStateMismatchException;
@@ -61,6 +64,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -84,6 +88,7 @@ public class SISCallbackHandlerTest {
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
     private static final URI FRONT_END_SESSION_ENDED_URI =
             URI.create("https://example.com/session-ended");
+    private static final String FRONT_END_AIS_LOGOUT_URL = "https://example.com/ais-logout";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -102,6 +107,9 @@ public class SISCallbackHandlerTest {
             new SISCallbackValidationError("access_denied", "No access", true, false);
     private static final SISCallbackValidationError UPDATE_REQUESTED_ERROR =
             new SISCallbackValidationError("access_denied", "record_update_requested", true, true);
+    private static final SISCallbackValidationError GENERIC_ERROR =
+            new SISCallbackValidationError("generic_error", "uh oh", false, false);
+
     private static final URI IPV_URI = URI.create("http://ipv-uri");
     private static final CrossBrowserEntity NO_SESSION_ENTITY =
             new CrossBrowserEntity(
@@ -117,6 +125,13 @@ public class SISCallbackHandlerTest {
                     new ErrorObject("state-mismatch", "Test Description"),
                     new OrchClientSessionItem("test-csid-2")
                             .withAuthRequestParams(MISMATCH_STATE_AUTH_REQUEST.toParameters()));
+    private static final URI ACCESS_DENIED_URI =
+            new AuthenticationErrorResponse(
+                            URI.create(REDIRECT_URI.toString()),
+                            OAuth2Error.ACCESS_DENIED,
+                            RP_STATE,
+                            null)
+                    .toURI();
 
     private final OrchSessionItem orchSession =
             new OrchSessionItem(SESSION_ID)
@@ -160,6 +175,13 @@ public class SISCallbackHandlerTest {
                                 "",
                                 Map.of(ResponseHeaders.LOCATION, REDIRECT_URI.toString()),
                                 null));
+        when(endOfJourneyService.generateAuthenticationErrorResponse(any(), any()))
+                .thenReturn(
+                        generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(ResponseHeaders.LOCATION, ACCESS_DENIED_URI.toString()),
+                                null));
         when(endOfJourneyService.generateAuthenticationErrorResponse(
                         eqAuthRequest(MISMATCH_STATE_AUTH_REQUEST),
                         eq(MISMATCH_STATE_ENTITY.getErrorObject()),
@@ -191,6 +213,7 @@ public class SISCallbackHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertDoesRedirectToPage(response, FRONT_END_ERROR_URI.toString());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -216,6 +239,7 @@ public class SISCallbackHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertDoesRedirectToPage(response, FRONT_END_SESSION_ENDED_URI.toString());
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -240,6 +264,7 @@ public class SISCallbackHandlerTest {
 
         var response = handler.handleRequest(request, context);
         assertDoesRedirectToPage(response, FRONT_END_ERROR_URI.toString());
+        verifyNoInteractions(auditService);
     }
 
     @Nested
@@ -282,6 +307,49 @@ public class SISCallbackHandlerTest {
             var response = handler.handleRequest(request, context);
 
             assertDoesRedirectToPage(response, IPV_URI.toString());
+            assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
+            verifyNoMoreInteractions(auditService);
+        }
+
+        @Test
+        void shouldRedirectToLogoutPageWhenAISInterventionOccursAfterSISErrorCheck()
+                throws Exception {
+            var request =
+                    createRequestEvent(
+                            Map.of("error", "generic_error", "error_description", "uh oh"));
+            usingValidIdentityContext(request);
+            when(sisAuthorisationService.validateResponse(
+                            request.getQueryStringParameters(), SESSION_ID))
+                    .thenReturn(Optional.of(GENERIC_ERROR));
+            mockAisIntervention();
+
+            var response = handler.handleRequest(request, context);
+
+            assertDoesRedirectToPage(response, FRONT_END_AIS_LOGOUT_URL);
+            assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
+            verifyNoMoreInteractions(auditService);
+        }
+
+        @Test
+        void shouldRedirectBackToRPWithErrorWhenSISReturnsGenericErrorThatIsNotAccessDenied()
+                throws Exception {
+            var request =
+                    createRequestEvent(
+                            Map.of("error", "generic_error", "error_description", "uh oh"));
+            usingValidIdentityContext(request);
+            when(sisAuthorisationService.validateResponse(
+                            request.getQueryStringParameters(), SESSION_ID))
+                    .thenReturn(Optional.of(GENERIC_ERROR));
+
+            var response = handler.handleRequest(request, context);
+
+            assertDoesRedirectToPage(
+                    response,
+                    REDIRECT_URI
+                            + "?error=access_denied"
+                            + "&error_description=Access+denied+by+resource+owner+or+authorization+server"
+                            + "&state="
+                            + authRequest.getState());
             assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
             verifyNoMoreInteractions(auditService);
         }
@@ -385,6 +453,22 @@ public class SISCallbackHandlerTest {
                                 client,
                                 AUTH_USER_INFO,
                                 authRequest));
+    }
+
+    private void mockAisIntervention() {
+        when(endOfJourneyService.getAndCheckForIntervention(
+                        eq(orchSession),
+                        any(AuditContext.class),
+                        any(TxmaAuditUser.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(false)))
+                .thenReturn(
+                        Optional.of(
+                                generateApiGatewayProxyResponse(
+                                        302,
+                                        null,
+                                        Map.of("Location", FRONT_END_AIS_LOGOUT_URL),
+                                        null)));
     }
 
     private void assertDoesRedirectToPage(APIGatewayProxyResponseEvent response, String page) {
