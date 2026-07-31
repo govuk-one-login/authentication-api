@@ -18,11 +18,13 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserStateMismatchException;
 import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -35,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -46,6 +49,8 @@ public class IdentityContextServiceTest {
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final AuthenticationUserInfoStorageService authUserInfoStorageService =
+            mock(AuthenticationUserInfoStorageService.class);
 
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
@@ -73,6 +78,13 @@ public class IdentityContextServiceTest {
                             List.of(),
                             "test-client-name")
                     .withRpPairwiseId(RP_PAIRWISE_SUBJECT);
+    private final ClientRegistry client =
+            new ClientRegistry()
+                    .withClientID(CLIENT_ID.getValue())
+                    .withClientName("test-client")
+                    .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
+                    .withSectorIdentifierUri("https://test.com")
+                    .withSubjectType("pairwise");
 
     private IdentityContextService service;
 
@@ -83,7 +95,8 @@ public class IdentityContextServiceTest {
                         crossBrowserOrchestrationService,
                         orchSessionService,
                         orchClientSessionService,
-                        dynamoClientService);
+                        dynamoClientService,
+                        authUserInfoStorageService);
     }
 
     @Test
@@ -168,6 +181,19 @@ public class IdentityContextServiceTest {
         assertThrows(IdentityCallbackException.class, () -> service.buildContext(request));
     }
 
+    @Test
+    void shouldThrowIdentityCallbackExceptionWhenAuthUserInfoIsNotFound() throws Exception {
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+        when(authUserInfoStorageService.getAuthenticationUserInfo(
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                .thenReturn(Optional.empty());
+
+        var request = createRequestEvent();
+        assertThrows(IdentityCallbackException.class, () -> service.buildContext(request));
+    }
+
     private APIGatewayProxyRequestEvent createRequestEvent() {
         return createRequestEvent(Map.of());
     }
@@ -220,6 +246,10 @@ public class IdentityContextServiceTest {
     private void usingClientSession(OrchClientSessionItem clientSession) {
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
+    }
+
+    private void usingValidClient() {
+        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(client));
     }
 
     private void mockCrossBrowserReturningNoSessionEntity(APIGatewayProxyRequestEvent request)

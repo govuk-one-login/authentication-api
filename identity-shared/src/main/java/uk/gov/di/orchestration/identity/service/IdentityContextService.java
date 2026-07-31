@@ -11,6 +11,7 @@ import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -30,16 +31,19 @@ public class IdentityContextService {
     private final OrchSessionService orchSessionService;
     private final OrchClientSessionService orchClientSessionService;
     private final DynamoClientService clientService;
+    private final AuthenticationUserInfoStorageService authUserInfoStorageService;
 
     public IdentityContextService(
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             OrchSessionService orchSessionService,
             OrchClientSessionService orchClientSessionService,
-            DynamoClientService clientService) {
+            DynamoClientService clientService,
+            AuthenticationUserInfoStorageService authUserInfoStorageService) {
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.orchSessionService = orchSessionService;
         this.orchClientSessionService = orchClientSessionService;
         this.clientService = clientService;
+        this.authUserInfoStorageService = authUserInfoStorageService;
     }
 
     public IdentityContext buildContext(APIGatewayProxyRequestEvent input)
@@ -95,6 +99,12 @@ public class IdentityContextService {
                                 () ->
                                         new IdentityCallbackException(
                                                 "Client registry not found with given clientId"));
+
+        var authUserInfo =
+                authUserInfoStorageService
+                        .getAuthenticationUserInfo(
+                                orchSession.getInternalCommonSubjectId(), clientSessionId)
+                        .orElseThrow(() -> new IdentityCallbackException("authUserInfo not found"));
         return null;
     }
 }
