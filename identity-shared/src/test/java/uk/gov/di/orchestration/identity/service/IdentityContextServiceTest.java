@@ -17,12 +17,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserStateMismatchException;
+import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 
@@ -43,6 +45,7 @@ public class IdentityContextServiceTest {
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
     private final OrchClientSessionService orchClientSessionService =
             mock(OrchClientSessionService.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
 
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
@@ -79,7 +82,8 @@ public class IdentityContextServiceTest {
                 new IdentityContextService(
                         crossBrowserOrchestrationService,
                         orchSessionService,
-                        orchClientSessionService);
+                        orchClientSessionService,
+                        dynamoClientService);
     }
 
     @Test
@@ -152,6 +156,16 @@ public class IdentityContextServiceTest {
         var request = createRequestEvent();
 
         assertThrows(ParseException.class, () -> service.buildContext(request));
+    }
+
+    @Test
+    void shouldThrowIdentityCallbackExceptionWhenClientDoesNotExistWithClientId() {
+        usingValidSession();
+        usingValidClientSession();
+        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
+        var request = createRequestEvent();
+
+        assertThrows(IdentityCallbackException.class, () -> service.buildContext(request));
     }
 
     private APIGatewayProxyRequestEvent createRequestEvent() {
