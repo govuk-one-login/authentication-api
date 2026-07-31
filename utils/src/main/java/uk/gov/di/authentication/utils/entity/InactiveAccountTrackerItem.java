@@ -17,6 +17,7 @@ public class InactiveAccountTrackerItem {
     private String statusLastUpdated;
     private String userLastActiveSource = "AUTH_BACKFILL";
     private String userLastActiveSourceId;
+    private String userLastActiveUpdated;
 
     public InactiveAccountTrackerItem() {}
 
@@ -135,6 +136,20 @@ public class InactiveAccountTrackerItem {
 
     public InactiveAccountTrackerItem withUserLastActiveSourceId(String userLastActiveSourceId) {
         this.userLastActiveSourceId = userLastActiveSourceId;
+        return this;
+    }
+
+    @DynamoDbAttribute("userLastActiveUpdated")
+    public String getUserLastActiveUpdated() {
+        return userLastActiveUpdated;
+    }
+
+    public void setUserLastActiveUpdated(String userLastActiveUpdated) {
+        this.userLastActiveUpdated = userLastActiveUpdated;
+    }
+
+    public InactiveAccountTrackerItem withUserLastActiveUpdated(String userLastActiveUpdated) {
+        this.userLastActiveUpdated = userLastActiveUpdated;
         return this;
     }
 }

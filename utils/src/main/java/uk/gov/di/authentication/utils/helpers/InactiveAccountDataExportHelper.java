@@ -164,14 +164,17 @@ public class InactiveAccountDataExportHelper {
             return null;
         }
 
+        var currentTimestamp = NowHelper.toTimestampString(NowHelper.now());
+
         return new InactiveAccountTrackerItem()
                 .withDateForDeletion(dateForDeletion)
                 .withCommonSubjectId(subjectId)
                 .withPublicSubjectId(publicSubjectId)
                 .withEmailAddress(email)
+                .withStatusLastUpdated(currentTimestamp)
                 .withUserLastActive(lastActiveTimestamp)
-                .withStatusLastUpdated(NowHelper.toTimestampString(NowHelper.now()))
-                .withUserLastActiveSourceId(lastActiveSourceId);
+                .withUserLastActiveSourceId(lastActiveSourceId)
+                .withUserLastActiveUpdated(currentTimestamp);
     }
 
     private static String getTermsAndConditionsTimestamp(Map<String, AttributeValue> item) {

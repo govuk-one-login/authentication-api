@@ -155,6 +155,7 @@ class InactiveAccountDataExportHelperTest {
         assertEquals("AUTH_BACKFILL", result.getUserLastActiveSource());
         assertEquals("UserProfile.Updated", result.getUserLastActiveSourceId());
         assertNotNull(result.getStatusLastUpdated());
+        assertNotNull(result.getUserLastActiveUpdated());
     }
 
     @Test
