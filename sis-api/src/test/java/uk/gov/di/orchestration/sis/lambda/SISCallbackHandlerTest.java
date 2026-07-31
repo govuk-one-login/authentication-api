@@ -18,11 +18,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
+import uk.gov.di.orchestration.identity.entity.CrossBrowserStateMismatchException;
 import uk.gov.di.orchestration.identity.helpers.IdentityCallbackHelper;
 import uk.gov.di.orchestration.identity.service.IdentityContextService;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
+import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -44,6 +46,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 
@@ -76,6 +79,14 @@ public class SISCallbackHandlerTest {
                     new ErrorObject("test-error", "Test Description"),
                     new OrchClientSessionItem("test-csid")
                             .withAuthRequestParams(NO_SESSION_AUTH_REQUEST.toParameters()));
+    private static final AuthenticationRequest MISMATCH_STATE_AUTH_REQUEST =
+            generateAuthRequest(null);
+    private static final CrossBrowserEntity MISMATCH_STATE_ENTITY =
+            new CrossBrowserEntity(
+                    "test-csid-2",
+                    new ErrorObject("state-mismatch", "Test Description"),
+                    new OrchClientSessionItem("test-csid-2")
+                            .withAuthRequestParams(MISMATCH_STATE_AUTH_REQUEST.toParameters()));
     private SISCallbackHandler handler;
 
     @BeforeEach
@@ -98,6 +109,17 @@ public class SISCallbackHandlerTest {
                                 "",
                                 Map.of(ResponseHeaders.LOCATION, REDIRECT_URI.toString()),
                                 null));
+        when(endOfJourneyService.generateAuthenticationErrorResponse(
+                        eqAuthRequest(MISMATCH_STATE_AUTH_REQUEST),
+                        eq(MISMATCH_STATE_ENTITY.getErrorObject()),
+                        eq("No Session Error: false")))
+                .thenReturn(
+                        generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(ResponseHeaders.LOCATION, REDIRECT_URI.toString()),
+                                null));
+
         when(configurationService.isIdentityEnabled()).thenReturn(true);
         handler =
                 new SISCallbackHandler(
@@ -114,6 +136,7 @@ public class SISCallbackHandlerTest {
         var request = createRequestEvent();
 
         var response = handler.handleRequest(request, context);
+
         assertDoesRedirectToPage(response, FRONT_END_ERROR_URI.toString());
     }
 
@@ -138,7 +161,22 @@ public class SISCallbackHandlerTest {
                 .thenThrow(new NoSessionException("Session not found"));
 
         var response = handler.handleRequest(request, context);
+
         assertDoesRedirectToPage(response, FRONT_END_SESSION_ENDED_URI.toString());
+    }
+
+    @Test
+    void shouldRedirectToErrorPageWhenStateInParamsDoesNotMatchStateFromClientSession()
+            throws Exception {
+        var request = createRequestEvent();
+        when(identityContextService.buildContext(request))
+                .thenThrow(new CrossBrowserStateMismatchException(MISMATCH_STATE_ENTITY));
+
+        var response = handler.handleRequest(request, context);
+
+        assertDoesRedirectToPage(response, REDIRECT_URI.toString());
+        assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyNoMoreInteractions(auditService);
     }
 
     private APIGatewayProxyRequestEvent createRequestEvent() {
@@ -195,8 +233,9 @@ public class SISCallbackHandlerTest {
     private static AuthenticationRequest eqAuthRequest(AuthenticationRequest expectedAuthRequest) {
         return argThat(
                 actualAuthRequest ->
-                        expectedAuthRequest
-                                .toParameters()
-                                .equals(actualAuthRequest.toParameters()));
+                        actualAuthRequest != null
+                                && expectedAuthRequest
+                                        .toParameters()
+                                        .equals(actualAuthRequest.toParameters()));
     }
 }
