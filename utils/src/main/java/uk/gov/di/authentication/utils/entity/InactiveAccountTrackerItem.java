@@ -14,6 +14,7 @@ public class InactiveAccountTrackerItem {
     private String emailAddress;
     private String emailAddressLastUpdated;
     private String emailAddressSource = "AUTH_BACKFILL";
+    private String emailAddressSourceId = "UserProfile.Email";
     private String userLastActive;
     private String status = "pending";
     private String statusLastUpdated;
@@ -102,6 +103,15 @@ public class InactiveAccountTrackerItem {
 
     public void setEmailAddressSource(String emailAddressSource) {
         this.emailAddressSource = emailAddressSource;
+    }
+
+    @DynamoDbAttribute("emailAddressSourceId")
+    public String getEmailAddressSourceId() {
+        return emailAddressSourceId;
+    }
+
+    public void setEmailAddressSourceId(String emailAddressSourceId) {
+        this.emailAddressSourceId = emailAddressSourceId;
     }
 
     @DynamoDbAttribute("status")
