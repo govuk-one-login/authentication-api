@@ -12,8 +12,6 @@ import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.audit.TxmaAuditUser;
-import uk.gov.di.orchestration.identity.entity.AuditEventConfiguration;
 import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
 import uk.gov.di.orchestration.identity.service.IdentityTokenService;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
@@ -23,7 +21,6 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
-import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 
@@ -43,45 +40,31 @@ public class IdentityCallbackHelper {
 
     private static final Logger LOG = LogManager.getLogger(IdentityCallbackHelper.class);
     private final IdentityTokenService identityTokenService;
-    private final AuditService auditService;
-    private final AuditEventConfiguration auditEventConfiguration;
     private final CommonFrontend frontend;
     private final DynamoIdentityService dynamoIdentityService;
     private final OidcAPI oidcAPI;
 
     public IdentityCallbackHelper(
             IdentityTokenService identityTokenService,
-            AuditService auditService,
-            AuditEventConfiguration auditEventConfiguration,
             CommonFrontend frontend,
             DynamoIdentityService dynamoIdentityService,
             OidcAPI oidcAPI) {
         this.identityTokenService = identityTokenService;
-        this.auditService = auditService;
-        this.auditEventConfiguration = auditEventConfiguration;
         this.frontend = frontend;
         this.dynamoIdentityService = dynamoIdentityService;
         this.oidcAPI = oidcAPI;
     }
 
-    public Optional<APIGatewayProxyResponseEvent> makeTokenRequest(
-            String authCode, String clientId, TxmaAuditUser user) {
+    public TokenResponse makeTokenRequest(String authCode) throws IdentityCallbackException {
         var tokenResponse =
                 segmentedFunctionCall("getToken", () -> identityTokenService.getToken(authCode));
         if (!tokenResponse.indicatesSuccess()) {
-            auditService.submitAuditEvent(
-                    auditEventConfiguration.unsuccessfulTokenResponseReceived(), clientId, user);
-            return Optional.of(
-                    RedirectService.redirectToFrontendErrorPageWithErrorLog(
-                            frontend.errorURI(),
-                            new Exception(
-                                    String.format(
-                                            "TokenResponse was not successful: %s",
-                                            tokenResponse.toErrorResponse().toJSONObject()))));
+            throw new IdentityCallbackException(
+                    String.format(
+                            "TokenResponse was not successful: %s",
+                            tokenResponse.toErrorResponse().toJSONObject()));
         }
-        auditService.submitAuditEvent(
-                auditEventConfiguration.successfulTokenResponseReceived(), clientId, user);
-        return Optional.empty();
+        return tokenResponse;
     }
 
     public void saveIdentityClaimsToDynamo(

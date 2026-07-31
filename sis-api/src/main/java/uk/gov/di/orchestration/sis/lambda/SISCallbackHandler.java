@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,7 +40,9 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
+import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
+import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 
 public class SISCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -131,6 +134,11 @@ public class SISCallbackHandler
             }
             auditService.submitAuditEvent(
                     ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
+
+            var authCode = input.getQueryStringParameters().get("code");
+            var tokenResponse = makeTokenRequest(authCode, clientId, user);
+            auditService.submitAuditEvent(
+                    ORCH_SIS_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
         } catch (IdentityCallbackException e) {
             return identityCallbackHelper.redirectToFrontendErrorPageWithErrorLog(e);
         } catch (NoSessionException e) {
@@ -140,6 +148,17 @@ public class SISCallbackHandler
                     new Error("Cannot retrieve auth request params from client session id"));
         }
         return null;
+    }
+
+    private TokenResponse makeTokenRequest(String authCode, String clientId, TxmaAuditUser user)
+            throws IdentityCallbackException {
+        try {
+            return identityCallbackHelper.makeTokenRequest(authCode);
+        } catch (IdentityCallbackException e) {
+            auditService.submitAuditEvent(
+                    ORCH_SIS_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
+            throw e;
+        }
     }
 
     private IdentityContextResponse getIdentityContext(APIGatewayProxyRequestEvent input)
@@ -207,13 +226,19 @@ public class SISCallbackHandler
             }
             var aisIntervention =
                     endOfJourneyService.getAndCheckForIntervention(
-                            identityContext.orchSessionItem(), auditContext, user, identityContext.clientRegistry().getClientID(), false);
+                            identityContext.orchSessionItem(),
+                            auditContext,
+                            user,
+                            identityContext.clientRegistry().getClientID(),
+                            false);
             if (aisIntervention.isPresent()) {
                 return aisIntervention;
             }
-            return Optional.ofNullable(endOfJourneyService.generateAuthenticationErrorResponse(
-                    identityContext.authRequest(),
-                    new ErrorObject(ACCESS_DENIED_CODE, validationError.errorDescription())));
+            return Optional.ofNullable(
+                    endOfJourneyService.generateAuthenticationErrorResponse(
+                            identityContext.authRequest(),
+                            new ErrorObject(
+                                    ACCESS_DENIED_CODE, validationError.errorDescription())));
         }
         return Optional.empty();
     }
