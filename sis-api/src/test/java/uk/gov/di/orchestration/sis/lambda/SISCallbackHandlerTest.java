@@ -23,7 +23,7 @@ import uk.gov.di.orchestration.identity.service.IdentityContextService;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
-import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -44,7 +44,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 
@@ -57,7 +56,10 @@ public class SISCallbackHandlerTest {
             mock(IdentityContextService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final EndOfJourneyService endOfJourneyService = mock(EndOfJourneyService.class);
+
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
+    private static final URI FRONT_END_SESSION_ENDED_URI =
+            URI.create("https://example.com/session-ended");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -85,7 +87,7 @@ public class SISCallbackHandlerTest {
         when(identityCallbackHelper.redirectToFrontendErrorPageForNoSession(any(Exception.class)))
                 .thenReturn(
                         RedirectService.redirectToFrontendErrorPageWithErrorLog(
-                                FRONT_END_ERROR_URI, new Error("error")));
+                                FRONT_END_SESSION_ENDED_URI, new Error("error")));
         when(endOfJourneyService.generateAuthenticationErrorResponse(
                         eqAuthRequest(NO_SESSION_AUTH_REQUEST),
                         eq(NO_SESSION_ENTITY.getErrorObject()),
@@ -127,6 +129,16 @@ public class SISCallbackHandlerTest {
         assertDoesRedirectToPage(response, REDIRECT_URI.toString());
         assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         verifyNoMoreInteractions(auditService);
+    }
+
+    @Test
+    void shouldRedirectToErrorPageWhenNoSessionFoundInContextService() throws Exception {
+        var request = createRequestEvent();
+        when(identityContextService.buildContext(request))
+                .thenThrow(new NoSessionException("Session not found"));
+
+        var response = handler.handleRequest(request, context);
+        assertDoesRedirectToPage(response, FRONT_END_SESSION_ENDED_URI.toString());
     }
 
     private APIGatewayProxyRequestEvent createRequestEvent() {
