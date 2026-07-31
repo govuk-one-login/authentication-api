@@ -12,9 +12,11 @@ import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchSessionService;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.when;
 public class IdentityContextServiceTest {
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
             mock(CrossBrowserOrchestrationService.class);
+    private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
 
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
@@ -36,7 +39,7 @@ public class IdentityContextServiceTest {
 
     @BeforeEach
     void setup() {
-        service = new IdentityContextService(crossBrowserOrchestrationService);
+        service = new IdentityContextService(crossBrowserOrchestrationService, orchSessionService);
     }
 
     @Test
@@ -56,6 +59,14 @@ public class IdentityContextServiceTest {
         var request = createRequestEvent();
         request.setHeaders(Map.of(COOKIE, ""));
         mockNoSessionFoundFromState(request);
+
+        assertThrows(NoSessionException.class, () -> service.buildContext(request));
+    }
+
+    @Test
+    void shouldThrowNoSessionExceptionWhenNoSessionFoundWithSessionId() {
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.empty());
+        var request = createRequestEvent();
 
         assertThrows(NoSessionException.class, () -> service.buildContext(request));
     }
