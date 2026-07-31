@@ -3,10 +3,19 @@ package uk.gov.di.orchestration.identity.service;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.ResponseMode;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
+import uk.gov.di.orchestration.identity.entity.CrossBrowserStateMismatchException;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
@@ -16,7 +25,9 @@ import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 
+import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -38,12 +49,26 @@ public class IdentityContextServiceTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate() + "--1700558480962";
     private static final State STATE = new State();
+    private static final URI REDIRECT_URI = URI.create("test-uri");
+    private static final State RP_STATE = new State();
+    private static final ClientID CLIENT_ID = new ClientID("test-client-id");
     private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
             "urn:fdc:gov.uk:2022:0VzHWj9aaJpyHXJX8B5QJ-UOUibweHmkSg1GjF6w9yM";
+    private static final String RP_PAIRWISE_SUBJECT =
+            "urn:fdc:gov.uk:2022:_WJvfEzqmWo6vnDwSqgMPTC-aK8n_fkgZsNF-a4OxxU";
 
     private final OrchSessionItem orchSession =
             new OrchSessionItem("test-session-id")
                     .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
+    private final AuthenticationRequest authRequest = generateAuthRequest(new OIDCClaimsRequest());
+    private final OrchClientSessionItem orchClientSession =
+            new OrchClientSessionItem(
+                            CLIENT_SESSION_ID,
+                            authRequest.toParameters(),
+                            null,
+                            List.of(),
+                            "test-client-name")
+                    .withRpPairwiseId(RP_PAIRWISE_SUBJECT);
 
     private IdentityContextService service;
 
@@ -95,6 +120,30 @@ public class IdentityContextServiceTest {
         assertThrows(NoSessionException.class, () -> service.buildContext(request));
     }
 
+    @Test
+    void shouldThrowNoSessionExceptionWhenStateParamFieldIsNotPresent() throws Exception {
+        usingValidSession();
+        usingValidClientSession();
+        var request = createRequestEvent();
+        when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
+                        request.getQueryStringParameters(), CLIENT_SESSION_ID, orchSession))
+                .thenThrow(new NoSessionException("test"));
+
+        assertThrows(NoSessionException.class, () -> service.buildContext(request));
+    }
+
+    @Test
+    void
+            shouldThrowCrossBrowserStateMismatchExceptionWhenStateInParamsDoesNotMatchStateFromClientSession()
+                    throws Exception {
+        usingValidSession();
+        usingValidClientSession();
+        var request = createRequestEvent();
+        mockStateMismatch(request);
+
+        assertThrows(CrossBrowserStateMismatchException.class, () -> service.buildContext(request));
+    }
+
     private APIGatewayProxyRequestEvent createRequestEvent() {
         return createRequestEvent(Map.of());
     }
@@ -121,8 +170,28 @@ public class IdentityContextServiceTest {
                 PERSISTENT_SESSION_ID);
     }
 
+    public static AuthenticationRequest generateAuthRequest(OIDCClaimsRequest oidcClaimsRequest) {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        Nonce nonce = new Nonce();
+        scope.add(OIDCScopeValue.OPENID);
+        scope.add("phone");
+        scope.add("email");
+        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                .state(RP_STATE)
+                .nonce(nonce)
+                .claims(oidcClaimsRequest)
+                .responseMode(ResponseMode.QUERY)
+                .build();
+    }
+
     private void usingValidSession() {
         when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
+    }
+
+    private void usingValidClientSession() {
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(orchClientSession));
     }
 
     private void mockCrossBrowserReturningNoSessionEntity(APIGatewayProxyRequestEvent request)
@@ -141,5 +210,16 @@ public class IdentityContextServiceTest {
         when(crossBrowserOrchestrationService.generateNoSessionOrchestrationEntity(
                         request.getQueryStringParameters()))
                 .thenThrow(new NoSessionException("test"));
+    }
+
+    private void mockStateMismatch(APIGatewayProxyRequestEvent request) throws Exception {
+        var crossBrowserEntity =
+                new CrossBrowserEntity(
+                        "test-csid-2",
+                        new ErrorObject("test-error"),
+                        new OrchClientSessionItem("test-csid-2"));
+        when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
+                        request.getQueryStringParameters(), CLIENT_SESSION_ID, orchSession))
+                .thenReturn(Optional.of(crossBrowserEntity));
     }
 }
