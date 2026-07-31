@@ -9,10 +9,13 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
@@ -38,6 +41,8 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -65,6 +70,7 @@ public class IdentityContextServiceTest {
             "urn:fdc:gov.uk:2022:0VzHWj9aaJpyHXJX8B5QJ-UOUibweHmkSg1GjF6w9yM";
     private static final String RP_PAIRWISE_SUBJECT =
             "urn:fdc:gov.uk:2022:_WJvfEzqmWo6vnDwSqgMPTC-aK8n_fkgZsNF-a4OxxU";
+    private static final UserInfo AUTH_USER_INFO = generateAuthUserInfo();
 
     private final OrchSessionItem orchSession =
             new OrchSessionItem("test-session-id")
@@ -194,6 +200,23 @@ public class IdentityContextServiceTest {
         assertThrows(IdentityCallbackException.class, () -> service.buildContext(request));
     }
 
+    @Test
+    void shouldReturnIdentityContext() throws Exception {
+        usingValidSession();
+        usingValidClientSession();
+        usingValidClient();
+        usingValidAuthUserInfo();
+
+        var request = createRequestEvent();
+        var result = service.buildContext(request);
+
+        assertThat(result.orchSessionItem(), equalTo(orchSession));
+        assertThat(result.orchClientSessionItem(), equalTo(orchClientSession));
+        assertThat(result.clientRegistry(), equalTo(client));
+        assertThat(result.authUserInfo(), equalTo(AUTH_USER_INFO));
+        assertThat(result.authRequest().toParameters(), equalTo(authRequest.toParameters()));
+    }
+
     private APIGatewayProxyRequestEvent createRequestEvent() {
         return createRequestEvent(Map.of());
     }
@@ -235,6 +258,24 @@ public class IdentityContextServiceTest {
                 .build();
     }
 
+    private static UserInfo generateAuthUserInfo() {
+        return new UserInfo(
+                new JSONObject(
+                        Map.of(
+                                "sub",
+                                TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER,
+                                "client_session_id",
+                                CLIENT_SESSION_ID,
+                                "email",
+                                "test-email-address",
+                                "phone_number",
+                                "012345678902",
+                                "salt",
+                                "TW1jNDhpbUV1TzVra1ZXN050WFZ0eDVoMG1iQ1RmWHNxWGRXdmJSTXpkdz0=",
+                                "local_account_id",
+                                new Subject().getValue())));
+    }
+
     private void usingValidSession() {
         when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
@@ -250,6 +291,12 @@ public class IdentityContextServiceTest {
 
     private void usingValidClient() {
         when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(client));
+    }
+
+    private void usingValidAuthUserInfo() throws ParseException {
+        when(authUserInfoStorageService.getAuthenticationUserInfo(
+                        TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(AUTH_USER_INFO));
     }
 
     private void mockCrossBrowserReturningNoSessionEntity(APIGatewayProxyRequestEvent request)

@@ -105,6 +105,7 @@ public class IdentityContextService {
                         .getAuthenticationUserInfo(
                                 orchSession.getInternalCommonSubjectId(), clientSessionId)
                         .orElseThrow(() -> new IdentityCallbackException("authUserInfo not found"));
-        return null;
+        return new IdentityContext(
+                orchSession, orchClientSession, clientRegistry, authUserInfo, authRequest);
     }
 }
