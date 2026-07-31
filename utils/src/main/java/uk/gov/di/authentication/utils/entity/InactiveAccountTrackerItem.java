@@ -15,7 +15,7 @@ public class InactiveAccountTrackerItem {
     private String userLastActive;
     private String status = "pending";
     private String statusLastUpdated;
-    private String source = "AUTH_BACKFILL";
+    private String userLastActiveSource = "AUTH_BACKFILL";
     private String sourceId;
 
     public InactiveAccountTrackerItem() {}
@@ -78,20 +78,6 @@ public class InactiveAccountTrackerItem {
         return this;
     }
 
-    @DynamoDbAttribute("userLastActive")
-    public String getUserLastActive() {
-        return userLastActive;
-    }
-
-    public void setUserLastActive(String userLastActive) {
-        this.userLastActive = userLastActive;
-    }
-
-    public InactiveAccountTrackerItem withUserLastActive(String userLastActive) {
-        this.userLastActive = userLastActive;
-        return this;
-    }
-
     @DynamoDbAttribute("status")
     public String getStatus() {
         return status;
@@ -115,13 +101,27 @@ public class InactiveAccountTrackerItem {
         return this;
     }
 
-    @DynamoDbAttribute("source")
-    public String getSource() {
-        return source;
+    @DynamoDbAttribute("userLastActive")
+    public String getUserLastActive() {
+        return userLastActive;
     }
 
-    public void setSource(String source) {
-        this.source = source;
+    public void setUserLastActive(String userLastActive) {
+        this.userLastActive = userLastActive;
+    }
+
+    public InactiveAccountTrackerItem withUserLastActive(String userLastActive) {
+        this.userLastActive = userLastActive;
+        return this;
+    }
+
+    @DynamoDbAttribute("userLastActiveSource")
+    public String getUserLastActiveSource() {
+        return userLastActiveSource;
+    }
+
+    public void setUserLastActiveSource(String userLastActiveSource) {
+        this.userLastActiveSource = userLastActiveSource;
     }
 
     @DynamoDbAttribute("sourceId")
