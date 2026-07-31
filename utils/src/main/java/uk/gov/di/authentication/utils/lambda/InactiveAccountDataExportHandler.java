@@ -64,6 +64,7 @@ public class InactiveAccountDataExportHandler
     private final int parallelism;
     private final int totalSegments;
     private final int maxRetries;
+    private final int batchWriteMaxRetries;
     private final int maxItemsPerSegment;
     private final long pauseBetweenInvocationsMs;
     private final String lambdaName;
@@ -82,6 +83,8 @@ public class InactiveAccountDataExportHandler
         this.parallelism = configurationService.getInactiveAccountExportParallelism();
         this.totalSegments = configurationService.getInactiveAccountExportTotalSegments();
         this.maxRetries = configurationService.getInactiveAccountExportMaxRetries();
+        this.batchWriteMaxRetries =
+                configurationService.getInactiveAccountExportBatchWriteMaxRetries();
         this.maxItemsPerSegment = configurationService.getInactiveAccountExportMaxItemsPerSegment();
         this.pauseBetweenInvocationsMs =
                 configurationService.getInactiveAccountExportPauseBetweenInvocationsMs();
@@ -266,7 +269,8 @@ public class InactiveAccountDataExportHandler
         long missingCredentialsCount = 0;
         List<Map<String, AttributeValue>> currentBatch = new ArrayList<>();
         InactiveAccountDataExportBatchWriteService batchWriteService =
-                new InactiveAccountDataExportBatchWriteService(client, exportTableName);
+                new InactiveAccountDataExportBatchWriteService(
+                        client, exportTableName, batchWriteMaxRetries);
 
         do {
             if (itemsScanned >= maxItemsPerSegment) {

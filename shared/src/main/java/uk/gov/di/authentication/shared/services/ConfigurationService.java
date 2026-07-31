@@ -261,6 +261,12 @@ public class ConfigurationService
         return System.getenv().getOrDefault("INACTIVE_ACCOUNT_EXPORT_TABLE_NAME", "");
     }
 
+    public int getInactiveAccountExportBatchWriteMaxRetries() {
+        return Integer.parseInt(
+                System.getenv()
+                        .getOrDefault("INACTIVE_ACCOUNT_EXPORT_BATCH_WRITE_MAX_RETRIES", "0"));
+    }
+
     public String getTicfCRILambdaIdentifier() {
         return System.getenv().getOrDefault("TICF_CRI_LAMBDA_IDENTIFIER", "");
     }
