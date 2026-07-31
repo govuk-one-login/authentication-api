@@ -9,9 +9,11 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
 import uk.gov.di.orchestration.shared.entity.CrossBrowserEntity;
 import uk.gov.di.orchestration.shared.entity.OrchClientSessionItem;
+import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
+import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 
 import java.util.HashMap;
@@ -27,6 +29,8 @@ public class IdentityContextServiceTest {
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
             mock(CrossBrowserOrchestrationService.class);
     private final OrchSessionService orchSessionService = mock(OrchSessionService.class);
+    private final OrchClientSessionService orchClientSessionService =
+            mock(OrchClientSessionService.class);
 
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
@@ -34,12 +38,22 @@ public class IdentityContextServiceTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate() + "--1700558480962";
     private static final State STATE = new State();
+    private static final String TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER =
+            "urn:fdc:gov.uk:2022:0VzHWj9aaJpyHXJX8B5QJ-UOUibweHmkSg1GjF6w9yM";
+
+    private final OrchSessionItem orchSession =
+            new OrchSessionItem("test-session-id")
+                    .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER);
 
     private IdentityContextService service;
 
     @BeforeEach
     void setup() {
-        service = new IdentityContextService(crossBrowserOrchestrationService, orchSessionService);
+        service =
+                new IdentityContextService(
+                        crossBrowserOrchestrationService,
+                        orchSessionService,
+                        orchClientSessionService);
     }
 
     @Test
@@ -71,6 +85,16 @@ public class IdentityContextServiceTest {
         assertThrows(NoSessionException.class, () -> service.buildContext(request));
     }
 
+    @Test
+    void shouldThrowNoSessionExceptionWhenNoClientSessionFoundWithClientSessionId() {
+        usingValidSession();
+        when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.empty());
+        var request = createRequestEvent();
+
+        assertThrows(NoSessionException.class, () -> service.buildContext(request));
+    }
+
     private APIGatewayProxyRequestEvent createRequestEvent() {
         return createRequestEvent(Map.of());
     }
@@ -95,6 +119,10 @@ public class IdentityContextServiceTest {
                 3600,
                 "Secure; HttpOnly;",
                 PERSISTENT_SESSION_ID);
+    }
+
+    private void usingValidSession() {
+        when(orchSessionService.getSession(SESSION_ID)).thenReturn(Optional.of(orchSession));
     }
 
     private void mockCrossBrowserReturningNoSessionEntity(APIGatewayProxyRequestEvent request)
