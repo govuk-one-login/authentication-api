@@ -153,7 +153,7 @@ public class InactiveAccountDataExportHelper {
         LastActiveDate lastActiveDate =
                 calculateLastActiveDate(userProfileItem, userCredentialsItem);
         String lastActiveTimestamp = lastActiveDate != null ? lastActiveDate.timestamp() : null;
-        String lastActiveSource = lastActiveDate != null ? lastActiveDate.source() : null;
+        String lastActiveSourceId = lastActiveDate != null ? lastActiveDate.source() : null;
 
         String dateForDeletion = calculateDateForDeletion(lastActiveTimestamp);
 
@@ -171,7 +171,7 @@ public class InactiveAccountDataExportHelper {
                 .withEmailAddress(email)
                 .withUserLastActive(lastActiveTimestamp)
                 .withStatusLastUpdated(NowHelper.toTimestampString(NowHelper.now()))
-                .withSourceId(lastActiveSource);
+                .withUserLastActiveSourceId(lastActiveSourceId);
     }
 
     private static String getTermsAndConditionsTimestamp(Map<String, AttributeValue> item) {

@@ -153,7 +153,7 @@ class InactiveAccountDataExportHelperTest {
         assertEquals("2021-07-17T10:30:00.123456", result.getUserLastActive());
         assertEquals("pending", result.getStatus());
         assertEquals("AUTH_BACKFILL", result.getUserLastActiveSource());
-        assertEquals("UserProfile.Updated", result.getSourceId());
+        assertEquals("UserProfile.Updated", result.getUserLastActiveSourceId());
         assertNotNull(result.getStatusLastUpdated());
     }
 
@@ -180,7 +180,7 @@ class InactiveAccountDataExportHelperTest {
 
         InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, null);
 
-        assertEquals("UserProfile.Updated", result.getSourceId());
+        assertEquals("UserProfile.Updated", result.getUserLastActiveSourceId());
         assertEquals("my-subject-id", result.getCommonSubjectId());
     }
 
