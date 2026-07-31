@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
 import uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.LastActiveDate;
 
@@ -29,16 +31,22 @@ class InactiveAccountDataExportHelperTest {
     void buildCredentialKeysShouldExtractEmailKeysFromProfileItems() {
         List<Map<String, AttributeValue>> profileItems =
                 List.of(
-                        Map.of("Email", AttributeValue.builder().s("a@example.com").build()),
-                        Map.of("Email", AttributeValue.builder().s("b@example.com").build()),
-                        Map.of("Email", AttributeValue.builder().s("c@example.com").build()));
+                        Map.of(
+                                UserCredentials.ATTRIBUTE_EMAIL,
+                                AttributeValue.builder().s("a@example.com").build()),
+                        Map.of(
+                                UserCredentials.ATTRIBUTE_EMAIL,
+                                AttributeValue.builder().s("b@example.com").build()),
+                        Map.of(
+                                UserCredentials.ATTRIBUTE_EMAIL,
+                                AttributeValue.builder().s("c@example.com").build()));
 
         var keys = buildCredentialKeys(profileItems);
 
         assertEquals(3, keys.size());
-        assertEquals("a@example.com", keys.get(0).get("Email").s());
-        assertEquals("b@example.com", keys.get(1).get("Email").s());
-        assertEquals("c@example.com", keys.get(2).get("Email").s());
+        assertEquals("a@example.com", keys.get(0).get(UserCredentials.ATTRIBUTE_EMAIL).s());
+        assertEquals("b@example.com", keys.get(1).get(UserCredentials.ATTRIBUTE_EMAIL).s());
+        assertEquals("c@example.com", keys.get(2).get(UserCredentials.ATTRIBUTE_EMAIL).s());
     }
 
     @Test
@@ -70,7 +78,8 @@ class InactiveAccountDataExportHelperTest {
                                                 .keys(
                                                         List.of(
                                                                 Map.of(
-                                                                        "Email",
+                                                                        UserCredentials
+                                                                                .ATTRIBUTE_EMAIL,
                                                                         AttributeValue.builder()
                                                                                 .s("x@example.com")
                                                                                 .build())))
@@ -86,8 +95,12 @@ class InactiveAccountDataExportHelperTest {
     void extractUnprocessedKeysShouldReturnKeysWhenPresent() {
         List<Map<String, AttributeValue>> unprocessed =
                 List.of(
-                        Map.of("Email", AttributeValue.builder().s("a@example.com").build()),
-                        Map.of("Email", AttributeValue.builder().s("b@example.com").build()));
+                        Map.of(
+                                UserCredentials.ATTRIBUTE_EMAIL,
+                                AttributeValue.builder().s("a@example.com").build()),
+                        Map.of(
+                                UserCredentials.ATTRIBUTE_EMAIL,
+                                AttributeValue.builder().s("b@example.com").build()));
 
         var response =
                 BatchGetItemResponse.builder()
@@ -132,17 +145,19 @@ class InactiveAccountDataExportHelperTest {
     void buildTrackerItemShouldMapAllFieldsFromUserProfileItem() {
         Map<String, AttributeValue> userProfileItem =
                 Map.of(
-                        "SubjectID",
+                        UserProfile.ATTRIBUTE_SUBJECT_ID,
                         AttributeValue.builder().s("subject-123").build(),
-                        "PublicSubjectID",
+                        UserProfile.ATTRIBUTE_PUBLIC_SUBJECT_ID,
                         AttributeValue.builder().s("public-456").build(),
-                        "Email",
+                        UserProfile.ATTRIBUTE_EMAIL,
                         AttributeValue.builder().s("test@example.com").build(),
-                        "Updated",
+                        UserProfile.ATTRIBUTE_UPDATED,
                         AttributeValue.builder().s("2021-07-17T10:30:00.123456").build());
 
         Map<String, AttributeValue> userCredentialsItem =
-                Map.of("Email", AttributeValue.builder().s("test@example.com").build());
+                Map.of(
+                        UserCredentials.ATTRIBUTE_EMAIL,
+                        AttributeValue.builder().s("test@example.com").build());
 
         InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, userCredentialsItem);
 
@@ -164,7 +179,9 @@ class InactiveAccountDataExportHelperTest {
     @Test
     void buildTrackerItemShouldReturnNullWhenNoTimestampsAvailable() {
         Map<String, AttributeValue> userProfileItem =
-                Map.of("SubjectID", AttributeValue.builder().s("subject-789").build());
+                Map.of(
+                        UserProfile.ATTRIBUTE_SUBJECT_ID,
+                        AttributeValue.builder().s("subject-789").build());
 
         InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, null);
 
@@ -175,11 +192,11 @@ class InactiveAccountDataExportHelperTest {
     void buildTrackerItemShouldSetSourceIdToSubjectId() {
         Map<String, AttributeValue> userProfileItem =
                 Map.of(
-                        "SubjectID",
+                        UserProfile.ATTRIBUTE_SUBJECT_ID,
                         AttributeValue.builder().s("my-subject-id").build(),
-                        "Email",
+                        UserProfile.ATTRIBUTE_EMAIL,
                         AttributeValue.builder().s("user@gov.uk").build(),
-                        "Updated",
+                        UserProfile.ATTRIBUTE_UPDATED,
                         AttributeValue.builder().s("2020-01-01T00:00:00.000000").build());
 
         InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, null);
@@ -192,11 +209,11 @@ class InactiveAccountDataExportHelperTest {
     void calculateLastActiveDateShouldReturnMostRecentAcrossAllAttributes() {
         Map<String, AttributeValue> userProfileItem =
                 Map.of(
-                        "Created",
+                        UserProfile.ATTRIBUTE_CREATED,
                         AttributeValue.builder().s("2022-01-01T10:00:00.111111").build(),
-                        "Updated",
+                        UserProfile.ATTRIBUTE_UPDATED,
                         AttributeValue.builder().s("2023-05-10T14:30:00.222222").build(),
-                        "termsAndConditions",
+                        UserProfile.ATTRIBUTE_TERMS_AND_CONDITIONS,
                         AttributeValue.builder()
                                 .m(
                                         Map.of(
@@ -208,9 +225,9 @@ class InactiveAccountDataExportHelperTest {
 
         Map<String, AttributeValue> userCredentialsItem =
                 Map.of(
-                        "Created",
+                        UserCredentials.ATTRIBUTE_CREATED,
                         AttributeValue.builder().s("2022-01-01T10:00:00.111111").build(),
-                        "Updated",
+                        UserCredentials.ATTRIBUTE_UPDATED,
                         AttributeValue.builder().s("2024-06-01T08:00:00.333333").build());
 
         LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
@@ -223,16 +240,16 @@ class InactiveAccountDataExportHelperTest {
     void calculateLastActiveDateShouldReturnCredentialsUpdatedWhenMostRecent() {
         Map<String, AttributeValue> userProfileItem =
                 Map.of(
-                        "Created",
+                        UserProfile.ATTRIBUTE_CREATED,
                         AttributeValue.builder().s("2020-01-01T00:00:00.111111").build(),
-                        "Updated",
+                        UserProfile.ATTRIBUTE_UPDATED,
                         AttributeValue.builder().s("2021-06-15T12:00:00.222222").build());
 
         Map<String, AttributeValue> userCredentialsItem =
                 Map.of(
-                        "Created",
+                        UserCredentials.ATTRIBUTE_CREATED,
                         AttributeValue.builder().s("2020-01-01T00:00:00.111111").build(),
-                        "Updated",
+                        UserCredentials.ATTRIBUTE_UPDATED,
                         AttributeValue.builder().s("2025-03-20T16:45:00.552352138").build());
 
         LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
@@ -244,7 +261,9 @@ class InactiveAccountDataExportHelperTest {
     @Test
     void calculateLastActiveDateShouldReturnProfileCreatedWhenOnlyAttributePresent() {
         Map<String, AttributeValue> userProfileItem =
-                Map.of("Created", AttributeValue.builder().s("2023-05-10T14:30:00.123456").build());
+                Map.of(
+                        UserProfile.ATTRIBUTE_CREATED,
+                        AttributeValue.builder().s("2023-05-10T14:30:00.123456").build());
 
         LastActiveDate result = calculateLastActiveDate(userProfileItem, null);
 
@@ -255,7 +274,9 @@ class InactiveAccountDataExportHelperTest {
     @Test
     void calculateLastActiveDateShouldReturnNullWhenNoTimestampAttributesPresent() {
         Map<String, AttributeValue> userProfileItem =
-                Map.of("Email", AttributeValue.builder().s("test@example.com").build());
+                Map.of(
+                        UserProfile.ATTRIBUTE_EMAIL,
+                        AttributeValue.builder().s("test@example.com").build());
 
         LastActiveDate result = calculateLastActiveDate(userProfileItem, null);
 
@@ -273,13 +294,15 @@ class InactiveAccountDataExportHelperTest {
     void calculateLastActiveDateShouldHandleOnlyCredentialsItemProvided() {
         Map<String, AttributeValue> userCredentialsItem =
                 Map.of(
-                        "Created",
+                        UserCredentials.ATTRIBUTE_CREATED,
                         AttributeValue.builder().s("2022-08-01T09:00:00.111111").build(),
-                        "Updated",
+                        UserCredentials.ATTRIBUTE_UPDATED,
                         AttributeValue.builder().s("2023-12-25T18:30:00.654321").build());
 
         Map<String, AttributeValue> userProfileItem =
-                Map.of("Email", AttributeValue.builder().s("test@example.com").build());
+                Map.of(
+                        UserProfile.ATTRIBUTE_EMAIL,
+                        AttributeValue.builder().s("test@example.com").build());
 
         LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
 

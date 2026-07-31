@@ -6,6 +6,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
 
@@ -110,10 +111,12 @@ public class InactiveAccountDataExportHelper {
         if (userProfileItem != null) {
             candidates.add(
                     new TimestampCandidate(
-                            getStringAttribute(userProfileItem, "Created"), "UserProfile.Created"));
+                            getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_CREATED),
+                            "UserProfile.Created"));
             candidates.add(
                     new TimestampCandidate(
-                            getStringAttribute(userProfileItem, "Updated"), "UserProfile.Updated"));
+                            getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_UPDATED),
+                            "UserProfile.Updated"));
             candidates.add(
                     new TimestampCandidate(
                             getTermsAndConditionsTimestamp(userProfileItem),
@@ -123,11 +126,13 @@ public class InactiveAccountDataExportHelper {
         if (userCredentialsItem != null) {
             candidates.add(
                     new TimestampCandidate(
-                            getStringAttribute(userCredentialsItem, "Created"),
+                            getStringAttribute(
+                                    userCredentialsItem, UserCredentials.ATTRIBUTE_CREATED),
                             "UserCredentials.Created"));
             candidates.add(
                     new TimestampCandidate(
-                            getStringAttribute(userCredentialsItem, "Updated"),
+                            getStringAttribute(
+                                    userCredentialsItem, UserCredentials.ATTRIBUTE_UPDATED),
                             "UserCredentials.Updated"));
         }
 
@@ -146,9 +151,10 @@ public class InactiveAccountDataExportHelper {
     public static InactiveAccountTrackerItem buildTrackerItem(
             Map<String, AttributeValue> userProfileItem,
             Map<String, AttributeValue> userCredentialsItem) {
-        String subjectId = getStringAttribute(userProfileItem, "SubjectID");
-        String publicSubjectId = getStringAttribute(userProfileItem, "PublicSubjectID");
-        String email = getStringAttribute(userProfileItem, "Email");
+        String subjectId = getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_SUBJECT_ID);
+        String publicSubjectId =
+                getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_PUBLIC_SUBJECT_ID);
+        String email = getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_EMAIL);
 
         LastActiveDate lastActiveDate =
                 calculateLastActiveDate(userProfileItem, userCredentialsItem);
@@ -165,7 +171,7 @@ public class InactiveAccountDataExportHelper {
         }
 
         var currentTimestamp = NowHelper.toTimestampString(NowHelper.now());
-        String profileUpdated = getStringAttribute(userProfileItem, "Updated");
+        String profileUpdated = getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_UPDATED);
 
         return new InactiveAccountTrackerItem()
                 .withDateForDeletion(dateForDeletion)
@@ -180,7 +186,7 @@ public class InactiveAccountDataExportHelper {
     }
 
     private static String getTermsAndConditionsTimestamp(Map<String, AttributeValue> item) {
-        AttributeValue tcMap = item.get("termsAndConditions");
+        AttributeValue tcMap = item.get(UserProfile.ATTRIBUTE_TERMS_AND_CONDITIONS);
         if (tcMap == null || !tcMap.hasM()) {
             return null;
         }
