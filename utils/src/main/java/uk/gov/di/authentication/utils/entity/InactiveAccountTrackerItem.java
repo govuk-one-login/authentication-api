@@ -21,7 +21,7 @@ public class InactiveAccountTrackerItem {
     public InactiveAccountTrackerItem() {}
 
     @DynamoDbPartitionKey
-    @DynamoDbAttribute("DateForDeletion")
+    @DynamoDbAttribute("dateForDeletion")
     public String getDateForDeletion() {
         return dateForDeletion;
     }
@@ -36,7 +36,7 @@ public class InactiveAccountTrackerItem {
     }
 
     @DynamoDbSortKey
-    @DynamoDbAttribute("CommonSubjectId")
+    @DynamoDbAttribute("commonSubjectId")
     public String getCommonSubjectId() {
         return commonSubjectId;
     }
@@ -50,7 +50,7 @@ public class InactiveAccountTrackerItem {
         return this;
     }
 
-    @DynamoDbAttribute("PublicSubjectId")
+    @DynamoDbAttribute("publicSubjectId")
     public String getPublicSubjectId() {
         return publicSubjectId;
     }
@@ -64,7 +64,7 @@ public class InactiveAccountTrackerItem {
         return this;
     }
 
-    @DynamoDbAttribute("EmailAddress")
+    @DynamoDbAttribute("emailAddress")
     public String getEmailAddress() {
         return emailAddress;
     }
@@ -78,7 +78,7 @@ public class InactiveAccountTrackerItem {
         return this;
     }
 
-    @DynamoDbAttribute("UserLastActive")
+    @DynamoDbAttribute("userLastActive")
     public String getUserLastActive() {
         return userLastActive;
     }
@@ -92,7 +92,7 @@ public class InactiveAccountTrackerItem {
         return this;
     }
 
-    @DynamoDbAttribute("Status")
+    @DynamoDbAttribute("status")
     public String getStatus() {
         return status;
     }
@@ -101,7 +101,7 @@ public class InactiveAccountTrackerItem {
         this.status = status;
     }
 
-    @DynamoDbAttribute("StatusLastUpdated")
+    @DynamoDbAttribute("statusLastUpdated")
     public String getStatusLastUpdated() {
         return statusLastUpdated;
     }
@@ -115,7 +115,7 @@ public class InactiveAccountTrackerItem {
         return this;
     }
 
-    @DynamoDbAttribute("Source")
+    @DynamoDbAttribute("source")
     public String getSource() {
         return source;
     }
@@ -124,7 +124,7 @@ public class InactiveAccountTrackerItem {
         this.source = source;
     }
 
-    @DynamoDbAttribute("SourceId")
+    @DynamoDbAttribute("sourceId")
     public String getSourceId() {
         return sourceId;
     }
