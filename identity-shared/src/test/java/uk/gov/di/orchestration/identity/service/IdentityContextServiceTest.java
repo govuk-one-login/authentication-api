@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.identity.service;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -144,6 +145,15 @@ public class IdentityContextServiceTest {
         assertThrows(CrossBrowserStateMismatchException.class, () -> service.buildContext(request));
     }
 
+    @Test
+    void shouldThrowParseExceptionWhenClientSessionHasInvalidAuthRequestParams() {
+        usingValidSession();
+        usingClientSession(orchClientSession.withAuthRequestParams(Map.of()));
+        var request = createRequestEvent();
+
+        assertThrows(ParseException.class, () -> service.buildContext(request));
+    }
+
     private APIGatewayProxyRequestEvent createRequestEvent() {
         return createRequestEvent(Map.of());
     }
@@ -190,8 +200,12 @@ public class IdentityContextServiceTest {
     }
 
     private void usingValidClientSession() {
+        usingClientSession(orchClientSession);
+    }
+
+    private void usingClientSession(OrchClientSessionItem clientSession) {
         when(orchClientSessionService.getClientSession(CLIENT_SESSION_ID))
-                .thenReturn(Optional.of(orchClientSession));
+                .thenReturn(Optional.of(clientSession));
     }
 
     private void mockCrossBrowserReturningNoSessionEntity(APIGatewayProxyRequestEvent request)

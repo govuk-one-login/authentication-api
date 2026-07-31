@@ -1,6 +1,8 @@
 package uk.gov.di.orchestration.identity.service;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserStateMismatchException;
 import uk.gov.di.orchestration.identity.entity.IdentityContext;
@@ -14,6 +16,7 @@ import uk.gov.di.orchestration.shared.services.OrchSessionService;
 
 import java.util.Objects;
 
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
@@ -37,7 +40,8 @@ public class IdentityContextService {
     public IdentityContext buildContext(APIGatewayProxyRequestEvent input)
             throws CrossBrowserNoSessionException,
                     NoSessionException,
-                    CrossBrowserStateMismatchException {
+                    CrossBrowserStateMismatchException,
+                    ParseException {
         var sessionCookiesIds = CookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
         if (Objects.isNull(sessionCookiesIds)) {
             var noSessionEntity =
@@ -73,6 +77,10 @@ public class IdentityContextService {
         if (mismatchedEntity.isPresent()) {
             throw new CrossBrowserStateMismatchException(mismatchedEntity.get());
         }
+
+        var authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
+        var clientId = authRequest.getClientID().getValue();
+        attachLogFieldToLogs(CLIENT_ID, clientId);
         return null;
     }
 }
