@@ -13,6 +13,7 @@ public class InactiveAccountTrackerItem {
     private String publicSubjectId;
     private String emailAddress;
     private String emailAddressLastUpdated;
+    private String emailAddressSource = "AUTH_BACKFILL";
     private String userLastActive;
     private String status = "pending";
     private String statusLastUpdated;
@@ -92,6 +93,15 @@ public class InactiveAccountTrackerItem {
     public InactiveAccountTrackerItem withEmailAddressLastUpdated(String emailAddressLastUpdated) {
         this.emailAddressLastUpdated = emailAddressLastUpdated;
         return this;
+    }
+
+    @DynamoDbAttribute("emailAddressSource")
+    public String getEmailAddressSource() {
+        return emailAddressSource;
+    }
+
+    public void setEmailAddressSource(String emailAddressSource) {
+        this.emailAddressSource = emailAddressSource;
     }
 
     @DynamoDbAttribute("status")
