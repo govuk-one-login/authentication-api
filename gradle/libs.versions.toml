@@ -2,7 +2,7 @@
 awsSdk = "2.46.17"
 junit = "6.0.3"
 pact = "4.6.20"
-spotbugs = "4.10.2"
+spotbugs = "4.10.3"
 xray = "2.21.0"
 
 [libraries]
