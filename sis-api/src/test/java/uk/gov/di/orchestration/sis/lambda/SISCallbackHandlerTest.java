@@ -36,8 +36,10 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserStateMismatchException;
 import uk.gov.di.orchestration.identity.entity.IdentityContext;
+import uk.gov.di.orchestration.identity.entity.LogIds;
 import uk.gov.di.orchestration.identity.helpers.IdentityCallbackHelper;
 import uk.gov.di.orchestration.identity.service.IdentityContextService;
+import uk.gov.di.orchestration.identity.service.IdentitySPOTService;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -68,6 +70,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -97,6 +100,7 @@ public class SISCallbackHandlerTest {
     private final OAuthService sisAuthorisationService = mock(OAuthService.class);
     private final InitiateIPVAuthorisationService ipvAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
+    private final IdentitySPOTService identitySpotService = mock(IdentitySPOTService.class);
 
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
     private static final URI FRONT_END_SESSION_ENDED_URI =
@@ -228,7 +232,8 @@ public class SISCallbackHandlerTest {
                         auditService,
                         endOfJourneyService,
                         sisAuthorisationService,
-                        ipvAuthorisationService);
+                        ipvAuthorisationService,
+                        identitySpotService);
     }
 
     @Test
@@ -572,6 +577,117 @@ public class SISCallbackHandlerTest {
         }
     }
 
+    @Nested
+    class InvokeSPOT {
+        @BeforeEach
+        void setup() throws Exception {
+            mockSuccessfulTokenResponse();
+            mockSuccessfulUserIdentityResponse();
+        }
+
+        @Test
+        void shouldRedirectEarlyIfWaitForSpotReturnsRedirect() throws Exception {
+            when(identitySpotService.waitForSpot(eq(CLIENT_SESSION_ID), any(AuditContext.class)))
+                    .thenReturn(
+                            Optional.of(
+                                    generateApiGatewayProxyResponse(
+                                            302,
+                                            "",
+                                            Map.of("Location", FRONT_END_ERROR_URI.toString()),
+                                            null)));
+
+            var request = createRequestEvent();
+            usingValidIdentityContext(request);
+            var response = handler.handleRequest(request, context);
+
+            verifySpotRequestQueued();
+            assertDoesRedirectToPage(response, FRONT_END_ERROR_URI.toString());
+            assertAuditEventsSubmitted(
+                    ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                    ORCH_SIS_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                    ORCH_SIS_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+        }
+
+        @Test
+        void shouldRedirectToErrorPageWhenWaitForSpotThrowsInterruptedException() throws Exception {
+            when(identitySpotService.waitForSpot(eq(CLIENT_SESSION_ID), any(AuditContext.class)))
+                    .thenThrow(new InterruptedException("interrupted"));
+
+            var request = createRequestEvent();
+            usingValidIdentityContext(request);
+            var response = handler.handleRequest(request, context);
+
+            verifySpotRequestQueued();
+            assertDoesRedirectToPage(response, FRONT_END_ERROR_URI.toString());
+            assertAuditEventsSubmitted(
+                    ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                    ORCH_SIS_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                    ORCH_SIS_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+        }
+
+        @Test
+        void shouldRedirectToLogoutPageWhenAisInterventionOccursAfterWaitForSpotReturnsSuccess()
+                throws Exception {
+            mockSuccessfulSpotResponse();
+            mockAisIntervention();
+
+            var request = createRequestEvent();
+            usingValidIdentityContext(request);
+            var response = handler.handleRequest(request, context);
+
+            verifySpotRequestQueued();
+            verifyAisInterventionCheck();
+            assertDoesRedirectToPage(response, FRONT_END_AIS_LOGOUT_URL);
+            assertAuditEventsSubmitted(
+                    ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                    ORCH_SIS_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                    ORCH_SIS_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
+        }
+
+        @Test
+        void shouldRedirectBackToRPIfNoAisInterventionOccursAfterWaitForSpotReturnsSuccess()
+                throws Exception {
+            mockSuccessfulSpotResponse();
+            mockSuccessfulAuthResponse(authRequestWithNoClaims);
+
+            var request = createRequestEvent();
+            usingValidIdentityContext(request);
+            var response = handler.handleRequest(request, context);
+
+            verifySpotRequestQueued();
+            verifyAisInterventionCheck();
+            assertDoesRedirectToPage(
+                    response,
+                    REDIRECT_URI
+                            + "?code="
+                            + NEW_AUTH_CODE
+                            + "&state="
+                            + authRequestWithNoClaims.getState());
+            assertAuditEventsSubmitted(
+                    ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                    ORCH_SIS_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                    ORCH_SIS_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
+                    AUTH_AUTH_CODE_ISSUED);
+        }
+
+        private void mockSuccessfulSpotResponse() throws Exception {
+            when(identitySpotService.waitForSpot(eq(CLIENT_SESSION_ID), any(AuditContext.class)))
+                    .thenReturn(Optional.empty());
+        }
+
+        private void verifySpotRequestQueued() {
+            verify(identitySpotService)
+                    .queueSPOTRequest(
+                            any(LogIds.class),
+                            anyString(),
+                            eq(AUTH_USER_INFO),
+                            eq(new Subject(orchClientSession.getRpPairwiseId())),
+                            any(UserInfo.class),
+                            eq(CLIENT_ID.getValue()),
+                            any(AuditContext.class));
+        }
+    }
+
     private APIGatewayProxyRequestEvent createRequestEvent() {
         return createRequestEvent(Map.of());
     }
@@ -677,6 +793,18 @@ public class SISCallbackHandlerTest {
                 .thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
     }
 
+    private void mockSuccessfulTokenResponse() {
+        when(sisAuthorisationService.getToken(AUTH_CODE.getValue()))
+                .thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+    }
+
+    private void mockSuccessfulUserIdentityResponse() throws Exception {
+        var userInfo = new UserInfo(new Subject("sis-subject"));
+        when(sisAuthorisationService.getUserInfo(SUCCESSFUL_TOKEN_RESPONSE)).thenReturn(userInfo);
+        when(identityCallbackHelper.validateUserIdentityResponse(userInfo, REQUESTED_LOCS))
+                .thenReturn(Optional.empty());
+    }
+
     private void mockSuccessfulAuthResponse(AuthenticationRequest authRequest) {
         when(endOfJourneyService.generateSuccessfulAuthResponse(
                         eqAuthRequest(authRequest),
@@ -693,6 +821,16 @@ public class SISCallbackHandlerTest {
                                 authRequest.getState(),
                                 null,
                                 authRequest.getResponseMode()));
+    }
+
+    private void verifyAisInterventionCheck() {
+        verify(endOfJourneyService)
+                .getAndCheckForIntervention(
+                        eq(orchSession),
+                        any(AuditContext.class),
+                        any(TxmaAuditUser.class),
+                        eq(CLIENT_ID.getValue()),
+                        eq(false));
     }
 
     private void assertDoesRedirectToPage(APIGatewayProxyResponseEvent response, String page) {
