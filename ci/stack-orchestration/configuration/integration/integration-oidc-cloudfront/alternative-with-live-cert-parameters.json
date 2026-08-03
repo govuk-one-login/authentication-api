@@ -5,7 +5,7 @@
   },
   {
     "ParameterKey": "CloudFrontCertArn",
-    "ParameterValue": "TODO"
+    "ParameterValue": "arn:aws:acm:us-east-1:058264132019:certificate/eb73b64a-f996-4594-bc65-ab638bd7f641"
   },
   {
     "ParameterKey": "FraudHeaderEnabled",
