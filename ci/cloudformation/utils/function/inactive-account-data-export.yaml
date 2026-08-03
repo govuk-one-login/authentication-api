@@ -55,12 +55,32 @@ Resources:
               !Ref Environment,
               inactiveAccountExportPauseBetweenInvocationsMs,
             ]
+          INACTIVE_ACCOUNT_EXPORT_TABLE_NAME:
+            - !Sub
+              - "arn:aws:dynamodb:${AWS::Region}:${AccountId}:table/${TableName}"
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    inactiveAccountExportTableAccountId,
+                  ]
+                TableName:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    inactiveAccountExportTableName,
+                  ]
+
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoCredentialReadAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
         - !Ref InactiveAccountDataExportSelfInvokePolicy
+        - !If
+          - InactiveAccountTrackerCrossAccountWriteEnabled
+          - !Ref InactiveAccountTrackerCrossAccountWritePolicy
+          - !Ref AWS::NoValue
       AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDataExportLogGroup
