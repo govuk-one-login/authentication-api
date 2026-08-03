@@ -287,6 +287,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURIOrEmpty("SIS_AUTHORISATION_URI");
     }
 
+    public URI getSISBackendURI() {
+        return getURIOrEmpty("SIS_BACKEND_URI");
+    }
+
     public String getSISAudience() {
         return System.getenv().getOrDefault("SIS_AUDIENCE", "");
     }
