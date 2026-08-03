@@ -10,6 +10,8 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
+import software.amazon.awssdk.services.dynamodb.model.BatchWriteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.BatchWriteItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
@@ -63,6 +65,10 @@ class InactiveAccountDataExportHandlerTest {
                 .thenReturn("test-inactive-account-data-export-lambda");
         when(configurationService.getInactiveAccountExportPauseBetweenInvocationsMs())
                 .thenReturn(0L);
+        when(configurationService.getInactiveAccountExportTableName())
+                .thenReturn("test-tracker-table");
+        when(client.batchWriteItem(any(BatchWriteItemRequest.class)))
+                .thenReturn(BatchWriteItemResponse.builder().build());
     }
 
     private InactiveAccountDataExportHandler createHandler() {
@@ -93,7 +99,7 @@ class InactiveAccountDataExportHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertEquals(itemCount, response.processedCount());
-        assertEquals(0, response.writtenCount());
+        assertEquals(itemCount, response.writtenCount());
     }
 
     @Test
@@ -399,7 +405,7 @@ class InactiveAccountDataExportHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertEquals(105, response.processedCount());
-        assertEquals(0, response.writtenCount());
+        assertEquals(5, response.writtenCount());
         verify(client, times(1)).scan(any(ScanRequest.class));
     }
 
@@ -415,7 +421,7 @@ class InactiveAccountDataExportHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertEquals(505, response.processedCount());
-        assertEquals(0, response.writtenCount());
+        assertEquals(itemCount, response.writtenCount());
     }
 
     @Test
@@ -503,7 +509,7 @@ class InactiveAccountDataExportHandlerTest {
 
         assertNotNull(continuation.segmentKeys());
         assertEquals(105, continuation.processedCount());
-        assertEquals(0, continuation.writtenCount());
+        assertEquals(5, continuation.writtenCount());
     }
 
     @Test

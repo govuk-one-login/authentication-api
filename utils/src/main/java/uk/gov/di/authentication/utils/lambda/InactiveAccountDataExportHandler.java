@@ -60,6 +60,7 @@ public class InactiveAccountDataExportHandler
     private final Json objectMapper = SerializationService.getInstance();
     private final String userProfileTableName;
     private final String userCredentialsTableName;
+    private final String exportTableName;
     private final int parallelism;
     private final int totalSegments;
     private final int maxRetries;
@@ -77,6 +78,7 @@ public class InactiveAccountDataExportHandler
                 TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
         this.userCredentialsTableName =
                 TableNameHelper.getFullTableName(USER_CREDENTIALS_TABLE, configurationService);
+        this.exportTableName = configurationService.getInactiveAccountExportTableName();
         this.parallelism = configurationService.getInactiveAccountExportParallelism();
         this.totalSegments = configurationService.getInactiveAccountExportTotalSegments();
         this.maxRetries = configurationService.getInactiveAccountExportMaxRetries();
@@ -143,12 +145,14 @@ public class InactiveAccountDataExportHandler
 
             long totalItemsScanned = 0;
             long totalMissingCredentials = 0;
+            long totalWritten = 0;
             Map<Integer, Map<String, String>> remainingSegmentKeys = new HashMap<>();
 
             for (SegmentTask segmentTask : segmentTasks) {
                 SegmentResult result = segmentTask.task().join();
                 totalItemsScanned += result.itemsScanned();
                 totalMissingCredentials += result.missingCredentialsCount();
+                totalWritten += result.writtenCount();
 
                 if (result.lastEvaluatedKey() != null && !result.lastEvaluatedKey().isEmpty()) {
                     remainingSegmentKeys.put(
@@ -157,13 +161,17 @@ public class InactiveAccountDataExportHandler
             }
 
             processedCount += totalItemsScanned;
+            writtenCount += totalWritten;
 
             LOG.info(
                     "Invocation complete: {} items scanned this invocation, {} missing credentials, "
-                            + "{} total processed, {} segments remaining",
+                            + "{} total processed, {} written this invocation, "
+                            + "{} total written, {} segments remaining",
                     totalItemsScanned,
                     totalMissingCredentials,
                     processedCount,
+                    totalWritten,
+                    writtenCount,
                     remainingSegmentKeys.size());
 
             if (!remainingSegmentKeys.isEmpty()) {
@@ -258,7 +266,7 @@ public class InactiveAccountDataExportHandler
         long missingCredentialsCount = 0;
         List<Map<String, AttributeValue>> currentBatch = new ArrayList<>();
         InactiveAccountDataExportBatchWriteService batchWriteService =
-                new InactiveAccountDataExportBatchWriteService();
+                new InactiveAccountDataExportBatchWriteService(client, exportTableName);
 
         do {
             if (itemsScanned >= maxItemsPerSegment) {
@@ -310,17 +318,26 @@ public class InactiveAccountDataExportHandler
             currentBatch.clear();
         }
 
+        batchWriteService.flushRemaining();
+
         Map<String, AttributeValue> finalKey =
                 (lastKey != null && !lastKey.isEmpty()) ? lastKey : null;
 
         LOG.info(
-                "Segment {} completed: {} items scanned, {} missing credentials, segmentExhausted={}",
+                "Segment {} completed: {} items scanned, {} missing credentials, "
+                        + "{} items written, {} batches flushed, segmentExhausted={}",
                 segment,
                 itemsScanned,
                 missingCredentialsCount,
+                batchWriteService.getTotalWritten(),
+                batchWriteService.getTotalBatchesFlushed(),
                 finalKey == null);
 
-        return new SegmentResult(itemsScanned, missingCredentialsCount, finalKey);
+        return new SegmentResult(
+                itemsScanned,
+                missingCredentialsCount,
+                batchWriteService.getTotalWritten(),
+                finalKey);
     }
 
     private long batchGetUserCredentials(
@@ -422,6 +439,7 @@ public class InactiveAccountDataExportHandler
     record SegmentResult(
             long itemsScanned,
             long missingCredentialsCount,
+            long writtenCount,
             Map<String, AttributeValue> lastEvaluatedKey) {}
 
     private static void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {

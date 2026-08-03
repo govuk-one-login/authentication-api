@@ -257,6 +257,10 @@ public class ConfigurationService
                                 "INACTIVE_ACCOUNT_EXPORT_PAUSE_BETWEEN_INVOCATIONS_MS", "60000"));
     }
 
+    public String getInactiveAccountExportTableName() {
+        return System.getenv().getOrDefault("INACTIVE_ACCOUNT_EXPORT_TABLE_NAME", "");
+    }
+
     public String getTicfCRILambdaIdentifier() {
         return System.getenv().getOrDefault("TICF_CRI_LAMBDA_IDENTIFIER", "");
     }
