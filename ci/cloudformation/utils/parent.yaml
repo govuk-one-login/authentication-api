@@ -136,6 +136,18 @@ Conditions:
                 ]
               - "0"
 
+  InactiveAccountTrackerStubEnabled: !Not
+    - !Or
+      - !Equals
+        - !Ref Environment
+        - staging
+      - !Equals
+        - !Ref Environment
+        - integration
+      - !Equals
+        - !Ref Environment
+        - production
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -1640,3 +1652,52 @@ Resources:
             Condition:
               Bool:
                 "aws:SecureTransport": "false"
+
+  # ============================================================================
+  # DynamoDB Tables
+  # ============================================================================
+
+  # Stub inactive account tracker table for dev/build environments
+  InactiveAccountTrackerStubKmsKey:
+    Type: AWS::KMS::Key
+    Condition: InactiveAccountTrackerStubEnabled
+    Properties:
+      Description: KMS key for the inactive account tracker stub table
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  InactiveAccountTrackerStubTable:
+    Type: AWS::DynamoDB::Table
+    Condition: InactiveAccountTrackerStubEnabled
+    Properties:
+      TableName: !Sub
+        - ${Env}-stub-inactive-account-tracker
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: dateForDeletion
+          AttributeType: S
+        - AttributeName: commonSubjectId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: dateForDeletion
+          KeyType: HASH
+        - AttributeName: commonSubjectId
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt InactiveAccountTrackerStubKmsKey.Arn
+      DeletionProtectionEnabled: false
+      Tags:
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Service
+          Value: inactive-account-data-export
