@@ -87,6 +87,26 @@ class OrchJwtServiceTest {
     }
 
     @Test
+    void shouldSignAJwtWithAGivenKeyAlias() throws Exception {
+        var claim1Value = "JWT claim 1";
+        var jwtClaimsSet = new JWTClaimsSet.Builder().claim("claim1", claim1Value).build();
+        var jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(SIGNING_KEY_ID).build();
+        var expectedMessage =
+                jwsHeader.toBase64URL() + "." + Base64URL.encode(jwtClaimsSet.toString());
+        mockKmsSigning(ecSigningKey, jwtClaimsSet);
+
+        var signedJWTResponse = orchJwtService.signJWT(jwtClaimsSet, SIGNING_KEY_ALIAS);
+
+        var signRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
+        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim1"), equalTo(claim1Value));
+        verify(kmsConnectionService).sign(signRequestCaptor.capture());
+        assertThat(
+                SdkBytes.fromByteArray(expectedMessage.getBytes(StandardCharsets.UTF_8)),
+                equalTo(signRequestCaptor.getValue().message()));
+        assertThat(MessageType.RAW, equalTo(signRequestCaptor.getValue().messageType()));
+    }
+
+    @Test
     void shouldUseAHashDigestWhenMessageSizeIsMoreThan4095() throws Exception {
         var claim1Value = "JWT claim 1";
         var jwtClaimsSet =
@@ -99,11 +119,9 @@ class OrchJwtServiceTest {
                 jwsHeader.toBase64URL() + "." + Base64URL.encode(jwtClaimsSet.toString());
         mockKmsSigning(ecSigningKey, jwtClaimsSet);
 
-        var encryptedJWT =
-                orchJwtService.signAndEncryptJWT(jwtClaimsSet, SIGNING_KEY_ALIAS, publicEncKey);
+        var signedJWTResponse = orchJwtService.signJWT(jwtClaimsSet, SIGNING_KEY_ALIAS);
 
         var signRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
-        var signedJWTResponse = decryptJWT(encryptedJWT);
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim1"), equalTo(claim1Value));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("state"), equalTo(LONG_CLAIM));
         signedJWTResponse.verify(new ECDSAVerifier(ecSigningKey.toECPublicKey()));
