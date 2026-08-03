@@ -12,6 +12,7 @@ Metadata:
         - E1011
         - W8001
         - W2531
+        - E2531
 
 Description: >
   SAM template for deploying account-management API
