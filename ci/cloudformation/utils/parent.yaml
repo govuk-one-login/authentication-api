@@ -74,18 +74,6 @@ Conditions:
               - !Ref SubEnvironment
               - none
 
-  InactiveAccountTrackerCrossAccountWriteEnabled:
-    Fn::Or:
-      - Fn::Equals:
-          - !Ref Environment
-          - staging
-      - Fn::Equals:
-          - !Ref Environment
-          - integration
-      - Fn::Equals:
-          - !Ref Environment
-          - production
-
   AllowBulkTestUsers:
     Fn::Equals:
       - !FindInMap [
@@ -148,17 +136,21 @@ Conditions:
                 ]
               - "0"
 
-  InactiveAccountTrackerStubEnabled: !Not
-    - !Or
-      - !Equals
-        - !Ref Environment
-        - staging
-      - !Equals
-        - !Ref Environment
-        - integration
-      - !Equals
-        - !Ref Environment
-        - production
+  InactiveAccountTrackerCrossAccountWriteEnabled:
+    Fn::Or:
+      - Fn::Equals:
+          - !Ref Environment
+          - staging
+      - Fn::Equals:
+          - !Ref Environment
+          - integration
+      - Fn::Equals:
+          - !Ref Environment
+          - production
+
+  InactiveAccountTrackerStubEnabled:
+    Fn::Not:
+      - !Condition InactiveAccountTrackerCrossAccountWriteEnabled
 
 Mappings:
   EnvironmentConfiguration:
@@ -1304,6 +1296,41 @@ Resources:
                   !Ref Environment,
                   inactiveAccountExportTableEncryptionKey,
                 ]
+
+  # Policy for write access to the inactive account tracker stub table
+  InactiveAccountTrackerStubWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountTrackerStubEnabled
+    Properties:
+      Description: "IAM policy for writing to the inactive account tracker stub table"
+      Path: !Sub
+        - /${Env}/utils/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowBatchWriteToTrackerStubTable
+            Effect: Allow
+            Action:
+              - dynamodb:BatchWriteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-inactive-account-tracker
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToTrackerStubTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              - !GetAtt InactiveAccountTrackerStubKmsKey.Arn
 
   # ============================================================================
   # S3 Access Policies
