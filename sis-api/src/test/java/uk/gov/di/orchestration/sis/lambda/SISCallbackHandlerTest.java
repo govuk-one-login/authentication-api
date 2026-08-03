@@ -234,8 +234,7 @@ public class SISCallbackHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertDoesRedirectToPage(response, REDIRECT_URI.toString());
-        assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
-        verifyNoMoreInteractions(auditService);
+        assertAuditEventsSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
     }
 
     @Test
@@ -260,8 +259,7 @@ public class SISCallbackHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertDoesRedirectToPage(response, REDIRECT_URI.toString());
-        assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
-        verifyNoMoreInteractions(auditService);
+        assertAuditEventsSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
     }
 
     @Test
@@ -291,8 +289,7 @@ public class SISCallbackHandlerTest {
             var response = handler.handleRequest(request, context);
 
             assertDoesRedirectToPage(response, IPV_URI.toString());
-            assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
-            verifyNoMoreInteractions(auditService);
+            assertAuditEventsSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         }
 
         @Test
@@ -315,8 +312,7 @@ public class SISCallbackHandlerTest {
             var response = handler.handleRequest(request, context);
 
             assertDoesRedirectToPage(response, IPV_URI.toString());
-            assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
-            verifyNoMoreInteractions(auditService);
+            assertAuditEventsSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         }
 
         @Test
@@ -334,8 +330,7 @@ public class SISCallbackHandlerTest {
             var response = handler.handleRequest(request, context);
 
             assertDoesRedirectToPage(response, FRONT_END_AIS_LOGOUT_URL);
-            assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
-            verifyNoMoreInteractions(auditService);
+            assertAuditEventsSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         }
 
         @Test
@@ -358,8 +353,7 @@ public class SISCallbackHandlerTest {
                             + "&error_description=Access+denied+by+resource+owner+or+authorization+server"
                             + "&state="
                             + authRequest.getState());
-            assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
-            verifyNoMoreInteractions(auditService);
+            assertAuditEventsSubmitted(ORCH_SIS_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         }
 
         private void mockIpvRedirect(APIGatewayProxyRequestEvent request, boolean updateRequested) {
@@ -393,9 +387,9 @@ public class SISCallbackHandlerTest {
         var response = handler.handleRequest(request, context);
 
         assertDoesRedirectToPage(response, FRONT_END_ERROR_URI.toString());
-        assertAuditEventSubmitted(ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
-        assertAuditEventSubmitted(ORCH_SIS_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-        verifyNoMoreInteractions(auditService);
+        assertAuditEventsSubmitted(
+                ORCH_SIS_SUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                ORCH_SIS_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
     }
 
     private APIGatewayProxyRequestEvent createRequestEvent() {
@@ -503,9 +497,13 @@ public class SISCallbackHandlerTest {
         assertEquals(page, response.getHeaders().get("Location"));
     }
 
-    private void assertAuditEventSubmitted(AuditableEvent event) {
-        verify(auditService)
-                .submitAuditEvent(eq(event), eq(CLIENT_ID.getValue()), any(TxmaAuditUser.class));
+    private void assertAuditEventsSubmitted(AuditableEvent... events) {
+        for (var event : events) {
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(event), eq(CLIENT_ID.getValue()), any(TxmaAuditUser.class));
+        }
+        verifyNoMoreInteractions(auditService);
     }
 
     private static AuthenticationRequest eqAuthRequest(AuthenticationRequest expectedAuthRequest) {
