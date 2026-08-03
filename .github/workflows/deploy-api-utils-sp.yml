@@ -28,6 +28,15 @@ on:
       - "ipv-api/**"
       - "oidc-api/**"
       - "sis-api/**"
+      - "orchestration-*/**"
+      - "doc-checking-app-api/**"
+      - "client-registry-api/**"
+      - "auth-external-api/**"
+      - "oidc-api-integration-tests/**"
+      - "ipv-api-integration-tests/**"
+      - "identity-shared/**"
+      - "http/**"
+      - "tools/**"
 
 env:
   AWS_REGION: eu-west-2
