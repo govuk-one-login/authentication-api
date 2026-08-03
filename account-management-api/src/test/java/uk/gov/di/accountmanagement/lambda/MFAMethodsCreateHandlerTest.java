@@ -829,11 +829,12 @@ class MFAMethodsCreateHandlerTest {
 
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.UNEXPECTED_ACCT_MGMT_ERROR));
-            verifyNoInteractions(sqsClient);
 
+            // We still emit add completed here, as we did add a method to the database,
+            // regardless of whether the overall api request returns an error in this case.
             verify(auditService)
                     .submitAuditEvent(
-                            AUTH_MFA_METHOD_ADD_FAILED,
+                            AUTH_MFA_METHOD_ADD_COMPLETED,
                             BASE_AUDIT_CONTEXT.withPhoneNumber(null),
                             AUDIT_EVENT_COMPONENT_ID_HOME,
                             pair("journey-type", ACCOUNT_MANAGEMENT.getValue()),
