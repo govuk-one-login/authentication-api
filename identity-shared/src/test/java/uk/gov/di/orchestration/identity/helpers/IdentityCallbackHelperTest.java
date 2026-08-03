@@ -78,9 +78,10 @@ public class IdentityCallbackHelperTest {
         void shouldThrowIdentityCallbackExceptionWhenTokenResponseIsNotSuccessful() {
             withUnsuccessfulTokenResponse();
 
+            var expectedAuthCodeValue = AUTH_CODE.toString();
             assertThrows(
                     IdentityCallbackException.class,
-                    () -> helper.makeTokenRequest(AUTH_CODE.toString()));
+                    () -> helper.makeTokenRequest(expectedAuthCodeValue));
         }
 
         @Test
@@ -378,11 +379,10 @@ public class IdentityCallbackHelperTest {
             userInfo.setClaim("vot", LevelOfConfidence.MEDIUM_LEVEL.getValue());
             userInfo.setClaim("vtm", "http://different-trustmark-url");
 
+            var expectedLoCs = List.of(LevelOfConfidence.MEDIUM_LEVEL);
             assertThrows(
                     IdentityCallbackException.class,
-                    () ->
-                            helper.validateUserIdentityResponse(
-                                    userInfo, List.of(LevelOfConfidence.MEDIUM_LEVEL)));
+                    () -> helper.validateUserIdentityResponse(userInfo, expectedLoCs));
         }
 
         @Test

@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -126,9 +125,10 @@ public class IdentityCallbackHelper {
                 userIdentityResponse = UserInfoResponse.parse(httpResponse);
                 if (!httpResponse.indicatesSuccess()) {
                     LOG.warn(
-                            format(
-                                    "Unsuccessful %s response from user identity endpoint on attempt %d: %s ",
-                                    httpResponse.getStatusCode(), count, httpResponse.getBody()));
+                            "Unsuccessful {} response from user identity endpoint on attempt {}: {} ",
+                            httpResponse.getStatusCode(),
+                            count,
+                            httpResponse.getBody());
                 }
             } while (!userIdentityResponse.indicatesSuccess() && count < maxTries);
 
