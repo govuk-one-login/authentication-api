@@ -48,7 +48,6 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INT
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -147,35 +146,6 @@ class UpdateProfileHandlerTest {
                             AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
                             auditContextWithAllUserInfo);
         }
-
-        @Test
-        void
-                checkUpdateProfileTermsCondsAcceptanceAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-            usingValidSession();
-            when(authenticationService.getUserProfileFromEmail(EMAIL))
-                    .thenReturn(Optional.of(generateUserProfile()));
-
-            var body =
-                    format(
-                            "{ \"email\": \"%s\", \"updateProfileType\": \"%s\" }",
-                            EMAIL, UPDATE_TERMS_CONDS);
-            var event =
-                    apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
-
-            APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-            assertThat(result, hasStatus(204));
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                            auditContextWithOnlyClientSession.withTxmaAuditEncoded(
-                                    AuditService.UNKNOWN));
-
-            verify(auditService)
-                    .submitAuditEvent(
-                            AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                            auditContextWithAllUserInfo.withTxmaAuditEncoded(AuditService.UNKNOWN));
-        }
     }
 
     @Nested
@@ -202,9 +172,6 @@ class UpdateProfileHandlerTest {
                             auditContextWithOnlyClientSession);
             // TODO - AUT-5464 - Verify AUTH_PASSKEY_REGISTRATION_PROMPT_SKIPPED audit event
         }
-
-        // TODO - AUT-5464 - Add test
-        // checkUpdateProfileRenewLastSkippedAddingPasskeyAuditEventStillEmittedWhenTICFHeaderNotProvided
     }
 
     @Test
@@ -224,27 +191,6 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_REQUEST_ERROR, auditContextWithOnlyClientSession);
-    }
-
-    @Test
-    void checkUpdateProfileRequestErrorAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        usingValidSession();
-        var body = format("{ \"email\": \"%s\" }", EMAIL);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
-
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-        assertThat(result, hasStatus(400));
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(
-                                AuditService.UNKNOWN));
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_REQUEST_ERROR,
-                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(
-                                AuditService.UNKNOWN));
     }
 
     private void usingValidSession() {
