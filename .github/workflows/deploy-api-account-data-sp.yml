@@ -27,6 +27,17 @@ on:
       - "ticf-cri-stub/**"
       - "interventions-api-stub/**"
       - "sis-api/**"
+      - "orchestration-*/**"
+      - "doc-checking-app-api/**"
+      - "delivery-receipts-api/**"
+      - "client-registry-api/**"
+      - "auth-external-api/**"
+      - "account-data-api-integration-tests/**"
+      - "oidc-api-integration-tests/**"
+      - "ipv-api-integration-tests/**"
+      - "identity-shared/**"
+      - "http/**"
+      - "user-permissions/**"
 
 env:
   AWS_REGION: eu-west-2
