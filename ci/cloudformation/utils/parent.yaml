@@ -1760,7 +1760,9 @@ Resources:
     Type: AWS::KMS::Key
     Condition: InactiveAccountTrackerStubEnabled
     Properties:
-      Description: KMS key for the inactive account tracker stub table
+      Description: !Sub
+        - KMS key for the inactive account tracker stub table (${Env})
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       EnableKeyRotation: true
       KeyPolicy:
         Version: 2012-10-17
