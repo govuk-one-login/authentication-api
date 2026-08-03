@@ -11,6 +11,8 @@ import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.LambdaPauseHelper;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -19,6 +21,8 @@ import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportRequest;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportResponse;
+import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
+import uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportBatchWriteService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.backoff;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildCredentialKeys;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildTrackerItem;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.countMissingCredentials;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.extractUnprocessedKeys;
 
@@ -252,6 +257,8 @@ public class InactiveAccountDataExportHandler
         long itemsScanned = 0;
         long missingCredentialsCount = 0;
         List<Map<String, AttributeValue>> currentBatch = new ArrayList<>();
+        InactiveAccountDataExportBatchWriteService batchWriteService =
+                new InactiveAccountDataExportBatchWriteService();
 
         do {
             if (itemsScanned >= maxItemsPerSegment) {
@@ -288,7 +295,8 @@ public class InactiveAccountDataExportHandler
                 currentBatch.add(item);
 
                 if (currentBatch.size() >= BATCH_GET_ITEM_MAX_SIZE) {
-                    missingCredentialsCount += batchGetUserCredentials(currentBatch, maxRetries);
+                    missingCredentialsCount +=
+                            batchGetUserCredentials(currentBatch, maxRetries, batchWriteService);
                     currentBatch.clear();
                 }
             }
@@ -297,7 +305,8 @@ public class InactiveAccountDataExportHandler
         } while (lastKey != null && !lastKey.isEmpty());
 
         if (!currentBatch.isEmpty()) {
-            missingCredentialsCount += batchGetUserCredentials(currentBatch, maxRetries);
+            missingCredentialsCount +=
+                    batchGetUserCredentials(currentBatch, maxRetries, batchWriteService);
             currentBatch.clear();
         }
 
@@ -315,7 +324,9 @@ public class InactiveAccountDataExportHandler
     }
 
     private long batchGetUserCredentials(
-            List<Map<String, AttributeValue>> userProfileItems, int maxRetries) {
+            List<Map<String, AttributeValue>> userProfileItems,
+            int maxRetries,
+            InactiveAccountDataExportBatchWriteService batchWriteService) {
         if (userProfileItems.isEmpty()) {
             return 0;
         }
@@ -325,9 +336,36 @@ public class InactiveAccountDataExportHandler
             return userProfileItems.size();
         }
 
-        List<Map<String, AttributeValue>> results = fetchWithRetry(keys, maxRetries);
+        List<Map<String, AttributeValue>> credentialResults = fetchWithRetry(keys, maxRetries);
 
-        return countMissingCredentials(keys.size(), results.size());
+        buildAndBufferTrackerItems(userProfileItems, credentialResults, batchWriteService);
+
+        return countMissingCredentials(keys.size(), credentialResults.size());
+    }
+
+    private void buildAndBufferTrackerItems(
+            List<Map<String, AttributeValue>> userProfileItems,
+            List<Map<String, AttributeValue>> credentialResults,
+            InactiveAccountDataExportBatchWriteService batchWriteService) {
+        Map<String, Map<String, AttributeValue>> credentialsByEmail = new HashMap<>();
+        for (Map<String, AttributeValue> credItem : credentialResults) {
+            AttributeValue email = credItem.get(UserCredentials.ATTRIBUTE_EMAIL);
+            if (email != null) {
+                credentialsByEmail.put(email.s(), credItem);
+            }
+        }
+
+        for (Map<String, AttributeValue> profileItem : userProfileItems) {
+            AttributeValue email = profileItem.get(UserProfile.ATTRIBUTE_EMAIL);
+            if (email == null) {
+                continue;
+            }
+            InactiveAccountTrackerItem trackerItem =
+                    buildTrackerItem(profileItem, credentialsByEmail.get(email.s()));
+            if (trackerItem != null) {
+                batchWriteService.add(trackerItem);
+            }
+        }
     }
 
     private List<Map<String, AttributeValue>> fetchWithRetry(
