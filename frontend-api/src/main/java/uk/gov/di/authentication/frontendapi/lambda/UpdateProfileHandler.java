@@ -8,10 +8,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jspecify.annotations.NonNull;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyRegistrationPromptSkipped;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
@@ -22,6 +24,8 @@ import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.time.Clock;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.audit.AuditContext.emptyAuditContext;
@@ -118,7 +122,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             case SKIP_ADDING_PASSKEY -> {
                 authenticationService.renewLastSkippedAddingPasskeyTimestamp(request.getEmail());
                 LOG.info("Renewed lastSkippedAddingPasskey timestamp");
-                // TODO - AUT-5464 - Add the audit event here
+                var auditEvent =
+                        AuthPasskeyRegistrationPromptSkipped.create(
+                                auditContext, JourneyType.SIGN_IN, Clock.systemUTC());
+                structuredAuditService.submitAuditEvent(auditEvent);
             }
             default -> {
                 LOG.error(

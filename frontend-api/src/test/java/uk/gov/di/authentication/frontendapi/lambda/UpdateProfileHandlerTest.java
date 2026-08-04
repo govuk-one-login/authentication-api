@@ -10,7 +10,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthPasskeyRegistrationPromptSkipped;
+import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithoutPhone;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -26,6 +29,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -174,7 +178,25 @@ class UpdateProfileHandlerTest {
                     .submitAuditEvent(
                             AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
                             auditContextWithOnlyClientSession);
-            // TODO - AUT-5464 - Verify AUTH_PASSKEY_REGISTRATION_PROMPT_SKIPPED audit event
+
+            ArgumentCaptor<AuthPasskeyRegistrationPromptSkipped> auditEventCaptor =
+                    ArgumentCaptor.forClass(AuthPasskeyRegistrationPromptSkipped.class);
+            verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
+            var emittedAuditEvent = auditEventCaptor.getValue();
+            assertThat(
+                    emittedAuditEvent.eventName(),
+                    equalTo("AUTH_PASSKEY_REGISTRATION_PROMPT_SKIPPED"));
+            assertThat(emittedAuditEvent.extensions().journeyType(), equalTo("SIGN_IN"));
+            var expectedUser =
+                    new UserWithoutPhone(
+                            EMAIL,
+                            CLIENT_SESSION_ID,
+                            IP_ADDRESS,
+                            DI_PERSISTENT_SESSION_ID,
+                            SESSION_ID,
+                            INTERNAL_COMMON_SUBJECT_ID,
+                            null);
+            assertThat(emittedAuditEvent.user(), equalTo(expectedUser));
         }
     }
 
