@@ -182,7 +182,8 @@ public class InactiveAccountDataExportHelper {
                 .withStatusLastUpdated(currentTimestamp)
                 .withUserLastActive(lastActiveTimestamp)
                 .withUserLastActiveSourceId(lastActiveSourceId)
-                .withUserLastActiveUpdated(currentTimestamp);
+                .withUserLastActiveUpdated(currentTimestamp)
+                .withHasSetupMfa(determineHasSetupMfa(userProfileItem, userCredentialsItem));
     }
 
     public static boolean determineHasSetupMfa(

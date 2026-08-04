@@ -177,6 +177,7 @@ class InactiveAccountDataExportHelperTest {
         assertEquals("UserProfile.Updated", result.getUserLastActiveSourceId());
         assertNotNull(result.getStatusLastUpdated());
         assertNotNull(result.getUserLastActiveUpdated());
+        assertFalse(result.getHasSetupMfa());
     }
 
     @Test
