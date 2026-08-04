@@ -27,6 +27,7 @@ public class UserProfile {
     public static final String ATTRIBUTE_TEST_USER = "testUser";
     public static final String ATTRIBUTE_MFA_METHODS_MIGRATED = "mfaMethodsMigrated";
     public static final String ATTRIBUTE_MFA_IDENTIFIER = "MFAIdentifier";
+    public static final String ATTRIBUTE_LAST_SKIPPED_ADDING_PASSKEY = "LastSkippedAddingPasskey";
 
     private String email;
     private String subjectID;
@@ -43,6 +44,7 @@ public class UserProfile {
     private int testUser;
     private boolean mfaMethodsMigrated;
     private String mfaIdentifier;
+    private String lastSkippedAddingPasskey;
 
     public UserProfile() {}
 
@@ -258,6 +260,20 @@ public class UserProfile {
 
     public UserProfile withMfaIdentifier(String mfaIdentifier) {
         this.mfaIdentifier = mfaIdentifier;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_LAST_SKIPPED_ADDING_PASSKEY)
+    public String getLastSkippedAddingPasskey() {
+        return lastSkippedAddingPasskey;
+    }
+
+    public void setLastSkippedAddingPasskey(String lastSkippedAddingPasskey) {
+        this.lastSkippedAddingPasskey = lastSkippedAddingPasskey;
+    }
+
+    public UserProfile withLastSkippedAddingPasskey(String lastSkippedAddingPasskey) {
+        this.lastSkippedAddingPasskey = lastSkippedAddingPasskey;
         return this;
     }
 }

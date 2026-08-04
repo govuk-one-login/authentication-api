@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.audit.AuditContext;
@@ -29,13 +30,14 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
+import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.SKIP_ADDING_PASSKEY;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
@@ -46,18 +48,15 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INT
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.UK_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class UpdateProfileHandlerTest {
 
-    private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
-    private static final String COOKIE = "Cookie";
 
     private final Context context = mock(Context.class);
     private UpdateProfileHandler handler;
@@ -119,103 +118,79 @@ class UpdateProfileHandlerTest {
                         authSessionService);
     }
 
-    @Test
-    void shouldReturn204WhenUpdatingTermsAndConditions() {
-        usingValidSession();
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
-                .thenReturn(Optional.of(generateUserProfile()));
+    @Nested
+    class UpdateTermsConds {
+        @Test
+        void shouldReturn204WhenUpdatingTermsAndConditions() {
+            usingValidSession();
+            when(authenticationService.getUserProfileFromEmail(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile()));
 
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        EMAIL, UPDATE_TERMS_CONDS, UPDATED_TERMS_AND_CONDITIONS_VALUE);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+            var body =
+                    format(
+                            "{ \"email\": \"%s\", \"updateProfileType\": \"%s\" }",
+                            EMAIL, UPDATE_TERMS_CONDS);
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
+            APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
-        verify(authenticationService)
-                .updateTermsAndConditions(eq(EMAIL), eq(TERMS_AND_CONDITIONS_VERSION));
-        assertThat(result, hasStatus(204));
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE, auditContextWithAllUserInfo);
+            verify(authenticationService)
+                    .updateTermsAndConditions(eq(EMAIL), eq(TERMS_AND_CONDITIONS_VERSION));
+            assertThat(result, hasStatus(204));
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
+                            auditContextWithOnlyClientSession);
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
+                            auditContextWithAllUserInfo);
+        }
     }
 
-    @Test
-    void checkUpdateProfileTermsCondsAcceptanceAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        usingValidSession();
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
-                .thenReturn(Optional.of(generateUserProfile()));
+    @Nested
+    class SkipAddingPasskey {
+        @Test
+        void shouldReturn204WhenRenewingLastSkippedAddingPasskeyTimestamp() {
+            usingValidSession();
+            when(authenticationService.getUserProfileFromEmail(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile()));
 
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        EMAIL, UPDATE_TERMS_CONDS, UPDATED_TERMS_AND_CONDITIONS_VALUE);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
+            var body =
+                    format(
+                            "{ \"email\": \"%s\", \"updateProfileType\": \"%s\" }",
+                            EMAIL, SKIP_ADDING_PASSKEY);
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
+            APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
-        assertThat(result, hasStatus(204));
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(
-                                AuditService.UNKNOWN));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        auditContextWithAllUserInfo.withTxmaAuditEncoded(AuditService.UNKNOWN));
+            verify(authenticationService).renewLastSkippedAddingPasskeyTimestamp(eq(EMAIL));
+            assertThat(result, hasStatus(204));
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
+                            auditContextWithOnlyClientSession);
+            // TODO - AUT-5464 - Verify AUTH_PASSKEY_REGISTRATION_PROMPT_SKIPPED audit event
+        }
     }
 
     @Test
     void shouldReturn400WhenRequestIsMissingParameters() {
         usingValidSession();
 
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        EMAIL, UPDATE_TERMS_CONDS);
+        var body = format("{ \"email\": \"%s\" }", EMAIL);
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-        verify(authenticationService, never())
-                .updatePhoneNumber(eq(EMAIL), eq(CommonTestVariables.UK_MOBILE_NUMBER));
+        verifyNoInteractions(authenticationService);
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
         verify(auditService)
                 .submitAuditEvent(
                         AUTH_UPDATE_PROFILE_REQUEST_ERROR, auditContextWithOnlyClientSession);
-    }
-
-    @Test
-    void checkUpdateProfileRequestErrorAuditEventStillEmittedWhenTICFHeaderNotProvided() {
-        usingValidSession();
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        EMAIL, UPDATE_TERMS_CONDS);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
-
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-        assertThat(result, hasStatus(400));
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(
-                                AuditService.UNKNOWN));
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_REQUEST_ERROR,
-                        auditContextWithOnlyClientSession.withTxmaAuditEncoded(
-                                AuditService.UNKNOWN));
     }
 
     private void usingValidSession() {
@@ -225,8 +200,7 @@ class UpdateProfileHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
-        var response = handler.handleRequest(event, context);
-        return response;
+        return handler.handleRequest(event, context);
     }
 
     private UserProfile generateUserProfile() {
