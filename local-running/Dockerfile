@@ -2,7 +2,7 @@ FROM amazoncorretto:17.0.16@sha256:e2adb8e2da6716cf3d8a4090396daa61005d070fe9ea9
 
 WORKDIR /app
 
-RUN yum update -y && yum install -y findutils tar
+RUN yum update -y && yum install -y findutils-4.5.11-6.amzn2 tar-1.26-35.amzn2.0.4 && yum clean all && rm -rf /var/cache/yum
 
 COPY gradle ./gradle
 COPY gradlew ./
