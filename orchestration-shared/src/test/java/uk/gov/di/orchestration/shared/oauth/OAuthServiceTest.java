@@ -4,12 +4,13 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
+import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPRequestSender;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.http.ReadOnlyHTTPRequest;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import com.nimbusds.oauth2.sdk.token.Tokens;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -237,10 +238,8 @@ public class OAuthServiceTest {
                         com.nimbusds.oauth2.sdk.ParseException {
             when(mockHttpService.send(any(ReadOnlyHTTPRequest.class)))
                     .thenReturn(getSuccessfulUserinfoResponse());
-            var userInfoRequest =
-                    new UserInfoRequest(TEST_OAUTH_CONFIG.userInfoURI(), new BearerAccessToken());
 
-            var userInfoResponse = oAuthService.getUserInfo(userInfoRequest);
+            var userInfoResponse = oAuthService.getUserInfo(getTokenResponse());
 
             assertEquals(
                     getSuccessfulUserinfoResponse().getBodyAsJSONObject(),
@@ -256,10 +255,8 @@ public class OAuthServiceTest {
             when(mockHttpService.send(any(ReadOnlyHTTPRequest.class)))
                     .thenReturn(getFailedUserInfoResponse())
                     .thenReturn(getSuccessfulUserinfoResponse());
-            var userInfoRequest =
-                    new UserInfoRequest(TEST_OAUTH_CONFIG.userInfoURI(), new BearerAccessToken());
 
-            var userInfoResponse = oAuthService.getUserInfo(userInfoRequest);
+            var userInfoResponse = oAuthService.getUserInfo(getTokenResponse());
 
             assertEquals(
                     getSuccessfulUserinfoResponse().getBodyAsJSONObject(),
@@ -273,12 +270,10 @@ public class OAuthServiceTest {
             when(mockHttpService.send(any(ReadOnlyHTTPRequest.class)))
                     .thenReturn(getFailedUserInfoResponse())
                     .thenReturn(getFailedUserInfoResponse());
-            var userInfoRequest =
-                    new UserInfoRequest(TEST_OAUTH_CONFIG.userInfoURI(), new BearerAccessToken());
 
             assertThrows(
                     UnsuccessfulCredentialResponseException.class,
-                    () -> oAuthService.getUserInfo(userInfoRequest));
+                    () -> oAuthService.getUserInfo(getTokenResponse()));
 
             verify(mockHttpService, times(2)).send(any(ReadOnlyHTTPRequest.class));
         }
@@ -327,5 +322,9 @@ public class OAuthServiceTest {
 
             return userInfoResponse;
         }
+    }
+
+    private AccessTokenResponse getTokenResponse() {
+        return new AccessTokenResponse(new Tokens(new BearerAccessToken(), null), null);
     }
 }
