@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -70,6 +71,8 @@ public class OAuthServiceTest {
             mock(CrossBrowserOrchestrationService.class);
     private final HTTPRequestSender mockHttpService = mock(HTTPRequestSender.class);
     private final RSAPublicKey publicKey = mock(RSAPublicKey.class);
+    CallbackValidator noOpCallbackValidator =
+            (queryParams, sessionId) -> BaseCallbackValidationError.INVALID_STATE;
     private OAuthService oAuthService;
 
     @BeforeEach
@@ -81,7 +84,8 @@ public class OAuthServiceTest {
                         fixedNowClock,
                         mockHttpService,
                         stateStorageService,
-                        crossBrowserOrchestrationService);
+                        crossBrowserOrchestrationService,
+                        noOpCallbackValidator);
     }
 
     @Nested
@@ -437,6 +441,21 @@ public class OAuthServiceTest {
                             Optional.of(
                                     new StateItem(statePrefix + Constants.SESSION_ID)
                                             .withState(new State().getValue())));
+        }
+    }
+
+    @Nested
+    class CallbackValidation {
+        @Test
+        void itDelegatesCallbackValidationToTheProvidedValidator() {
+            var params =
+                    Map.of(
+                            "state",
+                            Constants.STATE.getValue(),
+                            "code",
+                            Constants.AUTHORIZATION_CODE.getValue());
+            var response = oAuthService.validateCallback(params, Constants.SESSION_ID);
+            assertEquals(BaseCallbackValidationError.INVALID_STATE, response);
         }
     }
 }
