@@ -16,15 +16,18 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.OAuthConfiguration;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.io.IOException;
 import java.security.interfaces.RSAPublicKey;
@@ -44,25 +47,32 @@ public class OAuthService {
     private final OrchJwtService jwtService;
     private final NowHelper.NowClock clock;
     private final HTTPRequestSender httpRequestSender;
+    private final StateStorageService stateStorageService;
     private final Logger LOG = LogManager.getLogger(this.getClass());
 
     public OAuthService(
-            OAuthConfiguration clientConfig, OrchJwtService jwtService, NowHelper.NowClock clock) {
+            OAuthConfiguration clientConfig,
+            OrchJwtService jwtService,
+            NowHelper.NowClock clock,
+            StateStorageService stateStorageService) {
         this.clientConfig = clientConfig;
         this.jwtService = jwtService;
         this.clock = clock;
         this.httpRequestSender = null;
+        this.stateStorageService = stateStorageService;
     }
 
     public OAuthService(
             OAuthConfiguration clientConfig,
             OrchJwtService jwtService,
             NowHelper.NowClock clock,
-            HTTPRequestSender httpRequestSender) {
+            HTTPRequestSender httpRequestSender,
+            StateStorageService stateStorageService) {
         this.clientConfig = clientConfig;
         this.jwtService = jwtService;
         this.clock = clock;
         this.httpRequestSender = httpRequestSender;
+        this.stateStorageService = stateStorageService;
     }
 
     public TokenResponse getToken(String authCode) {
@@ -175,5 +185,22 @@ public class OAuthService {
                 .endpointURI(clientConfig.authorizationURI())
                 .requestObject(encryptedJar)
                 .build();
+    }
+
+    public boolean isStateValid(String prefix, String sessionId, String responseState) {
+        var valueFromDynamo =
+                stateStorageService.getState(prefix + sessionId).map(StateItem::getState);
+        if (valueFromDynamo.isEmpty()) {
+            LOG.info("No state found in Dynamo");
+            return false;
+        }
+
+        State storedState = new State(valueFromDynamo.get());
+        LOG.info(
+                "Response state: {} and Stored state: {}. Are equal: {}",
+                responseState,
+                storedState.getValue(),
+                responseState.equals(storedState.getValue()));
+        return responseState.equals(storedState.getValue());
     }
 }
