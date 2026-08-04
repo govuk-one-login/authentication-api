@@ -32,6 +32,7 @@ dependencies {
             libs.openTelemetryAwsSdk
 
     implementation project(path: ':ipv-api')
+    implementation project(path: ':sis-api')
 
     testImplementation libs.bundles.test,
             libs.awsLambdaTests,

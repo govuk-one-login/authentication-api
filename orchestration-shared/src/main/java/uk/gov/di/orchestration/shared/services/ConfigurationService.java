@@ -307,6 +307,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return getURLOrThrow("SIS_JWKS_URL");
     }
 
+    public boolean isSisEnabled() {
+        return getFlagOrFalse("SIS_ENABLED");
+    }
+
     public int getJwkCacheExpirationInSeconds() {
         return Integer.parseInt(
                 System.getenv().getOrDefault("JWK_CACHE_EXPIRATION_IN_SECONDS", "300"));
