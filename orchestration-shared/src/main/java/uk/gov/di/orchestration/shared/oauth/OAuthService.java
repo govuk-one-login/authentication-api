@@ -13,15 +13,20 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
+import com.nimbusds.openid.connect.sdk.UserInfoResponse;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.OAuthConfiguration;
+import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 
 import java.io.IOException;
 import java.time.temporal.ChronoUnit;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 
 public class OAuthService {
@@ -121,5 +126,34 @@ public class OAuthService {
             LOG.error("Error whilst parsing response", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public UserInfo getUserInfo(UserInfoRequest userInfoRequest)
+            throws UnsuccessfulCredentialResponseException {
+        LOG.info("Sending userinfo request");
+        int count = 0;
+        int maxTries = 2;
+        UserInfoResponse userInfoResponse;
+        do {
+            if (count > 0) LOG.warn("Retrying user info request");
+            count++;
+            userInfoResponse =
+                    sendHttpRequest(userInfoRequest.toHTTPRequest(), UserInfoResponse::parse);
+            if (!userInfoResponse.indicatesSuccess()) {
+                LOG.warn(
+                        format(
+                                "Unsuccessful %s response from userinfo endpoint on attempt %d: %s ",
+                                userInfoResponse.toHTTPResponse().getStatusCode(),
+                                count,
+                                userInfoResponse.toHTTPResponse().getBody()));
+            }
+        } while (!userInfoResponse.indicatesSuccess() && count < maxTries);
+
+        if (!userInfoResponse.indicatesSuccess()) {
+            LOG.error("Response from userinfo endpoint does not indicate success");
+            throw new UnsuccessfulCredentialResponseException(
+                    userInfoResponse.toErrorResponse().toString());
+        }
+        return userInfoResponse.toSuccessResponse().getUserInfo();
     }
 }
