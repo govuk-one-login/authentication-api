@@ -78,6 +78,12 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcClientId,
             ]
+          PASSKEY_PROMPT_SUPPRESSION_IN_MINUTES:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              passkeyPromptSuppressionInMinutes,
+            ]
       LoggingConfig:
         LogGroup: !Ref UserExistsFunctionLogGroup
       Policies:
