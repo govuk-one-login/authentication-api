@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jspecify.annotations.NonNull;
 import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -36,18 +37,21 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     private static final Logger LOG = LogManager.getLogger(UpdateProfileHandler.class);
 
     private final AuditService auditService;
+    private final StructuredAuditService structuredAuditService;
 
     protected UpdateProfileHandler(
             AuthenticationService authenticationService,
             ConfigurationService configurationService,
             AuditService auditService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            StructuredAuditService structuredAuditService) {
         super(
                 UpdateProfileRequest.class,
                 configurationService,
                 authenticationService,
                 authSessionService);
         this.auditService = auditService;
+        this.structuredAuditService = structuredAuditService;
     }
 
     public UpdateProfileHandler() {
@@ -57,6 +61,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     public UpdateProfileHandler(ConfigurationService configurationService) {
         super(UpdateProfileRequest.class, configurationService);
         auditService = new AuditService(configurationService);
+        structuredAuditService = new StructuredAuditService(configurationService);
     }
 
     @Override
