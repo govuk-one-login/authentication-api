@@ -35,8 +35,14 @@ public class PasskeyRegistrationPromptHelper {
                                 .minusMinutes(dontPromptAgainInMinutesDuration);
                 var lastSkippedAsLocalDateTime =
                         LocalDateTime.parse(userProfile.getLastSkippedAddingPasskey());
-                return lastSkippedAsLocalDateTime.isAfter(
-                        earliestTimestampAfterWhichWeCanPromptAgain);
+                var shouldSuppress =
+                        lastSkippedAsLocalDateTime.isAfter(
+                                earliestTimestampAfterWhichWeCanPromptAgain);
+                if (shouldSuppress) {
+                    LOG.info(
+                            "suppressing passkey registration prompt as user has recently skipped");
+                }
+                return shouldSuppress;
             } catch (DateTimeParseException e) {
                 LOG.warn(
                         "last skipped adding passkey date on user profile could not be parsed as local date time, not suppressing create passkey prompt");
