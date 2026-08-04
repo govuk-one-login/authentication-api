@@ -26,6 +26,7 @@ import uk.gov.di.orchestration.shared.entity.OAuthConfiguration;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
@@ -48,16 +49,19 @@ public class OAuthService {
     private final NowHelper.NowClock clock;
     private final HTTPRequestSender httpRequestSender;
     private final StateStorageService stateStorageService;
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final Logger LOG = LogManager.getLogger(this.getClass());
 
     public OAuthService(
             OAuthConfiguration clientConfig,
             OrchJwtService jwtService,
             NowHelper.NowClock clock,
-            StateStorageService stateStorageService) {
+            StateStorageService stateStorageService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService) {
         this.clientConfig = clientConfig;
         this.jwtService = jwtService;
         this.clock = clock;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.httpRequestSender = null;
         this.stateStorageService = stateStorageService;
     }
@@ -67,12 +71,14 @@ public class OAuthService {
             OrchJwtService jwtService,
             NowHelper.NowClock clock,
             HTTPRequestSender httpRequestSender,
-            StateStorageService stateStorageService) {
+            StateStorageService stateStorageService,
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService) {
         this.clientConfig = clientConfig;
         this.jwtService = jwtService;
         this.clock = clock;
         this.httpRequestSender = httpRequestSender;
         this.stateStorageService = stateStorageService;
+        this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
     }
 
     public TokenResponse getToken(String authCode) {
@@ -202,5 +208,10 @@ public class OAuthService {
                 storedState.getValue(),
                 responseState.equals(storedState.getValue()));
         return responseState.equals(storedState.getValue());
+    }
+
+    public void storeState(String prefix, State state, String sessionId, String clientSessionId) {
+        stateStorageService.storeState(prefix + sessionId, state.getValue());
+        crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
     }
 }

@@ -22,6 +22,7 @@ import uk.gov.di.orchestration.shared.entity.OAuthConfiguration;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.helper.Constants;
@@ -65,6 +66,8 @@ public class OAuthServiceTest {
 
     private final OrchJwtService jwtService = mock(OrchJwtService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
+    private final CrossBrowserOrchestrationService crossBrowserOrchestrationService =
+            mock(CrossBrowserOrchestrationService.class);
     private final HTTPRequestSender mockHttpService = mock(HTTPRequestSender.class);
     private final RSAPublicKey publicKey = mock(RSAPublicKey.class);
     private OAuthService oAuthService;
@@ -77,7 +80,8 @@ public class OAuthServiceTest {
                         jwtService,
                         fixedNowClock,
                         mockHttpService,
-                        stateStorageService);
+                        stateStorageService,
+                        crossBrowserOrchestrationService);
     }
 
     @Nested
@@ -374,7 +378,7 @@ public class OAuthServiceTest {
     }
 
     @Nested
-    class CallbackValidation {
+    class StateStorage {
         public String statePrefix = "state::";
 
         @Test
@@ -399,6 +403,20 @@ public class OAuthServiceTest {
             assertFalse(
                     oAuthService.isStateValid(
                             statePrefix, Constants.SESSION_ID, Constants.STATE.getValue()));
+        }
+
+        @Test
+        void shouldStoreStateAgainstSessionAndClientSessionID() {
+            oAuthService.storeState(
+                    statePrefix,
+                    Constants.STATE,
+                    Constants.SESSION_ID,
+                    Constants.CLIENT_SESSION_ID);
+
+            verify(stateStorageService, times(1))
+                    .storeState(statePrefix + Constants.SESSION_ID, Constants.STATE.getValue());
+            verify(crossBrowserOrchestrationService, times(1))
+                    .storeClientSessionIdAgainstState(Constants.CLIENT_SESSION_ID, Constants.STATE);
         }
 
         private void mockStatePresent() {
