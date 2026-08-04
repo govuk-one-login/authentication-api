@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPRequestSender;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.http.ReadOnlyHTTPRequest;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,15 +19,18 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.shared.entity.OAuthConfiguration;
+import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
+import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.sharedtest.helper.Constants;
 
 import java.io.IOException;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
@@ -34,9 +38,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -57,6 +64,7 @@ public class OAuthServiceTest {
                     Constants.TEST_PRIVATE_KEY_JWT_AUDIENCE);
 
     private final OrchJwtService jwtService = mock(OrchJwtService.class);
+    private final StateStorageService stateStorageService = mock(StateStorageService.class);
     private final HTTPRequestSender mockHttpService = mock(HTTPRequestSender.class);
     private final RSAPublicKey publicKey = mock(RSAPublicKey.class);
     private OAuthService oAuthService;
@@ -64,7 +72,12 @@ public class OAuthServiceTest {
     @BeforeEach
     void setup() {
         oAuthService =
-                new OAuthService(TEST_OAUTH_CONFIG, jwtService, fixedNowClock, mockHttpService);
+                new OAuthService(
+                        TEST_OAUTH_CONFIG,
+                        jwtService,
+                        fixedNowClock,
+                        mockHttpService,
+                        stateStorageService);
     }
 
     @Nested
@@ -357,6 +370,55 @@ public class OAuthServiceTest {
                             eq(TEST_OAUTH_CONFIG.signingKeyAlias()),
                             any(RSAPublicKey.class)))
                     .thenReturn(EncryptedJWT.parse(TEST_SERIALIZED_JWE));
+        }
+    }
+
+    @Nested
+    class CallbackValidation {
+        public String statePrefix = "state::";
+
+        @Test
+        void shouldValidateStateInDynamoMatchesStateProvided() {
+            mockStatePresent();
+            assertTrue(
+                    oAuthService.isStateValid(
+                            statePrefix, Constants.SESSION_ID, Constants.STATE.getValue()));
+        }
+
+        @Test
+        void shouldReturnFalseForMissingState() {
+            mockStateMissing();
+            assertFalse(
+                    oAuthService.isStateValid(
+                            statePrefix, Constants.SESSION_ID, Constants.STATE.getValue()));
+        }
+
+        @Test
+        void shouldReturnFalseForMismatchState() {
+            mockStateMismatch();
+            assertFalse(
+                    oAuthService.isStateValid(
+                            statePrefix, Constants.SESSION_ID, Constants.STATE.getValue()));
+        }
+
+        private void mockStatePresent() {
+            when(stateStorageService.getState(anyString()))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem(statePrefix + Constants.SESSION_ID)
+                                            .withState(Constants.STATE.getValue())));
+        }
+
+        private void mockStateMissing() {
+            when(stateStorageService.getState(anyString())).thenReturn(Optional.empty());
+        }
+
+        private void mockStateMismatch() {
+            when(stateStorageService.getState(anyString()))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem(statePrefix + Constants.SESSION_ID)
+                                            .withState(new State().getValue())));
         }
     }
 }
