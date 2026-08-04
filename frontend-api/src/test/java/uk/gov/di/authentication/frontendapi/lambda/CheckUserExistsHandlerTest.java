@@ -119,6 +119,7 @@ class CheckUserExistsHandlerTest {
             new BearerAccessToken("adapi_bearer");
     private static final String YESTERDAY = LocalDateTime.now().minusDays(1).toString();
     private static final String ONE_HOUR_AGO = LocalDateTime.now().minusHours(1).toString();
+    private static final String TWO_WEEKS_AGO = LocalDateTime.now().minusWeeks(2).toString();
 
     private static final AuditContext AUDIT_CONTEXT =
             new AuditContext(
@@ -671,6 +672,37 @@ class CheckUserExistsHandlerTest {
                 String createdAtTimestamp, boolean expectedShouldSuppressPasskeyPrompt)
                 throws Json.JsonException {
             var userProfile = generateUserProfile().withCreated(createdAtTimestamp);
+            setupUserProfileAndClient(Optional.of(userProfile));
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                    .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(200));
+            var checkUserExistsResponse =
+                    objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+            assertEquals(
+                    expectedShouldSuppressPasskeyPrompt,
+                    checkUserExistsResponse.shouldSuppressPasskeyRegistrationPrompt());
+        }
+
+        private static Stream<Arguments> skippedDateTimesToExpectedShouldSuppressPrompts() {
+            return Stream.of(Arguments.of(TWO_WEEKS_AGO, false), Arguments.of(YESTERDAY, true));
+        }
+
+        @ParameterizedTest
+        @MethodSource("skippedDateTimesToExpectedShouldSuppressPrompts")
+        void shouldIndicateThatPasskeyPromptShouldBeSuppressedWhenUserHasRecentlySkipped(
+                String skippedAtTimestamp, boolean expectedShouldSuppressPasskeyPrompt)
+                throws Json.JsonException {
+            var oneWeekInMinutes = 10080L;
+            when(configurationService.getPasskeyPromptSuppressionInMinutes())
+                    .thenReturn(oneWeekInMinutes);
+
+            var userProfile =
+                    generateUserProfile()
+                            .withCreated(TWO_WEEKS_AGO)
+                            .withLastSkippedAddingPasskey(skippedAtTimestamp);
             setupUserProfileAndClient(Optional.of(userProfile));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
                     .thenReturn(new UserCredentials().withMfaMethods(List.of()));

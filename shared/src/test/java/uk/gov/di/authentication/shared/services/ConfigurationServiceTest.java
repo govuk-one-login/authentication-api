@@ -653,6 +653,14 @@ class ConfigurationServiceTest {
         assertTrue(configurationService.isInternationalSmsSendingEnabled());
     }
 
+    @Test
+    void getDontPromptForPasskeysAgainDurationMinutesShouldDefault() {
+        var oneWeekDurationMinutes = (long) 60 * 24 * 7;
+        assertEquals(
+                oneWeekDurationMinutes,
+                configurationService.getPasskeyPromptSuppressionInMinutes());
+    }
+
     private GetParameterRequest parameterRequest(String name) {
         return GetParameterRequest.builder().withDecryption(true).name(name).build();
     }

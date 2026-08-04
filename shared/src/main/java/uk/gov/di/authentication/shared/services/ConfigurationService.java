@@ -784,6 +784,13 @@ public class ConfigurationService
         }
     }
 
+    public Long getPasskeyPromptSuppressionInMinutes() {
+        var oneWeekInMinutes = "10080";
+        return Long.parseLong(
+                System.getenv()
+                        .getOrDefault("PASSKEY_PROMPT_SUPPRESSION_IN_MINUTES", oneWeekInMinutes));
+    }
+
     // FEATURE SWITCHES
     public boolean isEnhancedAuthCodeProtectionEnabled() {
         return System.getenv()
