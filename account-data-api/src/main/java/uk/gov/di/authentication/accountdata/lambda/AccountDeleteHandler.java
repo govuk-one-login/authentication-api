@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.services.AccountDeleteDynamoService;
 import uk.gov.di.authentication.accountdata.services.ConfigurationService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -16,6 +17,8 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.accountdata.helpers.ScopeAuthorizerHelper.isScopeAuthorized;
+import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -62,6 +65,15 @@ public class AccountDeleteHandler
 
         if (publicSubjectId == null || publicSubjectId.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+        }
+
+        if (!isSubjectIdAuthorized(publicSubjectId, input.getRequestContext())) {
+            LOG.warn("SubjectId in path parameter does not match Authorizer principalId");
+            return generateApiGatewayProxyErrorResponse(403, ErrorResponse.UNAUTHORIZED_REQUEST);
+        }
+
+        if (!isScopeAuthorized(AccountDataScope.ACCOUNT_DELETE, input.getRequestContext())) {
+            return generateApiGatewayProxyErrorResponse(403, ErrorResponse.UNAUTHORIZED_REQUEST);
         }
 
         Optional<UserProfile> maybeUserProfile =

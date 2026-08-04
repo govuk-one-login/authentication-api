@@ -7,7 +7,8 @@ public enum AccountDataScope implements AccessTokenScope {
     PASSKEY_CREATE("passkey-create"),
     PASSKEY_RETRIEVE("passkey-retrieve"),
     PASSKEY_UPDATE("passkey-update"),
-    PASSKEY_DELETE("passkey-delete");
+    PASSKEY_DELETE("passkey-delete"),
+    ACCOUNT_DELETE("account-delete");
 
     private final String value;
 

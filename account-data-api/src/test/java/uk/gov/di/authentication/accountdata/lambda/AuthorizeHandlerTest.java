@@ -94,6 +94,7 @@ class AuthorizeHandlerTest {
                     Arguments.of(AccountDataScope.PASSKEY_RETRIEVE.getValue()),
                     Arguments.of(AccountDataScope.PASSKEY_UPDATE.getValue()),
                     Arguments.of(AccountDataScope.PASSKEY_DELETE.getValue()),
+                    Arguments.of(AccountDataScope.ACCOUNT_DELETE.getValue()),
                     Arguments.of("passkey-create passkey-retrieve"));
         }
 
