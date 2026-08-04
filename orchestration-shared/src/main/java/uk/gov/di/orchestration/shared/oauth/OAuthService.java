@@ -128,9 +128,13 @@ public class OAuthService {
         }
     }
 
-    public UserInfo getUserInfo(UserInfoRequest userInfoRequest)
+    public UserInfo getUserInfo(TokenResponse tokenResponse)
             throws UnsuccessfulCredentialResponseException {
         LOG.info("Sending userinfo request");
+        var userInfoRequest =
+                new UserInfoRequest(
+                        clientConfig.userInfoURI(),
+                        tokenResponse.toSuccessResponse().getTokens().getBearerAccessToken());
         int count = 0;
         int maxTries = 2;
         UserInfoResponse userInfoResponse;
