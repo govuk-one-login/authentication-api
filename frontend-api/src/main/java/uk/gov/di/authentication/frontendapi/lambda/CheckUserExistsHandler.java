@@ -214,7 +214,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                 request.isSupportPasskeyUsage());
                 shouldSuppressPasskeyRegistrationPrompt =
                         PasskeyRegistrationPromptHelper.shouldSuppressPasskeyRegistrationPrompt(
-                                userProfile);
+                                userProfile, 5L);
                 metadataPairs.add(
                         pair(
                                 AUDIT_EVENT_EXTENSIONS_HAS_ACTIVE_PASSKEY,
