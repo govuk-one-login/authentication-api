@@ -8,11 +8,14 @@ import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPRequestSender;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.http.ReadOnlyHTTPRequest;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.shared.entity.OAuthConfiguration;
+import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.sharedtest.helper.Constants;
@@ -28,6 +31,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -220,6 +224,108 @@ public class OAuthServiceTest {
                     return fixedNowClock.nowPlus(5, ChronoUnit.SECONDS);
                 }
             };
+        }
+    }
+
+    @Nested
+    class UserinfoRequestTest {
+
+        @Test
+        void shouldCallUserInfoEndpointAndReturnWhenSuccessful()
+                throws IOException,
+                        UnsuccessfulCredentialResponseException,
+                        com.nimbusds.oauth2.sdk.ParseException {
+            when(mockHttpService.send(any(ReadOnlyHTTPRequest.class)))
+                    .thenReturn(getSuccessfulUserinfoResponse());
+            var userInfoRequest =
+                    new UserInfoRequest(TEST_OAUTH_CONFIG.userInfoURI(), new BearerAccessToken());
+
+            var userInfoResponse = oAuthService.getUserInfo(userInfoRequest);
+
+            assertEquals(
+                    getSuccessfulUserinfoResponse().getBodyAsJSONObject(),
+                    userInfoResponse.toJSONObject());
+            verify(mockHttpService, times(1)).send(any(ReadOnlyHTTPRequest.class));
+        }
+
+        @Test
+        void shouldRetryIfInitialUserInfoRequestFails()
+                throws IOException,
+                        UnsuccessfulCredentialResponseException,
+                        com.nimbusds.oauth2.sdk.ParseException {
+            when(mockHttpService.send(any(ReadOnlyHTTPRequest.class)))
+                    .thenReturn(getFailedUserInfoResponse())
+                    .thenReturn(getSuccessfulUserinfoResponse());
+            var userInfoRequest =
+                    new UserInfoRequest(TEST_OAUTH_CONFIG.userInfoURI(), new BearerAccessToken());
+
+            var userInfoResponse = oAuthService.getUserInfo(userInfoRequest);
+
+            assertEquals(
+                    getSuccessfulUserinfoResponse().getBodyAsJSONObject(),
+                    userInfoResponse.toJSONObject());
+            verify(mockHttpService, times(2)).send(any(ReadOnlyHTTPRequest.class));
+        }
+
+        @Test
+        void shouldThrowUnsuccessfulCredentialResponseExceptionIfTwoRequestsFail()
+                throws IOException {
+            when(mockHttpService.send(any(ReadOnlyHTTPRequest.class)))
+                    .thenReturn(getFailedUserInfoResponse())
+                    .thenReturn(getFailedUserInfoResponse());
+            var userInfoRequest =
+                    new UserInfoRequest(TEST_OAUTH_CONFIG.userInfoURI(), new BearerAccessToken());
+
+            assertThrows(
+                    UnsuccessfulCredentialResponseException.class,
+                    () -> oAuthService.getUserInfo(userInfoRequest));
+
+            verify(mockHttpService, times(2)).send(any(ReadOnlyHTTPRequest.class));
+        }
+
+        private HTTPResponse getSuccessfulUserinfoResponse() {
+            var userInfoResponse = new HTTPResponse(200);
+            userInfoResponse.setEntityContentType(APPLICATION_JSON);
+            userInfoResponse.setBody(
+                    """
+               {
+                   "sub": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+                   "vot": "P2",
+                   "vtm": "https://oidc.example.com/trustmark",
+                   "https://vocab.example.gov.uk/v1/credentialJWT": [
+                       "<JWT-encoded VC 1>",
+                       "<JWT-encoded VC 2>"
+                   ],
+                   "https://vocab.example.gov.uk/v1/coreIdentity": {
+                       "name": [
+                           {}
+                       ],
+                       "birthDate": [
+                           {}
+                       ]
+                   },
+                   "phone_number_verified": true,
+                   "email_address_verified": true
+               }
+               """);
+            return userInfoResponse;
+        }
+
+        private HTTPResponse getFailedUserInfoResponse() {
+            var userInfoResponse = new HTTPResponse(401);
+            userInfoResponse.setEntityContentType(APPLICATION_JSON);
+            userInfoResponse.setBody(
+                    """
+                    {
+                        "error": "invalid_token",
+                        "error_description": "The access token expired or is invalid."
+                    }
+                    """);
+            userInfoResponse.setHeader(
+                    "WWW-Authenticate",
+                    "error=\"invalid_token\", error_description=\"The access token expired or is invalid.\"");
+
+            return userInfoResponse;
         }
     }
 }
