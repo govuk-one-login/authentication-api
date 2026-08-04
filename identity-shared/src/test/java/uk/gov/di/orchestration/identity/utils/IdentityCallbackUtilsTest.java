@@ -121,7 +121,8 @@ class IdentityCallbackUtilsTest {
     class ValidateUserIdentityResponse {
 
         @Test
-        void shouldReturnAccessDeniedIfVotIsNotContainedInRequestedLoCs() {
+        void shouldReturnAccessDeniedIfVotIsNotContainedInRequestedLoCs()
+                throws IdentityCallbackException {
             var userInfo = new UserInfo(SUBJECT);
             userInfo.setClaim("vot", LevelOfConfidence.MEDIUM_LEVEL.getValue());
 
@@ -149,7 +150,8 @@ class IdentityCallbackUtilsTest {
         }
 
         @Test
-        void shouldNotReturnErrorIfVotIsInRequestedLoCsAndVtmMatchesTrustmarkUrl() {
+        void shouldNotReturnErrorIfVotIsInRequestedLoCsAndVtmMatchesTrustmarkUrl()
+                throws IdentityCallbackException {
             var userInfo = new UserInfo(SUBJECT);
             userInfo.setClaim("vot", LevelOfConfidence.MEDIUM_LEVEL.getValue());
             userInfo.setClaim("vtm", TRUSTMARK_URL);
