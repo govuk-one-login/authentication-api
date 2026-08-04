@@ -1,10 +1,12 @@
 package uk.gov.di.orchestration.shared.oauth;
 
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
+import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPRequestSender;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
@@ -22,6 +24,7 @@ import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.sharedtest.helper.Constants;
 
 import java.io.IOException;
+import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Set;
@@ -55,6 +58,7 @@ public class OAuthServiceTest {
 
     private final OrchJwtService jwtService = mock(OrchJwtService.class);
     private final HTTPRequestSender mockHttpService = mock(HTTPRequestSender.class);
+    private final RSAPublicKey publicKey = mock(RSAPublicKey.class);
     private OAuthService oAuthService;
 
     @BeforeEach
@@ -326,5 +330,33 @@ public class OAuthServiceTest {
 
     private AccessTokenResponse getTokenResponse() {
         return new AccessTokenResponse(new Tokens(new BearerAccessToken(), null), null);
+    }
+
+    @Nested
+    class AuthorisationRequest {
+        private static final String TEST_SERIALIZED_JWE =
+                "eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ";
+
+        @Test
+        void shouldCreateAuthorisationRequestFromClaimsAndKeyInfo() throws ParseException {
+            mockSigningAndEncryption();
+            var claims = new JWTClaimsSet.Builder().claim("hello", "world").build();
+            var authenticationRequest = oAuthService.createAuthorisationRequest(claims, publicKey);
+
+            assertEquals(
+                    TEST_OAUTH_CONFIG.clientId(), authenticationRequest.getClientID().toString());
+            assertEquals(TEST_SERIALIZED_JWE, authenticationRequest.getRequestObject().serialize());
+            assertEquals(
+                    TEST_OAUTH_CONFIG.authorizationURI(), authenticationRequest.getEndpointURI());
+            assertEquals(ResponseType.CODE, authenticationRequest.getResponseType());
+        }
+
+        private void mockSigningAndEncryption() throws ParseException {
+            when(jwtService.signAndEncryptJWT(
+                            any(JWTClaimsSet.class),
+                            eq(TEST_OAUTH_CONFIG.signingKeyAlias()),
+                            any(RSAPublicKey.class)))
+                    .thenReturn(EncryptedJWT.parse(TEST_SERIALIZED_JWE));
+        }
     }
 }

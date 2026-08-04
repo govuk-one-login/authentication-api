@@ -1,8 +1,11 @@
 package uk.gov.di.orchestration.shared.oauth;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
@@ -24,6 +27,7 @@ import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 
 import java.io.IOException;
+import java.security.interfaces.RSAPublicKey;
 import java.time.temporal.ChronoUnit;
 
 import static java.lang.String.format;
@@ -159,5 +163,17 @@ public class OAuthService {
                     userInfoResponse.toErrorResponse().toString());
         }
         return userInfoResponse.toSuccessResponse().getUserInfo();
+    }
+
+    public AuthorizationRequest createAuthorisationRequest(
+            JWTClaimsSet claims, RSAPublicKey publicEncKey) {
+        var encryptedJar =
+                jwtService.signAndEncryptJWT(claims, clientConfig.signingKeyAlias(), publicEncKey);
+        return new AuthorizationRequest.Builder(
+                        new ResponseType(ResponseType.Value.CODE),
+                        new ClientID(clientConfig.clientId()))
+                .endpointURI(clientConfig.authorizationURI())
+                .requestObject(encryptedJar)
+                .build();
     }
 }
