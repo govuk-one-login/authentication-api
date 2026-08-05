@@ -6137,7 +6137,7 @@ Resources:
       - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
     Type: "AWS::ApiGateway::ApiKey"
     Properties:
-      Name: !Sub "${Environment}-client-registry-api-key"
+      Name: !Sub "${Environment}-client-registry-api-key-v2"
       Description: |
         API Key for the client registry API endpoints (/connect/*)
       Enabled: true
