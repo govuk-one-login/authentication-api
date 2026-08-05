@@ -40,7 +40,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -380,30 +379,6 @@ public class OAuthServiceTest {
                             any(RSAPublicKey.class)))
                     .thenReturn(EncryptedJWT.parse(TEST_SERIALIZED_JWE));
         }
-    }
-
-    @Nested
-    class StateStorage {
-
-        @Test
-        void shouldValidateStateInDynamoMatchesStateProvided() {
-            mockStatePresent();
-            assertTrue(oAuthService.isStateValid(Constants.SESSION_ID, Constants.STATE.getValue()));
-        }
-
-        @Test
-        void shouldReturnFalseForMissingState() {
-            mockStateMissing();
-            assertFalse(
-                    oAuthService.isStateValid(Constants.SESSION_ID, Constants.STATE.getValue()));
-        }
-
-        @Test
-        void shouldReturnFalseForMismatchState() {
-            mockStateMismatch();
-            assertFalse(
-                    oAuthService.isStateValid(Constants.SESSION_ID, Constants.STATE.getValue()));
-        }
 
         @Test
         void shouldStoreStateAgainstSessionAndClientSessionID() {
@@ -416,30 +391,6 @@ public class OAuthServiceTest {
                             Constants.STATE.getValue());
             verify(crossBrowserOrchestrationService, times(1))
                     .storeClientSessionIdAgainstState(Constants.CLIENT_SESSION_ID, Constants.STATE);
-        }
-
-        private void mockStatePresent() {
-            when(stateStorageService.getState(anyString()))
-                    .thenReturn(
-                            Optional.of(
-                                    new StateItem(
-                                                    Constants.TEST_STATE_PREFIX
-                                                            + Constants.SESSION_ID)
-                                            .withState(Constants.STATE.getValue())));
-        }
-
-        private void mockStateMissing() {
-            when(stateStorageService.getState(anyString())).thenReturn(Optional.empty());
-        }
-
-        private void mockStateMismatch() {
-            when(stateStorageService.getState(anyString()))
-                    .thenReturn(
-                            Optional.of(
-                                    new StateItem(
-                                                    Constants.TEST_STATE_PREFIX
-                                                            + Constants.SESSION_ID)
-                                            .withState(new State().getValue())));
         }
     }
 
@@ -499,8 +450,7 @@ public class OAuthServiceTest {
 
         @Test
         void shouldReturnErrorWhenStateInDynamoIsEmpty() {
-            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
-                    .thenReturn(Optional.empty());
+            stateMissing();
 
             var queryParams = Map.of("state", Constants.STATE.getValue());
             var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
@@ -511,13 +461,7 @@ public class OAuthServiceTest {
 
         @Test
         void shouldReturnErrorWhenStateInDynamoDoesNotMatchStateInQueryParams() {
-            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new StateItem(
-                                                    Constants.TEST_STATE_PREFIX
-                                                            + Constants.SESSION_ID)
-                                            .withState(Constants.STATE.getValue())));
+            stateMismatch();
 
             var queryParams = Map.of("state", new State().getValue());
             var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
@@ -528,13 +472,8 @@ public class OAuthServiceTest {
 
         @Test
         void shouldReturnErrorWhenCodeIsNotPresentInQueryParams() {
-            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new StateItem(
-                                                    Constants.TEST_STATE_PREFIX
-                                                            + Constants.SESSION_ID)
-                                            .withState(Constants.STATE.getValue())));
+            statePresent();
+
             var queryParams = Map.of("state", Constants.STATE.getValue());
             var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
 
@@ -544,13 +483,8 @@ public class OAuthServiceTest {
 
         @Test
         void shouldReturnErrorWhenCodeIsEmptyInQueryParams() {
-            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new StateItem(
-                                                    Constants.TEST_STATE_PREFIX
-                                                            + Constants.SESSION_ID)
-                                            .withState(Constants.STATE.getValue())));
+            statePresent();
+
             var queryParams = Map.of("state", Constants.STATE.getValue(), "code", "");
             var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
 
@@ -560,13 +494,8 @@ public class OAuthServiceTest {
 
         @Test
         void shouldNotReturnErrorIfResponseIsValid() {
-            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
-                    .thenReturn(
-                            Optional.of(
-                                    new StateItem(
-                                                    Constants.TEST_STATE_PREFIX
-                                                            + Constants.SESSION_ID)
-                                            .withState(Constants.STATE.getValue())));
+            statePresent();
+
             var queryParams =
                     Map.of(
                             "state",
@@ -576,6 +505,30 @@ public class OAuthServiceTest {
 
             var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
             assertTrue(errorOpt.isEmpty());
+        }
+
+        private void statePresent() {
+            when(stateStorageService.getState(anyString()))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem(
+                                                    Constants.TEST_STATE_PREFIX
+                                                            + Constants.SESSION_ID)
+                                            .withState(Constants.STATE.getValue())));
+        }
+
+        private void stateMissing() {
+            when(stateStorageService.getState(anyString())).thenReturn(Optional.empty());
+        }
+
+        private void stateMismatch() {
+            when(stateStorageService.getState(anyString()))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem(
+                                                    Constants.TEST_STATE_PREFIX
+                                                            + Constants.SESSION_ID)
+                                            .withState(new State().getValue())));
         }
     }
 }
