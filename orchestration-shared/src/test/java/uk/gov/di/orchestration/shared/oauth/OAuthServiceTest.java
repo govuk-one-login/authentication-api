@@ -72,7 +72,7 @@ public class OAuthServiceTest {
     private final HTTPRequestSender mockHttpService = mock(HTTPRequestSender.class);
     private final RSAPublicKey publicKey = mock(RSAPublicKey.class);
     CallbackValidator noOpCallbackValidator =
-            (queryParams, sessionId) -> BaseCallbackValidationError.INVALID_STATE;
+            (queryParams, sessionId) -> Optional.of(BaseCallbackValidationError.INVALID_STATE);
     private OAuthService oAuthService;
 
     @BeforeEach
@@ -455,7 +455,7 @@ public class OAuthServiceTest {
                             "code",
                             Constants.AUTHORIZATION_CODE.getValue());
             var response = oAuthService.validateCallback(params, Constants.SESSION_ID);
-            assertEquals(BaseCallbackValidationError.INVALID_STATE, response);
+            assertEquals(Optional.of(BaseCallbackValidationError.INVALID_STATE), response);
         }
     }
 }

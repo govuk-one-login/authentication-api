@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.security.interfaces.RSAPublicKey;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -221,7 +222,7 @@ public class OAuthService {
         crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
     }
 
-    public CallbackValidationError validateCallback(
+    public Optional<CallbackValidationError> validateCallback(
             Map<String, String> queryParams, String sessionId) {
         return this.callbackValidator.validateCallback(queryParams, sessionId);
     }

@@ -1,7 +1,9 @@
 package uk.gov.di.orchestration.shared.oauth;
 
 import java.util.Map;
+import java.util.Optional;
 
 public interface CallbackValidator {
-    CallbackValidationError validateCallback(Map<String, String> queryParams, String sessionId);
+    Optional<CallbackValidationError> validateCallback(
+            Map<String, String> queryParams, String sessionId);
 }
