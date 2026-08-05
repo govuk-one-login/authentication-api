@@ -4,6 +4,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.TokenRequest;
@@ -200,9 +201,11 @@ public class OAuthService {
                 .build();
     }
 
-    public boolean isStateValid(String prefix, String sessionId, String responseState) {
+    public boolean isStateValid(String sessionId, String responseState) {
         var valueFromDynamo =
-                stateStorageService.getState(prefix + sessionId).map(StateItem::getState);
+                stateStorageService
+                        .getState(clientConfig.statePrefix() + sessionId)
+                        .map(StateItem::getState);
         if (valueFromDynamo.isEmpty()) {
             LOG.info("No state found in Dynamo");
             return false;
@@ -217,13 +220,44 @@ public class OAuthService {
         return responseState.equals(storedState.getValue());
     }
 
-    public void storeState(String prefix, State state, String sessionId, String clientSessionId) {
-        stateStorageService.storeState(prefix + sessionId, state.getValue());
+    public void storeState(State state, String sessionId, String clientSessionId) {
+        stateStorageService.storeState(clientConfig.statePrefix() + sessionId, state.getValue());
         crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
     }
 
     public Optional<CallbackValidationError> validateCallback(
             Map<String, String> queryParams, String sessionId) {
-        return this.callbackValidator.validateCallback(queryParams, sessionId);
+        if (queryParams == null || queryParams.isEmpty()) {
+            LOG.warn("No Query parameters in  Authorisation response");
+            return Optional.of(
+                    new BaseCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
+        }
+        if (queryParams.containsKey("error")) {
+            LOG.warn("Error response found in Authorisation response");
+            return callbackValidator.validateError(
+                    queryParams.get("error"), queryParams.get("error_description"));
+        }
+        if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
+            LOG.warn("No state param in Authorisation response");
+            return Optional.of(
+                    new BaseCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "No state param present in Authorisation response"));
+        }
+        if (!isStateValid(sessionId, queryParams.get("state"))) {
+            return Optional.of(
+                    new BaseCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid state param present in Authorisation response"));
+        }
+        if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
+            LOG.warn("No code param in Authorisation response");
+            return Optional.of(
+                    new BaseCallbackValidationError(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "No code param present in Authorisation response"));
+        }
+        return Optional.empty();
     }
 }

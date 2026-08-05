@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
+import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST_CODE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -63,7 +64,8 @@ public class OAuthServiceTest {
                     Constants.TEST_USERINFO_URI,
                     Constants.TEST_CALLBACK_URI,
                     Constants.TEST_SIGNING_KEY_ALIAS,
-                    Constants.TEST_PRIVATE_KEY_JWT_AUDIENCE);
+                    Constants.TEST_PRIVATE_KEY_JWT_AUDIENCE,
+                    Constants.TEST_STATE_PREFIX);
 
     private final OrchJwtService jwtService = mock(OrchJwtService.class);
     private final StateStorageService stateStorageService = mock(StateStorageService.class);
@@ -72,7 +74,7 @@ public class OAuthServiceTest {
     private final HTTPRequestSender mockHttpService = mock(HTTPRequestSender.class);
     private final RSAPublicKey publicKey = mock(RSAPublicKey.class);
     CallbackValidator noOpCallbackValidator =
-            (queryParams, sessionId) -> Optional.of(BaseCallbackValidationError.INVALID_STATE);
+            (error, description) -> Optional.of(BaseCallbackValidationError.INVALID_STATE);
     private OAuthService oAuthService;
 
     @BeforeEach
@@ -213,12 +215,12 @@ public class OAuthServiceTest {
         private HTTPResponse getSuccessfulTokenHttpResponse() {
             var tokenResponseContent =
                     """
-                    {
-                        "access_token": "740e5834-3a29-46b4-9a6f-16142fde533a",
-                        "token_type": "Bearer",
-                        "expires_in": 3600
-                    }
-                    """;
+                            {
+                                "access_token": "740e5834-3a29-46b4-9a6f-16142fde533a",
+                                "token_type": "Bearer",
+                                "expires_in": 3600
+                            }
+                            """;
             var tokenHTTPResponse = new HTTPResponse(200);
             tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
             tokenHTTPResponse.setBody(tokenResponseContent);
@@ -229,11 +231,11 @@ public class OAuthServiceTest {
         private HTTPResponse failedTokenResponse() {
             var tokenResponseContent =
                     """
-                    {
-                        "error": "invalid_grant",
-                        "error_description": "Client authentication failed"
-                    }
-                    """;
+                            {
+                                "error": "invalid_grant",
+                                "error_description": "Client authentication failed"
+                            }
+                            """;
 
             var tokenHTTPResponse = new HTTPResponse(401);
             tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
@@ -308,26 +310,26 @@ public class OAuthServiceTest {
             userInfoResponse.setEntityContentType(APPLICATION_JSON);
             userInfoResponse.setBody(
                     """
-               {
-                   "sub": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
-                   "vot": "P2",
-                   "vtm": "https://oidc.example.com/trustmark",
-                   "https://vocab.example.gov.uk/v1/credentialJWT": [
-                       "<JWT-encoded VC 1>",
-                       "<JWT-encoded VC 2>"
-                   ],
-                   "https://vocab.example.gov.uk/v1/coreIdentity": {
-                       "name": [
-                           {}
-                       ],
-                       "birthDate": [
-                           {}
-                       ]
-                   },
-                   "phone_number_verified": true,
-                   "email_address_verified": true
-               }
-               """);
+                            {
+                                "sub": "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+                                "vot": "P2",
+                                "vtm": "https://oidc.example.com/trustmark",
+                                "https://vocab.example.gov.uk/v1/credentialJWT": [
+                                    "<JWT-encoded VC 1>",
+                                    "<JWT-encoded VC 2>"
+                                ],
+                                "https://vocab.example.gov.uk/v1/coreIdentity": {
+                                    "name": [
+                                        {}
+                                    ],
+                                    "birthDate": [
+                                        {}
+                                    ]
+                                },
+                                "phone_number_verified": true,
+                                "email_address_verified": true
+                            }
+                            """);
             return userInfoResponse;
         }
 
@@ -336,11 +338,11 @@ public class OAuthServiceTest {
             userInfoResponse.setEntityContentType(APPLICATION_JSON);
             userInfoResponse.setBody(
                     """
-                    {
-                        "error": "invalid_token",
-                        "error_description": "The access token expired or is invalid."
-                    }
-                    """);
+                            {
+                                "error": "invalid_token",
+                                "error_description": "The access token expired or is invalid."
+                            }
+                            """);
             userInfoResponse.setHeader(
                     "WWW-Authenticate",
                     "error=\"invalid_token\", error_description=\"The access token expired or is invalid.\"");
@@ -383,42 +385,36 @@ public class OAuthServiceTest {
 
     @Nested
     class StateStorage {
-        public String statePrefix = "state::";
 
         @Test
         void shouldValidateStateInDynamoMatchesStateProvided() {
             mockStatePresent();
-            assertTrue(
-                    oAuthService.isStateValid(
-                            statePrefix, Constants.SESSION_ID, Constants.STATE.getValue()));
+            assertTrue(oAuthService.isStateValid(Constants.SESSION_ID, Constants.STATE.getValue()));
         }
 
         @Test
         void shouldReturnFalseForMissingState() {
             mockStateMissing();
             assertFalse(
-                    oAuthService.isStateValid(
-                            statePrefix, Constants.SESSION_ID, Constants.STATE.getValue()));
+                    oAuthService.isStateValid(Constants.SESSION_ID, Constants.STATE.getValue()));
         }
 
         @Test
         void shouldReturnFalseForMismatchState() {
             mockStateMismatch();
             assertFalse(
-                    oAuthService.isStateValid(
-                            statePrefix, Constants.SESSION_ID, Constants.STATE.getValue()));
+                    oAuthService.isStateValid(Constants.SESSION_ID, Constants.STATE.getValue()));
         }
 
         @Test
         void shouldStoreStateAgainstSessionAndClientSessionID() {
             oAuthService.storeState(
-                    statePrefix,
-                    Constants.STATE,
-                    Constants.SESSION_ID,
-                    Constants.CLIENT_SESSION_ID);
+                    Constants.STATE, Constants.SESSION_ID, Constants.CLIENT_SESSION_ID);
 
             verify(stateStorageService, times(1))
-                    .storeState(statePrefix + Constants.SESSION_ID, Constants.STATE.getValue());
+                    .storeState(
+                            Constants.TEST_STATE_PREFIX + Constants.SESSION_ID,
+                            Constants.STATE.getValue());
             verify(crossBrowserOrchestrationService, times(1))
                     .storeClientSessionIdAgainstState(Constants.CLIENT_SESSION_ID, Constants.STATE);
         }
@@ -427,7 +423,9 @@ public class OAuthServiceTest {
             when(stateStorageService.getState(anyString()))
                     .thenReturn(
                             Optional.of(
-                                    new StateItem(statePrefix + Constants.SESSION_ID)
+                                    new StateItem(
+                                                    Constants.TEST_STATE_PREFIX
+                                                            + Constants.SESSION_ID)
                                             .withState(Constants.STATE.getValue())));
         }
 
@@ -439,23 +437,167 @@ public class OAuthServiceTest {
             when(stateStorageService.getState(anyString()))
                     .thenReturn(
                             Optional.of(
-                                    new StateItem(statePrefix + Constants.SESSION_ID)
+                                    new StateItem(
+                                                    Constants.TEST_STATE_PREFIX
+                                                            + Constants.SESSION_ID)
                                             .withState(new State().getValue())));
         }
     }
 
     @Nested
-    class CallbackValidation {
+    class CallbackErrorValidation {
         @Test
-        void itDelegatesCallbackValidationToTheProvidedValidator() {
+        void shouldReturnErrorWhenQueryParamsAreNull() {
+            var errorOpt = oAuthService.validateCallback(null, Constants.SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.code(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(error.description(), equalTo("No query parameters present"));
+        }
+
+        @Test
+        void shouldReturnErrorWhenQueryParamsAreEmpty() {
+            var errorOpt = oAuthService.validateCallback(Map.of(), Constants.SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.code(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(error.description(), equalTo("No query parameters present"));
+        }
+
+        @Test
+        void shouldDelegateErrorValidationToTheProvidedValidator() {
             var params =
                     Map.of(
                             "state",
                             Constants.STATE.getValue(),
                             "code",
-                            Constants.AUTHORIZATION_CODE.getValue());
+                            Constants.AUTHORIZATION_CODE.getValue(),
+                            "error",
+                            "custom_error",
+                            "error_description",
+                            "custom_description");
+
             var response = oAuthService.validateCallback(params, Constants.SESSION_ID);
             assertEquals(Optional.of(BaseCallbackValidationError.INVALID_STATE), response);
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateNotPresentInQueryParams() {
+            // Query params needs to be not empty to reach the state check
+            var queryParams = Map.of("unused_param", "test");
+            var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.code(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.description(),
+                    equalTo("No state param present in Authorisation response"));
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateIsEmptyInQueryParams() {
+            var queryParams = Map.of("state", "");
+            var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.code(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.description(),
+                    equalTo("No state param present in Authorisation response"));
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateInDynamoIsEmpty() {
+            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
+                    .thenReturn(Optional.empty());
+            var queryParams = Map.of("state", "test-state");
+            var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.code(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.description(),
+                    equalTo("Invalid state param present in Authorisation response"));
+        }
+
+        @Test
+        void shouldReturnErrorWhenStateInDynamoDoesNotMatchStateInQueryParams() {
+            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem(
+                                                    Constants.TEST_STATE_PREFIX
+                                                            + Constants.SESSION_ID)
+                                            .withState("test-state")));
+            var queryParams = Map.of("state", "different-state");
+            var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.code(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.description(),
+                    equalTo("Invalid state param present in Authorisation response"));
+        }
+
+        @Test
+        void shouldReturnErrorWhenCodeIsNotPresentInQueryParams() {
+            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem(
+                                                    Constants.TEST_STATE_PREFIX
+                                                            + Constants.SESSION_ID)
+                                            .withState("test-state")));
+            var queryParams = Map.of("state", "test-state");
+            var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.code(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.description(),
+                    equalTo("No code param present in Authorisation response"));
+        }
+
+        @Test
+        void shouldReturnErrorWhenCodeIsEmptyInQueryParams() {
+            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem(
+                                                    Constants.TEST_STATE_PREFIX
+                                                            + Constants.SESSION_ID)
+                                            .withState("test-state")));
+            var queryParams = Map.of("state", "test-state", "code", "");
+            var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
+
+            assertTrue(errorOpt.isPresent());
+            var error = errorOpt.get();
+            assertThat(error.code(), equalTo(INVALID_REQUEST_CODE));
+            assertThat(
+                    error.description(),
+                    equalTo("No code param present in Authorisation response"));
+        }
+
+        @Test
+        void shouldNotReturnErrorIfResponseIsValid() {
+            when(stateStorageService.getState(Constants.TEST_STATE_PREFIX + Constants.SESSION_ID))
+                    .thenReturn(
+                            Optional.of(
+                                    new StateItem(
+                                                    Constants.TEST_STATE_PREFIX
+                                                            + Constants.SESSION_ID)
+                                            .withState("test-state")));
+            var queryParams = Map.of("state", "test-state", "code", "test-auth-code");
+
+            var errorOpt = oAuthService.validateCallback(queryParams, Constants.SESSION_ID);
+            assertTrue(errorOpt.isEmpty());
         }
     }
 }

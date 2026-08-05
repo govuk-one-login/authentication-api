@@ -27,6 +27,7 @@ public final class Constants {
     public static final URI TEST_CALLBACK_URI = URI.create("https://oidc.example.com/callback");
     public static final String TEST_SIGNING_KEY_ALIAS = "alias/oauth-signing-key";
     public static final String TEST_PRIVATE_KEY_JWT_AUDIENCE = TEST_TOKEN_URI.toString();
+    public static final String TEST_STATE_PREFIX = "state::";
     public static final Instant FIXED_TIMESTAMP = Instant.parse("2021-09-01T22:10:00.012Z");
     public static final Clock FIXED_CLOCK = fixed(FIXED_TIMESTAMP, ZoneId.of("UTC"));
 }
