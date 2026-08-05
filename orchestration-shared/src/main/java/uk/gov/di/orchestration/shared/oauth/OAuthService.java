@@ -193,9 +193,11 @@ public class OAuthService {
                 .build();
     }
 
-    public boolean isStateValid(String prefix, String sessionId, String responseState) {
+    public boolean isStateValid(String sessionId, String responseState) {
         var valueFromDynamo =
-                stateStorageService.getState(prefix + sessionId).map(StateItem::getState);
+                stateStorageService
+                        .getState(clientConfig.statePrefix() + sessionId)
+                        .map(StateItem::getState);
         if (valueFromDynamo.isEmpty()) {
             LOG.info("No state found in Dynamo");
             return false;
@@ -210,8 +212,8 @@ public class OAuthService {
         return responseState.equals(storedState.getValue());
     }
 
-    public void storeState(String prefix, State state, String sessionId, String clientSessionId) {
-        stateStorageService.storeState(prefix + sessionId, state.getValue());
+    public void storeState(State state, String sessionId, String clientSessionId) {
+        stateStorageService.storeState(clientConfig.statePrefix() + sessionId, state.getValue());
         crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
     }
 }
