@@ -1,13 +1,23 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.HttpStatus;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.lambda.RemoveAccountHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -17,12 +27,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -123,6 +139,95 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertNoNotificationsReceived(notificationsQueue);
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Nested
+    class ViaDataApi {
+        private static final String TOKEN = "test-adapi-access-token";
+        private WireMockServer accountDataApiWireMockServer;
+
+        @BeforeEach
+        void setUp() {
+            accountDataApiWireMockServer =
+                    new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+            accountDataApiWireMockServer.start();
+
+            handler =
+                    new RemoveAccountHandler(
+                            supportPasskeysAndTxmaEnabledConfigurationService(
+                                    "http://localhost:" + accountDataApiWireMockServer.port()));
+
+            txmaAuditQueue.clear();
+            notificationsQueue.clear();
+        }
+
+        @AfterEach
+        void tearDown() {
+            if (accountDataApiWireMockServer != null) {
+                accountDataApiWireMockServer.stop();
+            }
+        }
+
+        @Test
+        void shouldDeleteAccountViaDataApiAndReturn204WhenTokenIsPresent() {
+            var internalCommonSubjectId = setupUserAndRetrieveInternalCommonSubId();
+            var publicSubjectId = userStore.getPublicSubjectIdForEmail(EMAIL);
+
+            accountDataApiWireMockServer.stubFor(
+                    delete(urlPathMatching("/accounts/" + publicSubjectId))
+                            .withHeader("Authorization", WireMock.equalTo("Bearer " + TOKEN))
+                            .willReturn(aResponse().withStatus(204)));
+
+            var response =
+                    makeRequest(
+                            Optional.of(new RemoveAccountRequest(EMAIL)),
+                            Map.of("X-ADAPI-AccessToken", TOKEN),
+                            Collections.emptyMap(),
+                            Collections.emptyMap(),
+                            Map.of("principalId", internalCommonSubjectId));
+
+            assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+
+            accountDataApiWireMockServer.verify(
+                    1,
+                    deleteRequestedFor(urlPathMatching("/accounts/" + publicSubjectId))
+                            .withHeader("Authorization", WireMock.equalTo("Bearer " + TOKEN)));
+
+            assertTxmaAuditEventsSubmittedWithMatchingNames(
+                    txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
+
+            assertNotificationsReceived(
+                    notificationsQueue,
+                    List.of(
+                            new NotifyRequest(
+                                    EMAIL,
+                                    NotificationType.DELETE_ACCOUNT,
+                                    LocaleHelper.SupportedLanguage.EN)));
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {404, 500})
+        void shouldReturn500WhenDataApiReturnsError(int dataApiStatusCode) {
+            var internalCommonSubjectId = setupUserAndRetrieveInternalCommonSubId();
+            var publicSubjectId = userStore.getPublicSubjectIdForEmail(EMAIL);
+
+            accountDataApiWireMockServer.stubFor(
+                    delete(urlPathMatching("/accounts/" + publicSubjectId))
+                            .withHeader("Authorization", WireMock.equalTo("Bearer " + TOKEN))
+                            .willReturn(aResponse().withStatus(dataApiStatusCode)));
+
+            var response =
+                    makeRequest(
+                            Optional.of(new RemoveAccountRequest(EMAIL)),
+                            Map.of("X-ADAPI-AccessToken", TOKEN),
+                            Collections.emptyMap(),
+                            Collections.emptyMap(),
+                            Map.of("principalId", internalCommonSubjectId));
+
+            assertThat(response, hasStatus(HttpStatus.SC_INTERNAL_SERVER_ERROR));
+
+            assertTrue(userStore.userExists(EMAIL));
+        }
     }
 
     private String setupUserAndRetrieveInternalCommonSubId() {

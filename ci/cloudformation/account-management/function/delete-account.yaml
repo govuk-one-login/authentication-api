@@ -32,6 +32,20 @@ Resources:
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          ACCOUNT_DATA_API_URI: !Sub
+            - "https://${ApiId}.execute-api.eu-west-2.amazonaws.com/${EnvOrSubEnv}"
+            - EnvOrSubEnv:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              ApiId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  accountDataApiId,
+                ]
       LoggingConfig:
         LogGroup: !Ref DeleteAccountFunctionLogGroup
       Policies:
