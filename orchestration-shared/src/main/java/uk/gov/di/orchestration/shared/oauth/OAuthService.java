@@ -200,7 +200,7 @@ public class OAuthService {
                 .build();
     }
 
-    public boolean isStateValid(String sessionId, String responseState) {
+    private boolean isStateValid(String sessionId, String responseState) {
         var valueFromDynamo =
                 stateStorageService
                         .getState(clientConfig.statePrefix() + sessionId)
