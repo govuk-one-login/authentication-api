@@ -192,6 +192,7 @@ Mappings:
       inactiveAccountExportMaxItemsPerSegment: "10"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
       inactiveAccountExportTableName: "authdev1-stub-inactive-account-tracker"
+      inactiveAccountExportBatchWriteMaxRetries: "3"
 
     authdev2:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
@@ -231,6 +232,7 @@ Mappings:
       inactiveAccountExportMaxItemsPerSegment: "10"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
       inactiveAccountExportTableName: "authdev2-stub-inactive-account-tracker"
+      inactiveAccountExportBatchWriteMaxRetries: "3"
 
     authdev3:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
@@ -270,6 +272,7 @@ Mappings:
       inactiveAccountExportMaxItemsPerSegment: "10"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
       inactiveAccountExportTableName: "authdev3-stub-inactive-account-tracker"
+      inactiveAccountExportBatchWriteMaxRetries: "3"
 
     dev:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
@@ -309,6 +312,7 @@ Mappings:
       inactiveAccountExportMaxItemsPerSegment: "10"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
       inactiveAccountExportTableName: "dev-stub-inactive-account-tracker"
+      inactiveAccountExportBatchWriteMaxRetries: "3"
 
     build:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
@@ -348,6 +352,7 @@ Mappings:
       inactiveAccountExportMaxItemsPerSegment: "7500"
       inactiveAccountExportPauseBetweenInvocationsMs: "60000"
       inactiveAccountExportTableName: "build-stub-inactive-account-tracker"
+      inactiveAccountExportBatchWriteMaxRetries: "3"
 
     staging:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
@@ -389,6 +394,7 @@ Mappings:
       inactiveAccountExportTableAccountId: "539729775994"
       inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:539729775994:key/5191526d-1c85-4316-baf7-9fbe373880cf
       inactiveAccountExportTableName: "inactive_account_tracker_store"
+      inactiveAccountExportBatchWriteMaxRetries: "3"
 
     integration:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
@@ -430,6 +436,7 @@ Mappings:
       inactiveAccountExportTableAccountId: "666500506359"
       inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:666500506359:key/1ab2a72b-63e0-49b6-b88a-5160a7d27985
       inactiveAccountExportTableName: "inactive_account_tracker_store"
+      inactiveAccountExportBatchWriteMaxRetries: "3"
 
     production:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
@@ -471,6 +478,7 @@ Mappings:
       inactiveAccountExportTableAccountId: "026991849909"
       inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:026991849909:key/5489c67b-2c14-4b76-b6a3-a25148b14311
       inactiveAccountExportTableName: "inactive_account_tracker_store"
+      inactiveAccountExportBatchWriteMaxRetries: "3"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:

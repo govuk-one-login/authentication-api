@@ -67,6 +67,7 @@ class InactiveAccountDataExportHandlerTest {
                 .thenReturn(0L);
         when(configurationService.getInactiveAccountExportTableName())
                 .thenReturn("test-tracker-table");
+        when(configurationService.getInactiveAccountExportBatchWriteMaxRetries()).thenReturn(3);
         when(client.batchWriteItem(any(BatchWriteItemRequest.class)))
                 .thenReturn(BatchWriteItemResponse.builder().build());
     }

@@ -75,6 +75,12 @@ Resources:
               - ${Env}-stub-inactive-account-tracker
               - Env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          INACTIVE_ACCOUNT_EXPORT_BATCH_WRITE_MAX_RETRIES:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountExportBatchWriteMaxRetries,
+            ]
 
       Policies:
         - !Ref LambdaBasicExecutionPolicy

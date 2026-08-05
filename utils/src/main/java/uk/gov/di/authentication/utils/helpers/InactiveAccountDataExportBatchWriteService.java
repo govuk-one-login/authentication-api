@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.backoff;
+
 public class InactiveAccountDataExportBatchWriteService {
 
     private static final Logger LOG =
@@ -25,13 +27,17 @@ public class InactiveAccountDataExportBatchWriteService {
 
     private final DynamoDbClient client;
     private final String tableName;
+    private final int maxRetries;
     private final List<InactiveAccountTrackerItem> buffer = new ArrayList<>();
     private long totalWritten;
+    private long totalFailed;
     private long totalBatchesFlushed;
 
-    public InactiveAccountDataExportBatchWriteService(DynamoDbClient client, String tableName) {
+    public InactiveAccountDataExportBatchWriteService(
+            DynamoDbClient client, String tableName, int maxRetries) {
         this.client = client;
         this.tableName = tableName;
+        this.maxRetries = maxRetries;
     }
 
     public void add(InactiveAccountTrackerItem item) {
@@ -51,32 +57,61 @@ public class InactiveAccountDataExportBatchWriteService {
         return totalWritten;
     }
 
+    public long getTotalFailed() {
+        return totalFailed;
+    }
+
     public long getTotalBatchesFlushed() {
         return totalBatchesFlushed;
     }
 
     private void flush() {
         List<WriteRequest> writeRequests = toWriteRequests(buffer);
-
-        BatchWriteItemResponse response =
-                client.batchWriteItem(
-                        BatchWriteItemRequest.builder()
-                                .requestItems(Map.of(tableName, writeRequests))
-                                .build());
-
-        int unprocessedCount = 0;
-        if (response.hasUnprocessedItems() && response.unprocessedItems().containsKey(tableName)) {
-            unprocessedCount = response.unprocessedItems().get(tableName).size();
-        }
-
-        int written = buffer.size() - unprocessedCount;
-        totalWritten += written;
-        totalBatchesFlushed++;
         buffer.clear();
 
-        if (unprocessedCount > 0) {
-            LOG.warn("BatchWriteItem returned {} unprocessed items", unprocessedCount);
+        int retryCount = 0;
+
+        while (!writeRequests.isEmpty()) {
+            BatchWriteItemResponse response =
+                    client.batchWriteItem(
+                            BatchWriteItemRequest.builder()
+                                    .requestItems(Map.of(tableName, writeRequests))
+                                    .build());
+
+            List<WriteRequest> unprocessedItems = extractUnprocessedItems(response);
+
+            int writtenThisCall = writeRequests.size() - unprocessedItems.size();
+            totalWritten += writtenThisCall;
+
+            writeRequests = unprocessedItems;
+
+            if (!writeRequests.isEmpty()) {
+                retryCount++;
+                if (retryCount > maxRetries) {
+                    LOG.error(
+                            "Failed to write {} items after {} retries",
+                            writeRequests.size(),
+                            maxRetries);
+                    totalFailed += writeRequests.size();
+                    break;
+                }
+                LOG.warn(
+                        "{} unprocessed write items (attempt {}/{})",
+                        writeRequests.size(),
+                        retryCount,
+                        maxRetries);
+                backoff(retryCount);
+            }
         }
+
+        totalBatchesFlushed++;
+    }
+
+    private List<WriteRequest> extractUnprocessedItems(BatchWriteItemResponse response) {
+        if (response.hasUnprocessedItems() && response.unprocessedItems().containsKey(tableName)) {
+            return response.unprocessedItems().get(tableName);
+        }
+        return List.of();
     }
 
     private static List<WriteRequest> toWriteRequests(List<InactiveAccountTrackerItem> items) {
