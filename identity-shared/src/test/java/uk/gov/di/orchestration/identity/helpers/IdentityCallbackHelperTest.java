@@ -1,16 +1,6 @@
 package uk.gov.di.orchestration.identity.helpers;
 
-import com.nimbusds.common.contenttype.ContentType;
-import com.nimbusds.oauth2.sdk.AccessTokenResponse;
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.TokenErrorResponse;
-import com.nimbusds.oauth2.sdk.TokenResponse;
-import com.nimbusds.oauth2.sdk.http.HTTPRequest;
-import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,15 +8,12 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
-import uk.gov.di.orchestration.identity.service.IdentityTokenService;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -44,13 +31,10 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class IdentityCallbackHelperTest {
-    private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
     private static final URI TRUSTMARK_URI = URI.create("https://oidc.com/trustmark");
     private static final Subject SUBJECT =
             new Subject("urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6");
-    private static final URI BACKEND_URI = URI.create("http://test-backend-uri");
-    private final IdentityTokenService identityTokenService = mock(IdentityTokenService.class);
     private final CommonFrontend frontend = mock(CommonFrontend.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final OidcAPI oidcApi = mock(OidcAPI.class);
@@ -62,48 +46,9 @@ public class IdentityCallbackHelperTest {
 
     @BeforeEach
     void setUp() {
-        helper =
-                new IdentityCallbackHelper(
-                        identityTokenService, frontend, dynamoIdentityService, oidcApi);
+        helper = new IdentityCallbackHelper(frontend, dynamoIdentityService, oidcApi);
         when(frontend.errorURI()).thenReturn(FRONT_END_ERROR_URI);
         when(oidcApi.trustmarkURI()).thenReturn(TRUSTMARK_URI);
-    }
-
-    @Nested
-    class MakeTokenRequest {
-        private final AccessTokenResponse successfulTokenResponse =
-                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
-
-        @Test
-        void shouldThrowIdentityCallbackExceptionWhenTokenResponseIsNotSuccessful() {
-            withUnsuccessfulTokenResponse();
-
-            var expectedAuthCodeValue = AUTH_CODE.toString();
-            assertThrows(
-                    IdentityCallbackException.class,
-                    () -> helper.makeTokenRequest(expectedAuthCodeValue));
-        }
-
-        @Test
-        void shouldReturnTokenResponseWhenTokenResponseIsSuccessful()
-                throws IdentityCallbackException {
-            withSuccessfulTokenResponse();
-
-            var response = helper.makeTokenRequest(AUTH_CODE.toString());
-
-            assertThat(response, equalTo(successfulTokenResponse));
-        }
-
-        private void withSuccessfulTokenResponse() {
-            when(identityTokenService.getToken(AUTH_CODE.toString()))
-                    .thenReturn(successfulTokenResponse);
-        }
-
-        private void withUnsuccessfulTokenResponse() {
-            var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("error"));
-            when(identityTokenService.getToken(AUTH_CODE.toString()))
-                    .thenReturn(unsuccessfulTokenResponse);
-        }
     }
 
     @Nested
@@ -260,100 +205,6 @@ public class IdentityCallbackHelperTest {
                             "P2",
                             "",
                             null);
-        }
-    }
-
-    @Nested
-    class SendUserIdentityRequest {
-        private static final String SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT =
-                "{"
-                        + " \"sub\": \""
-                        + SUBJECT
-                        + "\","
-                        + " \"vot\": \"P2\","
-                        + " \"vtm\": \""
-                        + TRUSTMARK_URI
-                        + "\""
-                        + "}";
-        private static final BearerAccessToken BEARER_ACCESS_TOKEN = new BearerAccessToken();
-        private static final TokenResponse SUCCESSFUL_TOKEN_RESPONSE =
-                new AccessTokenResponse(new Tokens(BEARER_ACCESS_TOKEN, null));
-
-        @Test
-        void shouldCreateUserIdentityRequest() throws Exception {
-            var httpRequest =
-                    helper.createUserIdentityRequest(SUCCESSFUL_TOKEN_RESPONSE, BACKEND_URI);
-
-            assertThat(httpRequest.getMethod(), equalTo(HTTPRequest.Method.GET));
-            assertThat(httpRequest.getURI(), equalTo(new URI(BACKEND_URI + "/user-identity")));
-            assertThat(
-                    httpRequest.getAuthorization(),
-                    equalTo(BEARER_ACCESS_TOKEN.toAuthorizationHeader()));
-        }
-
-        @Test
-        void shouldReturnUserInfoResponseIfUserIdentityRequestIsSuccessful() throws Exception {
-            var mockedRequest = mock(HTTPRequest.class);
-            when(mockedRequest.send()).thenReturn(successfulUserIdentityResponse());
-
-            var response = helper.sendUserIdentityRequest(mockedRequest);
-
-            assertThat(response.getSubject(), equalTo(SUBJECT));
-        }
-
-        @Test
-        void shouldThrowExceptionIfUserIdentityRequestExceedsNumberOfRetries() throws Exception {
-            var mockedRequest = mock(HTTPRequest.class);
-            when(mockedRequest.send()).thenReturn(unsuccessfulUserIdentityResponse());
-
-            assertThrows(
-                    UnsuccessfulCredentialResponseException.class,
-                    () -> helper.sendUserIdentityRequest(mockedRequest));
-        }
-
-        @Test
-        void shouldReturnUserInfoResponseIfUserIdentityRequestIsSuccessfulAfterRetry()
-                throws Exception {
-            var mockedRequest = mock(HTTPRequest.class);
-            when(mockedRequest.send())
-                    .thenReturn(unsuccessfulUserIdentityResponse())
-                    .thenReturn(successfulUserIdentityResponse());
-
-            var response = helper.sendUserIdentityRequest(mockedRequest);
-
-            assertThat(response.getSubject(), equalTo(SUBJECT));
-        }
-
-        @Test
-        void shouldThrowExceptionIfUserIdentityResponseIsInvalidJSON() throws Exception {
-            var invalidJsonResponse = new HTTPResponse(200);
-            invalidJsonResponse.setBody("{");
-            var mockedRequest = mock(HTTPRequest.class);
-            when(mockedRequest.send()).thenReturn(invalidJsonResponse);
-
-            assertThrows(
-                    UnsuccessfulCredentialResponseException.class,
-                    () -> helper.sendUserIdentityRequest(mockedRequest));
-        }
-
-        @Test
-        void shouldThrowExceptionIfUserIdentityRequestIsInterrupted() throws Exception {
-            var mockedRequest = mock(HTTPRequest.class);
-            when(mockedRequest.send()).thenThrow(new IOException("Network interruption"));
-
-            assertThrows(
-                    RuntimeException.class, () -> helper.sendUserIdentityRequest(mockedRequest));
-        }
-
-        private static HTTPResponse successfulUserIdentityResponse() {
-            var httpResponse = new HTTPResponse(200);
-            httpResponse.setEntityContentType(ContentType.APPLICATION_JSON);
-            httpResponse.setBody(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
-            return httpResponse;
-        }
-
-        private static HTTPResponse unsuccessfulUserIdentityResponse() {
-            return new HTTPResponse(500);
         }
     }
 

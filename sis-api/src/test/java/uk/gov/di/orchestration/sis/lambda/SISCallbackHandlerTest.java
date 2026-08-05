@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.TokenErrorResponse;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -36,7 +37,6 @@ import uk.gov.di.orchestration.identity.entity.CrossBrowserNoSessionException;
 import uk.gov.di.orchestration.identity.entity.CrossBrowserStateMismatchException;
 import uk.gov.di.orchestration.identity.entity.IdentityContext;
 import uk.gov.di.orchestration.identity.entity.LogIds;
-import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
 import uk.gov.di.orchestration.identity.helpers.IdentityCallbackHelper;
 import uk.gov.di.orchestration.identity.service.IdentityContextService;
 import uk.gov.di.orchestration.identity.service.IdentitySPOTService;
@@ -52,6 +52,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.oauth.OAuthService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.EndOfJourneyService;
@@ -102,6 +103,7 @@ public class SISCallbackHandlerTest {
     private final InitiateIPVAuthorisationService ipvAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
     private final IdentitySPOTService identitySpotService = mock(IdentitySPOTService.class);
+    private final OAuthService sisOAuthService = mock(OAuthService.class);
 
     private static final URI FRONT_END_ERROR_URI = URI.create("https://example.com/error");
     private static final URI FRONT_END_SESSION_ENDED_URI =
@@ -159,6 +161,8 @@ public class SISCallbackHandlerTest {
                     FRONT_END_ERROR_URI, new Error("error"));
     private static final AccessTokenResponse SUCCESSFUL_TOKEN_RESPONSE =
             new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
+    private static final TokenErrorResponse UNSUCCESSFUL_TOKEN_RESPONSE =
+            new TokenErrorResponse(new ErrorObject("test-error"));
     private static final URI SIS_BACKEND_URI = URI.create("http://sis-backend");
 
     private final OrchSessionItem orchSession =
@@ -232,7 +236,8 @@ public class SISCallbackHandlerTest {
                         endOfJourneyService,
                         sisAuthorisationService,
                         ipvAuthorisationService,
-                        identitySpotService);
+                        identitySpotService,
+                        sisOAuthService);
     }
 
     @Test
@@ -418,10 +423,9 @@ public class SISCallbackHandlerTest {
     class UserIdentityValidation {
         @Test
         void shouldRedirectToErrorPageWhenUserIdentityRequestTimesOut() throws Exception {
-            when(identityCallbackHelper.makeTokenRequest(AUTH_CODE.getValue()))
+            when(sisOAuthService.getToken(AUTH_CODE.getValue()))
                     .thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-            when(identityCallbackHelper.sendUserIdentityRequest(
-                            SUCCESSFUL_TOKEN_RESPONSE, SIS_BACKEND_URI))
+            when(sisOAuthService.getUserInfo(SUCCESSFUL_TOKEN_RESPONSE))
                     .thenThrow(new UnsuccessfulCredentialResponseException("timed out!"));
             var request = createRequestEvent();
             usingValidIdentityContext(request);
@@ -568,11 +572,9 @@ public class SISCallbackHandlerTest {
         }
 
         private void mockValidationFailed(UserInfo userInfo) throws Exception {
-            when(identityCallbackHelper.makeTokenRequest(AUTH_CODE.getValue()))
+            when(sisOAuthService.getToken(AUTH_CODE.getValue()))
                     .thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-            when(identityCallbackHelper.sendUserIdentityRequest(
-                            SUCCESSFUL_TOKEN_RESPONSE, SIS_BACKEND_URI))
-                    .thenReturn(userInfo);
+            when(sisOAuthService.getUserInfo(SUCCESSFUL_TOKEN_RESPONSE)).thenReturn(userInfo);
             when(identityCallbackHelper.validateUserIdentityResponse(userInfo, REQUESTED_LOCS))
                     .thenReturn(Optional.of(new ErrorObject("validation_failure")));
         }
@@ -789,21 +791,18 @@ public class SISCallbackHandlerTest {
                                         null)));
     }
 
-    private void mockUnsuccessfulTokenResponse() throws IdentityCallbackException {
-        when(identityCallbackHelper.makeTokenRequest(AUTH_CODE.getValue()))
-                .thenThrow(new IdentityCallbackException("Token response was not successful"));
+    private void mockUnsuccessfulTokenResponse() {
+        when(sisOAuthService.getToken(AUTH_CODE.getValue()))
+                .thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
     }
 
-    private void mockSuccessfulTokenResponse() throws IdentityCallbackException {
-        when(identityCallbackHelper.makeTokenRequest(AUTH_CODE.getValue()))
-                .thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+    private void mockSuccessfulTokenResponse() {
+        when(sisOAuthService.getToken(AUTH_CODE.getValue())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
     }
 
     private void mockSuccessfulUserIdentityResponse() throws Exception {
         var userInfo = new UserInfo(new Subject("sis-subject"));
-        when(identityCallbackHelper.sendUserIdentityRequest(
-                        SUCCESSFUL_TOKEN_RESPONSE, SIS_BACKEND_URI))
-                .thenReturn(userInfo);
+        when(sisOAuthService.getUserInfo(SUCCESSFUL_TOKEN_RESPONSE)).thenReturn(userInfo);
         when(identityCallbackHelper.validateUserIdentityResponse(userInfo, REQUESTED_LOCS))
                 .thenReturn(Optional.empty());
     }

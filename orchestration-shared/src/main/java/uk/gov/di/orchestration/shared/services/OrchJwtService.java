@@ -20,7 +20,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.MessageType;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.orchestration.shared.exceptions.InvalidJWEException;
+import uk.gov.di.orchestration.shared.exceptions.InvalidJWTException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -56,6 +56,33 @@ public class OrchJwtService {
             attachLogFieldToLogs(JWT_ID, jwtClaimsSet.getJWTID());
         }
         LOG.info("Generating signed and encrypted JWT");
+        var signedJwt = signJWT(jwtClaimsSet, signingKeyAlias);
+        return encryptJWT(signedJwt, publicEncryptionKey);
+    }
+
+    private EncryptedJWT encryptJWT(SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) {
+        try {
+            LOG.info("Encrypting SignedJWT");
+            var jweObject =
+                    new JWEObject(
+                            new JWEHeader.Builder(
+                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                                    .contentType("JWT")
+                                    .build(),
+                            new Payload(signedJWT));
+            jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
+            LOG.info("SignedJWT has been successfully encrypted");
+            return EncryptedJWT.parse(jweObject.serialize());
+        } catch (JOSEException e) {
+            LOG.error("Error when encrypting SignedJWT", e);
+            throw new InvalidJWTException("Error when encrypting SignedJWT", e);
+        } catch (ParseException e) {
+            LOG.error("Error when parsing JWE object to EncryptedJWT", e);
+            throw new InvalidJWTException("Error when parsing JWE object to EncryptedJWT", e);
+        }
+    }
+
+    public SignedJWT signJWT(JWTClaimsSet jwtClaimsSet, String signingKeyAlias) {
         var signingKey = jwksService.getPublicJWKWithKeyId(signingKeyAlias);
         var jwsHeader =
                 new JWSHeader.Builder(SIGNING_ALGORITHM).keyID(signingKey.getKeyID()).build();
@@ -91,32 +118,10 @@ public class OrchJwtService {
                                             signResult.signature().asByteArray(),
                                             ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
                             .toString();
-            return encryptJWT(SignedJWT.parse(message + "." + signature), publicEncryptionKey);
+            return SignedJWT.parse(message + "." + signature);
         } catch (ParseException | JOSEException e) {
             LOG.error("Error when generating SignedJWT", e);
-            throw new InvalidJWEException("Error when generating SignedJWT", e);
-        }
-    }
-
-    private EncryptedJWT encryptJWT(SignedJWT signedJWT, RSAPublicKey publicEncryptionKey) {
-        try {
-            LOG.info("Encrypting SignedJWT");
-            var jweObject =
-                    new JWEObject(
-                            new JWEHeader.Builder(
-                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
-                                    .contentType("JWT")
-                                    .build(),
-                            new Payload(signedJWT));
-            jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
-            LOG.info("SignedJWT has been successfully encrypted");
-            return EncryptedJWT.parse(jweObject.serialize());
-        } catch (JOSEException e) {
-            LOG.error("Error when encrypting SignedJWT", e);
-            throw new InvalidJWEException("Error when encrypting SignedJWT", e);
-        } catch (ParseException e) {
-            LOG.error("Error when parsing JWE object to EncryptedJWT", e);
-            throw new InvalidJWEException("Error when parsing JWE object to EncryptedJWT", e);
+            throw new InvalidJWTException("Error when generating SignedJWT", e);
         }
     }
 

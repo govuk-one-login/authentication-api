@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
+import uk.gov.di.orchestration.shared.oauth.OAuthService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.EndOfJourneyService;
@@ -72,6 +73,7 @@ public class SISCallbackHandler
     private final SISAuthorisationService sisAuthorisationService;
     private final InitiateIPVAuthorisationService ipvAuthorisationService;
     private final IdentitySPOTService identitySPOTService;
+    private final OAuthService sisOAuthService;
 
     public SISCallbackHandler(
             ConfigurationService configurationService,
@@ -81,7 +83,8 @@ public class SISCallbackHandler
             EndOfJourneyService endOfJourneyService,
             SISAuthorisationService sisAuthorisationService,
             InitiateIPVAuthorisationService ipvAuthorisationService,
-            IdentitySPOTService identitySPOTService) {
+            IdentitySPOTService identitySPOTService,
+            OAuthService sisOAuthService) {
         this.configurationService = configurationService;
         this.identityCallbackHelper = identityCallbackHelper;
         this.identityContextService = identityContextService;
@@ -90,6 +93,7 @@ public class SISCallbackHandler
         this.sisAuthorisationService = sisAuthorisationService;
         this.ipvAuthorisationService = ipvAuthorisationService;
         this.identitySPOTService = identitySPOTService;
+        this.sisOAuthService = sisOAuthService;
     }
 
     @Override
@@ -159,9 +163,7 @@ public class SISCallbackHandler
             auditService.submitAuditEventNoPrefix(
                     ORCH_SIS_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
 
-            var userIdentityUserInfo =
-                    identityCallbackHelper.sendUserIdentityRequest(
-                            tokenResponse, configurationService.getSISBackendURI());
+            var userIdentityUserInfo = sisOAuthService.getUserInfo(tokenResponse);
             auditService.submitAuditEventNoPrefix(
                     ORCH_SIS_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientId, user);
 
@@ -196,13 +198,16 @@ public class SISCallbackHandler
 
     private TokenResponse makeTokenRequest(String authCode, String clientId, TxmaAuditUser user)
             throws IdentityCallbackException {
-        try {
-            return identityCallbackHelper.makeTokenRequest(authCode);
-        } catch (IdentityCallbackException e) {
+        var tokenResponse = sisOAuthService.getToken(authCode);
+        if (!tokenResponse.indicatesSuccess()) {
             auditService.submitAuditEventNoPrefix(
                     ORCH_SIS_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
-            throw e;
+            throw new IdentityCallbackException(
+                    String.format(
+                            "TokenResponse was not successful: %s",
+                            tokenResponse.toErrorResponse().toJSONObject()));
         }
+        return tokenResponse;
     }
 
     private IdentityContextResponse getIdentityContext(APIGatewayProxyRequestEvent input)
