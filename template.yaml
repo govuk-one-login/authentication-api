@@ -6137,7 +6137,7 @@ Resources:
       - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
     Type: "AWS::ApiGateway::ApiKey"
     Properties:
-      Name: !Sub "${Environment}-client-registry-api-key"
+      Name: !Sub "${Environment}-client-registry-api-key-v2"
       Description: |
         API Key for the client registry API endpoints (/connect/*)
       Enabled: true
@@ -6145,6 +6145,23 @@ Resources:
         - RestApiId: !Ref OrchestrationOidcApi
           StageName: !Sub "${Environment}"
       Value: !Sub "{{resolve:secretsmanager:/deploy/${Environment}/client-registry-api-key}}"
+
+  ClientRegistryApiKeyUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Condition: ProvisionNewApiClientRegistryApiKey
+    Properties:
+      UsagePlanName: !Sub ${Environment}-client-registry-api-key-usage-plan
+      ApiStages:
+        - ApiId: !Ref OrchestrationOidcApi
+          Stage: !Ref OrchestrationOidcApi.Stage
+
+  ClientRegistryApiKeyUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Condition: ProvisionNewApiClientRegistryApiKey
+    Properties:
+      KeyId: !Ref ClientRegistryApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref ClientRegistryApiKeyUsagePlan
 
   OrchestrationOidcApiWafAssociation:
     Type: "AWS::WAFv2::WebACLAssociation"
