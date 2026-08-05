@@ -168,6 +168,7 @@ Conditions:
         !Equals [production, !Ref Environment],
       ],
     ]
+  SisEnabled: !Equals [dev, !Ref Environment]
   #endregion
 
   # Comment to force re-deployment of template - this can be deleted once the staging API GW/CloudFront migration is complete.
@@ -184,6 +185,7 @@ Mappings:
       newauthAccountId: "975050272416"
       authEnvironment: authdev3
       serviceDomain: authdev3.dev.account.gov.uk
+      orchServiceDomain: dev.account.gov.uk
       idTokenKeyRsaArn: arn:aws:kms:eu-west-2:653994557586:key/17e5e566-4e99-43b4-ad59-e1ef924a582b
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:653994557586:authdev3-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -220,6 +222,7 @@ Mappings:
       newauthAccountId: "058264536367"
       authEnvironment: build
       serviceDomain: build.account.gov.uk
+      orchServiceDomain: build.account.gov.uk
       backchannelLogoutQueueArn: arn:aws:sqs:eu-west-2:761723964695:build-back-channel-logout-queue
       docAppBackendUri: https://dcmaw-cri.build.stubs.account.gov.uk
       docAppDomain: https://dcmaw-cri.build.stubs.account.gov.uk
@@ -3137,12 +3140,80 @@ Resources:
                   !Ref Environment,
                   serviceDomain,
                 ]
+          SIS_ENABLED: !If
+            - SisEnabled
+            - true
+            - false
+          SIS_AUDIENCE: !If
+            - IpvExists
+            - !Sub
+              - https://reuse-identity.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://sisstub.oidc.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    orchServiceDomain,
+                  ]
+          SIS_AUTHORISATION_CALLBACK_URI: !Sub
+            - https://oidc.${ServiceDomain}/sis-callback
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          SIS_AUTHORISATION_CLIENT_ID: authOrchestrator
+          SIS_AUTHORISATION_URI: !If
+            - IpvExists
+            - !Sub
+              - https://reuse-identity.${ServiceDomain}/oauth2/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://sisstub.oidc.${ServiceDomain}/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    orchServiceDomain,
+                  ]
+          SIS_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchSISTokenSigningKmsKeyAlias
+          SIS_JWKS_URL: !If
+            - IpvExists
+            - !Sub
+              - https://reuse-identity.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://sisstub.oidc.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    orchServiceDomain,
+                  ]
       Policies:
         - !Ref ClientRegistryTableReadAccessPolicy
         - !Ref AuthUserInfoTableReadWriteAccessPolicy
         - !Ref TxmaQueueSendPermissionPolicy
         - !Ref StorageTokenSigningKmsAccessPolicy
-        - !Ref IpvTokenSigningKmsAccessPolicy
+        - !Ref IdentityTokenSigningKmsAccessPolicy
         - !Ref OrchToAuthSigningKmsAccessPolicy
         - !Ref AuthPublicEncryptionKeyAccessPolicy
         - !Ref AccountInterventionsServiceUriSecretAccessPolicy
