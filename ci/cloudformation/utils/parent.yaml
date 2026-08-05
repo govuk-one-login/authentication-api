@@ -136,17 +136,21 @@ Conditions:
                 ]
               - "0"
 
-  InactiveAccountTrackerStubEnabled: !Not
-    - !Or
-      - !Equals
-        - !Ref Environment
-        - staging
-      - !Equals
-        - !Ref Environment
-        - integration
-      - !Equals
-        - !Ref Environment
-        - production
+  InactiveAccountTrackerCrossAccountWriteEnabled:
+    Fn::Or:
+      - Fn::Equals:
+          - !Ref Environment
+          - staging
+      - Fn::Equals:
+          - !Ref Environment
+          - integration
+      - Fn::Equals:
+          - !Ref Environment
+          - production
+
+  InactiveAccountTrackerStubEnabled:
+    Fn::Not:
+      - !Condition InactiveAccountTrackerCrossAccountWriteEnabled
 
 Mappings:
   EnvironmentConfiguration:
@@ -187,6 +191,7 @@ Mappings:
       inactiveAccountExportMaxRetries: "3"
       inactiveAccountExportMaxItemsPerSegment: "10"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
+      inactiveAccountExportTableName: "authdev1-stub-inactive-account-tracker"
 
     authdev2:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
@@ -225,6 +230,7 @@ Mappings:
       inactiveAccountExportMaxRetries: "3"
       inactiveAccountExportMaxItemsPerSegment: "10"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
+      inactiveAccountExportTableName: "authdev2-stub-inactive-account-tracker"
 
     authdev3:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
@@ -263,6 +269,7 @@ Mappings:
       inactiveAccountExportMaxRetries: "3"
       inactiveAccountExportMaxItemsPerSegment: "10"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
+      inactiveAccountExportTableName: "authdev3-stub-inactive-account-tracker"
 
     dev:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
@@ -301,6 +308,7 @@ Mappings:
       inactiveAccountExportMaxRetries: "3"
       inactiveAccountExportMaxItemsPerSegment: "10"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
+      inactiveAccountExportTableName: "dev-stub-inactive-account-tracker"
 
     build:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
@@ -339,6 +347,7 @@ Mappings:
       inactiveAccountExportMaxRetries: "3"
       inactiveAccountExportMaxItemsPerSegment: "7500"
       inactiveAccountExportPauseBetweenInvocationsMs: "60000"
+      inactiveAccountExportTableName: "build-stub-inactive-account-tracker"
 
     staging:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
@@ -377,6 +386,9 @@ Mappings:
       inactiveAccountExportMaxRetries: "3"
       inactiveAccountExportMaxItemsPerSegment: "7500"
       inactiveAccountExportPauseBetweenInvocationsMs: "60000"
+      inactiveAccountExportTableAccountId: "539729775994"
+      inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:539729775994:key/5191526d-1c85-4316-baf7-9fbe373880cf
+      inactiveAccountExportTableName: "inactive_account_tracker_store"
 
     integration:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
@@ -415,6 +427,9 @@ Mappings:
       inactiveAccountExportMaxRetries: "3"
       inactiveAccountExportMaxItemsPerSegment: "7500"
       inactiveAccountExportPauseBetweenInvocationsMs: "60000"
+      inactiveAccountExportTableAccountId: "666500506359"
+      inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:666500506359:key/1ab2a72b-63e0-49b6-b88a-5160a7d27985
+      inactiveAccountExportTableName: "inactive_account_tracker_store"
 
     production:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
@@ -453,6 +468,9 @@ Mappings:
       inactiveAccountExportMaxRetries: "3"
       inactiveAccountExportMaxItemsPerSegment: "7500"
       inactiveAccountExportPauseBetweenInvocationsMs: "60000"
+      inactiveAccountExportTableAccountId: "026991849909"
+      inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:026991849909:key/5489c67b-2c14-4b76-b6a3-a25148b14311
+      inactiveAccountExportTableName: "inactive_account_tracker_store"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -1234,6 +1252,86 @@ Resources:
                     internationalSmsSendCountTableEncryptionKey,
                   ]
 
+  # Policy for cross-account write access to the inactive account tracker table
+  InactiveAccountTrackerCrossAccountWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountTrackerCrossAccountWriteEnabled
+    Properties:
+      Description: "IAM policy for writing to the inactive account tracker table in the home-team account"
+      Path: !Sub
+        - /${Env}/utils/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowBatchWriteToTrackerTable
+            Effect: Allow
+            Action:
+              - dynamodb:BatchWriteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${TableName}
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      inactiveAccountExportTableAccountId,
+                    ]
+                  TableName:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      inactiveAccountExportTableName,
+                    ]
+          - Sid: AllowAccessToTrackerTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  inactiveAccountExportTableEncryptionKey,
+                ]
+
+  # Policy for write access to the inactive account tracker stub table
+  InactiveAccountTrackerStubWritePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountTrackerStubEnabled
+    Properties:
+      Description: "IAM policy for writing to the inactive account tracker stub table"
+      Path: !Sub
+        - /${Env}/utils/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowBatchWriteToTrackerStubTable
+            Effect: Allow
+            Action:
+              - dynamodb:BatchWriteItem
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-inactive-account-tracker
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToTrackerStubTableKms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              - !GetAtt InactiveAccountTrackerStubKmsKey.Arn
+
   # ============================================================================
   # S3 Access Policies
   # ============================================================================
@@ -1662,7 +1760,9 @@ Resources:
     Type: AWS::KMS::Key
     Condition: InactiveAccountTrackerStubEnabled
     Properties:
-      Description: KMS key for the inactive account tracker stub table
+      Description: !Sub
+        - KMS key for the inactive account tracker stub table (${Env})
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       EnableKeyRotation: true
       KeyPolicy:
         Version: 2012-10-17
