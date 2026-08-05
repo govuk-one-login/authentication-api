@@ -6146,6 +6146,23 @@ Resources:
           StageName: !Sub "${Environment}"
       Value: !Sub "{{resolve:secretsmanager:/deploy/${Environment}/client-registry-api-key}}"
 
+  ClientRegistryApiKeyUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Condition: ProvisionNewApiClientRegistryApiKey
+    Properties:
+      UsagePlanName: !Sub ${Environment}-client-registry-api-key-usage-plan
+      ApiStages:
+        - ApiId: !Ref OrchestrationOidcApi
+          Stage: !Ref OrchestrationOidcApi.Stage
+
+  ClientRegistryApiKeyUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Condition: ProvisionNewApiClientRegistryApiKey
+    Properties:
+      KeyId: !Ref ClientRegistryApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref ClientRegistryApiKeyUsagePlan
+
   OrchestrationOidcApiWafAssociation:
     Type: "AWS::WAFv2::WebACLAssociation"
     Condition: UseCloudfront
