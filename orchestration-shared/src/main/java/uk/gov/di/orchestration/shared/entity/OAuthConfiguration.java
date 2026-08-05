@@ -9,4 +9,5 @@ public record OAuthConfiguration(
         URI userInfoURI,
         URI redirectURI,
         String signingKeyAlias,
-        String privateKeyJwtAudience) {}
+        String privateKeyJwtAudience,
+        String statePrefix) {}
