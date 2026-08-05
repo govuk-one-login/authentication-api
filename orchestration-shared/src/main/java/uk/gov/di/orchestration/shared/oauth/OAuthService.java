@@ -33,6 +33,8 @@ import uk.gov.di.orchestration.shared.services.StateStorageService;
 import java.io.IOException;
 import java.security.interfaces.RSAPublicKey;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -50,6 +52,7 @@ public class OAuthService {
     private final HTTPRequestSender httpRequestSender;
     private final StateStorageService stateStorageService;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
+    private final CallbackValidator callbackValidator;
     private final Logger LOG = LogManager.getLogger(this.getClass());
 
     public OAuthService(
@@ -57,11 +60,13 @@ public class OAuthService {
             OrchJwtService jwtService,
             NowHelper.NowClock clock,
             StateStorageService stateStorageService,
-            CrossBrowserOrchestrationService crossBrowserOrchestrationService) {
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
+            CallbackValidator callbackValidator) {
         this.clientConfig = clientConfig;
         this.jwtService = jwtService;
         this.clock = clock;
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
+        this.callbackValidator = callbackValidator;
         this.httpRequestSender = null;
         this.stateStorageService = stateStorageService;
     }
@@ -72,13 +77,15 @@ public class OAuthService {
             NowHelper.NowClock clock,
             HTTPRequestSender httpRequestSender,
             StateStorageService stateStorageService,
-            CrossBrowserOrchestrationService crossBrowserOrchestrationService) {
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
+            CallbackValidator callbackValidator) {
         this.clientConfig = clientConfig;
         this.jwtService = jwtService;
         this.clock = clock;
         this.httpRequestSender = httpRequestSender;
         this.stateStorageService = stateStorageService;
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
+        this.callbackValidator = callbackValidator;
     }
 
     public TokenResponse getToken(String authCode) {
@@ -215,5 +222,36 @@ public class OAuthService {
     public void storeState(State state, String sessionId, String clientSessionId) {
         stateStorageService.storeState(clientConfig.statePrefix() + sessionId, state.getValue());
         crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
+    }
+
+    public Optional<CallbackValidationError> validateCallback(
+            Map<String, String> queryParams, String sessionId) {
+        if (queryParams == null || queryParams.isEmpty()) {
+            LOG.warn("No Query parameters in  Authorisation response");
+            return Optional.of(BaseCallbackValidationError.NO_QUERY_PARAMS);
+        }
+
+        if (queryParams.containsKey("error")) {
+            LOG.warn("Error response found in Authorisation response");
+            return Optional.of(
+                    callbackValidator.handleError(
+                            queryParams.get("error"), queryParams.get("error_description")));
+        }
+
+        if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
+            LOG.warn("No state param in Authorisation response");
+            return Optional.of(BaseCallbackValidationError.NO_STATE);
+        }
+
+        if (!isStateValid(sessionId, queryParams.get("state"))) {
+            return Optional.of(BaseCallbackValidationError.INVALID_STATE);
+        }
+
+        if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
+            LOG.warn("No code param in Authorisation response");
+            return Optional.of(BaseCallbackValidationError.NO_CODE_IN_PARAMS);
+        }
+
+        return Optional.empty();
     }
 }
