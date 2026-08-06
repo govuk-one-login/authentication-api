@@ -497,7 +497,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, null);
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 3L);
 
         handler.handleRequest(request, context);
 
@@ -513,6 +513,32 @@ class InactiveAccountDataExportHandlerTest {
         assertNotNull(continuation.segmentKeys());
         assertEquals(105, continuation.processedCount());
         assertEquals(5, continuation.writtenCount());
+        assertEquals(4L, continuation.invocationCount());
+    }
+
+    @Test
+    void shouldSelfInvokeWithInvocationCountOneWhenFirstInvocationHasNoCount() {
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
+
+        handler.handleRequest(request, context);
+
+        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(
+                        payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
+
+        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+        var continuation =
+                gson.fromJson(payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
+
+        assertEquals(1L, continuation.invocationCount());
     }
 
     @Test
