@@ -20,8 +20,11 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -108,6 +111,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
 
         @Test
@@ -135,6 +139,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
 
         @Test
@@ -162,6 +167,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.MISSING_SUBJECT_ID));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
 
         @Test
@@ -247,6 +253,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(422));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_AAGUID));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
 
         @Test
@@ -274,6 +281,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(422));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_AAGUID));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
     }
 
@@ -308,6 +316,7 @@ class PasskeysCreateHandlerTest {
         // Then
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+        verify(passkeysService, never()).createPasskey(any(), anyString());
     }
 
     @Test
@@ -338,6 +347,7 @@ class PasskeysCreateHandlerTest {
         // Then
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+        verify(passkeysService, never()).createPasskey(any(), anyString());
     }
 
     private String buildPasskeysCreateRequestBody(
