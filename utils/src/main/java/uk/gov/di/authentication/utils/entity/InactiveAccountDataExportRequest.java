@@ -7,4 +7,5 @@ import java.util.Map;
 public record InactiveAccountDataExportRequest(
         @Expose Map<Integer, Map<String, String>> segmentKeys,
         @Expose Long processedCount,
-        @Expose Long writtenCount) {}
+        @Expose Long writtenCount,
+        @Expose Long invocationCount) {}
