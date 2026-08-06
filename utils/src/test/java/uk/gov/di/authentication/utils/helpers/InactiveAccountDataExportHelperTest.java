@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.utils.helpers;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -21,6 +23,7 @@ import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHe
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.calculateDateForDeletion;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.calculateLastActiveDate;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.countMissingCredentials;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.determineHasSetupMfa;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.extractUnprocessedKeys;
 
 class InactiveAccountDataExportHelperTest {
@@ -174,6 +177,7 @@ class InactiveAccountDataExportHelperTest {
         assertEquals("UserProfile.Updated", result.getUserLastActiveSourceId());
         assertNotNull(result.getStatusLastUpdated());
         assertNotNull(result.getUserLastActiveUpdated());
+        assertFalse(result.getHasSetupMfa());
     }
 
     @Test
@@ -323,5 +327,136 @@ class InactiveAccountDataExportHelperTest {
     @Test
     void calculateDateForDeletionShouldReturnNullForBlankInput() {
         assertNull(calculateDateForDeletion(""));
+    }
+
+    @Nested
+    class DetermineHasSetupMfaTest {
+
+        @Test
+        void shouldReturnTrueForMigratedUserWithMfaMethods() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_MFA_METHODS_MIGRATED,
+                            AttributeValue.builder().bool(true).build());
+
+            Map<String, AttributeValue> credentialsItem =
+                    Map.of(
+                            UserCredentials.ATTRIBUTE_MFA_METHODS,
+                            AttributeValue.builder()
+                                    .l(
+                                            List.of(
+                                                    AttributeValue.builder()
+                                                            .m(
+                                                                    Map.of(
+                                                                            "MfaMethodType",
+                                                                            AttributeValue.builder()
+                                                                                    .s("AUTH_APP")
+                                                                                    .build()))
+                                                            .build()))
+                                    .build());
+
+            assertTrue(determineHasSetupMfa(profileItem, credentialsItem));
+        }
+
+        @Test
+        void shouldReturnFalseForMigratedUserWithNoMfaMethods() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_MFA_METHODS_MIGRATED,
+                            AttributeValue.builder().bool(true).build());
+
+            Map<String, AttributeValue> credentialsItem =
+                    Map.of(
+                            UserCredentials.ATTRIBUTE_EMAIL,
+                            AttributeValue.builder().s("test@example.com").build());
+
+            assertFalse(determineHasSetupMfa(profileItem, credentialsItem));
+        }
+
+        @Test
+        void shouldReturnFalseForMigratedUserWithEmptyMfaMethodsList() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_MFA_METHODS_MIGRATED,
+                            AttributeValue.builder().bool(true).build());
+
+            Map<String, AttributeValue> credentialsItem =
+                    Map.of(
+                            UserCredentials.ATTRIBUTE_MFA_METHODS,
+                            AttributeValue.builder().l(List.of()).build());
+
+            assertFalse(determineHasSetupMfa(profileItem, credentialsItem));
+        }
+
+        @Test
+        void shouldReturnTrueForUnmigratedUserWithPhoneNumberVerified() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED,
+                            AttributeValue.builder().n("1").build());
+
+            Map<String, AttributeValue> credentialsItem =
+                    Map.of(
+                            UserCredentials.ATTRIBUTE_EMAIL,
+                            AttributeValue.builder().s("test@example.com").build());
+
+            assertTrue(determineHasSetupMfa(profileItem, credentialsItem));
+        }
+
+        @Test
+        void shouldReturnTrueForUnmigratedUserWithMfaMethodPresent() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED,
+                            AttributeValue.builder().n("0").build());
+
+            Map<String, AttributeValue> credentialsItem =
+                    Map.of(
+                            UserCredentials.ATTRIBUTE_MFA_METHODS,
+                            AttributeValue.builder()
+                                    .l(
+                                            List.of(
+                                                    AttributeValue.builder()
+                                                            .m(
+                                                                    Map.of(
+                                                                            "MfaMethodType",
+                                                                            AttributeValue.builder()
+                                                                                    .s("AUTH_APP")
+                                                                                    .build()))
+                                                            .build()))
+                                    .build());
+
+            assertTrue(determineHasSetupMfa(profileItem, credentialsItem));
+        }
+
+        @Test
+        void shouldReturnFalseForUnmigratedUserWithPhoneNotVerifiedAndNoMfaMethods() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED,
+                            AttributeValue.builder().n("0").build());
+
+            Map<String, AttributeValue> credentialsItem =
+                    Map.of(
+                            UserCredentials.ATTRIBUTE_EMAIL,
+                            AttributeValue.builder().s("test@example.com").build());
+
+            assertFalse(determineHasSetupMfa(profileItem, credentialsItem));
+        }
+
+        @Test
+        void shouldReturnFalseForUnmigratedUserWithPhoneNotVerifiedAndEmptyMfaMethods() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED,
+                            AttributeValue.builder().n("0").build());
+
+            Map<String, AttributeValue> credentialsItem =
+                    Map.of(
+                            UserCredentials.ATTRIBUTE_MFA_METHODS,
+                            AttributeValue.builder().l(List.of()).build());
+
+            assertFalse(determineHasSetupMfa(profileItem, credentialsItem));
+        }
     }
 }

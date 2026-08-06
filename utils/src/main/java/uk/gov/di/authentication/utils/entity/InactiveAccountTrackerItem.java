@@ -18,6 +18,7 @@ public class InactiveAccountTrackerItem {
     private String userLastActive;
     private String status = "pending";
     private String statusLastUpdated;
+    private Boolean hasSetupMfa;
     private String userLastActiveSource = "AUTH_BACKFILL";
     private String userLastActiveSourceId;
     private String userLastActiveUpdated;
@@ -185,6 +186,20 @@ public class InactiveAccountTrackerItem {
 
     public InactiveAccountTrackerItem withUserLastActiveUpdated(String userLastActiveUpdated) {
         this.userLastActiveUpdated = userLastActiveUpdated;
+        return this;
+    }
+
+    @DynamoDbAttribute("hasSetupMfa")
+    public Boolean getHasSetupMfa() {
+        return hasSetupMfa;
+    }
+
+    public void setHasSetupMfa(Boolean hasSetupMfa) {
+        this.hasSetupMfa = hasSetupMfa;
+    }
+
+    public InactiveAccountTrackerItem withHasSetupMfa(Boolean hasSetupMfa) {
+        this.hasSetupMfa = hasSetupMfa;
         return this;
     }
 }

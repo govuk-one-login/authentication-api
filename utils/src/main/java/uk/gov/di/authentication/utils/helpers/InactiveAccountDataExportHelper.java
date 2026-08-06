@@ -182,7 +182,42 @@ public class InactiveAccountDataExportHelper {
                 .withStatusLastUpdated(currentTimestamp)
                 .withUserLastActive(lastActiveTimestamp)
                 .withUserLastActiveSourceId(lastActiveSourceId)
-                .withUserLastActiveUpdated(currentTimestamp);
+                .withUserLastActiveUpdated(currentTimestamp)
+                .withHasSetupMfa(determineHasSetupMfa(userProfileItem, userCredentialsItem));
+    }
+
+    public static boolean determineHasSetupMfa(
+            Map<String, AttributeValue> userProfileItem,
+            Map<String, AttributeValue> userCredentialsItem) {
+        AttributeValue migratedAttr =
+                userProfileItem.get(UserProfile.ATTRIBUTE_MFA_METHODS_MIGRATED);
+        boolean isMigrated = migratedAttr != null && Boolean.TRUE.equals(migratedAttr.bool());
+
+        if (isMigrated) {
+            return hasMfaMethods(userCredentialsItem);
+        }
+
+        AttributeValue phoneVerifiedAttr =
+                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED);
+        boolean phoneVerified = phoneVerifiedAttr != null && "1".equals(phoneVerifiedAttr.n());
+
+        if (phoneVerified) {
+            return true;
+        }
+
+        return hasMfaMethods(userCredentialsItem);
+    }
+
+    private static boolean hasMfaMethods(Map<String, AttributeValue> userCredentialsItem) {
+        if (userCredentialsItem == null) {
+            return false;
+        }
+        AttributeValue mfaMethodsAttr =
+                userCredentialsItem.get(UserCredentials.ATTRIBUTE_MFA_METHODS);
+        if (mfaMethodsAttr == null || !mfaMethodsAttr.hasL()) {
+            return false;
+        }
+        return !mfaMethodsAttr.l().isEmpty();
     }
 
     private static String getTermsAndConditionsTimestamp(Map<String, AttributeValue> item) {
