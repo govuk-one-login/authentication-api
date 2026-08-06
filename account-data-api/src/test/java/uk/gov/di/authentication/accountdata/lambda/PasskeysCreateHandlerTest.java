@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
 import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
@@ -20,8 +21,11 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -66,7 +70,11 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             -7);
-            when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
+            var requestAsObject =
+                    SerializationService.getInstance()
+                            .readValue(
+                                    passkeysCreateRequestBody, PasskeysCreateRequest.class, true);
+            when(passkeysService.createPasskey(requestAsObject, PUBLIC_SUBJECT_ID))
                     .thenReturn(Result.success(null));
             var request =
                     passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
@@ -108,6 +116,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
 
         @Test
@@ -135,6 +144,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_REQUEST_BODY));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
 
         @Test
@@ -162,6 +172,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.MISSING_SUBJECT_ID));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
 
         @Test
@@ -247,6 +258,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(422));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_AAGUID));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
 
         @Test
@@ -274,6 +286,7 @@ class PasskeysCreateHandlerTest {
             // Then
             assertThat(result, hasStatus(422));
             assertThat(result, hasJsonBody(ErrorResponse.INVALID_AAGUID));
+            verify(passkeysService, never()).createPasskey(any(), anyString());
         }
     }
 
@@ -308,6 +321,7 @@ class PasskeysCreateHandlerTest {
         // Then
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+        verify(passkeysService, never()).createPasskey(any(), anyString());
     }
 
     @Test
@@ -338,6 +352,7 @@ class PasskeysCreateHandlerTest {
         // Then
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.UNAUTHORIZED_REQUEST));
+        verify(passkeysService, never()).createPasskey(any(), anyString());
     }
 
     private String buildPasskeysCreateRequestBody(

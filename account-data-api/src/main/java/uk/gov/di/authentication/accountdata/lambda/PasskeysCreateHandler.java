@@ -66,9 +66,9 @@ public class PasskeysCreateHandler
         LOG.info("PasskeysCreateHandler called");
 
         return parseRequest(input)
-                .flatMap(createContext -> validateAuthorizedSubjectId(createContext, input))
-                .flatMap(createContext -> validateScope(createContext, input))
-                .flatMap(this::validateRequest)
+                .flatTap(createContext -> validateAuthorizedSubjectId(createContext, input))
+                .flatTap(createContext -> validateScope(input))
+                .flatTap(this::validateRequest)
                 .flatMap(this::createPasskey)
                 .fold(
                         failure ->
@@ -110,26 +110,26 @@ public class PasskeysCreateHandler
         return Result.success(new PasskeysCreateContext(publicSubjectId, passkeysCreateRequest));
     }
 
-    private Result<PasskeysCreateFailureReason, PasskeysCreateContext> validateAuthorizedSubjectId(
+    private Result<PasskeysCreateFailureReason, Void> validateAuthorizedSubjectId(
             PasskeysCreateContext context, APIGatewayProxyRequestEvent input) {
         if (isSubjectIdAuthorized(context.publicSubjectId(), input.getRequestContext())) {
-            return Result.success(context);
+            return Result.emptySuccess();
         } else {
             LOG.warn("SubjectId in path parameter does not match Authorizer principalId");
             return Result.failure(UNAUTHORIZED_REQUEST);
         }
     }
 
-    private Result<PasskeysCreateFailureReason, PasskeysCreateContext> validateScope(
-            PasskeysCreateContext context, APIGatewayProxyRequestEvent input) {
+    private Result<PasskeysCreateFailureReason, Void> validateScope(
+            APIGatewayProxyRequestEvent input) {
         if (isScopeAuthorized(AccountDataScope.PASSKEY_CREATE, input.getRequestContext())) {
-            return Result.success(context);
+            return Result.emptySuccess();
         } else {
             return Result.failure(UNAUTHORIZED_REQUEST);
         }
     }
 
-    private Result<PasskeysCreateFailureReason, PasskeysCreateContext> validateRequest(
+    private Result<PasskeysCreateFailureReason, Void> validateRequest(
             PasskeysCreateContext context) {
         var passkeysCreateRequest = context.passkeysCreateRequest();
 
@@ -137,7 +137,7 @@ public class PasskeysCreateHandler
             return Result.failure(INVALID_AAGUID);
         }
 
-        return Result.success(context);
+        return Result.emptySuccess();
     }
 
     private Result<PasskeysCreateFailureReason, Void> createPasskey(PasskeysCreateContext context) {
