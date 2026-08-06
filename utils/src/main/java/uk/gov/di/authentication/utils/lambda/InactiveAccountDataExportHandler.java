@@ -68,6 +68,7 @@ public class InactiveAccountDataExportHandler
     private final int maxItemsPerSegment;
     private final long pauseBetweenInvocationsMs;
     private final String lambdaName;
+    private final int maxInvocations;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService,
@@ -89,6 +90,7 @@ public class InactiveAccountDataExportHandler
         this.pauseBetweenInvocationsMs =
                 configurationService.getInactiveAccountExportPauseBetweenInvocationsMs();
         this.lambdaName = configurationService.getInactiveAccountExportLambdaName();
+        this.maxInvocations = configurationService.getInactiveAccountExportMaxInvocations();
     }
 
     public InactiveAccountDataExportHandler() {
@@ -114,6 +116,8 @@ public class InactiveAccountDataExportHandler
                 request != null && request.invocationCount() != null
                         ? request.invocationCount()
                         : 0L;
+
+        enforceMaxInvocationsLimit(invocationCount, processedCount, writtenCount);
 
         Map<Integer, Map<String, AttributeValue>> activeSegments =
                 resolveActiveSegments(request, totalSegments);
@@ -188,6 +192,27 @@ public class InactiveAccountDataExportHandler
             return new InactiveAccountDataExportResponse(processedCount, writtenCount);
         } finally {
             forcePoolShutdown(forkJoinPool);
+        }
+    }
+
+    private void enforceMaxInvocationsLimit(
+            long invocationCount, long processedCount, long writtenCount) {
+        if (invocationCount >= maxInvocations) {
+            LOG.error(
+                    "INACTIVE_ACCOUNT_DATA_EXPORT_MAX_INVOCATIONS_EXCEEDED: invocationCount={} "
+                            + "has reached or exceeded maxInvocations={}, halting self-invocation "
+                            + "chain. processedCount={}, writtenCount={}",
+                    invocationCount,
+                    maxInvocations,
+                    processedCount,
+                    writtenCount);
+
+            throw new IllegalStateException(
+                    "Inactive account data export exceeded maximum re-invocation limit of "
+                            + maxInvocations
+                            + " (invocationCount="
+                            + invocationCount
+                            + ")");
         }
     }
 

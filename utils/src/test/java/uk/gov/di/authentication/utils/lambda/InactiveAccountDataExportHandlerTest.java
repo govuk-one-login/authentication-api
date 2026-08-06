@@ -68,6 +68,7 @@ class InactiveAccountDataExportHandlerTest {
         when(configurationService.getInactiveAccountExportTableName())
                 .thenReturn("test-tracker-table");
         when(configurationService.getInactiveAccountExportBatchWriteMaxRetries()).thenReturn(3);
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(1000);
         when(client.batchWriteItem(any(BatchWriteItemRequest.class)))
                 .thenReturn(BatchWriteItemResponse.builder().build());
     }
@@ -627,6 +628,50 @@ class InactiveAccountDataExportHandlerTest {
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         assertThrows(RuntimeException.class, () -> handler.handleRequest(request, context));
+    }
+
+    @Test
+    void shouldThrowOnFirstInvocationWhenMaxInvocationsIsZero() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(0);
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
+
+        assertThrows(IllegalStateException.class, () -> handler.handleRequest(request, context));
+
+        verify(client, never()).scan(any(ScanRequest.class));
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
+    }
+
+    @Test
+    void shouldAllowInvocationOneBelowMaxInvocationsLimit() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(3);
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 2L);
+
+        handler.handleRequest(request, context);
+
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(any(), eq("test-inactive-account-data-export-lambda"));
+    }
+
+    @Test
+    void shouldThrowWhenMaxInvocationsExceeded() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(3);
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 3L);
+
+        assertThrows(IllegalStateException.class, () -> handler.handleRequest(request, context));
+
+        verify(client, never()).scan(any(ScanRequest.class));
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
     }
 
     private Map<String, AttributeValue> createItem(int index) {
