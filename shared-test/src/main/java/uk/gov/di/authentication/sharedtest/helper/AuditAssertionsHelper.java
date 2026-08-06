@@ -82,11 +82,14 @@ public class AuditAssertionsHelper {
     }
 
     public static List<String> assertTxmaAuditEventsReceived(
-            SqsQueueExtension queue,
-            Collection<AuditableEvent> events,
-            boolean validateDeviceInformation) {
+            SqsQueueExtension queue, List<String> eventNames) {
+        return assertTxmaAuditEventsReceived(queue, eventNames, true);
+    }
 
-        var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
+    public static List<String> assertTxmaAuditEventsReceived(
+            SqsQueueExtension queue,
+            List<String> expectedTxmaEvents,
+            boolean validateDeviceInformation) {
 
         if (expectedTxmaEvents.isEmpty()) {
             throw new RuntimeException(
@@ -144,6 +147,15 @@ public class AuditAssertionsHelper {
         }
 
         return sentEvents;
+    }
+
+    public static List<String> assertTxmaAuditEventsReceived(
+            SqsQueueExtension queue,
+            Collection<AuditableEvent> events,
+            boolean validateDeviceInformation) {
+
+        var expectedTxmaEvents = events.stream().map(Objects::toString).toList();
+        return assertTxmaAuditEventsReceived(queue, expectedTxmaEvents, validateDeviceInformation);
     }
 
     private static void assertValidAuditEventsHaveDeviceInformationInRestrictedSection(

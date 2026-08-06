@@ -67,8 +67,10 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTH_UPDATE_PROFILE_REQUEST_RECEIVED));
-        // TODO - AUT-5464 - Add AUTH_PASSKEY_REGISTRATION_PROMPT_SKIPPED to List
+                txmaAuditQueue,
+                List.of(
+                        "AUTH_UPDATE_PROFILE_REQUEST_RECEIVED",
+                        "AUTH_PASSKEY_REGISTRATION_PROMPT_SKIPPED"));
     }
 
     private void setUpTest(String sessionId) {
