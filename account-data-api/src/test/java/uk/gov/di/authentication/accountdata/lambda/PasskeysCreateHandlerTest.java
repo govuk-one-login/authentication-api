@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.accountdata.entity.passkey.PasskeysCreateRequest;
 import uk.gov.di.authentication.accountdata.entity.passkey.failurereasons.PasskeysCreateFailureReason;
 import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.PasskeysService;
@@ -69,7 +70,11 @@ class PasskeysCreateHandlerTest {
                             false,
                             false,
                             -7);
-            when(passkeysService.createPasskey(any(), eq(PUBLIC_SUBJECT_ID)))
+            var requestAsObject =
+                    SerializationService.getInstance()
+                            .readValue(
+                                    passkeysCreateRequestBody, PasskeysCreateRequest.class, true);
+            when(passkeysService.createPasskey(requestAsObject, PUBLIC_SUBJECT_ID))
                     .thenReturn(Result.success(null));
             var request =
                     passkeysCreateRequest(passkeysCreateRequestBody, pathParams, AUTHORIZER_PARAMS);
