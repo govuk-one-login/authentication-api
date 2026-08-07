@@ -1,0 +1,23 @@
+name: "Extract version info"
+description: "Extracts PR number and commit message to build a version string"
+
+outputs:
+  version:
+    description: "The version string (PR number + commit message or short SHA + message)"
+    value: ${{ steps.version_info.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Extract PR number and commit message
+      id: version_info
+      shell: bash
+      run: |
+        HEAD_MESSAGE=$(git log -1 --format=%s)
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        if [[ "$HEAD_MESSAGE" =~ \(#([0-9]+)\) ]]; then
+          VERSION="#${BASH_REMATCH[1]} - ${HEAD_MESSAGE}"
+        else
+          VERSION="${SHORT_SHA}${HEAD_MESSAGE:+: $HEAD_MESSAGE}"
+        fi
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
