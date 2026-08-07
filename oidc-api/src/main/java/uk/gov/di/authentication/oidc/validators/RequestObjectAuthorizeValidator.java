@@ -2,6 +2,8 @@ package uk.gov.di.authentication.oidc.validators;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.proc.BadJWTException;
+import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.langtag.LangTagException;
 import com.nimbusds.langtag.LangTagUtils;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -31,6 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
 import static java.util.Collections.emptyList;
@@ -108,6 +111,24 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                 } else {
                     LOG.info("Request object JWT has a valid expiry date. Expiry: {}", expiration);
                 }
+            }
+
+            // Currently we do not use this to exact match the JWT claims
+            // or assert certain claims are present. This just validates the
+            // time based nbf and exp claims
+            var validator = defaultJWTClaimsVerifier(null, null, clock);
+            validator.setMaxClockSkew(30);
+
+            try {
+                validator.verify(jwtClaimsSet, null);
+            } catch (BadJWTException e) {
+                logErrorInProdElseWarn(
+                        String.format(
+                                "Error validating time based claims in request object: %s",
+                                e.getMessage()));
+                throw new InvalidAuthorizeRequestException(
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_OBJECT_CODE, "Request object expired"));
             }
 
             if (jwtClaimsSet.getStringClaim("redirect_uri") == null
@@ -371,5 +392,15 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
     private static Optional<AuthRequestError> errorResponse(
             URI uri, ErrorObject error, State state) {
         return Optional.of(new AuthRequestError(error, uri, state));
+    }
+
+    private DefaultJWTClaimsVerifier<?> defaultJWTClaimsVerifier(
+            JWTClaimsSet exactMatchClaims, Set<String> requiredClaims, NowHelper.NowClock clock) {
+        return new DefaultJWTClaimsVerifier<>(exactMatchClaims, requiredClaims) {
+            @Override
+            protected java.util.Date currentTime() {
+                return clock.now();
+            }
+        };
     }
 }
