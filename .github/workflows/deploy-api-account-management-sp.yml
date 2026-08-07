@@ -86,14 +86,10 @@ jobs:
           ./gradlew --no-daemon --parallel :account-management-api:buildZip
 
       - name: Install Rain
-        env:
-          VERSION: ${{ env.RAIN_VERSION }}
-          ARCH: ${{ env.RAIN_ARCH }}
-        run: |
-          wget -q "https://github.com/aws-cloudformation/rain/releases/download/${VERSION}/rain-${VERSION}_${ARCH}.zip"
-          unzip "rain-${VERSION}_${ARCH}.zip"
-          chmod +x "rain-${VERSION}_${ARCH}/rain"
-          mv "rain-${VERSION}_${ARCH}/rain" /usr/local/bin/rain
+        uses: ./.github/actions/install-rain
+        with:
+          version: ${{ env.RAIN_VERSION }}
+          arch: ${{ env.RAIN_ARCH }}
 
       - name: Generate am template
         run: "./scripts/merge-templates.sh"
