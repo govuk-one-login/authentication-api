@@ -190,12 +190,12 @@ public class AuthorisationHandler
         this.auditService = new AuditService(configurationService);
         this.queryParamsAuthorizeValidator =
                 new QueryParamsAuthorizeValidator(configurationService);
+        this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
         this.requestObjectAuthorizeValidator =
-                new RequestObjectAuthorizeValidator(configurationService);
+                new RequestObjectAuthorizeValidator(configurationService, this.nowClock);
         this.clientService = new DynamoClientService(configurationService);
         this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
-        this.nowClock = new NowHelper.NowClock(Clock.systemUTC());
         this.authenticationAuthorisationService =
                 new AuthenticationAuthorizationService(
                         configurationService,

@@ -18,6 +18,7 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -43,19 +44,23 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
     private final OidcAPI oidcApi;
     private final ClientSignatureValidationService clientSignatureValidationService;
+    private final NowHelper.NowClock clock;
 
     public RequestObjectAuthorizeValidator(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService,
             OidcAPI oidcApi,
-            ClientSignatureValidationService clientSignatureValidationService) {
+            ClientSignatureValidationService clientSignatureValidationService,
+            NowHelper.NowClock clock) {
         super(configurationService, dynamoClientService, ipvCapacityService);
         this.clientSignatureValidationService = clientSignatureValidationService;
         this.oidcApi = oidcApi;
+        this.clock = clock;
     }
 
-    public RequestObjectAuthorizeValidator(ConfigurationService configurationService) {
+    public RequestObjectAuthorizeValidator(
+            ConfigurationService configurationService, NowHelper.NowClock clock) {
         super(
                 configurationService,
                 new DynamoClientService(configurationService),
@@ -63,6 +68,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         this.oidcApi = new OidcAPI(configurationService);
         this.clientSignatureValidationService =
                 new ClientSignatureValidationService(configurationService);
+        this.clock = clock;
     }
 
     @Override

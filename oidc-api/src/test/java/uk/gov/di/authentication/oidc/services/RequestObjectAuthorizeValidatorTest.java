@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.entity.PublicKeySource;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -44,11 +45,16 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.security.KeyPair;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.time.Clock.fixed;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -87,6 +93,9 @@ class RequestObjectAuthorizeValidatorTest {
             "11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111@digital.cabinet-office.gov.uk";
     private RequestObjectAuthorizeValidator validator;
     private final OidcAPI oidcApi = mock(OidcAPI.class);
+    private static final String FIXED_TIMESTAMP = "2021-09-01T22:10:00.012Z";
+    private static final Clock fixedClock = fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
+    private static final NowHelper.NowClock fixedNowClock = new NowHelper.NowClock(fixedClock);
 
     @BeforeEach
     void setup() {
@@ -98,7 +107,8 @@ class RequestObjectAuthorizeValidatorTest {
                         dynamoClientService,
                         ipvCapacityService,
                         oidcApi,
-                        clientSignatureValidationService);
+                        clientSignatureValidationService,
+                        fixedNowClock);
         var clientRegistry =
                 generateClientRegistry(
                         ClientType.APP.getValue(),
@@ -1001,6 +1011,59 @@ class RequestObjectAuthorizeValidatorTest {
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
         assertEquals(STATE, requestObjectError.get().state());
+    }
+
+    @Nested
+    class TimestampValidation {
+        @Test
+        void shouldThrowAnErrorWhenRequestIsExpired() throws Exception {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .expirationTime(fixedNowClock.nowMinus(2, ChronoUnit.MINUTES))
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            assertThrows(
+                    InvalidAuthorizeRequestException.class, () -> validator.validate(authRequest));
+        }
+
+        @Test
+        void shouldThrowAnErrorWhenRequestCurrentTimeIsBeforeNotBeforeClaim() throws Exception {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .notBeforeTime(fixedNowClock.nowPlus(2, ChronoUnit.MINUTES))
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            assertThrows(
+                    InvalidAuthorizeRequestException.class, () -> validator.validate(authRequest));
+        }
+
+        @Test
+        void shouldNotThrowWhenExpiryIsWithinClockSkew() throws Exception {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .expirationTime(fixedNowClock.nowPlus(30, ChronoUnit.SECONDS))
+                            .build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+            var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
+
+            assertThat(requestObjectError, equalTo(Optional.empty()));
+        }
+
+        @Test
+        void shouldNotThrowWhenNotBeforeIsWithinClockSkew() throws Exception {
+            var jwtClaimsSet =
+                    getDefaultJWTClaimsSetBuilder()
+                            .notBeforeTime(fixedNowClock.nowMinus(30, ChronoUnit.SECONDS))
+                            .build();
+            var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+            var requestObjectError = validator.validate(generateAuthRequest(signedJWT));
+
+            assertThat(requestObjectError, equalTo(Optional.empty()));
+        }
     }
 
     @Test
