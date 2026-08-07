@@ -107,17 +107,9 @@ jobs:
           sam validate --lint -t ad-template.yaml
           sam build --parallel -t ad-template.yaml
 
-      - name: Extract PR number and commit message
+      - name: Extract version info
         id: version_info
-        run: |
-          HEAD_MESSAGE=$(git log -1 --format=%s)
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          if [[ "$HEAD_MESSAGE" =~ \(#([0-9]+)\) ]]; then
-            VERSION="#${BASH_REMATCH[1]} - ${HEAD_MESSAGE}"
-          else
-            VERSION="${SHORT_SHA}${HEAD_MESSAGE:+: $HEAD_MESSAGE}"
-          fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/extract-version-info
 
       - name: Deploy SAM app
         uses: govuk-one-login/devplatform-upload-action@64e46134b4108ebfa1cf2a64fee00782f8e2e8cf # v4.1.0
