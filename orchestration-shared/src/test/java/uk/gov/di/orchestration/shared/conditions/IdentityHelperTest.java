@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
+// QualityGateUnitTest
 class IdentityHelperTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
@@ -24,6 +25,7 @@ class IdentityHelperTest {
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalseWhenVtrNotPresentInAuthRequest() {
         var authRequest = createAuthRequest();
@@ -32,6 +34,7 @@ class IdentityHelperTest {
                 IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalseWhenNoLevelOfConfidenceIsPresentInAuthRequest() {
         var authRequest = createAuthRequest("Cl.Cm");
@@ -39,6 +42,7 @@ class IdentityHelperTest {
         assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalseWhenP0LevelOfConfidenceIsPresentInAuthRequest() {
         var authRequest = createAuthRequest("P0.Cl.Cm");
@@ -46,6 +50,7 @@ class IdentityHelperTest {
         assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnTrueIfLevelOfConfidenceGreaterThanP0IsPresentInAuthRequest() {
         var authRequest = createAuthRequest("P2.Cl.Cm");
@@ -53,6 +58,7 @@ class IdentityHelperTest {
         assertTrue(IdentityHelper.identityRequired(authRequest.toParameters(), true, true));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalseIfIdentityIsNotEnabled() {
         var authRequest = createAuthRequest("P2.Cl.Cm");
@@ -60,6 +66,7 @@ class IdentityHelperTest {
         assertFalse(IdentityHelper.identityRequired(authRequest.toParameters(), true, false));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalseWhenRPDoesNotSupportIdentityVerification() {
         var authRequest = createAuthRequest("P2.Cl.Cm");

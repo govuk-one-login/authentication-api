@@ -7,8 +7,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
+// QualityGateUnitTest
 public class JsonUpdateHelperTest {
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateStringReturnsNewValue() {
         var oldJson = "\"abc\"";
@@ -17,6 +19,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateNumberReturnsNewNumber() {
         var oldJson = "123";
@@ -25,6 +28,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateBooleanReturnsNewBoolean() {
         var oldJson = "true";
@@ -33,6 +37,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateToNullReturnNull() {
         var oldJson = "true";
@@ -41,6 +46,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateFromNullReturnNewValue() {
         var oldJson = "null";
@@ -49,6 +55,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateVariableTypeReturnNewValue() {
         var oldJson = "[]";
@@ -57,6 +64,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateObjectReturnsUpdatedObject() {
         var oldJson =
@@ -84,6 +92,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateArrayOfSameLengthReturnsUpdatedArray() {
         var oldJson =
@@ -130,6 +139,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateArrayOfDifferentLengthReturnsNewArray() {
         var oldJson =
@@ -166,6 +176,7 @@ public class JsonUpdateHelperTest {
         assertJsonEqual(JsonUpdateHelper.updateJson(oldJson, newJson), expectedJson);
     }
 
+    // QualityGateRegressionTest
     @Test
     void testUpdateNestedReturnsCorrectValue() {
         var oldJson =

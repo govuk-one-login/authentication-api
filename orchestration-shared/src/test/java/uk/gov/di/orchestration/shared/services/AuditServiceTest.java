@@ -28,6 +28,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.asJson;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasNumericFieldWithValue;
 
+// QualityGateUnitTest
 class AuditServiceTest {
 
     private static final String FIXED_TIMESTAMP = "2021-09-01T22:10:00.012Z";
@@ -53,6 +54,7 @@ class AuditServiceTest {
         when(oidcApi.baseURI()).thenReturn(URI.create("oidc-base-url"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldLogAuditEvent() {
         var auditService = new AuditService(FIXED_CLOCK, oidcApi, awsSqsClient);
@@ -90,6 +92,7 @@ class AuditServiceTest {
         assertThat(userObject, hasFieldWithValue("ip_address", equalTo("ip-address")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
         var auditService = new AuditService(FIXED_CLOCK, oidcApi, awsSqsClient);
@@ -119,6 +122,7 @@ class AuditServiceTest {
         assertThat(extensions, hasFieldWithValue("key2", equalTo("value2")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAddCountryCodeExtensionToPhoneNumberEvents() {
         var auditService = new AuditService(FIXED_CLOCK, oidcApi, awsSqsClient);
@@ -147,6 +151,7 @@ class AuditServiceTest {
         assertThat(extensions, hasFieldWithValue("phone_number_country_code", equalTo("44")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void TxmaHeaderShouldBeAddedToAuditEvent() throws JOSEException, InvalidEncodingException {
         var auditService = new AuditService(FIXED_CLOCK, oidcApi, awsSqsClient);
@@ -169,6 +174,7 @@ class AuditServiceTest {
                 hasFieldWithValue("encoded", equalTo(TXMA_ENCODED_HEADER_VALUE)));
     }
 
+    // QualityGateRegressionTest
     @Test
     void TxmaHeaderNotAddedWhenNotSet() {
         var auditService = new AuditService(FIXED_CLOCK, oidcApi, awsSqsClient);

@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
     private static final String PREFIXED_SESSION_ID = "state:test-session-id";
     private static final State STATE = new State();
@@ -32,6 +33,7 @@ class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
         stateStorageService = new StateStorageService(dynamoDbClient, table, configurationService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldStoreState() {
         stateStorageService.storeState(PREFIXED_SESSION_ID, STATE.getValue());
@@ -42,6 +44,7 @@ class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
         assertEquals(STATE.getValue(), captor.getValue().getState());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfStoringStateFails() {
         withFailedPut();
@@ -50,6 +53,7 @@ class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
                 () -> stateStorageService.storeState(PREFIXED_SESSION_ID, STATE.getValue()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetStateByPrefixedSessionId() {
         var expectedStateItem = withValidStateItemInDynamo();
@@ -59,6 +63,7 @@ class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
         assertEquals(expectedStateItem, actualStateItem.get());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotGetStateIfTtlHasExpired() {
         withExpiredStateItem();
@@ -66,12 +71,14 @@ class StateStorageServiceTest extends BaseDynamoServiceTest<StateItem> {
         assertTrue(actualStateItem.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotGetStateIfStateDoesNotExist() {
         var actualStateItem = stateStorageService.getState(PREFIXED_SESSION_ID);
         assertTrue(actualStateItem.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowIfGettingStateFails() {
         withFailedGet();

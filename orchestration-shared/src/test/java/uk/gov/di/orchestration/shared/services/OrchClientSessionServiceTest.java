@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessionItem> {
     private static final String CLIENT_SESSION_ID = "test-client-session-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -31,6 +32,7 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
                 new OrchClientSessionService(dynamoDbClient, table, configurationService);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldStoreClientSession() {
         var clientSession = withValidClientSession();
@@ -38,6 +40,7 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
         verify(table).putItem(clientSession);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenFailingToStoreClientSession() {
         withFailedPut();
@@ -47,6 +50,7 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
                 () -> clientSessionService.storeClientSession(clientSession));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldGetClientSessionById() {
         withValidClientSession();
@@ -55,6 +59,7 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
         assertEquals(CLIENT_SESSION_ID, clientSession.get().getClientSessionId());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenFailingToGetClientSessionById() {
         withFailedGet();
@@ -63,12 +68,14 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
                 () -> clientSessionService.getClientSession(CLIENT_SESSION_ID));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotGetClientSessionByIdWhenNoClientSessionExists() {
         var clientSession = clientSessionService.getClientSession("not-a-client-session");
         assertTrue(clientSession.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotGetClientSessionByIdWhenClientSessionExistsButTimeToLiveExpired() {
         withExpiredClientSession();
@@ -76,6 +83,7 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
         assertTrue(clientSession.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldUpdateClientSession() {
         var existingSession = withValidClientSession();
@@ -84,6 +92,7 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
         verify(table).updateItem(sessionToBeUpdated);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenUpdatingClientSessionFails() {
         withFailedUpdate();
@@ -93,6 +102,7 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
                 () -> clientSessionService.updateStoredClientSession(sessionToBeUpdated));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldDeleteClientSession() {
         var existingClientSession = withValidClientSession();
@@ -101,6 +111,7 @@ class OrchClientSessionServiceTest extends BaseDynamoServiceTest<OrchClientSessi
         verify(table).deleteItem(existingClientSession);
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldThrowWhenDeletingClientSessionFails() {
         withValidClientSession();
