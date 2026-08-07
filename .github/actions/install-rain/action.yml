@@ -1,0 +1,24 @@
+name: "Install Rain"
+description: "Downloads and installs the AWS CloudFormation Rain CLI tool"
+
+inputs:
+  version:
+    description: "Rain version to install (e.g. v1.23.0)"
+    required: true
+  arch:
+    description: "Architecture string (e.g. linux-amd64)"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rain
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        ARCH: ${{ inputs.arch }}
+      run: |
+        wget -q "https://github.com/aws-cloudformation/rain/releases/download/${VERSION}/rain-${VERSION}_${ARCH}.zip"
+        unzip "rain-${VERSION}_${ARCH}.zip"
+        chmod +x "rain-${VERSION}_${ARCH}/rain"
+        mv "rain-${VERSION}_${ARCH}/rain" /usr/local/bin/rain
