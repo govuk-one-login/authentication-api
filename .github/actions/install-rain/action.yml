@@ -1,5 +1,5 @@
 name: "Install Rain"
-description: "Downloads and installs the AWS CloudFormation Rain CLI tool"
+description: "Downloads and installs the AWS CloudFormation Rain CLI tool with SHA256 integrity verification"
 
 inputs:
   version:
@@ -7,6 +7,9 @@ inputs:
     required: true
   arch:
     description: "Architecture string (e.g. linux-amd64)"
+    required: true
+  sha256:
+    description: "Expected SHA256 hash of the zip file for integrity verification"
     required: true
 
 runs:
@@ -17,8 +20,14 @@ runs:
       env:
         VERSION: ${{ inputs.version }}
         ARCH: ${{ inputs.arch }}
+        EXPECTED_SHA256: ${{ inputs.sha256 }}
       run: |
-        wget -q "https://github.com/aws-cloudformation/rain/releases/download/${VERSION}/rain-${VERSION}_${ARCH}.zip"
-        unzip "rain-${VERSION}_${ARCH}.zip"
+        FILENAME="rain-${VERSION}_${ARCH}.zip"
+        wget -q "https://github.com/aws-cloudformation/rain/releases/download/${VERSION}/${FILENAME}"
+
+        echo "Verifying SHA256 checksum..."
+        echo "${EXPECTED_SHA256}  ${FILENAME}" | sha256sum -c -
+
+        unzip "${FILENAME}"
         chmod +x "rain-${VERSION}_${ARCH}/rain"
         mv "rain-${VERSION}_${ARCH}/rain" /usr/local/bin/rain
