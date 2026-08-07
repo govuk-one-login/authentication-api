@@ -110,10 +110,16 @@ public class EndOfJourneyService {
 
     public APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
             AuthenticationRequest authenticationRequest, ErrorObject error) {
+        return generateAuthenticationErrorResponse(authenticationRequest, error, "");
+    }
+
+    public APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
+            AuthenticationRequest authenticationRequest, ErrorObject error, String additionalLog) {
         LOG.warn(
-                "Error in Authorisation Response. ErrorCode: {}. ErrorDescription: {}.",
+                "Error in Authorisation Response. ErrorCode: {}. ErrorDescription: {}. {}",
                 error.getCode(),
-                error.getDescription());
+                error.getDescription(),
+                additionalLog);
         var errorResponseUri =
                 new AuthenticationErrorResponse(
                                 authenticationRequest.getRedirectionURI(),
