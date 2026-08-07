@@ -15,7 +15,6 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 
-import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException.httpResponseCodeException;
 import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException.interruptedException;
 import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException.ioException;
@@ -25,6 +24,9 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 public class AccountDataApiService {
     private static final Logger LOG = LogManager.getLogger(AccountDataApiService.class);
     private static final int MAX_TRIES = 2;
+    public static final String BEARER = "Bearer ";
+    public static final String AUTHORIZATION = "Authorization";
+    public static final String ACCOUNTS_PATH_SEGMENT = "/accounts/";
     private final HttpClient httpClient;
     private final ConfigurationService configurationService;
     private final SerializationService serializationService = SerializationService.getInstance();
@@ -66,10 +68,10 @@ public class AccountDataApiService {
                 HttpRequest.newBuilder(
                                 buildURI(
                                         configurationService.getAccountDataURI(),
-                                        "/accounts/"
+                                        ACCOUNTS_PATH_SEGMENT
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys"))
-                        .header("Authorization", "Bearer " + token)
+                        .header(AUTHORIZATION, BEARER + token)
                         .GET()
                         .timeout(
                                 Duration.ofMillis(
@@ -85,11 +87,27 @@ public class AccountDataApiService {
                 HttpRequest.newBuilder(
                                 buildURI(
                                         configurationService.getAccountDataURI(),
-                                        "/accounts/"
+                                        ACCOUNTS_PATH_SEGMENT
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys/"
                                                 + passkeyId))
-                        .header("Authorization", "Bearer " + token)
+                        .header(AUTHORIZATION, BEARER + token)
+                        .DELETE()
+                        .timeout(
+                                Duration.ofMillis(
+                                        configurationService.getAccountDataApiCallTimeout()))
+                        .build();
+        return sendRequest(request);
+    }
+
+    public HttpResponse<String> deleteAccount(String publicSubjectId, String token)
+            throws UnsuccessfulAccountDataApiResponseException {
+        var request =
+                HttpRequest.newBuilder(
+                                buildURI(
+                                        configurationService.getAccountDataURI(),
+                                        ACCOUNTS_PATH_SEGMENT + publicSubjectId))
+                        .header(AUTHORIZATION, BEARER + token)
                         .DELETE()
                         .timeout(
                                 Duration.ofMillis(
@@ -107,7 +125,7 @@ public class AccountDataApiService {
                 count++;
                 return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             } catch (HttpTimeoutException e) {
-                LOG.warn(format("Timeout on attempt %d when calling Account Data API", count));
+                LOG.warn("Timeout on attempt {} when calling Account Data API", count);
                 if (count >= MAX_TRIES) {
                     throw timeoutException(configurationService.getAccountDataApiCallTimeout(), e);
                 }

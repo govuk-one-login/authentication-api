@@ -10,6 +10,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -36,6 +38,7 @@ public class AccountDeletionService {
     private final StructuredAuditService structuredAuditService;
     private final ConfigurationService configurationService;
     private final DynamoDeleteService dynamoDeleteService;
+    private final AccountDataApiService accountDataApiService;
     private final Json objectMapper = SerializationService.getInstance();
 
     public AccountDeletionService(
@@ -43,12 +46,29 @@ public class AccountDeletionService {
             AwsSqsClient sqsClient,
             StructuredAuditService structuredAuditService,
             ConfigurationService configurationService,
-            DynamoDeleteService dynamoDeleteService) {
+            DynamoDeleteService dynamoDeleteService,
+            AccountDataApiService accountDataApiService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.structuredAuditService = structuredAuditService;
         this.configurationService = configurationService;
         this.dynamoDeleteService = dynamoDeleteService;
+        this.accountDataApiService = accountDataApiService;
+    }
+
+    public AccountDeletionService(
+            AuthenticationService authenticationService,
+            AwsSqsClient sqsClient,
+            StructuredAuditService structuredAuditService,
+            ConfigurationService configurationService,
+            DynamoDeleteService dynamoDeleteService) {
+        this(
+                authenticationService,
+                sqsClient,
+                structuredAuditService,
+                configurationService,
+                dynamoDeleteService,
+                null);
     }
 
     public void removeAccount(
@@ -57,7 +77,7 @@ public class AccountDeletionService {
             String txmaAuditEncoded,
             AccountDeletionReason reason)
             throws Json.JsonException {
-        removeAccount(input, userProfile, txmaAuditEncoded, reason, true);
+        removeAccount(input, userProfile, txmaAuditEncoded, reason, true, Optional.empty());
     }
 
     public void removeAccount(
@@ -67,6 +87,17 @@ public class AccountDeletionService {
             AccountDeletionReason reason,
             boolean sendNotification)
             throws Json.JsonException {
+        removeAccount(
+                input, userProfile, txmaAuditEncoded, reason, sendNotification, Optional.empty());
+    }
+
+    public void removeAccount(
+            Optional<APIGatewayProxyRequestEvent> input,
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            boolean sendNotification,
+            Optional<String> accountDataApiToken) {
         LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -77,10 +108,15 @@ public class AccountDeletionService {
         var email = userProfile.getEmail();
 
         LOG.info("Deleting user account");
-        dynamoDeleteService.deleteAccount(
-                email,
-                internalCommonSubjectIdentifier.getValue(),
-                userProfile.getPublicSubjectID());
+        if (accountDataApiToken.isPresent() && accountDataApiService != null) {
+            deleteAccountViaDataApi(userProfile.getPublicSubjectID(), accountDataApiToken.get());
+        } else {
+            dynamoDeleteService.deleteAccount(
+                    email,
+                    internalCommonSubjectIdentifier.getValue(),
+                    userProfile.getPublicSubjectID());
+            LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
+        }
 
         if (sendNotification) {
             try {
@@ -149,6 +185,30 @@ public class AccountDeletionService {
             structuredAuditService.submitAuditEvent(auditEvent);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
+        }
+    }
+
+    private void deleteAccountViaDataApi(String publicSubjectId, String token) {
+        try {
+            var response = accountDataApiService.deleteAccount(publicSubjectId, token);
+            int statusCode = response.statusCode();
+            if (statusCode == 204) {
+                LOG.info("Successfully deleted account via Data API");
+            } else if (statusCode == 404) {
+                LOG.error("Account not found in Data API for publicSubjectId: {}", publicSubjectId);
+                throw new RuntimeException(
+                        "Account not found in Data API for publicSubjectId: " + publicSubjectId);
+            } else {
+                LOG.error(
+                        "Data API returned error status {} when deleting account for publicSubjectId: {}",
+                        statusCode,
+                        publicSubjectId);
+                throw new RuntimeException(
+                        "Data API returned error status " + statusCode + " when deleting account");
+            }
+        } catch (UnsuccessfulAccountDataApiResponseException e) {
+            LOG.error("Failed to call Data API to delete account: {}", e.getMessage());
+            throw new RuntimeException("Failed to delete account via Data API", e);
         }
     }
 }

@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -75,13 +76,15 @@ public class RemoveAccountHandler
         this.structuredAuditService = new StructuredAuditService(configurationService);
         this.configurationService = configurationService;
         this.dynamoDeleteService = new DynamoDeleteService(configurationService);
+        var accountDataApiService = new AccountDataApiService(configurationService);
         this.accountDeletionService =
                 new AccountDeletionService(
                         authenticationService,
                         sqsClient,
                         structuredAuditService,
                         configurationService,
-                        dynamoDeleteService);
+                        dynamoDeleteService,
+                        accountDataApiService);
     }
 
     public RemoveAccountHandler() {
@@ -120,17 +123,30 @@ public class RemoveAccountHandler
 
             authoriseRequest(input, userProfile);
 
+            var token =
+                    Optional.ofNullable(input.getHeaders())
+                            .map(headers -> headers.get("X-ADAPI-AccessToken"))
+                            .filter(t -> !t.isEmpty());
+
             accountDeletionService.removeAccount(
                     Optional.of(input),
                     userProfile,
                     TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
-                    AccountDeletionReason.USER_INITIATED);
+                    AccountDeletionReason.USER_INITIATED,
+                    true,
+                    token);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+        } catch (RuntimeException e) {
+            if (e instanceof InvalidPrincipalException) {
+                throw e;
+            }
+            LOG.error("Error deleting account", e);
+            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
     }
 

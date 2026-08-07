@@ -32,6 +32,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AccountDataApiServiceTest {
+    public static final String TEST_PUBLIC_SUBJECT_ID = "testPublicSubjectId";
     private AutoCloseable closeable;
 
     @Mock private HttpClient httpClient;
@@ -67,7 +68,7 @@ class AccountDataApiServiceTest {
             when(httpClient.send(any(), any())).thenReturn(null);
 
             // Act
-            service.retrievePasskeysAsJson("testPublicSubjectId", TOKEN);
+            service.retrievePasskeysAsJson(TEST_PUBLIC_SUBJECT_ID, TOKEN);
 
             // Assert
             verify(httpClient).send(httpRequestCaptor.capture(), any());
@@ -75,7 +76,9 @@ class AccountDataApiServiceTest {
                     httpRequestCaptor.getValue().uri(),
                     equalTo(
                             URI.create(
-                                    "https://example.com/accounts/testPublicSubjectId/authenticators/passkeys")));
+                                    String.format(
+                                            "https://example.com/accounts/%s/authenticators/passkeys",
+                                            TEST_PUBLIC_SUBJECT_ID))));
             assertThat(httpRequestCaptor.getValue().method(), equalTo("GET"));
             assertThat(
                     httpRequestCaptor.getValue().headers().firstValue("Authorization").orElse(""),
@@ -94,7 +97,7 @@ class AccountDataApiServiceTest {
             when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
 
             // Act
-            var resp = service.retrievePasskeysAsJson("testPublicSubjectId", TOKEN);
+            var resp = service.retrievePasskeysAsJson(TEST_PUBLIC_SUBJECT_ID, TOKEN);
 
             // Assert
             assertThat(resp.statusCode(), equalTo(200));
@@ -148,7 +151,7 @@ class AccountDataApiServiceTest {
             when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
 
             // Act
-            var result = service.retrievePasskeys("testPublicSubjectId", TOKEN);
+            var result = service.retrievePasskeys(TEST_PUBLIC_SUBJECT_ID, TOKEN);
 
             // Assert
             assertThat(result.passkeys().size(), equalTo(2));
@@ -173,7 +176,7 @@ class AccountDataApiServiceTest {
 
             assertThrows(
                     UnsuccessfulAccountDataApiResponseException.class,
-                    () -> service.retrievePasskeys("testPublicSubjectId", TOKEN));
+                    () -> service.retrievePasskeys(TEST_PUBLIC_SUBJECT_ID, TOKEN));
         }
     }
 
@@ -189,7 +192,7 @@ class AccountDataApiServiceTest {
             when(httpClient.send(any(), any())).thenReturn(null);
 
             // Act
-            service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
+            service.deletePasskey(TEST_PUBLIC_SUBJECT_ID, "testPasskeyId", TOKEN);
 
             // Assert
             verify(httpClient).send(httpRequestCaptor.capture(), any());
@@ -197,7 +200,9 @@ class AccountDataApiServiceTest {
                     httpRequestCaptor.getValue().uri(),
                     equalTo(
                             URI.create(
-                                    "https://example.com/accounts/testPublicSubjectId/authenticators/passkeys/testPasskeyId")));
+                                    String.format(
+                                            "https://example.com/accounts/%s/authenticators/passkeys/testPasskeyId",
+                                            TEST_PUBLIC_SUBJECT_ID))));
             assertThat(httpRequestCaptor.getValue().method(), equalTo("DELETE"));
             assertThat(
                     httpRequestCaptor.getValue().headers().firstValue("Authorization").orElse(""),
@@ -216,11 +221,56 @@ class AccountDataApiServiceTest {
             when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
 
             // Act
-            var resp = service.deletePasskey("testPublicSubjectId", "testPasskeyId", TOKEN);
+            var resp = service.deletePasskey(TEST_PUBLIC_SUBJECT_ID, "testPasskeyId", TOKEN);
 
             // Assert
             assertThat(resp.statusCode(), equalTo(200));
             assertThat(resp.body(), equalTo("{'deleted': true}"));
+        }
+    }
+
+    @Nested
+    class DeleteAccount {
+        @Test
+        void shouldBuildCorrectRequestUri()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException {
+            // Arrange
+            var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+            when(httpClient.send(any(), any())).thenReturn(null);
+
+            // Act
+            service.deleteAccount(TEST_PUBLIC_SUBJECT_ID, TOKEN);
+
+            // Assert
+            verify(httpClient).send(httpRequestCaptor.capture(), any());
+            assertThat(
+                    httpRequestCaptor.getValue().uri(),
+                    equalTo(URI.create("https://example.com/accounts/" + TEST_PUBLIC_SUBJECT_ID)));
+            assertThat(httpRequestCaptor.getValue().method(), equalTo("DELETE"));
+            assertThat(
+                    httpRequestCaptor.getValue().headers().firstValue("Authorization").orElse(""),
+                    equalTo("Bearer " + TOKEN));
+        }
+
+        @Test
+        void shouldReturnVerbatimHttpResponse()
+                throws IOException,
+                        InterruptedException,
+                        UnsuccessfulAccountDataApiResponseException {
+            // Arrange
+            var mockHttpResponse = mock(HttpResponse.class);
+            when(mockHttpResponse.statusCode()).thenReturn(204);
+            when(mockHttpResponse.body()).thenReturn("");
+            when(httpClient.send(any(), any())).thenReturn(mockHttpResponse);
+
+            // Act
+            var resp = service.deleteAccount(TEST_PUBLIC_SUBJECT_ID, TOKEN);
+
+            // Assert
+            assertThat(resp.statusCode(), equalTo(204));
+            assertThat(resp.body(), equalTo(""));
         }
     }
 
@@ -339,15 +389,17 @@ class AccountDataApiServiceTest {
 
     enum PasskeysMethod {
         RETRIEVE_PASSKEYS,
-        DELETE_PASSKEY;
+        DELETE_PASSKEY,
+        DELETE_ACCOUNT;
 
         void call(AccountDataApiService service)
                 throws UnsuccessfulAccountDataApiResponseException {
             switch (this) {
                 case RETRIEVE_PASSKEYS -> service.retrievePasskeysAsJson(
-                        "testPublicSubjectId", TOKEN);
+                        TEST_PUBLIC_SUBJECT_ID, TOKEN);
                 case DELETE_PASSKEY -> service.deletePasskey(
-                        "testPublicSubjectId", "testPasskeyId", TOKEN);
+                        TEST_PUBLIC_SUBJECT_ID, "testPasskeyId", TOKEN);
+                case DELETE_ACCOUNT -> service.deleteAccount(TEST_PUBLIC_SUBJECT_ID, TOKEN);
             }
         }
     }
