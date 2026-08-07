@@ -91,6 +91,7 @@ jobs:
         with:
           version: ${{ env.RAIN_VERSION }}
           arch: ${{ env.RAIN_ARCH }}
+          sha256: "2fdfe059566acf15ad23e014a7856e88f6af61710854208a93526eec80f4078f"
 
       - name: Generate ad template
         run: "./scripts/merge-templates.sh"
