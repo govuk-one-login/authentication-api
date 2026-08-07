@@ -3,7 +3,6 @@ package uk.gov.di.authentication.oidc.contract;
 import au.com.dius.pact.consumer.MockServer;
 import au.com.dius.pact.consumer.dsl.DslPart;
 import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
-import au.com.dius.pact.consumer.junit.MockServerConfig;
 import au.com.dius.pact.consumer.junit5.PactConsumerTest;
 import au.com.dius.pact.consumer.junit5.PactTestFor;
 import au.com.dius.pact.core.model.PactSpecVersion;
@@ -30,7 +29,6 @@ import static org.mockito.Mockito.*;
 import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED;
 
 @PactConsumerTest
-@MockServerConfig(hostInterface = "localhost", port = "1234")
 class AccountInterventionServiceTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final Metrics metrics = mock(Metrics.class);
