@@ -1,0 +1,292 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Internet-facing ALB with target group pointing to private API Gateway via VPC endpoint"
+
+Parameters:
+  VpcStackName:
+    Type: String
+    Description: Name of the VPC stack to import values from
+    Default: vpc
+
+  CertificateArn:
+    Type: String
+    Description: ACM Certificate ARN for HTTPS listener
+    Default: ""
+
+  AllowedCIDRs:
+    Type: CommaDelimitedList
+    Description: Comma-separated list of CIDR blocks allowed to access the ALB
+    Default: "85.119.84.27/32,217.196.229.74/32,217.196.229.79/32,217.196.229.80/32,217.196.229.81/32,51.149.8.0/25,51.149.8.128/29,159.254.101.107/32,159.254.101.75/32,164.137.3.121/32,164.137.3.89/32,3.9.56.99/32"
+
+Resources:
+  # Security Group for ALB
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub "${AWS::StackName}-alb-sg"
+      GroupDescription: Security group for internet-facing ALB
+      VpcId:
+        Fn::ImportValue: !Sub "${VpcStackName}-VpcId"
+      SecurityGroupIngress:
+        # HTTP Rules
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [0, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [1, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [2, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [3, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [4, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [5, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [6, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [7, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [8, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [9, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [10, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Select [11, !Ref AllowedCIDRs]
+          Description: Allow HTTP
+        # HTTPS Rules
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [0, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [1, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [2, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [3, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [4, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [5, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [6, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [7, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [8, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [9, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [10, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Select [11, !Ref AllowedCIDRs]
+          Description: Allow HTTPS
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          DestinationSecurityGroupId:
+            Fn::ImportValue: !Sub "${VpcStackName}-AWSServicesEndpointSecurityGroupId"
+          Description: Allow HTTPS to AWS Services Endpoint
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-alb-sg"
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/test-alb-account-mgmt/alb-to-private-api.yaml
+
+  # Internet-facing ALB
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub "${AWS::StackName}-alb"
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets:
+        - Fn::ImportValue: !Sub "${VpcStackName}-FirewallSubnetIdA"
+        - Fn::ImportValue: !Sub "${VpcStackName}-FirewallSubnetIdB"
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-alb"
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/test-alb-account-mgmt/alb-to-private-api.yaml
+        - Key: FMSRegionalPolicy
+          Value: "false"
+        - Key: CustomPolicy
+          Value: "authenticationfrontend"
+
+  # Target Group for Private API
+  PrivateAPITargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-private-api-tg"
+      Port: 443
+      Protocol: HTTPS
+      VpcId:
+        Fn::ImportValue: !Sub "${VpcStackName}-VpcId"
+      TargetType: ip
+      Targets:
+        - Id: 10.6.10.174
+          Port: 443
+        - Id: 10.6.13.30
+          Port: 443
+        - Id: 10.6.15.28
+          Port: 443
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTPS
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      Matcher:
+        HttpCode: "200-399"
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "30"
+        - Key: stickiness.enabled
+          Value: "true"
+        - Key: stickiness.type
+          Value: "lb_cookie"
+        - Key: load_balancing.algorithm.type
+          Value: "least_outstanding_requests"
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-private-api-tg"
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/test-alb-account-mgmt/alb-to-private-api.yaml
+
+  # HTTP Listener with path-based routing
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PrivateAPITargetGroup
+          ForwardConfig:
+            TargetGroups:
+              - TargetGroupArn: !Ref PrivateAPITargetGroup
+                Weight: 1
+
+  # Listener Rule to set Host header for API Gateway
+  ListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HTTPListener
+      Priority: 1
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - "/*"
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref PrivateAPITargetGroup
+
+  # HTTPS Listener (optional, requires certificate)
+  HTTPSListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasCertificate
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref PrivateAPITargetGroup
+
+Conditions:
+  HasCertificate: !Not [!Equals [!Ref CertificateArn, ""]]
+
+Outputs:
+  LoadBalancerDNS:
+    Description: DNS name of the internet-facing ALB
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-DNS"
+
+  LoadBalancerArn:
+    Description: ARN of the ALB
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-ARN"
+
+  TargetGroupArn:
+    Description: ARN of the target group
+    Value: !Ref PrivateAPITargetGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-TargetGroup-ARN"
