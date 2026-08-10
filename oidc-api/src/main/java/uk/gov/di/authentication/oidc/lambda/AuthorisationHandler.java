@@ -95,7 +95,6 @@ import static uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationS
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.getPrimaryLanguageFromUILocales;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -228,13 +227,7 @@ public class AuthorisationHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> authoriseRequestHandler(input, context));
-    }
 
-    public APIGatewayProxyResponseEvent authoriseRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) throws java.text.ParseException {
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         input.getHeaders());
@@ -393,20 +386,6 @@ public class AuthorisationHandler
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
-        if (authRequest.getRequestObject() != null) {
-            var requestObjectScopes =
-                    authRequest.getRequestObject().getJWTClaimsSet().getStringClaim("scope");
-            if (requestObjectScopes.contains(",")) {
-                LOG.info(
-                        "Scope parameter in request object contains commas. Client ID: {}",
-                        clientId);
-            }
-        }
-        var queryParamScopes = input.getQueryStringParameters().get("scope");
-        if (queryParamScopes.contains(",")) {
-            LOG.info(
-                    "Scope parameter in query parameters contains commas. Client ID: {}", clientId);
-        }
         try {
             metrics.emit(
                     "rpStateLength",
@@ -445,7 +424,19 @@ public class AuthorisationHandler
                 getCustomParameterOpt(authRequest, "id_token_hint").isPresent()
                         && authRequest.getPrompt() != null
                         && authRequest.getPrompt().contains(Prompt.Type.LOGIN);
-        var vtrList = getVtrList(reauthRequested, authRequest);
+        List<VectorOfTrust> vtrList;
+        try {
+            vtrList = getVtrList(reauthRequested, authRequest);
+        } catch (java.text.ParseException e) {
+            LOG.error("Failed to parse VTR list", e);
+            return generateErrorResponse(
+                    authRequest.getRedirectionURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    OAuth2Error.INVALID_REQUEST,
+                    authRequest.getClientID().getValue(),
+                    user);
+        }
         var requestedVtr = VectorOfTrust.getLowestVtr(vtrList);
 
         sendAuthRequestParsedAuditEvent(authRequest, client, reauthRequested, requestedVtr, user);

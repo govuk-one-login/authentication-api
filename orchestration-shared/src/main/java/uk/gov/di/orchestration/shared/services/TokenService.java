@@ -49,7 +49,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class TokenService {
 
@@ -89,52 +88,40 @@ public class TokenService {
             String vot,
             Long authTime,
             String authCode) {
-        List<String> scopesForToken = authRequestScopes.toStringList();
-        AccessToken accessToken =
-                segmentedFunctionCall(
-                        "generateAndStoreAccessToken",
-                        () ->
-                                generateAndStoreAccessToken(
-                                        clientID,
-                                        scopesForToken,
-                                        rpPairwiseSubject,
-                                        internalPairwiseSubject,
-                                        claimsRequest,
-                                        signingAlgorithm,
-                                        journeyId,
-                                        authCode));
-        AccessTokenHash accessTokenHash =
-                segmentedFunctionCall(
-                        "AccessTokenHash.compute",
-                        () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
+        var scopesForToken = authRequestScopes.toStringList();
+        var accessToken =
+                generateAndStoreAccessToken(
+                        clientID,
+                        scopesForToken,
+                        rpPairwiseSubject,
+                        internalPairwiseSubject,
+                        claimsRequest,
+                        signingAlgorithm,
+                        journeyId,
+                        authCode);
+        var accessTokenHash = AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null);
 
-        SignedJWT idToken =
-                segmentedFunctionCall(
-                        "generateIDToken",
-                        () ->
-                                generateIDToken(
-                                        clientID,
-                                        rpPairwiseSubject,
-                                        additionalTokenClaims,
-                                        accessTokenHash,
-                                        vot,
-                                        isDocAppJourney,
-                                        signingAlgorithm,
-                                        journeyId,
-                                        authTime));
+        var idToken =
+                generateIDToken(
+                        clientID,
+                        rpPairwiseSubject,
+                        additionalTokenClaims,
+                        accessTokenHash,
+                        vot,
+                        isDocAppJourney,
+                        signingAlgorithm,
+                        journeyId,
+                        authTime);
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
-            RefreshToken refreshToken =
-                    segmentedFunctionCall(
-                            "generateAndStoreRefreshToken",
-                            () ->
-                                    generateAndStoreRefreshToken(
-                                            clientID,
-                                            scopesForToken,
-                                            rpPairwiseSubject,
-                                            internalPairwiseSubject,
-                                            signingAlgorithm,
-                                            authCode,
-                                            journeyId));
+            var refreshToken =
+                    generateAndStoreRefreshToken(
+                            clientID,
+                            scopesForToken,
+                            rpPairwiseSubject,
+                            internalPairwiseSubject,
+                            signingAlgorithm,
+                            authCode,
+                            journeyId);
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));

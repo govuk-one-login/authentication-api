@@ -28,7 +28,6 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
-import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AuthUserInfoClaims;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
@@ -69,7 +68,6 @@ import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.AuditHelper.attachTxmaAuditFieldFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -241,11 +239,8 @@ public class IPVCallbackHandler
                                                     "Client registry not found with given clientId"));
 
             var errorObject =
-                    segmentedFunctionCall(
-                            "validateIpvAuthResponse",
-                            () ->
-                                    ipvAuthorisationService.validateResponse(
-                                            input.getQueryStringParameters(), sessionId));
+                    ipvAuthorisationService.validateResponse(
+                            input.getQueryStringParameters(), sessionId);
 
             var ipAddress = IpAddressHelper.extractIpAddress(input);
 
@@ -324,11 +319,7 @@ public class IPVCallbackHandler
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientId, user);
 
             var tokenResponse =
-                    segmentedFunctionCall(
-                            "getIpvToken",
-                            () ->
-                                    ipvTokenService.getToken(
-                                            input.getQueryStringParameters().get("code")));
+                    ipvTokenService.getToken(input.getQueryStringParameters().get("code"));
             if (!tokenResponse.indicatesSuccess()) {
                 auditService.submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientId, user);
@@ -438,14 +429,8 @@ public class IPVCallbackHandler
             var spotQueuedAt = NowHelper.now().toInstant().toEpochMilli();
 
             auditService.submitAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientId, user);
-            segmentedFunctionCall(
-                    "saveIdentityClaims",
-                    () ->
-                            ipvCallbackHelper.saveIdentityClaimsToDynamo(
-                                    clientSessionId,
-                                    rpPairwiseSubject,
-                                    userIdentityUserInfo,
-                                    spotQueuedAt));
+            ipvCallbackHelper.saveIdentityClaimsToDynamo(
+                    clientSessionId, rpPairwiseSubject, userIdentityUserInfo, spotQueuedAt);
 
             URI redirectURI = null;
             if (configurationService.isSyncWaitForSpotEnabled()) {
@@ -529,12 +514,9 @@ public class IPVCallbackHandler
             AuditContext auditContext,
             APIGatewayProxyRequestEvent input,
             String clientId) {
-        AccountIntervention intervention =
-                segmentedFunctionCall(
-                        "AIS: getAccountIntervention",
-                        () ->
-                                this.accountInterventionService.getAccountIntervention(
-                                        orchSession.getInternalCommonSubjectId(), auditContext));
+        var intervention =
+                accountInterventionService.getAccountIntervention(
+                        orchSession.getInternalCommonSubjectId(), auditContext);
         if (configurationService.isAccountInterventionServiceActionEnabled()
                 && (intervention.getBlocked() || intervention.getSuspended())) {
             return Optional.of(

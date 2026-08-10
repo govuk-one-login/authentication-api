@@ -51,7 +51,6 @@ import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
 import static uk.gov.di.authentication.oidc.entity.AuthErrorCodes.SFAD_ERROR;
 import static uk.gov.di.authentication.oidc.helpers.AuthRequestHelper.getCustomParameterOpt;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class AuthenticationAuthorizationService {
     private static final Logger LOG =
@@ -382,13 +381,8 @@ public class AuthenticationAuthorizationService {
     private SignedJWT getReauthIdToken(AuthenticationRequest authenticationRequest)
             throws AuthenticationAuthorisationRequestException {
         boolean isTokenSignatureValid =
-                segmentedFunctionCall(
-                        "isTokenSignatureValid",
-                        () ->
-                                tokenValidationService.isReauthTokenSignatureValid(
-                                        authenticationRequest
-                                                .getCustomParameter("id_token_hint")
-                                                .get(0)));
+                tokenValidationService.isReauthTokenSignatureValid(
+                        authenticationRequest.getCustomParameter("id_token_hint").get(0));
         if (!isTokenSignatureValid) {
             LOG.error("Unable to validate ID token signature");
             throw new AuthenticationAuthorisationRequestException(

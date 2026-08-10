@@ -22,7 +22,6 @@ import java.lang.reflect.Type;
 import java.time.LocalDateTime;
 
 import static java.util.Objects.isNull;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class SerializationService implements Json {
 
@@ -69,14 +68,8 @@ public class SerializationService implements Json {
     public <T> T readValue(String jsonString, Class<T> clazz, Validator validator)
             throws JsonException {
         try {
-            T value =
-                    segmentedFunctionCall(
-                            "SerializationService::GSON::fromJson",
-                            () -> gson.fromJson(jsonString, clazz));
-            var violations =
-                    segmentedFunctionCall(
-                            "SerializationService::validator::validate",
-                            () -> validator.validate(value));
+            T value = gson.fromJson(jsonString, clazz);
+            var violations = validator.validate(value);
             if (violations.isEmpty()) {
                 return value;
             }
@@ -94,14 +87,8 @@ public class SerializationService implements Json {
     public <T> T readValue(String jsonString, Type typeOfT, Validator validator)
             throws JsonException {
         try {
-            T value =
-                    segmentedFunctionCall(
-                            "SerializationService::GSON::fromJson",
-                            () -> gson.fromJson(jsonString, typeOfT));
-            var violations =
-                    segmentedFunctionCall(
-                            "SerializationService::validator::validate",
-                            () -> validator.validate(value));
+            T value = gson.fromJson(jsonString, typeOfT);
+            var violations = validator.validate(value);
             if (violations.isEmpty()) {
                 return value;
             }
@@ -117,8 +104,7 @@ public class SerializationService implements Json {
 
     @Override
     public String writeValueAsString(Object object) {
-        return segmentedFunctionCall(
-                "SerializationService::GSON::toJson", () -> gson.toJson(object));
+        return gson.toJson(object);
     }
 
     public static SerializationService getInstance() {

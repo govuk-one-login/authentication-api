@@ -32,7 +32,6 @@ import java.util.NoSuchElementException;
 
 import static com.nimbusds.langtag.LangTagUtils.parseLangTagList;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
@@ -67,13 +66,7 @@ public class WellknownHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> wellknownRequestHandler(input, context));
-    }
 
-    public APIGatewayProxyResponseEvent wellknownRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("Wellknown request received");
         return generateApiGatewayProxyResponse(
                 200, providerMetadata, Map.of("Cache-Control", "max-age=86400"), null);
