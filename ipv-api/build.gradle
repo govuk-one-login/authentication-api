@@ -42,7 +42,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
     exclude 'uk/gov/di/authentication/ipv/contract/**'
 }
 

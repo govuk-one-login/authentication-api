@@ -57,6 +57,7 @@ mockitoCore = "org.mockito:mockito-core:5.23.0"
 nimbusJwt = "com.nimbusds:nimbus-jose-jwt:10.9.1"
 nimbusOidc = "com.nimbusds:oauth2-oidc-sdk:11.22.2"
 openTelemetryBom = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.28.1-alpha"
+openTelemetryApi = { module =  "io.opentelemetry:opentelemetry-api" }
 openTelemetryAwsSdk = { module = "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure" }
 openTelemetryJavaHttpClient = { module = "io.opentelemetry.instrumentation:opentelemetry-java-http-client" }
 pactConsumer = { module = "au.com.dius.pact.consumer:junit5", version.ref = "pact" }

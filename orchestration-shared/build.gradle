@@ -25,6 +25,7 @@ dependencies {
             libs.gson,
             libs.bundles.apache,
             platform(libs.openTelemetryBom),
+            libs.openTelemetryApi,
             libs.openTelemetryAwsSdk,
             libs.openTelemetryJavaHttpClient,
             libs.apacheHttpComponents
@@ -37,7 +38,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
 }
 
 java {
