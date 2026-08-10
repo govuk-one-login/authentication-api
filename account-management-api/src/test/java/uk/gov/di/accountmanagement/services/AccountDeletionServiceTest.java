@@ -4,10 +4,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -15,15 +17,18 @@ import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -37,11 +42,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class AccountDeletionServiceTest {
+    public static final String TEST_EMAIL = "test@example.com";
+    public static final String TEST_ADAPI_TOKEN = "test-token";
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final StructuredAuditService structuredAuditService =
@@ -103,7 +111,7 @@ class AccountDeletionServiceTest {
     @Test
     void removeAccountCallsDeleteAccount() throws Json.JsonException {
         // given
-        var expectedEmail = "test@example.com";
+        var expectedEmail = TEST_EMAIL;
         when(userProfile.getEmail()).thenReturn(expectedEmail);
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
         when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
@@ -122,7 +130,7 @@ class AccountDeletionServiceTest {
     void removeAccountThrowsIfDeleteAccountFails() {
         // given
         var expectedException = new RuntimeException();
-        when(userProfile.getEmail()).thenReturn("test@example.com");
+        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
         doThrow(expectedException).when(dynamoDeleteService).deleteAccount(any(), any(), any());
 
@@ -140,7 +148,7 @@ class AccountDeletionServiceTest {
     @Test
     void removeAccountSendsNotificationEmail() throws Json.JsonException {
         // given
-        var expectedEmail = "test@example.com";
+        var expectedEmail = TEST_EMAIL;
         when(userProfile.getEmail()).thenReturn(expectedEmail);
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
 
@@ -164,7 +172,7 @@ class AccountDeletionServiceTest {
     @Test
     void removeAccountSucceedsIfEmailNotificationFails() {
         // given
-        when(userProfile.getEmail()).thenReturn("test@example.com");
+        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
         doThrow(new RuntimeException()).when(sqsClient).send(any());
 
@@ -184,9 +192,8 @@ class AccountDeletionServiceTest {
     @EnumSource()
     @ParameterizedTest
     void removeAccountAudits(AccountDeletionReason reason) throws Json.JsonException {
-        var expectedEmail = "test@example.com";
         var expectedPhoneNumber = "+44123456789";
-        when(userProfile.getEmail()).thenReturn(expectedEmail);
+        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(userProfile.getPhoneNumber()).thenReturn(expectedPhoneNumber);
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
         when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
@@ -221,7 +228,7 @@ class AccountDeletionServiceTest {
 
     @Test
     void removeAccountAuditsWithNullLegacySubjectId() throws Json.JsonException {
-        when(userProfile.getEmail()).thenReturn("test@example.com");
+        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(userProfile.getPhoneNumber()).thenReturn("+44123456789");
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
         when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
@@ -257,7 +264,7 @@ class AccountDeletionServiceTest {
     @Test
     void removeAccountSucceedsIfAuditingFails() {
         // given
-        when(userProfile.getEmail()).thenReturn("test@example.com");
+        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
         when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
         doThrow(new RuntimeException()).when(structuredAuditService).submitAuditEvent(any());
         // then
@@ -271,5 +278,113 @@ class AccountDeletionServiceTest {
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Failed to audit account deletion")));
+    }
+
+    @Nested
+    class DataApiPath {
+        private final AccountDataApiService accountDataApiService =
+                mock(AccountDataApiService.class);
+        private final AccountDeletionService underTestWithDataApi =
+                new AccountDeletionService(
+                        authenticationService,
+                        sqsClient,
+                        structuredAuditService,
+                        configurationService,
+                        dynamoDeleteService,
+                        accountDataApiService);
+
+        @Test
+        void removeAccountCallsDataApiAndSendsNotificationWhenTokenIsPresent()
+                throws Json.JsonException, UnsuccessfulAccountDataApiResponseException {
+            var mockResponse = mock(HttpResponse.class);
+            when(mockResponse.statusCode()).thenReturn(204);
+            when(accountDataApiService.deleteAccount(any(), any())).thenReturn(mockResponse);
+            when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+            when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
+            when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
+
+            underTestWithDataApi.removeAccount(
+                    Optional.of(input),
+                    userProfile,
+                    StructuredAuditService.UNKNOWN,
+                    AccountDeletionReason.USER_INITIATED,
+                    true,
+                    Optional.of(TEST_ADAPI_TOKEN));
+
+            verify(accountDataApiService)
+                    .deleteAccount(eq(TEST_PUBLIC_SUBJECT_ID), eq(TEST_ADAPI_TOKEN));
+            verify(dynamoDeleteService, never()).deleteAccount(any(), any(), any());
+
+            var captor = ArgumentCaptor.forClass(String.class);
+            verify(sqsClient).send(captor.capture());
+            var notifyRequest =
+                    SerializationService.getInstance().readValue(captor.getValue(), HashMap.class);
+            assertEquals(TEST_EMAIL, notifyRequest.get("destination"));
+            assertEquals("DELETE_ACCOUNT", notifyRequest.get("notificationType"));
+        }
+
+        @Test
+        void removeAccountFallsBackToDynamoWhenTokenIsEmpty() throws Json.JsonException {
+            when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+            when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
+            when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
+
+            underTestWithDataApi.removeAccount(
+                    Optional.of(input),
+                    userProfile,
+                    StructuredAuditService.UNKNOWN,
+                    AccountDeletionReason.USER_INITIATED,
+                    true,
+                    Optional.empty());
+
+            verify(dynamoDeleteService)
+                    .deleteAccount(eq(TEST_EMAIL), any(), eq(TEST_PUBLIC_SUBJECT_ID));
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {404, 500})
+        void removeAccountThrowsWhenDataApiReturnsError(int statusCode)
+                throws UnsuccessfulAccountDataApiResponseException {
+            var mockResponse = mock(HttpResponse.class);
+            when(mockResponse.statusCode()).thenReturn(statusCode);
+            when(accountDataApiService.deleteAccount(any(), any())).thenReturn(mockResponse);
+            when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+            when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
+            when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
+
+            assertThrows(
+                    RuntimeException.class,
+                    () ->
+                            underTestWithDataApi.removeAccount(
+                                    Optional.of(input),
+                                    userProfile,
+                                    StructuredAuditService.UNKNOWN,
+                                    AccountDeletionReason.USER_INITIATED,
+                                    true,
+                                    Optional.of(TEST_ADAPI_TOKEN)));
+        }
+
+        @Test
+        void removeAccountThrowsWhenDataApiCallFails()
+                throws UnsuccessfulAccountDataApiResponseException {
+            when(accountDataApiService.deleteAccount(any(), any()))
+                    .thenThrow(
+                            new UnsuccessfulAccountDataApiResponseException(
+                                    "Connection failed", new RuntimeException()));
+            when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+            when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
+            when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
+
+            assertThrows(
+                    RuntimeException.class,
+                    () ->
+                            underTestWithDataApi.removeAccount(
+                                    Optional.of(input),
+                                    userProfile,
+                                    StructuredAuditService.UNKNOWN,
+                                    AccountDeletionReason.USER_INITIATED,
+                                    true,
+                                    Optional.of(TEST_ADAPI_TOKEN)));
+        }
     }
 }

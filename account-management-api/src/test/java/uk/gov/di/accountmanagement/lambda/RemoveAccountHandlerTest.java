@@ -94,7 +94,35 @@ class RemoveAccountHandlerTest {
                         Optional.of(event),
                         userProfile,
                         TXMA_ENCODED_HEADER_VALUE,
-                        AccountDeletionReason.USER_INITIATED);
+                        AccountDeletionReason.USER_INITIATED,
+                        true,
+                        Optional.empty());
+    }
+
+    @Test
+    void shouldPassAdapiTokenWhenHeaderIsPresent() {
+        var userProfile =
+                new UserProfile()
+                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_SUBJECT.getValue());
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+
+        var event = generateApiGatewayEvent(expectedCommonSubject);
+        var headers = new HashMap<>(event.getHeaders());
+        headers.put("X-ADAPI-AccessToken", "some-access-token");
+        event.setHeaders(headers);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+        verify(accountDeletionService)
+                .removeAccount(
+                        Optional.of(event),
+                        userProfile,
+                        TXMA_ENCODED_HEADER_VALUE,
+                        AccountDeletionReason.USER_INITIATED,
+                        true,
+                        Optional.of("some-access-token"));
     }
 
     @Test
@@ -116,7 +144,9 @@ class RemoveAccountHandlerTest {
                         Optional.of(event),
                         userProfile,
                         StructuredAuditService.UNKNOWN,
-                        AccountDeletionReason.USER_INITIATED);
+                        AccountDeletionReason.USER_INITIATED,
+                        true,
+                        Optional.empty());
     }
 
     @Test
