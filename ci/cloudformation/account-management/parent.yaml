@@ -821,19 +821,6 @@ Resources:
           FromPort: 443
           ToPort: 443
 
-  EgressLambdaSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Lambda Security Group permissions ruleset
-      VpcId:
-        Fn::ImportValue: !Sub ${VpcStackName}-VpcId
-      SecurityGroupEgress:
-        - Description: Allow outbound HTTPS traffic to internet
-          IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0
-
   RedisParametersAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
