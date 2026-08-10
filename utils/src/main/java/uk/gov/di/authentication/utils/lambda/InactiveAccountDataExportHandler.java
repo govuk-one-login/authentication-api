@@ -217,7 +217,7 @@ public class InactiveAccountDataExportHandler
 
         var continuationRequest =
                 new InactiveAccountDataExportRequest(
-                        remainingSegmentKeys, processedCount, writtenCount);
+                        remainingSegmentKeys, processedCount, writtenCount, null);
 
         String payload;
         try {
