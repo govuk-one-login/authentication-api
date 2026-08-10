@@ -21,8 +21,6 @@ dependencies {
             libs.awsS3,
             libs.awsSqs,
             libs.awsSsm,
-            platform(libs.xrayBom),
-            libs.bundles.xray,
             libs.awsCloudwatchEmf,
             libs.gson,
             libs.bundles.apache,
