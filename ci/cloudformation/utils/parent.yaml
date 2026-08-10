@@ -74,6 +74,12 @@ Conditions:
               - !Ref SubEnvironment
               - none
 
+  IsNotProduction:
+    Fn::Not:
+      - Fn::Equals:
+          - !Ref Environment
+          - production
+
   AllowBulkTestUsers:
     Fn::Equals:
       - !FindInMap [

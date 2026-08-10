@@ -87,6 +87,13 @@ Resources:
               !Ref Environment,
               inactiveAccountExportMaxInvocations,
             ]
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
 
       Policies:
         - !Ref LambdaBasicExecutionPolicy
