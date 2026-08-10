@@ -70,6 +70,7 @@ public class InactiveAccountDataExportHandler
     private final long pauseBetweenInvocationsMs;
     private final String lambdaName;
     private final int maxInvocations;
+    private final String internalSectorUri;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService,
@@ -92,6 +93,7 @@ public class InactiveAccountDataExportHandler
                 configurationService.getInactiveAccountExportPauseBetweenInvocationsMs();
         this.lambdaName = configurationService.getInactiveAccountExportLambdaName();
         this.maxInvocations = configurationService.getInactiveAccountExportMaxInvocations();
+        this.internalSectorUri = configurationService.getInternalSectorUri();
     }
 
     public InactiveAccountDataExportHandler() {
@@ -407,7 +409,10 @@ public class InactiveAccountDataExportHandler
             Map<String, AttributeValue> mutableProfileItem = new HashMap<>(profileItem);
             ensureSaltPresent(mutableProfileItem, client, userProfileTableName);
             InactiveAccountTrackerItem trackerItem =
-                    buildTrackerItem(mutableProfileItem, credentialsByEmail.get(email.s()));
+                    buildTrackerItem(
+                            mutableProfileItem,
+                            credentialsByEmail.get(email.s()),
+                            internalSectorUri);
             if (trackerItem != null) {
                 batchWriteService.add(trackerItem);
             }

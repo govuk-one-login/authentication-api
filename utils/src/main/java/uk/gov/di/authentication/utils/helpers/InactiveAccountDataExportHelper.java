@@ -301,6 +301,4 @@ public class InactiveAccountDataExportHelper {
 
         return value.b().asByteArray();
     }
-
-    
 }

@@ -70,6 +70,8 @@ class InactiveAccountDataExportHandlerTest {
                 .thenReturn("test-tracker-table");
         when(configurationService.getInactiveAccountExportBatchWriteMaxRetries()).thenReturn(3);
         when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(1000);
+        when(configurationService.getInternalSectorUri())
+                .thenReturn("https://identity.test.account.gov.uk");
         when(client.batchWriteItem(any(BatchWriteItemRequest.class)))
                 .thenReturn(BatchWriteItemResponse.builder().build());
     }
