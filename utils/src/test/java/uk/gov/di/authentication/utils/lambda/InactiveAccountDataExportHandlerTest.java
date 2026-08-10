@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -68,6 +69,7 @@ class InactiveAccountDataExportHandlerTest {
         when(configurationService.getInactiveAccountExportTableName())
                 .thenReturn("test-tracker-table");
         when(configurationService.getInactiveAccountExportBatchWriteMaxRetries()).thenReturn(3);
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(1000);
         when(client.batchWriteItem(any(BatchWriteItemRequest.class)))
                 .thenReturn(BatchWriteItemResponse.builder().build());
     }
@@ -501,7 +503,7 @@ class InactiveAccountDataExportHandlerTest {
 
         handler.handleRequest(request, context);
 
-        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
                         payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
@@ -529,7 +531,7 @@ class InactiveAccountDataExportHandlerTest {
 
         handler.handleRequest(request, context);
 
-        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
                         payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
@@ -581,7 +583,7 @@ class InactiveAccountDataExportHandlerTest {
 
         handler.handleRequest(request, context);
 
-        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
                         payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
@@ -627,6 +629,54 @@ class InactiveAccountDataExportHandlerTest {
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         assertThrows(RuntimeException.class, () -> handler.handleRequest(request, context));
+    }
+
+    @Test
+    void shouldReturnEarlyOnFirstInvocationWhenMaxInvocationsIsZero() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(0);
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
+
+        var response = handler.handleRequest(request, context);
+
+        assertNotNull(response);
+        verify(client, never()).scan(any(ScanRequest.class));
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
+    }
+
+    @Test
+    void shouldAllowInvocationOneBelowMaxInvocationsLimit() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(3);
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 2L);
+
+        handler.handleRequest(request, context);
+
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(any(), eq("test-inactive-account-data-export-lambda"));
+    }
+
+    @Test
+    void shouldReturnEarlyWhenMaxInvocationsExceeded() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(3);
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 3L);
+
+        var response = handler.handleRequest(request, context);
+
+        assertNotNull(response);
+        assertEquals(100L, response.processedCount());
+        assertEquals(0L, response.writtenCount());
+        verify(client, never()).scan(any(ScanRequest.class));
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
     }
 
     private Map<String, AttributeValue> createItem(int index) {
