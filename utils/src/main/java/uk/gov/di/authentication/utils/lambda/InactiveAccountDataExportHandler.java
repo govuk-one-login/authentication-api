@@ -110,6 +110,10 @@ public class InactiveAccountDataExportHandler
                 request != null && request.processedCount() != null ? request.processedCount() : 0L;
         long writtenCount =
                 request != null && request.writtenCount() != null ? request.writtenCount() : 0L;
+        long invocationCount =
+                request != null && request.invocationCount() != null
+                        ? request.invocationCount()
+                        : 0L;
 
         Map<Integer, Map<String, AttributeValue>> activeSegments =
                 resolveActiveSegments(request, totalSegments);
@@ -178,7 +182,7 @@ public class InactiveAccountDataExportHandler
                     remainingSegmentKeys.size());
 
             if (!remainingSegmentKeys.isEmpty()) {
-                selfInvoke(remainingSegmentKeys, processedCount, writtenCount);
+                selfInvoke(remainingSegmentKeys, processedCount, writtenCount, invocationCount);
             }
 
             return new InactiveAccountDataExportResponse(processedCount, writtenCount);
@@ -207,7 +211,8 @@ public class InactiveAccountDataExportHandler
     private void selfInvoke(
             Map<Integer, Map<String, String>> remainingSegmentKeys,
             long processedCount,
-            long writtenCount) {
+            long writtenCount,
+            long invocationCount) {
         if (lambdaName == null || lambdaName.isEmpty()) {
             throw new RuntimeException(
                     "INACTIVE_ACCOUNT_EXPORT_LAMBDA_NAME not set, cannot self-invoke");
@@ -215,9 +220,11 @@ public class InactiveAccountDataExportHandler
 
         LambdaPauseHelper.pauseBetweenInvocations(pauseBetweenInvocationsMs);
 
+        long nextInvocationCount = invocationCount + 1;
+
         var continuationRequest =
                 new InactiveAccountDataExportRequest(
-                        remainingSegmentKeys, processedCount, writtenCount, null);
+                        remainingSegmentKeys, processedCount, writtenCount, nextInvocationCount);
 
         String payload;
         try {
@@ -227,9 +234,10 @@ public class InactiveAccountDataExportHandler
         }
 
         LOG.info(
-                "Self-invoking with {} remaining segments, processedCount={}",
+                "Self-invoking with {} remaining segments, processedCount={}, invocationCount={}",
                 remainingSegmentKeys.size(),
-                processedCount);
+                processedCount,
+                nextInvocationCount);
 
         try {
             lambdaInvokerService.invokeAsyncWithPayload(payload, lambdaName);
