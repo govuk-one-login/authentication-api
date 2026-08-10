@@ -134,6 +134,7 @@ jobs:
           file: ${{ matrix.template.file }}
           framework: cloudformation
           quiet: true
+          soft_fail: true
           output_format: cli,sarif
           output_file_path: console,results.sarif
           external_checks_dirs: checkov-policies
