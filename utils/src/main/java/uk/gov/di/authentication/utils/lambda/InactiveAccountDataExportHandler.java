@@ -68,6 +68,7 @@ public class InactiveAccountDataExportHandler
     private final int maxItemsPerSegment;
     private final long pauseBetweenInvocationsMs;
     private final String lambdaName;
+    private final int maxInvocations;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService,
@@ -89,6 +90,7 @@ public class InactiveAccountDataExportHandler
         this.pauseBetweenInvocationsMs =
                 configurationService.getInactiveAccountExportPauseBetweenInvocationsMs();
         this.lambdaName = configurationService.getInactiveAccountExportLambdaName();
+        this.maxInvocations = configurationService.getInactiveAccountExportMaxInvocations();
     }
 
     public InactiveAccountDataExportHandler() {
@@ -110,6 +112,22 @@ public class InactiveAccountDataExportHandler
                 request != null && request.processedCount() != null ? request.processedCount() : 0L;
         long writtenCount =
                 request != null && request.writtenCount() != null ? request.writtenCount() : 0L;
+        long invocationCount =
+                request != null && request.invocationCount() != null
+                        ? request.invocationCount()
+                        : 0L;
+
+        if (invocationCount >= maxInvocations) {
+            LOG.warn(
+                    "INACTIVE_ACCOUNT_DATA_EXPORT_MAX_INVOCATIONS_EXCEEDED: invocationCount={} "
+                            + "has reached or exceeded maxInvocations={}, halting self-invocation "
+                            + "chain. processedCount={}, writtenCount={}",
+                    invocationCount,
+                    maxInvocations,
+                    processedCount,
+                    writtenCount);
+            return new InactiveAccountDataExportResponse(processedCount, writtenCount);
+        }
 
         Map<Integer, Map<String, AttributeValue>> activeSegments =
                 resolveActiveSegments(request, totalSegments);
@@ -178,7 +196,7 @@ public class InactiveAccountDataExportHandler
                     remainingSegmentKeys.size());
 
             if (!remainingSegmentKeys.isEmpty()) {
-                selfInvoke(remainingSegmentKeys, processedCount, writtenCount);
+                selfInvoke(remainingSegmentKeys, processedCount, writtenCount, invocationCount);
             }
 
             return new InactiveAccountDataExportResponse(processedCount, writtenCount);
@@ -207,7 +225,8 @@ public class InactiveAccountDataExportHandler
     private void selfInvoke(
             Map<Integer, Map<String, String>> remainingSegmentKeys,
             long processedCount,
-            long writtenCount) {
+            long writtenCount,
+            long invocationCount) {
         if (lambdaName == null || lambdaName.isEmpty()) {
             throw new RuntimeException(
                     "INACTIVE_ACCOUNT_EXPORT_LAMBDA_NAME not set, cannot self-invoke");
@@ -215,9 +234,11 @@ public class InactiveAccountDataExportHandler
 
         LambdaPauseHelper.pauseBetweenInvocations(pauseBetweenInvocationsMs);
 
+        long nextInvocationCount = invocationCount + 1;
+
         var continuationRequest =
                 new InactiveAccountDataExportRequest(
-                        remainingSegmentKeys, processedCount, writtenCount);
+                        remainingSegmentKeys, processedCount, writtenCount, nextInvocationCount);
 
         String payload;
         try {
@@ -227,9 +248,10 @@ public class InactiveAccountDataExportHandler
         }
 
         LOG.info(
-                "Self-invoking with {} remaining segments, processedCount={}",
+                "Self-invoking with {} remaining segments, processedCount={}, invocationCount={}",
                 remainingSegmentKeys.size(),
-                processedCount);
+                processedCount,
+                nextInvocationCount);
 
         try {
             lambdaInvokerService.invokeAsyncWithPayload(payload, lambdaName);

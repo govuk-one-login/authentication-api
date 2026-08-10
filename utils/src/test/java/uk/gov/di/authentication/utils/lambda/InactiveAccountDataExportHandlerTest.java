@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -68,6 +69,7 @@ class InactiveAccountDataExportHandlerTest {
         when(configurationService.getInactiveAccountExportTableName())
                 .thenReturn("test-tracker-table");
         when(configurationService.getInactiveAccountExportBatchWriteMaxRetries()).thenReturn(3);
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(1000);
         when(client.batchWriteItem(any(BatchWriteItemRequest.class)))
                 .thenReturn(BatchWriteItemResponse.builder().build());
     }
@@ -95,7 +97,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -111,7 +113,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -127,7 +129,7 @@ class InactiveAccountDataExportHandlerTest {
                                 .build());
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         assertThrows(DynamoDbException.class, () -> handler.handleRequest(request, context));
     }
@@ -139,7 +141,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -195,7 +197,7 @@ class InactiveAccountDataExportHandlerTest {
                         });
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -250,7 +252,7 @@ class InactiveAccountDataExportHandlerTest {
                         });
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -264,7 +266,7 @@ class InactiveAccountDataExportHandlerTest {
         mockScanWithPagination(0, 1);
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -279,7 +281,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -294,7 +296,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -311,7 +313,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -329,7 +331,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -402,7 +404,7 @@ class InactiveAccountDataExportHandlerTest {
         Map<Integer, Map<String, String>> segmentKeys = new HashMap<>();
         segmentKeys.put(1, Map.of("Email", "user5@example.com"));
 
-        var request = new InactiveAccountDataExportRequest(segmentKeys, 100L, 0L);
+        var request = new InactiveAccountDataExportRequest(segmentKeys, 100L, 0L, null);
         var response = handler.handleRequest(request, context);
 
         assertEquals(105, response.processedCount());
@@ -417,7 +419,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, 500L, 0L);
+        var request = new InactiveAccountDataExportRequest(null, 500L, 0L, null);
 
         var response = handler.handleRequest(request, context);
 
@@ -431,13 +433,14 @@ class InactiveAccountDataExportHandlerTest {
 
         var request =
                 new InactiveAccountDataExportRequest(
-                        Map.of(0, Map.of("Email", "user5@example.com")), 100L, 0L);
+                        Map.of(0, Map.of("Email", "user5@example.com")), 100L, 0L, 2L);
 
         String json = gson.toJson(request);
         var deserialised = gson.fromJson(json, InactiveAccountDataExportRequest.class);
 
         assertEquals(request.processedCount(), deserialised.processedCount());
         assertEquals(request.writtenCount(), deserialised.writtenCount());
+        assertEquals(request.invocationCount(), deserialised.invocationCount());
         assertEquals(
                 request.segmentKeys().get(0).get("Email"),
                 deserialised.segmentKeys().get(0).get("Email"));
@@ -452,6 +455,7 @@ class InactiveAccountDataExportHandlerTest {
         assertNull(deserialised.segmentKeys());
         assertNull(deserialised.processedCount());
         assertNull(deserialised.writtenCount());
+        assertNull(deserialised.invocationCount());
     }
 
     @Test
@@ -463,7 +467,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         handler.handleRequest(request, context);
 
@@ -479,7 +483,7 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         handler.handleRequest(request, context);
 
@@ -495,11 +499,11 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, 100L, 0L);
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 3L);
 
         handler.handleRequest(request, context);
 
-        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
                         payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
@@ -511,6 +515,32 @@ class InactiveAccountDataExportHandlerTest {
         assertNotNull(continuation.segmentKeys());
         assertEquals(105, continuation.processedCount());
         assertEquals(5, continuation.writtenCount());
+        assertEquals(4L, continuation.invocationCount());
+    }
+
+    @Test
+    void shouldSelfInvokeWithInvocationCountOneWhenFirstInvocationHasNoCount() {
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
+
+        handler.handleRequest(request, context);
+
+        var payloadCaptor = ArgumentCaptor.forClass(String.class);
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(
+                        payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
+
+        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+        var continuation =
+                gson.fromJson(payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
+
+        assertEquals(1L, continuation.invocationCount());
     }
 
     @Test
@@ -549,11 +579,11 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         handler.handleRequest(request, context);
 
-        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
                         payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
@@ -581,7 +611,7 @@ class InactiveAccountDataExportHandlerTest {
                 .invokeAsyncWithPayload(any(), any());
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         assertThrows(RuntimeException.class, () -> handler.handleRequest(request, context));
     }
@@ -596,9 +626,57 @@ class InactiveAccountDataExportHandlerTest {
         mockBatchGetItemWithFullMatch();
 
         var handler = createHandler();
-        var request = new InactiveAccountDataExportRequest(null, null, null);
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
         assertThrows(RuntimeException.class, () -> handler.handleRequest(request, context));
+    }
+
+    @Test
+    void shouldReturnEarlyOnFirstInvocationWhenMaxInvocationsIsZero() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(0);
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
+
+        var response = handler.handleRequest(request, context);
+
+        assertNotNull(response);
+        verify(client, never()).scan(any(ScanRequest.class));
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
+    }
+
+    @Test
+    void shouldAllowInvocationOneBelowMaxInvocationsLimit() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(3);
+        when(configurationService.getInactiveAccountExportMaxItemsPerSegment()).thenReturn(5);
+        int totalItems = 25;
+        int pageSize = 5;
+        mockScanWithPagination(totalItems, pageSize);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 2L);
+
+        handler.handleRequest(request, context);
+
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(any(), eq("test-inactive-account-data-export-lambda"));
+    }
+
+    @Test
+    void shouldReturnEarlyWhenMaxInvocationsExceeded() {
+        when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(3);
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 3L);
+
+        var response = handler.handleRequest(request, context);
+
+        assertNotNull(response);
+        assertEquals(100L, response.processedCount());
+        assertEquals(0L, response.writtenCount());
+        verify(client, never()).scan(any(ScanRequest.class));
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
     }
 
     private Map<String, AttributeValue> createItem(int index) {

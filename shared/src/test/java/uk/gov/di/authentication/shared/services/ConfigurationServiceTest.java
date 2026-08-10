@@ -224,6 +224,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getInactiveAccountExportMaxInvocationsShouldDefault() {
+        assertEquals(0, configurationService.getInactiveAccountExportMaxInvocations());
+    }
+
+    @Test
     void getTicfCRILambdaNameShouldDefault() {
         assertEquals("", configurationService.getTicfCRILambdaIdentifier());
     }

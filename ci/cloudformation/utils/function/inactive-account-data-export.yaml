@@ -81,6 +81,12 @@ Resources:
               !Ref Environment,
               inactiveAccountExportBatchWriteMaxRetries,
             ]
+          INACTIVE_ACCOUNT_EXPORT_MAX_INVOCATIONS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountExportMaxInvocations,
+            ]
 
       Policies:
         - !Ref LambdaBasicExecutionPolicy
