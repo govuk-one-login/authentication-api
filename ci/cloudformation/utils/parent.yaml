@@ -1179,6 +1179,7 @@ Resources:
               - dynamodb:Scan
               - dynamodb:PutItem
               - dynamodb:UpdateItem
+              - dynamodb:DescribeTable
             Resource:
               - !Sub
                 - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-bulk-email-users/index/*"
