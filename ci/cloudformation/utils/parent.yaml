@@ -1058,6 +1058,20 @@ Resources:
                       !Ref SubEnvironment,
                       !Ref Environment,
                     ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
           - Sid: AllowAccessToKms
             Effect: Allow
             Action:
@@ -1167,7 +1181,7 @@ Resources:
               - dynamodb:UpdateItem
             Resource:
               - !Sub
-                - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-bulk-email-*/index/*"
+                - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-bulk-email-users/index/*"
                 - DataStoreAccountId:
                     !FindInMap [
                       EnvironmentConfiguration,
@@ -1181,7 +1195,7 @@ Resources:
                       !Ref Environment,
                     ]
               - !Sub
-                - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-bulk-email-*"
+                - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-bulk-email-users"
                 - DataStoreAccountId:
                     !FindInMap [
                       EnvironmentConfiguration,
@@ -1215,8 +1229,28 @@ Resources:
               - dynamodb:Scan
             Resource:
               - !Sub
-                - "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-email-check-results"
-                - EnvironmentName:
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-email-check-result
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-email-check-result/index/*
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
                     !If [
                       UseSubEnvironment,
                       !Ref SubEnvironment,
@@ -1263,6 +1297,20 @@ Resources:
             Resource:
               - !Sub
                 - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-international-sms-send-count
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      dataStoreAccountId,
+                    ]
+                  Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-international-sms-send-count/index/*
                 - DataStoreAccountId:
                     !FindInMap [
                       EnvironmentConfiguration,
