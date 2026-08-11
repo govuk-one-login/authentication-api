@@ -255,18 +255,10 @@ public class AuthorisationHandler
         attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
         LOG.info("Received authentication request");
 
+        useOnlyApprovedHttpMethod("GET", input.getHttpMethod());
+
         AuthenticationRequest authRequest;
         try {
-            if (!"GET".equals(input.getHttpMethod())) {
-                LOG.warn(
-                        String.format(
-                                "Authentication request sent with invalid HTTP method %s",
-                                input.getHttpMethod()));
-                throw new InvalidHttpMethodException(
-                        String.format(
-                                "Authentication request does not support %s requests",
-                                input.getHttpMethod()));
-            }
             Map<String, String> parameterMap = input.getQueryStringParameters();
             Map<String, List<String>> requestParameters =
                     parameterMap.entrySet().stream()
@@ -490,6 +482,15 @@ public class AuthorisationHandler
                 reauthRequested,
                 requestedVtr,
                 user);
+    }
+
+    private void useOnlyApprovedHttpMethod(String acceptedHttpMethod, String usedHttpMethod) {
+        if (!acceptedHttpMethod.equals(usedHttpMethod)) {
+            LOG.warn("Authentication request sent with invalid HTTP method {}", usedHttpMethod);
+            throw new InvalidHttpMethodException(
+                    String.format(
+                            "Authentication request does not support %s requests", usedHttpMethod));
+        }
     }
 
     private void sendAuthRequestParsedAuditEvent(
