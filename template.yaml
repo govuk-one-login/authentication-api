@@ -4964,6 +4964,259 @@ Resources:
         Variables:
           # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
           ENVIRONMENT: !Sub ${Environment}
+          IDENTITY_ENABLED: true # Note that this sets whether the ipv api is turned on or not, it is not an indicator of whether a full identity journey can be completed
+          OIDC_API_BASE_URL: !Sub
+            - https://oidc.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          TXMA_AUDIT_QUEUE_URL:
+            Fn::ImportValue: !Sub orchestration-${Environment}-txma-QueueURL
+          INTERNAl_SECTOR_URI: !Sub
+            - https://identity.${ServiceDomain}
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:eu-west-2:${AccountId}:table/${AuthEnvironment}-"
+            - AccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authAccountId,
+                ]
+              AuthEnvironment:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  authEnvironment,
+                ]
+          AUTH_FRONTEND_BASE_URL: !Sub
+            - https://signin.${ServiceDomain}/
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED: true
+          ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED: true
+          ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME: "AISException"
+          ACCOUNT_INTERVENTION_SERVICE_URI: !Sub
+            - "{{resolve:secretsmanager:${SecretArn}:SecretString:::${SecretId}}}"
+            - SecretArn: !Ref AccountInterventionsServiceUriSecret
+              SecretId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  aisUriSecretId,
+                ]
+          ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR:
+            !If [AisAbortOnError, true, false]
+          IPV_AUDIENCE: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+          IPV_AUTHORISATION_CALLBACK_URI: !Sub
+            - https://oidc.${ServiceDomain}/ipv-callback
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
+          IPV_AUTHORISATION_URI: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}/oauth2/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+          IPV_BACKEND_URI: !If
+            - IpvExists
+            - !Sub
+              - https://api.identity.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+          IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
+          IPV_JWKS_URL: !If
+            - IpvExists
+            - !Sub
+              - https://identity.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://ipvstub.oidc.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+          SIS_AUDIENCE: !If
+            - IpvExists
+            - !Sub
+              - https://reuse-identity.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://sisstub.oidc.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    orchServiceDomain,
+                  ]
+          SIS_AUTHORISATION_CALLBACK_URI: !Sub
+            - https://oidc.${ServiceDomain}/sis-callback
+            - ServiceDomain:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  serviceDomain,
+                ]
+          SIS_AUTHORISATION_CLIENT_ID: authOrchestrator
+          SIS_AUTHORISATION_URI: !If
+            - IpvExists
+            - !Sub
+              - https://reuse-identity.${ServiceDomain}/oauth2/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://sisstub.oidc.${ServiceDomain}/authorize
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    orchServiceDomain,
+                  ]
+          SIS_BACKEND_URI: !If
+            - IpvExists
+            - !Sub
+              - https://reuse-identity.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://sisstub.oidc.${ServiceDomain}
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    orchServiceDomain,
+                  ]
+          SIS_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchSISTokenSigningKmsKeyAlias
+          SIS_JWKS_URL: !If
+            - IpvExists
+            - !Sub
+              - https://reuse-identity.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    serviceDomain,
+                  ]
+            - !Sub
+              - https://sisstub.oidc.${ServiceDomain}/.well-known/jwks.json
+              - ServiceDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    orchServiceDomain,
+                  ]
+          NEW_SPOT_REQUEST_QUEUE_WRITING: !If
+            - NewSpotRequestQueueWriting
+            - true
+            - false
+          SPOT_REQUEST_QUEUE_URL: !Sub https://sqs.eu-west-2.amazonaws.com/${AWS::AccountId}/${Environment}-spot-request-queue
+          JWK_CACHE_EXPIRATION_IN_SECONDS: 300
+          USE_SYNC_WAIT_FOR_SPOT: !If
+            - UseSyncWaitForSpot
+            - true
+            - false
+          SYNC_WAIT_FOR_SPOT_TIMEOUT:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              syncWaitForSpotTimeout,
+            ]
+          STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchStorageTokenSigningKmsKeyAlias
+          SEND_STORAGE_TOKEN_TO_IPV_ENABLED: true
+      Policies:
+        - !Ref OrchIdentityCredentialsTableReadAndWriteAccessPolicy
+        - !Ref ClientRegistryTableReadAccessPolicy
+        - !Ref TxmaQueueSendPermissionPolicy
+        - !Ref IdentityTokenSigningKmsAccessPolicy
+        - !Ref SpotRequestQueueWritePolicy
+        - !Ref SpotRequestQueueWriteAccessPolicy
+        - !Ref AccountInterventionsServiceUriSecretAccessPolicy
+        - !Ref OrchSessionTableReadWriteAndDeleteAccessPolicy
+        - !Ref AuthUserInfoTableReadAccessPolicy
+        - !Ref ClientSessionTableReadAndDeleteAccessPolicy
+        - !Ref OrchAuthCodeTableWriteAccessPolicy
+        - !Ref JwksCacheTableReadWriteAccessPolicy
+        - !Ref StateStorageTableReadWriteAccessPolicy
+        - !Ref CrossBrowserTableReadWriteAccessPolicy
+        - !Ref StorageTokenSigningKmsAccessPolicy
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
@@ -6973,6 +7226,27 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - Sid: AllowSISTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt OrchSISTokenSigningKmsKey.Arn
+
+  IdentityTokenSigningKmsAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowIpvTokenSigningKms
+            Effect: Allow
+            Action:
+              - kms:Sign
+              - kms:GetPublicKey
+            Resource:
+              - !GetAtt OrchIPVTokenSigningKmsKey.Arn
           - Sid: AllowSISTokenSigningKms
             Effect: Allow
             Action:
