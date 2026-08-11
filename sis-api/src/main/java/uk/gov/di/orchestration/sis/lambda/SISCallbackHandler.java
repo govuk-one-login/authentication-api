@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
@@ -26,7 +27,9 @@ import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
 import uk.gov.di.orchestration.identity.helpers.IdentityCallbackHelper;
 import uk.gov.di.orchestration.identity.service.IdentityContextService;
 import uk.gov.di.orchestration.identity.service.IdentitySPOTService;
+import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.OAuthConfiguration;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -37,8 +40,15 @@ import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.oauth.OAuthService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.EndOfJourneyService;
+import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.Metrics;
+import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
+import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
+import uk.gov.di.orchestration.shared.services.TokenService;
 import uk.gov.di.orchestration.sis.exception.SISCallbackValidationError;
+import uk.gov.di.orchestration.sis.service.SISAuthorisationService;
 
 import java.util.List;
 import java.util.Map;
@@ -75,6 +85,36 @@ public class SISCallbackHandler
     private final OAuthService sisAuthorisationService;
     private final InitiateIPVAuthorisationService ipvAuthorisationService;
     private final IdentitySPOTService identitySPOTService;
+
+    public SISCallbackHandler() {
+        this(ConfigurationService.getInstance());
+    }
+
+    public SISCallbackHandler(ConfigurationService configurationService) {
+        this(
+                configurationService,
+                new IdentityCallbackHelper(configurationService),
+                new IdentityContextService(configurationService),
+                new AuditService(configurationService),
+                new EndOfJourneyService(configurationService),
+                new OAuthService(
+                        configurationService,
+                        OAuthConfiguration.getSISConfig(configurationService),
+                        SISAuthorisationService::callbackValidator),
+                new InitiateIPVAuthorisationService(
+                        configurationService,
+                        new AuditService(configurationService),
+                        new IPVAuthorisationService(configurationService),
+                        new Metrics(configurationService),
+                        new CrossBrowserOrchestrationService(configurationService),
+                        new TokenService(
+                                configurationService,
+                                new KmsConnectionService(configurationService),
+                                new OrchAccessTokenService(configurationService),
+                                new OrchRefreshTokenService(configurationService),
+                                new OidcAPI(configurationService))),
+                new IdentitySPOTService(configurationService));
+    }
 
     public SISCallbackHandler(
             ConfigurationService configurationService,

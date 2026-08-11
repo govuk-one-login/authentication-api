@@ -26,12 +26,14 @@ import uk.gov.di.orchestration.shared.entity.OAuthConfiguration;
 import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 
 import java.io.IOException;
 import java.security.interfaces.RSAPublicKey;
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +56,19 @@ public class OAuthService {
     private final StateStorageService stateStorageService;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final CallbackValidator callbackValidator;
+
+    public OAuthService(
+            ConfigurationService configurationService,
+            OAuthConfiguration clientConfig,
+            CallbackValidator callbackValidator) {
+        this(
+                clientConfig,
+                new OrchJwtService(configurationService),
+                new NowHelper.NowClock(Clock.systemUTC()),
+                new StateStorageService(configurationService),
+                new CrossBrowserOrchestrationService(configurationService),
+                callbackValidator);
+    }
 
     public OAuthService(
             OAuthConfiguration clientConfig,

@@ -8,11 +8,13 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.identity.exceptions.IdentityCallbackException;
+import uk.gov.di.orchestration.shared.api.AuthFrontend;
 import uk.gov.di.orchestration.shared.api.CommonFrontend;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 
@@ -30,6 +32,13 @@ public class IdentityCallbackHelper {
     private final CommonFrontend frontend;
     private final DynamoIdentityService dynamoIdentityService;
     private final OidcAPI oidcAPI;
+
+    public IdentityCallbackHelper(ConfigurationService configurationService) {
+        this(
+                new AuthFrontend(configurationService),
+                new DynamoIdentityService(configurationService),
+                new OidcAPI(configurationService));
+    }
 
     public IdentityCallbackHelper(
             CommonFrontend frontend, DynamoIdentityService dynamoIdentityService, OidcAPI oidcAPI) {

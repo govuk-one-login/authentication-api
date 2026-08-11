@@ -12,6 +12,7 @@ import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
@@ -32,6 +33,15 @@ public class IdentityContextService {
     private final OrchClientSessionService orchClientSessionService;
     private final DynamoClientService clientService;
     private final AuthenticationUserInfoStorageService authUserInfoStorageService;
+
+    public IdentityContextService(ConfigurationService configurationService) {
+        this(
+                new CrossBrowserOrchestrationService(configurationService),
+                new OrchSessionService(configurationService),
+                new OrchClientSessionService(configurationService),
+                new DynamoClientService(configurationService),
+                new AuthenticationUserInfoStorageService(configurationService));
+    }
 
     public IdentityContextService(
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
