@@ -240,7 +240,7 @@ class AccountDataCredentialRepositoryTest {
                 "some-aaguid",
                 true,
                 5,
-                List.of("BLE", "internal"),
+                List.of("ble", "internal"),
                 true,
                 true,
                 true,

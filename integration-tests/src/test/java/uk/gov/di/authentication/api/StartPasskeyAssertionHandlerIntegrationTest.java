@@ -143,7 +143,7 @@ class StartPasskeyAssertionHandlerIntegrationTest extends ApiGatewayHandlerInteg
                     passkeysResponse(
                             passkeyJson(FIRST_PASSKEY_ID),
                             passkeyJsonWithTransports(
-                                    SECOND_PASSKEY_ID, List.of("BLE", "INTERNAL"))));
+                                    SECOND_PASSKEY_ID, List.of("ble", "internal"))));
 
             var response =
                     makeRequest(
