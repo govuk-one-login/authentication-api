@@ -41,6 +41,7 @@ import static java.util.Collections.singletonList;
 
 public class OAuthService {
     private static final long PRIVATE_KEY_JWT_EXPIRY = 5L;
+    private static final Logger LOG = LogManager.getLogger(OAuthService.class);
 
     interface ResponseParser<T> {
         T parse(HTTPResponse response) throws ParseException;
@@ -53,7 +54,6 @@ public class OAuthService {
     private final StateStorageService stateStorageService;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final CallbackValidator callbackValidator;
-    private final Logger LOG = LogManager.getLogger(this.getClass());
 
     public OAuthService(
             OAuthConfiguration clientConfig,
