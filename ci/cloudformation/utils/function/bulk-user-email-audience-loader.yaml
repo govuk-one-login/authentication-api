@@ -14,7 +14,7 @@ Resources:
         - !Ref DynamoUserReadAccessPolicy
         - !Ref DynamoCredentialReadAccessPolicy
         - !Ref DynamoBulkEmailTablesAccessPolicy
-        - !Ref EmailCheckResultsTableKmsAccessPolicy
+        - !Ref EmailCheckResultsTableWritePolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
       AutoPublishAlias: live
       LoggingConfig:

@@ -22,9 +22,8 @@ Resources:
                 ]
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref EmailCheckResultsWriteAccessPolicy
+        - !Ref EmailCheckResultsTableWritePolicy
         - !Ref EmailCheckResultsSqsAccessPolicy
-        - !Ref EmailCheckResultsTableKmsAccessPolicy
         - !Ref SqsQueueKmsAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
       LoggingConfig:
