@@ -7,7 +7,7 @@ Resources:
         - EnvironmentName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
-      Handler: uk.gov.di.authentication.utils.lambda.EmailCheckResultsWriterHandler::handleRequest
+      Handler: uk.gov.di.authentication.utils.lambda.EmailCheckResultWriterHandler::handleRequest
       Environment:
         Variables:
           ENVIRONMENT:
