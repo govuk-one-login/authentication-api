@@ -7,6 +7,7 @@ on:
     paths:
       - "ci/terraform/**"
       - "template.yaml"
+      - "ci/cloudformation/**"
       - "checkov-policies/**"
   pull_request:
     branches:
@@ -14,6 +15,7 @@ on:
     paths:
       - "ci/terraform/**"
       - "template.yaml"
+      - "ci/cloudformation/**"
       - "checkov-policies/**"
       - ".github/workflows/checkov.yml"
 
@@ -75,3 +77,71 @@ jobs:
         with:
           sarif_file: results.sarif
           category: orch-sam
+
+  scan-api-sam:
+    strategy:
+      matrix:
+        template:
+          - {
+              source_dir: "ci/cloudformation/auth",
+              file: "auth-template.yaml",
+              category: "auth-sam",
+            }
+          - {
+              source_dir: "ci/cloudformation/account-management",
+              file: "am-template.yaml",
+              category: "am-sam",
+            }
+          - {
+              source_dir: "ci/cloudformation/account-data",
+              file: "ad-template.yaml",
+              category: "ad-sam",
+            }
+          - {
+              source_dir: "ci/cloudformation/utils",
+              file: "utils-template.yaml",
+              category: "utils-sam",
+            }
+          - {
+              source_dir: "ci/cloudformation/stubs",
+              file: "stubs-template.yaml",
+              category: "stubs-sam",
+            }
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install Rain
+        uses: ./.github/actions/install-rain
+        with:
+          version: "v1.23.0"
+          arch: "linux-amd64"
+          sha256: "2fdfe059566acf15ad23e014a7856e88f6af61710854208a93526eec80f4078f"
+
+      - name: Merge templates
+        run: "./scripts/merge-templates.sh"
+        env:
+          TEMPLATE_SOURCE_DIR: ${{ matrix.template.source_dir }}
+          TEMPLATE_FILE: ${{ matrix.template.file }}
+
+      - name: Checkov GitHub Action
+        uses: bridgecrewio/checkov-action@dfb51aed1b783289b0d3f255028e7a88d5e8caa1 # v12.3105.0
+        with:
+          file: ${{ matrix.template.file }}
+          framework: cloudformation
+          quiet: true
+          soft_fail: true
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+          external_checks_dirs: checkov-policies
+
+      - name: Upload SARIF file
+        if: always()
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v3.25.12v3
+        with:
+          sarif_file: results.sarif
+          category: ${{ matrix.template.category }}
