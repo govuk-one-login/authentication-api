@@ -67,6 +67,11 @@ Resources:
                 !Ref Environment,
                 bulkEmailIncludedTermsAndConditions,
               ]
+          BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME: !Sub
+            - "${EnvironmentName}-bulk-user-email-audience-loader-lambda"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          BULK_USER_EMAIL_TYPE: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL
       Events:
         ScheduledEvent:
           Type: Schedule
