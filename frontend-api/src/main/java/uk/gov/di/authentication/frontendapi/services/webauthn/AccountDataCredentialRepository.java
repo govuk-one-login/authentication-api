@@ -63,7 +63,7 @@ public class AccountDataCredentialRepository implements CredentialRepository {
 
     Set<AuthenticatorTransport> transportStringsToSet(List<String> passkeyTransports) {
         return passkeyTransports.stream()
-                .map(s -> AuthenticatorTransport.valueOf(s.toUpperCase()))
+                .map(AuthenticatorTransport::of)
                 .collect(Collectors.toSet());
     }
 
