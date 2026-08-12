@@ -14,6 +14,48 @@ from multiprocessing.pool import AsyncResult
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_FILE = os.path.join(REPO_ROOT, ".tflint.hcl")
 
+# Valid tflint flags that can be passed through this wrapper.
+# Flags managed by the wrapper (--config, --chdir, --format, --filter, --init) are excluded.
+VALID_TFLINT_FLAGS = {
+    "-v",
+    "--version",
+    "--langserver",
+    "--ignore-module",
+    "--enable-rule",
+    "--disable-rule",
+    "--only",
+    "--enable-plugin",
+    "--var-file",
+    "--var",
+    "--call-module-type",
+    "--recursive",
+    "--force",
+    "--minimum-failure-severity",
+    "--color",
+    "--no-color",
+    "--fix",
+    "--no-parallel-runners",
+    "--max-workers",
+    "-h",
+    "--help",
+}
+
+
+def validate_tflint_args(args: list[str]) -> None:
+    """Validate that pass-through args are known tflint flags."""
+    for arg in args:
+        if not arg.startswith("-"):
+            continue
+        # Handle --flag=value style
+        flag = arg.split("=", 1)[0]
+        if flag not in VALID_TFLINT_FLAGS:
+            print(f"error: unknown tflint option: {flag}", file=sys.stderr)
+            print(
+                "hint: if this is a valid tflint flag, add it to VALID_TFLINT_FLAGS in this script.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
 
 def run_tflint(
     directory: pathlib.Path, files: list[str], args: list[str]
@@ -149,6 +191,8 @@ class ValidatePathAction(argparse.Action):
                 parser.error(f"Path {value} does not exist.")
             if not path.is_file():
                 parser.error(f"Path {value} is not a file.")
+            if path.suffix not in (".tf", ".hcl", ".tfvars"):
+                parser.error(f"Path {value} is not a Terraform file (.tf, .hcl).")
             pvalues.append(path)
         setattr(namespace, self.dest, pvalues)
 
@@ -165,4 +209,5 @@ if __name__ == "__main__":
         action=ValidatePathAction,
     )
     app_args, tflint_args = app_parser.parse_known_args()
+    validate_tflint_args(tflint_args)
     main(app_args, tflint_args)
