@@ -50,16 +50,7 @@ Resources:
             - "{{resolve:ssm:/deploy/${env}/ipv_backend_uri}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: !Sub
-            - arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${env}-ipv_reverification_request_signing_key
-            - DataStoreAccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  dataStoreAccountId,
-                ]
-              env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:${IpvReverificationRequestSigningKeyAlias}"
           REDIS_KEY: "session"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS:
