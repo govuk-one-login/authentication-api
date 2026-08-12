@@ -2,14 +2,20 @@ package uk.gov.di.authentication.utils.helpers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -148,13 +154,65 @@ public class InactiveAccountDataExportHelper {
         return LocalDateTime.parse(lastActiveDate).toLocalDate().plusYears(5).toString();
     }
 
+    public static void ensureSaltPresent(
+            Map<String, AttributeValue> userProfileItem,
+            DynamoDbClient dynamoDbClient,
+            String userProfileTableName) {
+        AttributeValue saltAttr = userProfileItem.get(UserProfile.ATTRIBUTE_SALT);
+        if (saltAttr != null && saltAttr.b() != null && saltAttr.b().asByteArray().length > 0) {
+            return;
+        }
+
+        String email = getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_EMAIL);
+        String publicSubjectId =
+                getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_PUBLIC_SUBJECT_ID);
+        LOG.info(
+                "Generating salt for public subject ID '{}': salt was missing or empty",
+                publicSubjectId);
+
+        byte[] newSalt = SaltHelper.generateNewSalt();
+        dynamoDbClient.updateItem(
+                UpdateItemRequest.builder()
+                        .tableName(userProfileTableName)
+                        .key(Map.of(UserProfile.ATTRIBUTE_EMAIL, AttributeValue.fromS(email)))
+                        .updateExpression("SET #salt = :salt")
+                        .expressionAttributeNames(Map.of("#salt", UserProfile.ATTRIBUTE_SALT))
+                        .expressionAttributeValues(
+                                Map.of(
+                                        ":salt",
+                                        AttributeValue.fromB(SdkBytes.fromByteArray(newSalt))))
+                        .build());
+
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_SALT, AttributeValue.fromB(SdkBytes.fromByteArray(newSalt)));
+    }
+
     public static InactiveAccountTrackerItem buildTrackerItem(
             Map<String, AttributeValue> userProfileItem,
-            Map<String, AttributeValue> userCredentialsItem) {
+            Map<String, AttributeValue> userCredentialsItem,
+            String internalSectorUri) {
         String subjectId = getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_SUBJECT_ID);
         String publicSubjectId =
                 getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_PUBLIC_SUBJECT_ID);
+        if (subjectId == null) {
+            LOG.warn(
+                    "Skipping tracker item for public subject ID '{}': subject ID is null. Manual processing required.",
+                    publicSubjectId);
+            return null;
+        }
+
         String email = getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_EMAIL);
+        byte[] salt = getSalt(userProfileItem);
+        if (salt.length == 0) {
+            LOG.warn(
+                    "Skipping tracker item for public subject ID '{}': salt is null or empty. Salt should've already been generated if not present.",
+                    publicSubjectId);
+            return null;
+        }
+
+        String commonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        subjectId, URI.create(internalSectorUri), salt);
 
         LastActiveDate lastActiveDate =
                 calculateLastActiveDate(userProfileItem, userCredentialsItem);
@@ -165,7 +223,7 @@ public class InactiveAccountDataExportHelper {
 
         if (dateForDeletion == null) {
             LOG.warn(
-                    "Skipping tracker item for public subject ID '{}': could not determine dateForDeletion (lastActiveDate was null)",
+                    "Skipping tracker item for public subject ID '{}': could not determine dateForDeletion (lastActiveDate was null).",
                     publicSubjectId);
             return null;
         }
@@ -175,7 +233,7 @@ public class InactiveAccountDataExportHelper {
 
         return new InactiveAccountTrackerItem()
                 .withDateForDeletion(dateForDeletion)
-                .withCommonSubjectId(subjectId)
+                .withCommonSubjectId(commonSubjectId)
                 .withPublicSubjectId(publicSubjectId)
                 .withEmailAddress(email)
                 .withEmailAddressLastUpdated(profileUpdated)
@@ -232,5 +290,15 @@ public class InactiveAccountDataExportHelper {
             Map<String, AttributeValue> item, String attributeName) {
         AttributeValue value = item.get(attributeName);
         return value != null ? value.s() : null;
+    }
+
+    private static byte[] getSalt(Map<String, AttributeValue> item) {
+        AttributeValue value = item.get(UserProfile.ATTRIBUTE_SALT);
+
+        if (value == null || value.b() == null || value.b().asByteArray().length == 0) {
+            return new byte[0];
+        }
+
+        return value.b().asByteArray();
     }
 }

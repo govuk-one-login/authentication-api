@@ -37,6 +37,7 @@ import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHe
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildCredentialKeys;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildTrackerItem;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.countMissingCredentials;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.ensureSaltPresent;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.extractUnprocessedKeys;
 
 public class InactiveAccountDataExportHandler
@@ -69,6 +70,7 @@ public class InactiveAccountDataExportHandler
     private final long pauseBetweenInvocationsMs;
     private final String lambdaName;
     private final int maxInvocations;
+    private final String internalSectorUri;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService,
@@ -91,6 +93,7 @@ public class InactiveAccountDataExportHandler
                 configurationService.getInactiveAccountExportPauseBetweenInvocationsMs();
         this.lambdaName = configurationService.getInactiveAccountExportLambdaName();
         this.maxInvocations = configurationService.getInactiveAccountExportMaxInvocations();
+        this.internalSectorUri = configurationService.getInternalSectorUri();
     }
 
     public InactiveAccountDataExportHandler() {
@@ -403,8 +406,13 @@ public class InactiveAccountDataExportHandler
             if (email == null) {
                 continue;
             }
+            Map<String, AttributeValue> mutableProfileItem = new HashMap<>(profileItem);
+            ensureSaltPresent(mutableProfileItem, client, userProfileTableName);
             InactiveAccountTrackerItem trackerItem =
-                    buildTrackerItem(profileItem, credentialsByEmail.get(email.s()));
+                    buildTrackerItem(
+                            mutableProfileItem,
+                            credentialsByEmail.get(email.s()),
+                            internalSectorUri);
             if (trackerItem != null) {
                 batchWriteService.add(trackerItem);
             }

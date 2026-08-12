@@ -2,14 +2,19 @@ package uk.gov.di.authentication.utils.helpers;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
 import uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.LastActiveDate;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,17 +23,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildCredentialKeys;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildTrackerItem;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.calculateDateForDeletion;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.calculateLastActiveDate;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.countMissingCredentials;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.determineHasSetupMfa;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.ensureSaltPresent;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.extractUnprocessedKeys;
 
 class InactiveAccountDataExportHelperTest {
 
     private static final String TABLE_NAME = "test-user-credentials";
+    private static final String USER_PROFILE_TABLE_NAME = "test-user-profile";
+    private static final String INTERNAL_SECTOR_URI = "https://identity.test.account.gov.uk";
+    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
 
     @Test
     void buildCredentialKeysShouldExtractEmailKeysFromProfileItems() {
@@ -144,6 +157,56 @@ class InactiveAccountDataExportHelperTest {
         assertEquals(0, countMissingCredentials(0, 0));
     }
 
+    @Nested
+    class EnsureSaltPresentTest {
+
+        @Test
+        void shouldReturnWithoutCallingDynamoWhenSaltAlreadyExists() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_EMAIL,
+                            AttributeValue.builder().s("test@example.com").build(),
+                            UserProfile.ATTRIBUTE_SALT,
+                            AttributeValue.builder()
+                                    .b(SdkBytes.fromByteArray(new byte[] {1, 2, 3}))
+                                    .build());
+
+            ensureSaltPresent(profileItem, dynamoDbClient, USER_PROFILE_TABLE_NAME);
+
+            verify(dynamoDbClient, never()).updateItem(any(UpdateItemRequest.class));
+        }
+
+        @Test
+        void shouldGenerateAndPersistSaltWhenMissing() {
+            Map<String, AttributeValue> profileItem = new HashMap<>();
+            profileItem.put(
+                    UserProfile.ATTRIBUTE_EMAIL,
+                    AttributeValue.builder().s("nosalt@example.com").build());
+
+            ensureSaltPresent(profileItem, dynamoDbClient, USER_PROFILE_TABLE_NAME);
+
+            verify(dynamoDbClient).updateItem(any(UpdateItemRequest.class));
+            assertNotNull(profileItem.get(UserProfile.ATTRIBUTE_SALT));
+            assertTrue(profileItem.get(UserProfile.ATTRIBUTE_SALT).b().asByteArray().length > 0);
+        }
+
+        @Test
+        void shouldGenerateAndPersistSaltWhenEmpty() {
+            Map<String, AttributeValue> profileItem = new HashMap<>();
+            profileItem.put(
+                    UserProfile.ATTRIBUTE_EMAIL,
+                    AttributeValue.builder().s("emptysalt@example.com").build());
+            profileItem.put(
+                    UserProfile.ATTRIBUTE_SALT,
+                    AttributeValue.builder().b(SdkBytes.fromByteArray(new byte[] {})).build());
+
+            ensureSaltPresent(profileItem, dynamoDbClient, USER_PROFILE_TABLE_NAME);
+
+            verify(dynamoDbClient).updateItem(any(UpdateItemRequest.class));
+            assertTrue(profileItem.get(UserProfile.ATTRIBUTE_SALT).b().asByteArray().length > 0);
+        }
+    }
+
     @Test
     void buildTrackerItemShouldMapAllFieldsFromUserProfileItem() {
         Map<String, AttributeValue> userProfileItem =
@@ -155,17 +218,22 @@ class InactiveAccountDataExportHelperTest {
                         UserProfile.ATTRIBUTE_EMAIL,
                         AttributeValue.builder().s("test@example.com").build(),
                         UserProfile.ATTRIBUTE_UPDATED,
-                        AttributeValue.builder().s("2021-07-17T10:30:00.123456").build());
+                        AttributeValue.builder().s("2021-07-17T10:30:00.123456").build(),
+                        UserProfile.ATTRIBUTE_SALT,
+                        AttributeValue.builder()
+                                .b(SdkBytes.fromByteArray(new byte[] {1, 2, 3, 4, 5}))
+                                .build());
 
         Map<String, AttributeValue> userCredentialsItem =
                 Map.of(
                         UserCredentials.ATTRIBUTE_EMAIL,
                         AttributeValue.builder().s("test@example.com").build());
 
-        InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, userCredentialsItem);
+        InactiveAccountTrackerItem result =
+                buildTrackerItem(userProfileItem, userCredentialsItem, INTERNAL_SECTOR_URI);
 
         assertEquals("2026-07-17", result.getDateForDeletion());
-        assertEquals("subject-123", result.getCommonSubjectId());
+        assertTrue(result.getCommonSubjectId().startsWith("urn:fdc:gov.uk:2022:"));
         assertEquals("public-456", result.getPublicSubjectId());
         assertEquals("test@example.com", result.getEmailAddress());
         assertEquals("2021-07-17T10:30:00.123456", result.getEmailAddressLastUpdated());
@@ -185,9 +253,14 @@ class InactiveAccountDataExportHelperTest {
         Map<String, AttributeValue> userProfileItem =
                 Map.of(
                         UserProfile.ATTRIBUTE_SUBJECT_ID,
-                        AttributeValue.builder().s("subject-789").build());
+                        AttributeValue.builder().s("subject-789").build(),
+                        UserProfile.ATTRIBUTE_SALT,
+                        AttributeValue.builder()
+                                .b(SdkBytes.fromByteArray(new byte[] {1, 2, 3}))
+                                .build());
 
-        InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, null);
+        InactiveAccountTrackerItem result =
+                buildTrackerItem(userProfileItem, null, INTERNAL_SECTOR_URI);
 
         assertNull(result);
     }
@@ -201,12 +274,85 @@ class InactiveAccountDataExportHelperTest {
                         UserProfile.ATTRIBUTE_EMAIL,
                         AttributeValue.builder().s("user@gov.uk").build(),
                         UserProfile.ATTRIBUTE_UPDATED,
-                        AttributeValue.builder().s("2020-01-01T00:00:00.000000").build());
+                        AttributeValue.builder().s("2020-01-01T00:00:00.000000").build(),
+                        UserProfile.ATTRIBUTE_SALT,
+                        AttributeValue.builder()
+                                .b(SdkBytes.fromByteArray(new byte[] {10, 20, 30}))
+                                .build());
 
-        InactiveAccountTrackerItem result = buildTrackerItem(userProfileItem, null);
+        InactiveAccountTrackerItem result =
+                buildTrackerItem(userProfileItem, null, INTERNAL_SECTOR_URI);
 
         assertEquals("UserProfile.Updated", result.getUserLastActiveSourceId());
-        assertEquals("my-subject-id", result.getCommonSubjectId());
+        assertTrue(result.getCommonSubjectId().startsWith("urn:fdc:gov.uk:2022:"));
+    }
+
+    @Test
+    void buildTrackerItemShouldReturnNullWhenSaltIsMissing() {
+        Map<String, AttributeValue> userProfileItem =
+                Map.of(
+                        UserProfile.ATTRIBUTE_SUBJECT_ID,
+                        AttributeValue.builder().s("subject-no-salt").build(),
+                        UserProfile.ATTRIBUTE_PUBLIC_SUBJECT_ID,
+                        AttributeValue.builder().s("public-no-salt").build(),
+                        UserProfile.ATTRIBUTE_EMAIL,
+                        AttributeValue.builder().s("nosalt@example.com").build(),
+                        UserProfile.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2021-07-17T10:30:00.123456").build());
+
+        InactiveAccountTrackerItem result =
+                buildTrackerItem(userProfileItem, null, INTERNAL_SECTOR_URI);
+
+        assertNull(result);
+    }
+
+    @Test
+    void buildTrackerItemShouldReturnNullWhenSaltIsEmpty() {
+        Map<String, AttributeValue> userProfileItem = new HashMap<>();
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_SUBJECT_ID,
+                AttributeValue.builder().s("subject-empty-salt").build());
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_PUBLIC_SUBJECT_ID,
+                AttributeValue.builder().s("public-empty-salt").build());
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_EMAIL,
+                AttributeValue.builder().s("emptysalt@example.com").build());
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_UPDATED,
+                AttributeValue.builder().s("2021-07-17T10:30:00.123456").build());
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_SALT,
+                AttributeValue.builder().b(SdkBytes.fromByteArray(new byte[] {})).build());
+
+        InactiveAccountTrackerItem result =
+                buildTrackerItem(userProfileItem, null, INTERNAL_SECTOR_URI);
+
+        assertNull(result);
+    }
+
+    @Test
+    void buildTrackerItemShouldReturnNullWhenSubjectIdIsNull() {
+        Map<String, AttributeValue> userProfileItem = new HashMap<>();
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_PUBLIC_SUBJECT_ID,
+                AttributeValue.builder().s("public-no-subject").build());
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_EMAIL,
+                AttributeValue.builder().s("nosubject@example.com").build());
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_UPDATED,
+                AttributeValue.builder().s("2021-07-17T10:30:00.123456").build());
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_SALT,
+                AttributeValue.builder()
+                        .b(SdkBytes.fromByteArray(new byte[] {1, 2, 3, 4, 5}))
+                        .build());
+
+        InactiveAccountTrackerItem result =
+                buildTrackerItem(userProfileItem, null, INTERNAL_SECTOR_URI);
+
+        assertNull(result);
     }
 
     @Test
@@ -458,5 +604,34 @@ class InactiveAccountDataExportHelperTest {
 
             assertFalse(determineHasSetupMfa(profileItem, credentialsItem));
         }
+    }
+
+    @Test
+    void buildTrackerItemShouldExtractHostFromUriWhenCalculatingPairwiseIdentifier() {
+        String subjectId = "test-subject-id";
+        byte[] salt = new byte[] {1, 2, 3, 4, 5};
+        String sectorUriWithProtocol = "https://identity.dev.account.gov.uk";
+        String sectorHost = "identity.dev.account.gov.uk";
+
+        Map<String, AttributeValue> userProfileItem =
+                Map.of(
+                        UserProfile.ATTRIBUTE_SUBJECT_ID,
+                        AttributeValue.builder().s(subjectId).build(),
+                        UserProfile.ATTRIBUTE_PUBLIC_SUBJECT_ID,
+                        AttributeValue.builder().s("public-123").build(),
+                        UserProfile.ATTRIBUTE_EMAIL,
+                        AttributeValue.builder().s("test@example.com").build(),
+                        UserProfile.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2021-07-17T10:30:00.123456").build(),
+                        UserProfile.ATTRIBUTE_SALT,
+                        AttributeValue.builder().b(SdkBytes.fromByteArray(salt)).build());
+
+        InactiveAccountTrackerItem result =
+                buildTrackerItem(userProfileItem, null, sectorUriWithProtocol);
+
+        String expectedPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(subjectId, sectorHost, salt);
+
+        assertEquals(expectedPairwiseId, result.getCommonSubjectId());
     }
 }
