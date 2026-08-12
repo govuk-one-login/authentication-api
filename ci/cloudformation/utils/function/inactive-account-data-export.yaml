@@ -94,6 +94,12 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
+          INACTIVE_ACCOUNT_EXPORT_TRACKER_WRITE_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountExportTrackerWriteEnabled,
+            ]
 
       Policies:
         - !Ref LambdaBasicExecutionPolicy
