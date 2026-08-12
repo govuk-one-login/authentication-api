@@ -54,7 +54,7 @@ jobs:
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
         with:
           gradle-version: wrapper
-          cache-read-only: true
+          cache-read-only: false
       - name: Run Build
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
