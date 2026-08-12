@@ -71,6 +71,7 @@ public class InactiveAccountDataExportHandler
     private final String lambdaName;
     private final int maxInvocations;
     private final String internalSectorUri;
+    private final boolean trackerWriteEnabled;
 
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService,
@@ -94,6 +95,8 @@ public class InactiveAccountDataExportHandler
         this.lambdaName = configurationService.getInactiveAccountExportLambdaName();
         this.maxInvocations = configurationService.getInactiveAccountExportMaxInvocations();
         this.internalSectorUri = configurationService.getInternalSectorUri();
+        this.trackerWriteEnabled =
+                configurationService.isInactiveAccountExportTrackerWriteEnabled();
     }
 
     public InactiveAccountDataExportHandler() {
@@ -110,6 +113,8 @@ public class InactiveAccountDataExportHandler
             throw new IllegalStateException(
                     "INACTIVE_ACCOUNT_EXPORT_MAX_ITEMS_PER_SEGMENT must be greater than 0");
         }
+
+        LOG.info("Tracker write enabled: {}", trackerWriteEnabled);
 
         long processedCount =
                 request != null && request.processedCount() != null ? request.processedCount() : 0L;
@@ -295,7 +300,7 @@ public class InactiveAccountDataExportHandler
         List<Map<String, AttributeValue>> currentBatch = new ArrayList<>();
         InactiveAccountDataExportBatchWriteService batchWriteService =
                 new InactiveAccountDataExportBatchWriteService(
-                        client, exportTableName, batchWriteMaxRetries);
+                        client, exportTableName, batchWriteMaxRetries, !trackerWriteEnabled);
 
         do {
             if (itemsScanned >= maxItemsPerSegment) {

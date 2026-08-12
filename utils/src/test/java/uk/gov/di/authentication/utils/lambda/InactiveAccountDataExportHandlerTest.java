@@ -72,6 +72,7 @@ class InactiveAccountDataExportHandlerTest {
         when(configurationService.getInactiveAccountExportMaxInvocations()).thenReturn(1000);
         when(configurationService.getInternalSectorUri())
                 .thenReturn("https://identity.test.account.gov.uk");
+        when(configurationService.isInactiveAccountExportTrackerWriteEnabled()).thenReturn(true);
         when(client.batchWriteItem(any(BatchWriteItemRequest.class)))
                 .thenReturn(BatchWriteItemResponse.builder().build());
     }
@@ -703,6 +704,40 @@ class InactiveAccountDataExportHandlerTest {
 
         assertEquals(itemCount, response.processedCount());
         assertEquals(itemCount, response.writtenCount());
+    }
+
+    void shouldNotWriteToTrackerTableWhenWriteDisabled() {
+        when(configurationService.isInactiveAccountExportTrackerWriteEnabled()).thenReturn(false);
+        int itemCount = 5;
+        mockScanWithPagination(itemCount, itemCount);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
+
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(itemCount, response.processedCount());
+        assertEquals(itemCount, response.writtenCount());
+
+        verify(client, never()).batchWriteItem(any(BatchWriteItemRequest.class));
+    }
+
+    @Test
+    void shouldStillScanAndProcessWhenWriteDisabled() {
+        when(configurationService.isInactiveAccountExportTrackerWriteEnabled()).thenReturn(false);
+        int itemCount = 10;
+        mockScanWithPagination(itemCount, itemCount);
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
+
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(itemCount, response.processedCount());
+        verify(client, times(1)).batchGetItem(any(BatchGetItemRequest.class));
+        verify(client, never()).batchWriteItem(any(BatchWriteItemRequest.class));
     }
 
     private Map<String, AttributeValue> createItem(int index) {
