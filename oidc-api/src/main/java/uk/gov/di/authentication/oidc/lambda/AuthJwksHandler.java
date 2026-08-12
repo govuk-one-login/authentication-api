@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class AuthJwksHandler
@@ -46,11 +45,6 @@ public class AuthJwksHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(), this::ipvJwksRequestHandler);
-    }
-
-    public APIGatewayProxyResponseEvent ipvJwksRequestHandler() {
         try {
             attachTraceId();
             LOG.info("AuthJwks request received");
@@ -64,10 +58,7 @@ public class AuthJwksHandler
             LOG.info("Generating AuthJwks successful response");
 
             return generateApiGatewayProxyResponse(
-                    200,
-                    segmentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
-                    Map.of("Cache-Control", "max-age=86400"),
-                    null);
+                    200, jwkSet.toString(true), Map.of("Cache-Control", "max-age=86400"), null);
         } catch (Exception e) {
             LOG.error("Error in AuthJwks lambda", e);
             return generateApiGatewayProxyResponse(500, "Error providing AuthJwks data");

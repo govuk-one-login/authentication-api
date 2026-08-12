@@ -19,7 +19,6 @@ import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.entity.AccountInterventionStatus.SUSPENDED_REPROVE_ID;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class EndOfJourneyService {
 
@@ -42,11 +41,8 @@ public class EndOfJourneyService {
 
     public AccountIntervention getIntervention(
             String internalCommonSubjectId, AuditContext auditContext) {
-        return segmentedFunctionCall(
-                "AIS: getAccountIntervention",
-                () ->
-                        accountInterventionService.getAccountIntervention(
-                                internalCommonSubjectId, auditContext));
+        return accountInterventionService.getAccountIntervention(
+                internalCommonSubjectId, auditContext);
     }
 
     public Optional<APIGatewayProxyResponseEvent> getAndCheckForIntervention(

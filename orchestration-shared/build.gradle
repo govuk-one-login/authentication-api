@@ -21,12 +21,11 @@ dependencies {
             libs.awsS3,
             libs.awsSqs,
             libs.awsSsm,
-            platform(libs.xrayBom),
-            libs.bundles.xray,
             libs.awsCloudwatchEmf,
             libs.gson,
             libs.bundles.apache,
             platform(libs.openTelemetryBom),
+            libs.openTelemetryApi,
             libs.openTelemetryAwsSdk,
             libs.openTelemetryJavaHttpClient,
             libs.apacheHttpComponents
@@ -39,7 +38,6 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    environment "TRACING_ENABLED", "false"
 }
 
 java {

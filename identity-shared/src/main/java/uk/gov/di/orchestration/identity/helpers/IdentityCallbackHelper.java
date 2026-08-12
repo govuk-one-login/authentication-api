@@ -20,7 +20,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class IdentityCallbackHelper {
 
@@ -46,8 +45,7 @@ public class IdentityCallbackHelper {
 
     public Optional<APIGatewayProxyResponseEvent> makeTokenRequest(
             String authCode, String clientId, TxmaAuditUser user) {
-        var tokenResponse =
-                segmentedFunctionCall("getToken", () -> identityTokenService.getToken(authCode));
+        var tokenResponse = identityTokenService.getToken(authCode);
         if (!tokenResponse.indicatesSuccess()) {
             auditService.submitAuditEvent(
                     auditEventConfiguration.unsuccessfulTokenResponseReceived(), clientId, user);

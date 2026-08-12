@@ -31,7 +31,6 @@ import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static com.nimbusds.jose.jwk.Curve.P_256;
 import static software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec.ECDSA_SHA_256;
 import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
-import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class JwksService {
     private final ConfigurationService configurationService;
@@ -100,20 +99,14 @@ public class JwksService {
     }
 
     JWK getPublicJWKWithKeyId(String keyId) {
-        var jwk =
-                segmentedFunctionCall(
-                        "createJwk", () -> KEY_CACHE.computeIfAbsent(keyId, this::createJwk));
+        var jwk = KEY_CACHE.computeIfAbsent(keyId, this::createJwk);
 
-        return segmentedFunctionCall(
-                "parseJwk",
-                () -> {
-                    try {
-                        return JWK.parse(jwk.toString());
-                    } catch (java.text.ParseException e) {
-                        LOG.error("Error parsing the public key to JWK", e);
-                        throw new RuntimeException(e);
-                    }
-                });
+        try {
+            return JWK.parse(jwk.toString());
+        } catch (java.text.ParseException e) {
+            LOG.error("Error parsing the public key to JWK", e);
+            throw new RuntimeException(e);
+        }
     }
 
     private JWK createJwk(String keyId) {
