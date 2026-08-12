@@ -195,11 +195,11 @@ Mappings:
       inactiveAccountExportParallelism: "3"
       inactiveAccountExportTotalSegments: "5"
       inactiveAccountExportMaxRetries: "3"
-      inactiveAccountExportMaxItemsPerSegment: "10"
+      inactiveAccountExportMaxItemsPerSegment: "25"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
       inactiveAccountExportTableName: "authdev1-stub-inactive-account-tracker"
       inactiveAccountExportBatchWriteMaxRetries: "3"
-      inactiveAccountExportMaxInvocations: "20"
+      inactiveAccountExportMaxInvocations: "40"
 
     authdev2:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
@@ -236,11 +236,11 @@ Mappings:
       inactiveAccountExportParallelism: "3"
       inactiveAccountExportTotalSegments: "5"
       inactiveAccountExportMaxRetries: "3"
-      inactiveAccountExportMaxItemsPerSegment: "10"
+      inactiveAccountExportMaxItemsPerSegment: "25"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
       inactiveAccountExportTableName: "authdev2-stub-inactive-account-tracker"
       inactiveAccountExportBatchWriteMaxRetries: "3"
-      inactiveAccountExportMaxInvocations: "20"
+      inactiveAccountExportMaxInvocations: "40"
 
     authdev3:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
@@ -277,11 +277,11 @@ Mappings:
       inactiveAccountExportParallelism: "3"
       inactiveAccountExportTotalSegments: "5"
       inactiveAccountExportMaxRetries: "3"
-      inactiveAccountExportMaxItemsPerSegment: "10"
+      inactiveAccountExportMaxItemsPerSegment: "25"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
       inactiveAccountExportTableName: "authdev3-stub-inactive-account-tracker"
       inactiveAccountExportBatchWriteMaxRetries: "3"
-      inactiveAccountExportMaxInvocations: "20"
+      inactiveAccountExportMaxInvocations: "40"
 
     dev:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
@@ -318,11 +318,11 @@ Mappings:
       inactiveAccountExportParallelism: "3"
       inactiveAccountExportTotalSegments: "5"
       inactiveAccountExportMaxRetries: "3"
-      inactiveAccountExportMaxItemsPerSegment: "10"
+      inactiveAccountExportMaxItemsPerSegment: "25"
       inactiveAccountExportPauseBetweenInvocationsMs: "15000"
       inactiveAccountExportTableName: "dev-stub-inactive-account-tracker"
       inactiveAccountExportBatchWriteMaxRetries: "3"
-      inactiveAccountExportMaxInvocations: "20"
+      inactiveAccountExportMaxInvocations: "40"
 
     build:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
