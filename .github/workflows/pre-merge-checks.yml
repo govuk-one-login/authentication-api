@@ -61,6 +61,7 @@ jobs:
         with:
           path: |
             .gradle/
+            !.gradle/configuration-cache/
             */build/
             !*/build/reports
             !*/build/jacoco
@@ -68,6 +69,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-${{ github.event.pull_request.base.sha }}
             ${{ runner.os }}-build-
+      - name: Cache Gradle configuration cache
+        if: needs.check-changed-files.outputs.java_changed == 'true'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .gradle/configuration-cache/
+          key: ${{ runner.os }}-cc-build-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
       - name: Run Build
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: ./gradlew --parallel build -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
