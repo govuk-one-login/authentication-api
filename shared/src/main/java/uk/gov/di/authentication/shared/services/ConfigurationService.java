@@ -272,6 +272,12 @@ public class ConfigurationService
                 System.getenv().getOrDefault("INACTIVE_ACCOUNT_EXPORT_MAX_INVOCATIONS", "0"));
     }
 
+    public boolean isInactiveAccountExportTrackerWriteEnabled() {
+        return System.getenv()
+                .getOrDefault("INACTIVE_ACCOUNT_EXPORT_TRACKER_WRITE_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
     public String getTicfCRILambdaIdentifier() {
         return System.getenv().getOrDefault("TICF_CRI_LAMBDA_IDENTIFIER", "");
     }

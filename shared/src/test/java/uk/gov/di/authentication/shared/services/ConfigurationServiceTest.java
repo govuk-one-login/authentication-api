@@ -229,6 +229,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void isInactiveAccountExportTrackerWriteEnabledShouldDefaultToFalse() {
+        assertFalse(configurationService.isInactiveAccountExportTrackerWriteEnabled());
+    }
+
+    @Test
     void getTicfCRILambdaNameShouldDefault() {
         assertEquals("", configurationService.getTicfCRILambdaIdentifier());
     }
