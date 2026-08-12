@@ -90,7 +90,7 @@ Resources:
 
       Policies:
         - !Ref LambdaBasicExecutionPolicy
-        - !Ref DynamoUserReadAccessPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoCredentialReadAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
         - !Ref InactiveAccountDataExportSelfInvokePolicy

@@ -2,12 +2,16 @@ package uk.gov.di.authentication.utils.helpers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
 
 import java.time.LocalDateTime;
@@ -146,6 +150,35 @@ public class InactiveAccountDataExportHelper {
             return null;
         }
         return LocalDateTime.parse(lastActiveDate).toLocalDate().plusYears(5).toString();
+    }
+
+    public static void ensureSaltPresent(
+            Map<String, AttributeValue> userProfileItem,
+            DynamoDbClient dynamoDbClient,
+            String userProfileTableName) {
+        AttributeValue saltAttr = userProfileItem.get(UserProfile.ATTRIBUTE_SALT);
+        if (saltAttr != null && saltAttr.b() != null && saltAttr.b().asByteArray().length > 0) {
+            return;
+        }
+
+        String email = getStringAttribute(userProfileItem, UserProfile.ATTRIBUTE_EMAIL);
+        LOG.info("Generating salt for email '{}': salt was missing or empty", email);
+
+        byte[] newSalt = SaltHelper.generateNewSalt();
+        dynamoDbClient.updateItem(
+                UpdateItemRequest.builder()
+                        .tableName(userProfileTableName)
+                        .key(Map.of(UserProfile.ATTRIBUTE_EMAIL, AttributeValue.fromS(email)))
+                        .updateExpression("SET #salt = :salt")
+                        .expressionAttributeNames(Map.of("#salt", UserProfile.ATTRIBUTE_SALT))
+                        .expressionAttributeValues(
+                                Map.of(
+                                        ":salt",
+                                        AttributeValue.fromB(SdkBytes.fromByteArray(newSalt))))
+                        .build());
+
+        userProfileItem.put(
+                UserProfile.ATTRIBUTE_SALT, AttributeValue.fromB(SdkBytes.fromByteArray(newSalt)));
     }
 
     public static InactiveAccountTrackerItem buildTrackerItem(

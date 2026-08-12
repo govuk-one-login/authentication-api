@@ -679,6 +679,30 @@ class InactiveAccountDataExportHandlerTest {
         verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
     }
 
+    @Test
+    void shouldGenerateSaltAndWriteItemsWhenSaltIsMissing() {
+        int itemCount = 3;
+        List<ScanResponse> pages =
+                List.of(
+                        ScanResponse.builder()
+                                .items(createItemsWithoutSalt(itemCount))
+                                .count(itemCount)
+                                .scannedCount(itemCount)
+                                .build());
+        AtomicInteger callCount = new AtomicInteger(0);
+        when(client.scan(any(ScanRequest.class)))
+                .thenAnswer(invocation -> pages.get(callCount.getAndIncrement()));
+        mockBatchGetItemWithFullMatch();
+
+        var handler = createHandler();
+        var request = new InactiveAccountDataExportRequest(null, null, null, null);
+
+        var response = handler.handleRequest(request, context);
+
+        assertEquals(itemCount, response.processedCount());
+        assertEquals(itemCount, response.writtenCount());
+    }
+
     private Map<String, AttributeValue> createItem(int index) {
         var profile =
                 new UserProfile()
@@ -691,6 +715,25 @@ class InactiveAccountDataExportHandlerTest {
                         .withTermsAndConditions(
                                 new TermsAndConditions("1.5", "2024-01-15T09:30:00Z"));
         return USER_PROFILE_SCHEMA.itemToMap(profile, true);
+    }
+
+    private List<Map<String, AttributeValue>> createItemsWithoutSalt(int count) {
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+
+        for (int i = 1; i <= count; i++) {
+            var profile =
+                    new UserProfile()
+                            .withEmail("nosalt" + i + "@example.com")
+                            .withCreated("2024-01-15T09:01:02.345678")
+                            .withUpdated("2024-06-20T10:03:04.567890")
+                            .withPublicSubjectID("public-nosalt-" + i)
+                            .withSubjectID("subject-nosalt-" + i)
+                            .withTermsAndConditions(
+                                    new TermsAndConditions("1.5", "2024-01-15T09:30:00Z"));
+            items.add(USER_PROFILE_SCHEMA.itemToMap(profile, true));
+        }
+
+        return items;
     }
 
     private Map<String, AttributeValue> createCredentialItem(String email) {

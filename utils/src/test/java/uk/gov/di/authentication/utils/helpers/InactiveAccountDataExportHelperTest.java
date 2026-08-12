@@ -2,9 +2,12 @@ package uk.gov.di.authentication.utils.helpers;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.BatchGetItemResponse;
 import software.amazon.awssdk.services.dynamodb.model.KeysAndAttributes;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
@@ -18,17 +21,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildCredentialKeys;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.buildTrackerItem;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.calculateDateForDeletion;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.calculateLastActiveDate;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.countMissingCredentials;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.determineHasSetupMfa;
+import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.ensureSaltPresent;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.extractUnprocessedKeys;
 
 class InactiveAccountDataExportHelperTest {
 
     private static final String TABLE_NAME = "test-user-credentials";
+    private static final String USER_PROFILE_TABLE_NAME = "test-user-profile";
+    private static final String INTERNAL_SECTOR_URI = "https://identity.test.account.gov.uk";
+    private final DynamoDbClient dynamoDbClient = mock(DynamoDbClient.class);
 
     @Test
     void buildCredentialKeysShouldExtractEmailKeysFromProfileItems() {
@@ -142,6 +153,56 @@ class InactiveAccountDataExportHelperTest {
     @Test
     void countMissingCredentialsShouldReturnZeroForZeroInputs() {
         assertEquals(0, countMissingCredentials(0, 0));
+    }
+
+    @Nested
+    class EnsureSaltPresentTest {
+
+        @Test
+        void shouldReturnWithoutCallingDynamoWhenSaltAlreadyExists() {
+            Map<String, AttributeValue> profileItem =
+                    Map.of(
+                            UserProfile.ATTRIBUTE_EMAIL,
+                            AttributeValue.builder().s("test@example.com").build(),
+                            UserProfile.ATTRIBUTE_SALT,
+                            AttributeValue.builder()
+                                    .b(SdkBytes.fromByteArray(new byte[] {1, 2, 3}))
+                                    .build());
+
+            ensureSaltPresent(profileItem, dynamoDbClient, USER_PROFILE_TABLE_NAME);
+
+            verify(dynamoDbClient, never()).updateItem(any(UpdateItemRequest.class));
+        }
+
+        @Test
+        void shouldGenerateAndPersistSaltWhenMissing() {
+            Map<String, AttributeValue> profileItem = new HashMap<>();
+            profileItem.put(
+                    UserProfile.ATTRIBUTE_EMAIL,
+                    AttributeValue.builder().s("nosalt@example.com").build());
+
+            ensureSaltPresent(profileItem, dynamoDbClient, USER_PROFILE_TABLE_NAME);
+
+            verify(dynamoDbClient).updateItem(any(UpdateItemRequest.class));
+            assertNotNull(profileItem.get(UserProfile.ATTRIBUTE_SALT));
+            assertTrue(profileItem.get(UserProfile.ATTRIBUTE_SALT).b().asByteArray().length > 0);
+        }
+
+        @Test
+        void shouldGenerateAndPersistSaltWhenEmpty() {
+            Map<String, AttributeValue> profileItem = new HashMap<>();
+            profileItem.put(
+                    UserProfile.ATTRIBUTE_EMAIL,
+                    AttributeValue.builder().s("emptysalt@example.com").build());
+            profileItem.put(
+                    UserProfile.ATTRIBUTE_SALT,
+                    AttributeValue.builder().b(SdkBytes.fromByteArray(new byte[] {})).build());
+
+            ensureSaltPresent(profileItem, dynamoDbClient, USER_PROFILE_TABLE_NAME);
+
+            verify(dynamoDbClient).updateItem(any(UpdateItemRequest.class));
+            assertTrue(profileItem.get(UserProfile.ATTRIBUTE_SALT).b().asByteArray().length > 0);
+        }
     }
 
     @Test
