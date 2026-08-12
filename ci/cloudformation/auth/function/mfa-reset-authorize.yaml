@@ -65,16 +65,7 @@ Resources:
             - "{{resolve:secretsmanager:/deploy/${env}/auth_internal_api_to_ipv_public_encryption_key}}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: !Sub
-            - arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${env}-ipv_reverification_request_signing_key
-            - DataStoreAccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  dataStoreAccountId,
-                ]
-              env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:${IpvReverificationRequestSigningKeyAlias}"
           MFA_RESET_CALLBACK_URI: !Sub
             - "${BaseUrl}/ipv/callback/authorize"
             - BaseUrl:
