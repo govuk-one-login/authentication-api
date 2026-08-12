@@ -927,3 +927,4 @@ public class ConfigurationService
                 .equals(FEATURE_SWITCH_ON);
     }
 }
+// validate cc fix
