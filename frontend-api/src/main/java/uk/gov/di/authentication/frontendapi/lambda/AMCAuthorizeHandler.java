@@ -169,6 +169,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         var state = new State();
         dynamoAmcStateService.store(state.getValue(), userContext.getClientSessionId());
 
+        LOG.info("test again");
+
         Result<AMCFailureReason, AMCAuthorizationUrlAndCookie> result =
                 getAMCPublicEncryptionKey()
                         .flatMap(
