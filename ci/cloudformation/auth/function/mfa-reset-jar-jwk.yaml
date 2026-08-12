@@ -11,7 +11,8 @@ Resources:
       Handler: uk.gov.di.authentication.frontendapi.lambda.MfaResetJarJwkHandler::handleRequest
       Environment:
         Variables:
-          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: !Sub
+          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:${IpvReverificationRequestSigningKeyAlias}"
+          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS: !Sub
             - arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${env}-ipv_reverification_request_signing_key
             - DataStoreAccountId:
                 !FindInMap [
