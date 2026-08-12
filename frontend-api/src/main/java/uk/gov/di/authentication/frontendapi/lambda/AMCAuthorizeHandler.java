@@ -162,6 +162,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                     400, ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED);
         }
 
+        LOG.info("testy test test");
+
         List<AccessTokenConfig> accessTokenConfigsForJourneyType =
                 request.amcJourneyType().getAccessTokenConfigs(configurationService);
         TransportJWTConfig transportJwtConfig =
