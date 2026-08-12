@@ -120,7 +120,7 @@ Resources:
               EnvironmentConfiguration,
               !Ref Environment,
               lambdaLogAlarmThreshold,
-              DefaultValue: 10,
+              DefaultValue: 20,
             ]
           Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           RunbookLink:
