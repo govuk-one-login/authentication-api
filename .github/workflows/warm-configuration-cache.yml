@@ -16,7 +16,7 @@ on:
       - "gradle/wrapper/gradle-wrapper.properties"
 
 jobs:
-  warm-style-checks:
+  style-checks:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -36,7 +36,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-style-checks-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-unit-tests:
+  run-unit-tests:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -56,7 +56,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-unit-tests-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-integration-api:
+  run-integration-tests-api:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -76,7 +76,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-integration-api-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-integration-services:
+  run-integration-tests-services:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -96,7 +96,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-integration-services-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-integration-orchestration:
+  run-integration-tests-orchestration:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -116,7 +116,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-integration-orchestration-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-integration-utils:
+  run-integration-tests-utils:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -136,7 +136,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-integration-utils-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-integration-account-mgmt:
+  run-account-management-and-delivery-receipts-tests:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -158,7 +158,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-integration-account-mgmt-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-integration-account-data:
+  run-account-data-api-integration-tests:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -178,7 +178,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-integration-account-data-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-sonar:
+  run-sonar-analysis:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -198,7 +198,7 @@ jobs:
           path: .gradle/configuration-cache/
           key: ${{ runner.os }}-cc-sonar-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
 
-  warm-sonar-on-merge:
+  run-code-analysis:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
