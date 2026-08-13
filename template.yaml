@@ -5220,6 +5220,17 @@ Resources:
       Tags:
         CheckovRulesToSkip: CKV_AWS_115.CKV_AWS_116.CKV_AWS_173
 
+  SISCallbackFunctionOrchestrationApiPermission:
+    Type: AWS::Lambda::Permission
+    Condition: ProvisionNewApiGateway
+    Properties:
+      FunctionName: !Ref SISCallbackFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - "arn:aws:execute-api:eu-west-2:${AWS::AccountId}:${ApiId}/*/GET/sis-callback"
+        - ApiId: !Ref OrchestrationOidcApi
+
   SISCallbackFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:

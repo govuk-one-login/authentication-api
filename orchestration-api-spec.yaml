@@ -12,6 +12,15 @@ paths:
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
         type: "aws_proxy"
+  /sis-callback:
+    get:
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SISCallbackFunction.Arn}:latest/invocations"
+        httpMethod: "POST"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+        type: "aws_proxy"
   /trustmark:
     get:
       x-amazon-apigateway-integration:
