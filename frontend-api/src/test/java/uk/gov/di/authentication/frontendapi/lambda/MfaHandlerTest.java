@@ -509,14 +509,7 @@ class MfaHandlerTest {
 
         assertThat(result, hasStatus(400));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.AUTH_MFA_MISMATCHED_EMAIL,
-                        AUDIT_CONTEXT
-                                .withEmail("wrong.email@gov.uk")
-                                .withPhoneNumber(AuditService.UNKNOWN),
-                        pair("journey-type", JourneyType.SIGN_IN),
-                        pair("mfa-type", NotificationType.MFA_SMS.getMfaMethodType().getValue()));
+        verifyNoInteractions(auditService);
     }
 
     @Test
