@@ -49,7 +49,6 @@ import java.util.Optional;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_INVALID_CODE_REQUEST;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_MISMATCHED_EMAIL;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_MFA_MISSING_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_MFA_METHOD;
@@ -195,9 +194,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             if (!userContext.getAuthSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
-                auditService.submitAuditEvent(
-                        AUTH_MFA_MISMATCHED_EMAIL, auditContext, journeyTypePair, mfaTypePair);
-
                 return generateApiGatewayProxyErrorResponse(400, SESSION_ID_MISSING);
             }
 
