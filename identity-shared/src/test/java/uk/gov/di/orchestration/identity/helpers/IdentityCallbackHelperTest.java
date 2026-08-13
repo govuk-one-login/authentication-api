@@ -243,7 +243,7 @@ public class IdentityCallbackHelperTest {
                 throws IdentityCallbackException {
             var userInfo = new UserInfo(SUBJECT);
             userInfo.setClaim("vot", LevelOfConfidence.MEDIUM_LEVEL.getValue());
-            userInfo.setClaim("vtm", TRUSTMARK_URI);
+            userInfo.setClaim("vtm", TRUSTMARK_URI.toString());
 
             var result =
                     helper.validateUserIdentityResponse(

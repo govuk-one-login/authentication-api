@@ -77,8 +77,9 @@ public class IdentityCallbackHelper {
         LOG.info("Validating userinfo response");
         for (LevelOfConfidence loc : locList) {
             if (loc.getValue().equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
+                var trustmarkURL = oidcAPI.trustmarkURI().toString();
 
-                if (!oidcAPI.trustmarkURI().equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+                if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
                     LOG.warn("VTM does not contain expected trustmark URL");
                     throw new IdentityCallbackException("Identity trustmark is invalid");
                 }
