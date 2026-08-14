@@ -39,6 +39,11 @@ class InactiveAccountDataExportBatchWriteServiceTest {
         return new InactiveAccountDataExportBatchWriteService(client, TABLE_NAME, MAX_RETRIES);
     }
 
+    private InactiveAccountDataExportBatchWriteService createDryRunService() {
+        return new InactiveAccountDataExportBatchWriteService(
+                client, TABLE_NAME, MAX_RETRIES, true);
+    }
+
     @Test
     void shouldFlushAutomaticallyAtBatchSize() {
         var service = createService();
@@ -195,5 +200,69 @@ class InactiveAccountDataExportBatchWriteServiceTest {
                 .withCommonSubjectId("subject-" + index)
                 .withPublicSubjectId("public-subject-" + index)
                 .withEmailAddress("user" + index + "@example.com");
+    }
+
+    @Test
+    void shouldNotCallDynamoDbWhenDryRunEnabled() {
+        var service = createDryRunService();
+
+        for (int i = 0; i < BATCH_WRITE_ITEM_MAX_SIZE; i++) {
+            service.add(createTrackerItem(i));
+        }
+
+        verify(client, never()).batchWriteItem(any(BatchWriteItemRequest.class));
+    }
+
+    @Test
+    void shouldTrackWrittenCountInDryRunMode() {
+        var service = createDryRunService();
+
+        for (int i = 0; i < BATCH_WRITE_ITEM_MAX_SIZE; i++) {
+            service.add(createTrackerItem(i));
+        }
+
+        assertEquals(BATCH_WRITE_ITEM_MAX_SIZE, service.getTotalWritten());
+        assertEquals(1, service.getTotalBatchesFlushed());
+    }
+
+    @Test
+    void shouldFlushRemainingInDryRunMode() {
+        var service = createDryRunService();
+        int itemCount = 10;
+
+        for (int i = 0; i < itemCount; i++) {
+            service.add(createTrackerItem(i));
+        }
+        service.flushRemaining();
+
+        verify(client, never()).batchWriteItem(any(BatchWriteItemRequest.class));
+        assertEquals(itemCount, service.getTotalWritten());
+        assertEquals(1, service.getTotalBatchesFlushed());
+    }
+
+    @Test
+    void shouldTrackMultipleBatchesInDryRunMode() {
+        var service = createDryRunService();
+        int totalItems = BATCH_WRITE_ITEM_MAX_SIZE * 3;
+
+        for (int i = 0; i < totalItems; i++) {
+            service.add(createTrackerItem(i));
+        }
+
+        verify(client, never()).batchWriteItem(any(BatchWriteItemRequest.class));
+        assertEquals(totalItems, service.getTotalWritten());
+        assertEquals(3, service.getTotalBatchesFlushed());
+    }
+
+    @Test
+    void shouldReportZeroFailedInDryRunMode() {
+        var service = createDryRunService();
+
+        for (int i = 0; i < BATCH_WRITE_ITEM_MAX_SIZE + 5; i++) {
+            service.add(createTrackerItem(i));
+        }
+        service.flushRemaining();
+
+        assertEquals(0, service.getTotalFailed());
     }
 }
