@@ -402,16 +402,16 @@ Mappings:
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
-      inactiveAccountExportParallelism: "20"
-      inactiveAccountExportTotalSegments: "150"
-      inactiveAccountExportMaxRetries: "3"
-      inactiveAccountExportMaxItemsPerSegment: "2500"
+      inactiveAccountExportParallelism: "5"
+      inactiveAccountExportTotalSegments: "125"
+      inactiveAccountExportMaxRetries: "7"
+      inactiveAccountExportMaxItemsPerSegment: "2000"
       inactiveAccountExportPauseBetweenInvocationsMs: "60000"
       inactiveAccountExportTableAccountId: "539729775994"
       inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:539729775994:key/5191526d-1c85-4316-baf7-9fbe373880cf
       inactiveAccountExportTableName: "inactive_account_tracker_store"
       inactiveAccountExportBatchWriteMaxRetries: "3"
-      inactiveAccountExportMaxInvocations: "25"
+      inactiveAccountExportMaxInvocations: "75"
       inactiveAccountExportTrackerWriteEnabled: "true"
 
     integration:
