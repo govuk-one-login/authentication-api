@@ -412,7 +412,7 @@ Mappings:
       inactiveAccountExportTableName: "inactive_account_tracker_store"
       inactiveAccountExportBatchWriteMaxRetries: "3"
       inactiveAccountExportMaxInvocations: "25"
-      inactiveAccountExportTrackerWriteEnabled: "false"
+      inactiveAccountExportTrackerWriteEnabled: "true"
 
     integration:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
