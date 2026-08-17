@@ -2,6 +2,8 @@ package uk.gov.di.authentication.oidc.validators;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.jwt.proc.BadJWTException;
+import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.langtag.LangTagException;
 import com.nimbusds.langtag.LangTagUtils;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -18,6 +20,7 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
 import uk.gov.di.orchestration.shared.exceptions.ClientSignatureValidationException;
 import uk.gov.di.orchestration.shared.exceptions.JwksException;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ClientSignatureValidationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -30,6 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
 import static java.util.Collections.emptyList;
@@ -43,19 +47,27 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
     private final OidcAPI oidcApi;
     private final ClientSignatureValidationService clientSignatureValidationService;
+    private final DefaultJWTClaimsVerifier<?> claimsVerifier;
 
     public RequestObjectAuthorizeValidator(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService,
             OidcAPI oidcApi,
-            ClientSignatureValidationService clientSignatureValidationService) {
+            ClientSignatureValidationService clientSignatureValidationService,
+            NowHelper.NowClock clock) {
         super(configurationService, dynamoClientService, ipvCapacityService);
         this.clientSignatureValidationService = clientSignatureValidationService;
         this.oidcApi = oidcApi;
+
+        // Currently we do not use this to exact match the JWT claims
+        // or assert certain claims are present. This just validates the
+        // time based nbf and exp claims
+        this.claimsVerifier = defaultJWTClaimsVerifier(null, null, clock);
     }
 
-    public RequestObjectAuthorizeValidator(ConfigurationService configurationService) {
+    public RequestObjectAuthorizeValidator(
+            ConfigurationService configurationService, NowHelper.NowClock clock) {
         super(
                 configurationService,
                 new DynamoClientService(configurationService),
@@ -63,6 +75,11 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         this.oidcApi = new OidcAPI(configurationService);
         this.clientSignatureValidationService =
                 new ClientSignatureValidationService(configurationService);
+
+        // Currently we do not use this to exact match the JWT claims
+        // or assert certain claims are present. This just validates the
+        // time based nbf and exp claims
+        this.claimsVerifier = defaultJWTClaimsVerifier(null, null, clock);
     }
 
     @Override
@@ -88,21 +105,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         try {
             var jwtClaimsSet = authRequest.getRequestObject().getJWTClaimsSet();
 
-            var expiration = jwtClaimsSet.getExpirationTime();
-            if (Objects.isNull(expiration)) {
-                LOG.info("Request object JWT does not have an expiry date");
-            } else {
-                long now = System.currentTimeMillis();
-                if (expiration.getTime() < now) {
-                    long expiredBySeconds = (now - expiration.getTime()) / 1000;
-                    LOG.warn(
-                            "Request object JWT has expired. Expiry: {}, expired by {} seconds",
-                            expiration,
-                            expiredBySeconds);
-                } else {
-                    LOG.info("Request object JWT has a valid expiry date. Expiry: {}", expiration);
-                }
-            }
+            validateTimestampClaims(jwtClaimsSet);
 
             if (jwtClaimsSet.getStringClaim("redirect_uri") == null
                     || !client.getRedirectUrls()
@@ -365,5 +368,27 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
     private static Optional<AuthRequestError> errorResponse(
             URI uri, ErrorObject error, State state) {
         return Optional.of(new AuthRequestError(error, uri, state));
+    }
+
+    private void validateTimestampClaims(JWTClaimsSet jwtClaimsSet) {
+        try {
+            claimsVerifier.verify(jwtClaimsSet, null);
+        } catch (BadJWTException e) {
+            LOG.warn("Error validating time based claims in request object: {}", e.getMessage());
+            // ATO-2769: Throw InvalidAuthorizeRequestException here once we've checked logging
+        }
+    }
+
+    private DefaultJWTClaimsVerifier<?> defaultJWTClaimsVerifier(
+            JWTClaimsSet exactMatchClaims, Set<String> requiredClaims, NowHelper.NowClock clock) {
+        var cv =
+                new DefaultJWTClaimsVerifier<>(exactMatchClaims, requiredClaims) {
+                    @Override
+                    protected java.util.Date currentTime() {
+                        return clock.now();
+                    }
+                };
+        cv.setMaxClockSkew(30);
+        return cv;
     }
 }
