@@ -565,6 +565,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getInactiveAccountDeletionClientIdShouldDefaultToEmptyString() {
+        assertEquals("", configurationService.getInactiveAccountDeletionClientId());
+    }
+
+    @Test
     void getMfaResetCallbackURIShouldDefault() {
         assertEquals(URI.create(""), configurationService.getMfaResetCallbackURI());
     }

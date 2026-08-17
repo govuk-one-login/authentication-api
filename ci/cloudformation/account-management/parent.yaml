@@ -313,6 +313,7 @@ Mappings:
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: rjlo8fsb55
+      inactiveAccountDeletionClientId: inactive-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -350,6 +351,7 @@ Mappings:
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: ez2ro7vca7
+      inactiveAccountDeletionClientId: inactive-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -387,6 +389,7 @@ Mappings:
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 5ctgxqnq37
+      inactiveAccountDeletionClientId: inactive-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -431,6 +434,7 @@ Mappings:
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 0aqzty84lj
+      inactiveAccountDeletionClientId: inactive-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -477,6 +481,7 @@ Mappings:
       testSigningKeyEnabled: true
       accessTokenJwksUrl: https://oidc.build.account.gov.uk/.well-known/jwks.json
       accountDataApiId: ac3znt5m23
+      inactiveAccountDeletionClientId: inactive-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -524,6 +529,7 @@ Mappings:
       legacyAccountDeletionTopicKmsKeyArn: arn:aws:kms:eu-west-2:539729775994:key/d33e9077-8d66-4f63-99a1-f90e29b4aabe
       accessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 7xgl7lexy4
+      inactiveAccountDeletionClientId: inactive-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -572,6 +578,7 @@ Mappings:
       testSigningKeyEnabled: false
       accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
       accountDataApiId: hoidt6wujb
+      inactiveAccountDeletionClientId: inactive-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -620,6 +627,7 @@ Mappings:
       testSigningKeyEnabled: false
       accessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 0218o1p9tj
+      inactiveAccountDeletionClientId: inactive-account-deletion
       argon2MemoryInKibibytes: "15360"
       argon2Iterations: "2"
       argon2Parallelism: "1"

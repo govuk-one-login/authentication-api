@@ -142,8 +142,7 @@ class AccessTokenConstructorServiceTest {
     }
 
     @Test
-    void shouldCreateAccessTokenWithoutSidClaimWhenSessionIdIsEmpty()
-            throws ParseException, JOSEException {
+    void shouldCreateAccessTokenWithoutSidClaimWhenSessionIdIsEmpty() throws ParseException {
         var result =
                 accessTokenConstructorService.createSignedAccessToken(
                         PUBLIC_SUBJECT_ID,

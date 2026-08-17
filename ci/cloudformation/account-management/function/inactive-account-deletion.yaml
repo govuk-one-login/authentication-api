@@ -16,6 +16,12 @@ Resources:
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          INACTIVE_ACCOUNT_DELETION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              inactiveAccountDeletionClientId,
+            ]
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
       Policies:
