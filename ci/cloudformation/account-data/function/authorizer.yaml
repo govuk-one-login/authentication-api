@@ -41,6 +41,12 @@ Resources:
               amcClientId,
             ]
           HOME_CLIENT_ID: "home"
+          INACTIVE_ACCOUNT_DELETION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              inactiveAccountDeletionClientId,
+            ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:
