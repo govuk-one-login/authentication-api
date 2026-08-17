@@ -652,6 +652,8 @@ Mappings:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
     reverification-result:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
+    inactive-account-deletion-queue-processor:
+      RunbookLink: "https://govukverify.atlassian.net/wiki/x/1QAJmwE"
     ticf-cri:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/UzdQFFH1"
 
