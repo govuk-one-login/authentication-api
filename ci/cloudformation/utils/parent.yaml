@@ -490,16 +490,16 @@ Mappings:
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
-      inactiveAccountExportParallelism: "200"
-      inactiveAccountExportTotalSegments: "200"
-      inactiveAccountExportMaxRetries: "3"
-      inactiveAccountExportMaxItemsPerSegment: "7500"
+      inactiveAccountExportParallelism: "5"
+      inactiveAccountExportTotalSegments: "125"
+      inactiveAccountExportMaxRetries: "7"
+      inactiveAccountExportMaxItemsPerSegment: "2000"
       inactiveAccountExportPauseBetweenInvocationsMs: "60000"
       inactiveAccountExportTableAccountId: "026991849909"
       inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:026991849909:key/5489c67b-2c14-4b76-b6a3-a25148b14311
       inactiveAccountExportTableName: "inactive_account_tracker_store"
-      inactiveAccountExportBatchWriteMaxRetries: "3"
-      inactiveAccountExportMaxInvocations: "0"
+      inactiveAccountExportBatchWriteMaxRetries: "7"
+      inactiveAccountExportMaxInvocations: "150"
       inactiveAccountExportTrackerWriteEnabled: "false"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
