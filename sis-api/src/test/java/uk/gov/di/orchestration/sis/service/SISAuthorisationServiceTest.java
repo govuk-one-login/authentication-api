@@ -28,6 +28,7 @@ import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
@@ -99,6 +100,7 @@ class SISAuthorisationServiceTest {
             mock(CrossBrowserOrchestrationService.class);
     private final JwksCacheService jwksCacheService = mock(JwksCacheService.class);
     private final OrchJwtService orchJwtService = mock(OrchJwtService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private SISAuthorisationService authorisationService;
 
     private RSAPublicKey publicEncKey;
@@ -136,6 +138,7 @@ class SISAuthorisationServiceTest {
                         crossBrowserOrchestrationService,
                         jwksCacheService,
                         orchJwtService,
+                        auditService,
                         new NowHelper.NowClock(Clock.fixed(NOW, ZoneOffset.UTC)));
     }
 
@@ -158,7 +161,10 @@ class SISAuthorisationServiceTest {
                                             SESSION_ID,
                                             CLIENT_SESSION_ID,
                                             false,
-                                            LEVELS_OF_CONFIDENCE),
+                                            LEVELS_OF_CONFIDENCE,
+                                            "123.123.123.123",
+                                            "test-psid",
+                                            "http://test-landing-page"),
                             "Expected to throw exception");
 
             assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
@@ -229,7 +235,10 @@ class SISAuthorisationServiceTest {
                             SESSION_ID,
                             CLIENT_SESSION_ID,
                             false,
-                            LEVELS_OF_CONFIDENCE);
+                            LEVELS_OF_CONFIDENCE,
+                            "123.123.123.123",
+                            "test-psid",
+                            "http://test-landing-page");
             assertThat(response, hasStatus(302));
             String redirectLocation = response.getHeaders().get("Location");
             assertThat(redirectLocation, startsWith(SIS_AUTHORISATION_URI.toString()));
