@@ -97,6 +97,7 @@ import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
 import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
+import uk.gov.di.orchestration.sis.service.SISAuthorisationService;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -170,6 +171,8 @@ class AuthenticationCallbackHandlerTest {
     private static final LogoutService logoutService = mock(LogoutService.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final AuthFrontend authFrontend = mock(AuthFrontend.class);
+    private final SISAuthorisationService sisAuthorisationService =
+            mock(SISAuthorisationService.class);
     private static final String TEST_FRONTEND_BASE_URI = "http://example.com";
     private static final String TEST_FRONTEND_LOGIN_URI = "http://example.com/login";
     private static final String TEST_FRONTEND_ERROR_URI = "http://example.com/error";
@@ -303,7 +306,8 @@ class AuthenticationCallbackHandlerTest {
                         accountInterventionService,
                         logoutService,
                         authFrontend,
-                        CROSS_BROWSER_ORCHESTRATION_SERVICE);
+                        CROSS_BROWSER_ORCHESTRATION_SERVICE,
+                        sisAuthorisationService);
         orchSession.resetClientSessions();
     }
 
