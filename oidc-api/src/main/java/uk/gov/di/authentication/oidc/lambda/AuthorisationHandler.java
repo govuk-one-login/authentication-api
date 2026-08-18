@@ -261,15 +261,7 @@ public class AuthorisationHandler
 
         AuthenticationRequest authRequest;
         try {
-            Map<String, String> parameterMap = input.getQueryStringParameters();
-            Map<String, List<String>> requestParameters =
-                    parameterMap.entrySet().stream()
-                            .collect(
-                                    Collectors.toMap(
-                                            Map.Entry::getKey, entry -> List.of(entry.getValue())));
-            authRequest = AuthenticationRequest.parse(requestParameters);
-            authRequest = stripOutReauthenticateQueryParams(authRequest);
-            authRequest = stripOutLoginHintQueryParams(authRequest);
+            authRequest = parseRequest(input);
         } catch (ParseException e) {
             LOG.warn("Authentication request could not be parsed", e);
             return generateParseExceptionResponse(e, user);
@@ -493,6 +485,21 @@ public class AuthorisationHandler
                     String.format(
                             "Authentication request does not support %s requests", usedHttpMethod));
         }
+    }
+
+    private AuthenticationRequest parseRequest(APIGatewayProxyRequestEvent input)
+            throws ParseException {
+        AuthenticationRequest authRequest;
+        Map<String, String> parameterMap = input.getQueryStringParameters();
+        Map<String, List<String>> requestParameters =
+                parameterMap.entrySet().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        Map.Entry::getKey, entry -> List.of(entry.getValue())));
+        authRequest = AuthenticationRequest.parse(requestParameters);
+        authRequest = stripOutReauthenticateQueryParams(authRequest);
+        authRequest = stripOutLoginHintQueryParams(authRequest);
+        return authRequest;
     }
 
     private void sendAuthRequestParsedAuditEvent(
