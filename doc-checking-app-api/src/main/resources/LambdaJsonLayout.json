@@ -91,5 +91,13 @@
   "jwt-id": {
     "$resolver": "mdc",
     "key": "jti"
+  },
+  "ip-address": {
+    "$resolver": "mdc",
+    "key": "ipAddress"
+  },
+  "user-agent": {
+    "$resolver": "mdc",
+    "key": "userAgent"
   }
 }

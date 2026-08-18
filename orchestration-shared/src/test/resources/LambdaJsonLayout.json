@@ -87,5 +87,13 @@
   "trace-id": {
     "$resolver": "mdc",
     "key": "dt.trace_id"
+  },
+  "ip-address": {
+    "$resolver": "mdc",
+    "key": "ipAddress"
+  },
+  "user-agent": {
+    "$resolver": "mdc",
+    "key": "userAgent"
   }
 }
