@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachIpAddressAndUserAgentToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachTraceId;
 
 public class IpvJwksHandler
@@ -43,6 +44,7 @@ public class IpvJwksHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        attachIpAddressAndUserAgentToLogs(input);
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(), this::ipvJwksRequestHandler);
     }
