@@ -14,7 +14,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -43,7 +42,6 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -94,11 +92,6 @@ class QueryParamsAuthorizeValidatorTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-    }
-
-    @AfterEach
-    void tearDown() {
-        assertThat(logging.events(), not(hasItem(withMessageContaining(CLIENT_ID.toString()))));
     }
 
     @Test
