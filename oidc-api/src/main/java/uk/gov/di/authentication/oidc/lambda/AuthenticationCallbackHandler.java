@@ -60,20 +60,24 @@ import uk.gov.di.orchestration.shared.services.ClientService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.JwksCacheService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.Metrics;
 import uk.gov.di.orchestration.shared.services.OrchAccessTokenService;
 import uk.gov.di.orchestration.shared.services.OrchAuthCodeService;
 import uk.gov.di.orchestration.shared.services.OrchClientSessionService;
+import uk.gov.di.orchestration.shared.services.OrchJwtService;
 import uk.gov.di.orchestration.shared.services.OrchRefreshTokenService;
 import uk.gov.di.orchestration.shared.services.OrchSessionService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.StateStorageService;
 import uk.gov.di.orchestration.shared.services.TokenService;
+import uk.gov.di.orchestration.sis.service.SISAuthorisationService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -125,6 +129,7 @@ public class AuthenticationCallbackHandler
     private final LogoutService logoutService;
     private final AuthFrontend authFrontend;
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
+    private final SISAuthorisationService sisAuthorisationService;
 
     public AuthenticationCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -149,7 +154,13 @@ public class AuthenticationCallbackHandler
         this.metrics = new Metrics(configurationService);
         this.orchAuthCodeService = new OrchAuthCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
-
+        var tokenService =
+                new TokenService(
+                        configurationService,
+                        kmsConnectionService,
+                        orchAccessTokenService,
+                        orchRefreshTokenService,
+                        oidcApi);
         this.initiateIPVAuthorisationService =
                 new InitiateIPVAuthorisationService(
                         configurationService,
@@ -157,18 +168,23 @@ public class AuthenticationCallbackHandler
                         new IPVAuthorisationService(configurationService),
                         metrics,
                         new CrossBrowserOrchestrationService(configurationService),
-                        new TokenService(
-                                configurationService,
-                                kmsConnectionService,
-                                orchAccessTokenService,
-                                orchRefreshTokenService,
-                                oidcApi));
+                        tokenService);
         this.accountInterventionService =
                 new AccountInterventionService(configurationService, metrics, auditService);
         this.logoutService = new LogoutService(configurationService);
         this.authFrontend = new AuthFrontend(configurationService);
         this.crossBrowserOrchestrationService =
                 new CrossBrowserOrchestrationService(configurationService);
+        this.sisAuthorisationService =
+                new SISAuthorisationService(
+                        configurationService,
+                        tokenService,
+                        stateStorageService,
+                        crossBrowserOrchestrationService,
+                        new JwksCacheService(configurationService),
+                        new OrchJwtService(configurationService),
+                        auditService,
+                        new NowHelper.NowClock(Clock.systemUTC()));
     }
 
     public AuthenticationCallbackHandler(
@@ -188,7 +204,8 @@ public class AuthenticationCallbackHandler
             AccountInterventionService accountInterventionService,
             LogoutService logoutService,
             AuthFrontend authFrontend,
-            CrossBrowserOrchestrationService crossBrowserOrchestrationService) {
+            CrossBrowserOrchestrationService crossBrowserOrchestrationService,
+            SISAuthorisationService sisAuthorisationService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -206,6 +223,7 @@ public class AuthenticationCallbackHandler
         this.logoutService = logoutService;
         this.authFrontend = authFrontend;
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
+        this.sisAuthorisationService = sisAuthorisationService;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -502,19 +520,34 @@ public class AuthenticationCallbackHandler
                 }
 
                 if (identityRequired) {
-                    return initiateIPVAuthorisationService.sendRequestToIPV(
-                            input,
-                            authenticationRequest,
-                            userInfo,
-                            sessionId,
-                            client,
-                            clientId,
-                            clientSessionId,
-                            persistentSessionId,
-                            reproveIdentity,
-                            VectorOfTrust.getRequestedLevelsOfConfidence(
-                                    orchClientSession.getVtrList()),
-                            false);
+                    if (configurationService.isSisEnabled()) {
+                        return sisAuthorisationService.sendRequest(
+                                authenticationRequest,
+                                userInfo,
+                                clientId,
+                                sessionId,
+                                clientSessionId,
+                                reproveIdentity,
+                                VectorOfTrust.getRequestedLevelsOfConfidence(
+                                        orchClientSession.getVtrList()),
+                                IpAddressHelper.extractIpAddress(input),
+                                persistentSessionId,
+                                client.getLandingPageUrl());
+                    } else {
+                        return initiateIPVAuthorisationService.sendRequestToIPV(
+                                input,
+                                authenticationRequest,
+                                userInfo,
+                                sessionId,
+                                client,
+                                clientId,
+                                clientSessionId,
+                                persistentSessionId,
+                                reproveIdentity,
+                                VectorOfTrust.getRequestedLevelsOfConfidence(
+                                        orchClientSession.getVtrList()),
+                                false);
+                    }
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
