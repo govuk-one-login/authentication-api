@@ -135,7 +135,7 @@ class RequestObjectAuthorizeValidatorTest {
 
         @RegisterExtension
         public final CaptureLoggingExtension loggingExtension =
-                new CaptureLoggingExtension(RequestObjectAuthorizeValidatorTest.class);
+                new CaptureLoggingExtension(RequestObjectAuthorizeValidator.class);
 
         @Test
         void shouldSuccessfullyValidateWhenVtrIsPresentAndVtrIsPermittedForClient()
