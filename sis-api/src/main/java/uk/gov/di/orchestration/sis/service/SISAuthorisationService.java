@@ -16,9 +16,11 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.CrossBrowserOrchestrationService;
 import uk.gov.di.orchestration.shared.services.JwksCacheService;
@@ -38,6 +40,8 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RsaKeyHelper.getRsaPublicKeyFromJwksCacheItem;
+import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.sis.domain.SISAuditableEvent.ORCH_SIS_AUTHORISATION_REQUESTED;
 
 public class SISAuthorisationService {
     private static final String STATE_STORAGE_PREFIX = "sis-state:";
@@ -49,6 +53,7 @@ public class SISAuthorisationService {
     private final CrossBrowserOrchestrationService crossBrowserOrchestrationService;
     private final JwksCacheService jwksCacheService;
     private final OrchJwtService orchJwtService;
+    private final AuditService auditService;
     private final NowHelper.NowClock nowClock;
 
     public SISAuthorisationService(
@@ -58,6 +63,7 @@ public class SISAuthorisationService {
             CrossBrowserOrchestrationService crossBrowserOrchestrationService,
             JwksCacheService jwksCacheService,
             OrchJwtService orchJwtService,
+            AuditService auditService,
             NowHelper.NowClock nowClock) {
         this.configurationService = configurationService;
         this.tokenService = tokenService;
@@ -65,6 +71,7 @@ public class SISAuthorisationService {
         this.crossBrowserOrchestrationService = crossBrowserOrchestrationService;
         this.jwksCacheService = jwksCacheService;
         this.orchJwtService = orchJwtService;
+        this.auditService = auditService;
         this.nowClock = nowClock;
     }
 
@@ -75,7 +82,10 @@ public class SISAuthorisationService {
             String sessionId,
             String clientSessionId,
             Boolean reproveIdentity,
-            List<String> levelsOfConfidence) {
+            List<String> levelsOfConfidence,
+            String ipAddress,
+            String persistentSessionCookieId,
+            String landingPageUrl) {
         if (!configurationService.isIdentityEnabled()) {
             LOG.error("Identity is not enabled");
             throw new RuntimeException("Identity is not enabled");
@@ -109,7 +119,20 @@ public class SISAuthorisationService {
                         .build();
         stateStorageService.storeState(STATE_STORAGE_PREFIX + sessionId, state.getValue());
         crossBrowserOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
-        // TODO: Add audit events
+        var rpPairwiseId = userInfo.getClaim("rp_pairwise_id");
+
+        auditService.submitAuditEventNoPrefix(
+                ORCH_SIS_AUTHORISATION_REQUESTED,
+                rpClientID,
+                TxmaAuditUser.user()
+                        .withGovukSigninJourneyId(clientSessionId)
+                        .withSessionId(sessionId)
+                        .withUserId(internalCommonSubjectId.getValue())
+                        .withEmail(userInfo.getEmailAddress())
+                        .withIpAddress(ipAddress)
+                        .withPersistentSessionId(persistentSessionCookieId),
+                pair("clientLandingPageUrl", landingPageUrl),
+                pair("rpPairwiseId", rpPairwiseId));
         // TODO: Add cloudwatch metric for SISHandoff
         LOG.info(
                 "Successfully processed SIS authorisation request, redirect URI {}",

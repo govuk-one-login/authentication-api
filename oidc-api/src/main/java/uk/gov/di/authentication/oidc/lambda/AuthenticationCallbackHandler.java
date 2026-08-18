@@ -183,6 +183,7 @@ public class AuthenticationCallbackHandler
                         crossBrowserOrchestrationService,
                         new JwksCacheService(configurationService),
                         new OrchJwtService(configurationService),
+                        auditService,
                         new NowHelper.NowClock(Clock.systemUTC()));
     }
 
@@ -520,7 +521,6 @@ public class AuthenticationCallbackHandler
 
                 if (identityRequired) {
                     if (configurationService.isSisEnabled()) {
-                        // TODO send ORCH_SIS_AUTHORISATION_REQUESTED
                         return sisAuthorisationService.sendRequest(
                                 authenticationRequest,
                                 userInfo,
@@ -529,7 +529,10 @@ public class AuthenticationCallbackHandler
                                 clientSessionId,
                                 reproveIdentity,
                                 VectorOfTrust.getRequestedLevelsOfConfidence(
-                                        orchClientSession.getVtrList()));
+                                        orchClientSession.getVtrList()),
+                                IpAddressHelper.extractIpAddress(input),
+                                persistentSessionId,
+                                client.getLandingPageUrl());
                     } else {
                         return initiateIPVAuthorisationService.sendRequestToIPV(
                                 input,
