@@ -109,14 +109,6 @@ Conditions:
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
-  DeployMigratedRecords:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   SwapLiveTrafficToCloudfront:
     !And [
       !Condition DeployMigratedRecords,
@@ -6157,7 +6149,6 @@ Resources:
 
   OrchestrationOidcOriginRecordSet:
     Type: AWS::Route53::RecordSet
-    Condition: DeployMigratedRecords
     Properties:
       Name: !Sub
         - "origin.${oidcDomain}"
@@ -6182,7 +6173,6 @@ Resources:
 
   OrchestrationOidcCloudFrontRecordSet:
     Type: AWS::Route53::RecordSet
-    Condition: DeployMigratedRecords
     Properties:
       Name:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
