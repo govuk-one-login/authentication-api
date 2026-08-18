@@ -109,14 +109,6 @@ Conditions:
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
-  UseCloudfront:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   DeployMigratedRecords:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -6135,7 +6127,6 @@ Resources:
 
   OrchestrationOidcApiWafAssociation:
     Type: "AWS::WAFv2::WebACLAssociation"
-    Condition: UseCloudfront
     Properties:
       WebACLArn:
         Fn::ImportValue: !Sub "${Environment}-oidc-cloudfront-CloakingOriginWebACLArn"
