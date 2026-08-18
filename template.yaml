@@ -109,17 +109,6 @@ Conditions:
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
-  CreateApiGwCustomDomain:
-    !And [
-      !Condition SwapLiveTrafficToCloudfront,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
   SwapOriginToApiGateway:
     !And [
       !Condition CreateApiGwCustomDomain,
@@ -6117,7 +6106,6 @@ Resources:
 
   OrchestrationOidcApiCustomDomain:
     Type: AWS::ApiGatewayV2::DomainName
-    Condition: CreateApiGwCustomDomain
     Properties:
       DomainName:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
@@ -6127,7 +6115,6 @@ Resources:
 
   OrchestrationOidcApiBasePathMapping:
     Type: AWS::ApiGateway::BasePathMapping
-    Condition: CreateApiGwCustomDomain
     Properties:
       DomainName:
         !FindInMap [EnvironmentConfiguration, !Ref Environment, oidcDomainName]
