@@ -1,12 +1,17 @@
 package uk.gov.di.orchestration.shared.helpers;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import io.opentelemetry.api.trace.Span;
 import org.apache.logging.log4j.ThreadContext;
+
+import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.helpers.InputSanitiser.sanitiseBase64;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.ORCH_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.TRACE_ID;
+import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 
 public class LogLineHelper {
 
@@ -22,7 +27,9 @@ public class LogLineHelper {
         CLIENT_ID("clientId", true),
         CLIENT_NAME("clientName", false),
         TRACE_ID("dt.trace_id", false),
-        JWT_ID("jti", false);
+        JWT_ID("jti", false),
+        IP_ADDRESS("ipAddress", false),
+        USER_AGENT("userAgent", false);
 
         private final String logFieldName;
         private boolean isBase64;
@@ -75,5 +82,23 @@ public class LogLineHelper {
         if (spanContext.isValid()) {
             attachLogFieldToLogs(TRACE_ID, spanContext.getTraceId());
         }
+    }
+
+    public static void attachIpAddressToLogs(String ipAddress) {
+        attachLogFieldToLogs(LogFieldName.IP_ADDRESS, ipAddress != null ? ipAddress : UNKNOWN);
+    }
+
+    public static void attachUserAgentToLogs(String userAgent) {
+        attachLogFieldToLogs(LogFieldName.USER_AGENT, userAgent != null ? userAgent : UNKNOWN);
+    }
+
+    public static void attachIpAddressAndUserAgentToLogs(APIGatewayProxyRequestEvent input) {
+        attachIpAddressToLogs(IpAddressHelper.extractIpAddress(input));
+        Map<String, String> headers =
+                Optional.ofNullable(input)
+                        .map(APIGatewayProxyRequestEvent::getHeaders)
+                        .orElse(Map.of());
+        String userAgent = getHeaderValueFromHeaders(headers, "User-Agent", true);
+        attachUserAgentToLogs(userAgent);
     }
 }
