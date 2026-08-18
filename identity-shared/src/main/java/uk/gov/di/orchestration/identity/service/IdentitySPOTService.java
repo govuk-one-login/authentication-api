@@ -38,6 +38,20 @@ public class IdentitySPOTService {
     private final AuthFrontend frontend;
     private final AuditService auditService;
 
+    public IdentitySPOTService(ConfigurationService configurationService) {
+        this(
+                configurationService,
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getSpotRequestQueueURI(),
+                        configurationService.getSqsEndpointURI()),
+                new OidcAPI(configurationService),
+                SerializationService.getInstance(),
+                new IdentityProgressService(configurationService),
+                new AuthFrontend(configurationService),
+                new AuditService(configurationService));
+    }
+
     public IdentitySPOTService(
             ConfigurationService configurationService,
             AwsSqsClient spotSqsClient,

@@ -43,7 +43,6 @@ public class AuditService {
     }
 
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
-
         var user =
                 TxmaAuditUser.user()
                         .withUserId(auditContext.subjectId())
@@ -57,13 +56,14 @@ public class AuditService {
         submitAuditEvent(event, auditContext.clientId(), user, auditContext.metadataPairs());
     }
 
-    public void submitAuditEvent(
+    public void submitAuditEventWithPrefix(
             AuditableEvent event,
             String clientId,
             TxmaAuditUser user,
+            String prefix,
             MetadataPair... metadataPairs) {
         var txmaAuditEvent =
-                auditEventWithTime(event, () -> Date.from(clock.instant()))
+                auditEventWithTime(event, prefix, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
                         .withComponentId(oidcApi.baseURI().toString())
                         .withUser(user);
@@ -85,6 +85,22 @@ public class AuditService {
                                 txmaAuditEvent.addExtension("phone_number_country_code", country));
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event,
+            String clientId,
+            TxmaAuditUser user,
+            MetadataPair... metadataPairs) {
+        submitAuditEventWithPrefix(event, clientId, user, "AUTH_", metadataPairs);
+    }
+
+    public void submitAuditEventNoPrefix(
+            AuditableEvent event,
+            String clientId,
+            TxmaAuditUser user,
+            MetadataPair... metadataPairs) {
+        submitAuditEventWithPrefix(event, clientId, user, "", metadataPairs);
     }
 
     public static class MetadataPair {

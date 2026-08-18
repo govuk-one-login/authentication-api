@@ -223,10 +223,6 @@ variable "shared_state_bucket" {
   default = "digital-identity-dev-tfstate"
 }
 
-variable "contra_state_bucket" {
-  type = string
-}
-
 variable "cloudwatch_log_retention" {
   default     = 30
   type        = number
@@ -524,6 +520,12 @@ variable "orch_logout_enabled" {
 
 variable "orch_ipv_callback_enabled" {
   description = "Flag to enable routing ipv callback traffic to the orchestration account"
+  type        = bool
+  default     = false
+}
+
+variable "orch_sis_callback_enabled" {
+  description = "Flag to enable routing sis callback traffic to the orchestration account"
   type        = bool
   default     = false
 }
