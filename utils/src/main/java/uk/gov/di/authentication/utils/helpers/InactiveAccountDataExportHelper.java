@@ -17,6 +17,8 @@ import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +28,13 @@ public class InactiveAccountDataExportHelper {
 
     private static final Logger LOG = LogManager.getLogger(InactiveAccountDataExportHelper.class);
     private static final long BASE_BACKOFF_MS = 100;
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            new DateTimeFormatterBuilder()
+                    .append(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    .optionalStart()
+                    .appendOffsetId()
+                    .optionalEnd()
+                    .toFormatter();
 
     public record LastActiveDate(String timestamp, String source) {}
 
@@ -88,7 +97,8 @@ public class InactiveAccountDataExportHelper {
             }
 
             try {
-                LocalDateTime parsed = LocalDateTime.parse(candidate.timestamp());
+                LocalDateTime parsed =
+                        LocalDateTime.parse(candidate.timestamp(), DATE_TIME_FORMATTER);
                 if (mostRecent == null || parsed.isAfter(mostRecent)) {
                     mostRecent = parsed;
                     mostRecentSource = candidate.source();
