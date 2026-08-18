@@ -287,7 +287,6 @@ public class AuthorisationHandler
             return generateBadRequestResponse(user, e.getMessage(), clientId);
         }
 
-        Optional<AuthRequestError> authRequestError;
         boolean isJarValidationRequired =
                 orchestrationAuthorizationService.isJarValidationRequired(client);
         if (isJarValidationRequired && authRequest.getRequestObject() == null) {
@@ -308,6 +307,7 @@ public class AuthorisationHandler
             }
         }
 
+        Optional<AuthRequestError> authRequestError;
         try {
             if (authRequest.getRequestObject() == null) {
                 LOG.info("Validating request query params");
