@@ -143,7 +143,7 @@ jobs:
           sam build --parallel
 
       - name: Deploy SAM app
-        uses: govuk-one-login/devplatform-upload-action@64e46134b4108ebfa1cf2a64fee00782f8e2e8cf # v3.8
+        uses: govuk-one-login/devplatform-upload-action@6359fac2743a3cd03f0e22eefb3cdc65b8566606 # Ryan testing stuff!
         with:
           artifact-bucket-name: ${{ secrets.ORCH_ARTIFACT_BUCKET_NAME }}
           signing-profile-name: ${{ secrets.ORCH_SIGNING_PROFILE_NAME }}
