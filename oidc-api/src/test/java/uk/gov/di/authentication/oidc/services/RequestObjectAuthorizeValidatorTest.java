@@ -25,7 +25,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
-import uk.gov.di.authentication.oidc.validators.BaseAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.api.OidcAPI;
 import uk.gov.di.orchestration.shared.entity.Channel;
@@ -135,8 +134,8 @@ class RequestObjectAuthorizeValidatorTest {
     class VtrClaim {
 
         @RegisterExtension
-        public final CaptureLoggingExtension baseClassLogging =
-                new CaptureLoggingExtension(BaseAuthorizeValidator.class);
+        public final CaptureLoggingExtension loggingExtension =
+                new CaptureLoggingExtension(RequestObjectAuthorizeValidatorTest.class);
 
         @Test
         void shouldSuccessfullyValidateWhenVtrIsPresentAndVtrIsPermittedForClient()
@@ -218,7 +217,7 @@ class RequestObjectAuthorizeValidatorTest {
             String expectedLogMessage =
                     "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.";
             assertThat(
-                    baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
+                    loggingExtension.events(), hasItem(withMessageContaining(expectedLogMessage)));
         }
 
         @Test
@@ -253,7 +252,7 @@ class RequestObjectAuthorizeValidatorTest {
             String expectedLogMessage =
                     "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.";
             assertThat(
-                    baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
+                    loggingExtension.events(), hasItem(withMessageContaining(expectedLogMessage)));
         }
     }
 

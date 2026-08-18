@@ -23,7 +23,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
-import uk.gov.di.authentication.oidc.validators.BaseAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -76,10 +75,6 @@ class QueryParamsAuthorizeValidatorTest {
     @RegisterExtension
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(QueryParamsAuthorizeValidator.class);
-
-    @RegisterExtension
-    public final CaptureLoggingExtension baseClassLogging =
-            new CaptureLoggingExtension(BaseAuthorizeValidator.class);
 
     @BeforeEach
     void setUp() {
@@ -530,7 +525,7 @@ class QueryParamsAuthorizeValidatorTest {
                                 .toJSONObject()));
         String expectedLogMessage =
                 "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.";
-        assertThat(baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
+        assertThat(logging.events(), hasItem(withMessageContaining(expectedLogMessage)));
     }
 
     @Test
@@ -567,7 +562,7 @@ class QueryParamsAuthorizeValidatorTest {
                                 .toJSONObject()));
         String expectedLogMessage =
                 "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.";
-        assertThat(baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
+        assertThat(logging.events(), hasItem(withMessageContaining(expectedLogMessage)));
     }
 
     @Test
