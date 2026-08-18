@@ -127,13 +127,6 @@ Conditions:
       !Equals [integration, !Ref Environment],
       !Equals [production, !Ref Environment],
     ]
-  DeployAlternateDomainRecord:
-    !Or [
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   DeployMigratedRecords:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -216,7 +209,6 @@ Mappings:
         "alg": "ES256"
         }]'
       oidcDomainName: "oidc.dev.account.gov.uk"
-      oidcAlternateDomainName: "oidc-orch.dev.account.gov.uk"
       serviceNameForKeyRotationStack: "orch"
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -252,7 +244,6 @@ Mappings:
         "alg": "ES256"
         }]'
       oidcDomainName: "oidc.build.account.gov.uk"
-      oidcAlternateDomainName: "oidc-orch.build.account.gov.uk"
       serviceNameForKeyRotationStack: "orch"
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -290,7 +281,6 @@ Mappings:
         "alg": "ES256"
         }]'
       oidcDomainName: "oidc.staging.account.gov.uk"
-      oidcAlternateDomainName: "oidc-orch.staging.account.gov.uk"
       serviceNameForKeyRotationStack: "orch"
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
@@ -326,7 +316,6 @@ Mappings:
         "alg": "ES256"
         }]'
       oidcDomainName: "oidc.integration.account.gov.uk"
-      oidcAlternateDomainName: "oidc-orch.integration.account.gov.uk"
       serviceNameForKeyRotationStack: "orch"
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
@@ -362,7 +351,6 @@ Mappings:
         "alg": "ES256"
         }]'
       oidcDomainName: "oidc.account.gov.uk"
-      oidcAlternateDomainName: "oidc-orch.account.gov.uk"
       serviceNameForKeyRotationStack: "orch"
 
 Globals:
@@ -6241,25 +6229,6 @@ Resources:
           - SwapLiveTrafficToCloudfront
           - Fn::ImportValue: !Sub "${Environment}-oidc-cloudfront-DistributionDomain"
           - "{{resolve:ssm:/deploy/api-migration/old-cloudfront-distribution-domain}}"
-        HostedZoneId: "Z2FDTNDATAQYW2" # Cloudfront Hosted Zone ID: https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-route53-recordset-aliastarget.html#:~:text=vpc%2Dendpoints.-,CloudFront%20distribution,-Specify%20Z2FDTNDATAQYW2.%20This
-        EvaluateTargetHealth: false
-
-  #region AlternateDomainRecordSet
-  OrchestrationOidcAlternateCloudFrontRecordSet:
-    Type: AWS::Route53::RecordSet
-    Condition: DeployAlternateDomainRecord
-    Properties:
-      Name:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          oidcAlternateDomainName,
-        ]
-      Type: A
-      HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc-orch/hosted-zone-id}}"
-      AliasTarget:
-        DNSName:
-          Fn::ImportValue: !Sub "${Environment}-oidc-cloudfront-DistributionDomain"
         HostedZoneId: "Z2FDTNDATAQYW2" # Cloudfront Hosted Zone ID: https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-route53-recordset-aliastarget.html#:~:text=vpc%2Dendpoints.-,CloudFront%20distribution,-Specify%20Z2FDTNDATAQYW2.%20This
         EvaluateTargetHealth: false
 
