@@ -109,14 +109,6 @@ Conditions:
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
-  ProvisionNewApiGateway:
-    !Or [
-      !Equals [dev, !Ref Environment],
-      !Equals [build, !Ref Environment],
-      !Equals [staging, !Ref Environment],
-      !Equals [integration, !Ref Environment],
-      !Equals [production, !Ref Environment],
-    ]
   ProvisionNewApiClientRegistryApiKey:
     !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
   UseCloudfront:
@@ -1638,7 +1630,6 @@ Resources:
 
   OpenIdConfigurationFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref OpenIdConfigurationFunction.Alias
       Action: lambda:InvokeFunction
@@ -1796,7 +1787,6 @@ Resources:
 
   TrustmarkFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref TrustmarkFunction.Alias
       Action: lambda:InvokeFunction
@@ -2203,7 +2193,6 @@ Resources:
 
   DocAppCallbackFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref DocAppCallbackFunction.Alias
       Action: lambda:InvokeFunction
@@ -2386,7 +2375,6 @@ Resources:
 
   TokenFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref TokenFunction.Alias
       Action: lambda:InvokeFunction
@@ -2589,7 +2577,6 @@ Resources:
 
   LogoutFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref LogoutFunction.Alias
       Action: lambda:InvokeFunction
@@ -3174,7 +3161,6 @@ Resources:
 
   AuthenticationCallbackFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref AuthenticationCallbackFunction.Alias
       Action: lambda:InvokeFunction
@@ -3393,7 +3379,6 @@ Resources:
 
   JwksFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref JwksFunction.Alias
       Action: lambda:InvokeFunction
@@ -3545,7 +3530,6 @@ Resources:
 
   IpvJwksFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref IpvJwksFunction.Alias
       Action: lambda:InvokeFunction
@@ -3679,7 +3663,6 @@ Resources:
 
   SISJwksFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref SISJwksFunction.Alias
       Action: lambda:InvokeFunction
@@ -3812,7 +3795,6 @@ Resources:
 
   AuthJwksFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref AuthJwksFunction.Alias
       Action: lambda:InvokeFunction
@@ -4081,7 +4063,6 @@ Resources:
 
   AuthorisationFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref AuthorisationFunction.Alias
       Action: lambda:InvokeFunction
@@ -4276,7 +4257,6 @@ Resources:
 
   UserInfoFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref UserInfoFunction.Alias
       Action: lambda:InvokeFunction
@@ -4468,7 +4448,6 @@ Resources:
 
   AuthCodeFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref AuthCodeFunction.Alias
       Action: lambda:InvokeFunction
@@ -5286,7 +5265,6 @@ Resources:
 
   IpvCallbackFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref IpvCallbackFunction.Alias
       Action: lambda:InvokeFunction
@@ -5924,7 +5902,6 @@ Resources:
 
   StorageTokenJwkFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiGateway
     Properties:
       FunctionName: !Ref StorageTokenJwkFunction.Alias
       Action: lambda:InvokeFunction
@@ -6088,7 +6065,6 @@ Resources:
     #region API Gateway
 
   OrchestrationOidcApi:
-    Condition: ProvisionNewApiGateway
     Type: AWS::Serverless::Api
     # checkov:skip=CKV_AWS_120: We absolutely do not want caching enabled for the API as it returns OIDC userinfo and access tokens
     Properties:
@@ -6121,7 +6097,6 @@ Resources:
         FMSRegionalPolicy: "false"
 
   OidcApiAccessLogGroup:
-    Condition: ProvisionNewApiGateway
     Type: AWS::Logs::LogGroup
     Properties:
       KmsKeyId: !GetAtt MainKmsKey.Arn
