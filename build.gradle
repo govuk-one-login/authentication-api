@@ -51,8 +51,8 @@ ext {
         // Netty
         [
             'io.netty:netty-codec-http',
-            '[4.1.136.Final,)',
-            'Multiple CVEs (SPDY memory exhaustion, ByteBuf leak, CORS bypass) fixed in 4.1.136.Final'
+            '[4.1.137.Final,)',
+            'CVE-2026-59903 is fixed in 4.1.137.Final'
         ],
         [
             'io.netty:netty-codec-dns',
