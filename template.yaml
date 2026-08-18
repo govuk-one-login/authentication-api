@@ -107,21 +107,6 @@ Conditions:
       !Equals [production, !Ref Environment],
     ]
 
-  #region API Migration Feature Flags
-  # Please keep separate from the other ones
-  SwapOriginToApiGateway:
-    !And [
-      !Condition CreateApiGwCustomDomain,
-      !Or [
-        !Equals [dev, !Ref Environment],
-        !Equals [build, !Ref Environment],
-        !Equals [staging, !Ref Environment],
-        !Equals [integration, !Ref Environment],
-        !Equals [production, !Ref Environment],
-      ],
-    ]
-  #endregion
-
   # Comment to force re-deployment of template - this can be deleted once the staging API GW/CloudFront migration is complete.
 
 Mappings:
@@ -6137,14 +6122,8 @@ Resources:
       Type: A
       HostedZoneId: "{{resolve:ssm:/deploy/hosted-zone/oidc/hosted-zone-id}}"
       AliasTarget:
-        DNSName: !If
-          - SwapOriginToApiGateway
-          - !GetAtt OrchestrationOidcApiCustomDomain.RegionalDomainName
-          - "{{resolve:ssm:/deploy/api-migration/old-api-gateway-regional-domain-name}}"
-        HostedZoneId: !If
-          - SwapOriginToApiGateway
-          - !GetAtt OrchestrationOidcApiCustomDomain.RegionalHostedZoneId
-          - "{{resolve:ssm:/deploy/api-migration/old-api-gateway-regional-hosted-zone-id}}"
+        DNSName: !GetAtt OrchestrationOidcApiCustomDomain.RegionalDomainName
+        HostedZoneId: !GetAtt OrchestrationOidcApiCustomDomain.RegionalHostedZoneId
         EvaluateTargetHealth: false
 
   OrchestrationOidcCloudFrontRecordSet:
