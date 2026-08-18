@@ -287,24 +287,10 @@ public class AuthorisationHandler
             return generateBadRequestResponse(user, e.getMessage(), clientId);
         }
 
-        boolean isJarValidationRequired =
+        boolean clientRequiresJarValidation =
                 orchestrationAuthorizationService.isJarValidationRequired(client);
-        if (isJarValidationRequired && authRequest.getRequestObject() == null) {
-            String errorMsg = "JAR required for client but request does not contain Request Object";
-            LOG.warn(errorMsg);
-            if (client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
-                LOG.warn("Redirecting");
-                return generateErrorResponse(
-                        authRequest.getRedirectionURI(),
-                        authRequest.getState(),
-                        authRequest.getResponseMode(),
-                        new ErrorObject(ACCESS_DENIED_CODE, errorMsg),
-                        client.getClientID(),
-                        user);
-            } else {
-                LOG.warn("Redirect URI {} is invalid for client", authRequest.getRedirectionURI());
-                return generateBadRequestResponse(user, errorMsg, client.getClientID());
-            }
+        if (clientRequiresJarValidation && authRequest.getRequestObject() == null) {
+            return handleJarValidationBadRequest(authRequest, client, user);
         }
 
         Optional<AuthRequestError> authRequestError;
@@ -500,6 +486,25 @@ public class AuthorisationHandler
         authRequest = stripOutReauthenticateQueryParams(authRequest);
         authRequest = stripOutLoginHintQueryParams(authRequest);
         return authRequest;
+    }
+
+    private APIGatewayProxyResponseEvent handleJarValidationBadRequest(
+            AuthenticationRequest authRequest, ClientRegistry client, TxmaAuditUser user) {
+        String errorMsg = "JAR required for client but request does not contain Request Object";
+        LOG.warn(errorMsg);
+        if (client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+            LOG.warn("Redirecting");
+            return generateErrorResponse(
+                    authRequest.getRedirectionURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    new ErrorObject(ACCESS_DENIED_CODE, errorMsg),
+                    client.getClientID(),
+                    user);
+        } else {
+            LOG.warn("Redirect URI {} is invalid for client", authRequest.getRedirectionURI());
+            return generateBadRequestResponse(user, errorMsg, client.getClientID());
+        }
     }
 
     private void sendAuthRequestParsedAuditEvent(
