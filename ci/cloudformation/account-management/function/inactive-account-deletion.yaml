@@ -22,10 +22,62 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               inactiveAccountDeletionClientId,
             ]
+          ACCOUNT_DATA_API_URI: !Sub
+            - "https://${ApiId}.execute-api.eu-west-2.amazonaws.com/${EnvOrSubEnv}"
+            - EnvOrSubEnv:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              ApiId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  accountDataApiId,
+                ]
+          AUTH_TO_ACCOUNT_DATA_API_AUDIENCE: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://account.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://account.${Environment}.account.gov.uk"
+            - "https://account.account.gov.uk"
+          AUTH_TO_ACCOUNT_DATA_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-auth-to-account-data-signing-key
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_ISSUER_CLAIM:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendBaseUrl,
+            ]
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - Version: 2012-10-17
+          Statement:
+            - Sid: AllowKmsSignForAccountDataToken
+              Effect: Allow
+              Action:
+                - kms:Sign
+                - kms:GetPublicKey
+              Resource:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  authToAccountDataSigningKeyArn,
+                ]
+        - !If
+          - InactiveAccountDeletionStubEnabled
+          - !Ref InactiveAccountDeletionStubQueueProcessorSQSPolicy
+          - !Ref AWS::NoValue
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

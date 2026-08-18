@@ -8,8 +8,11 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.InactiveAccountDeletionMessage;
+import uk.gov.di.accountmanagement.services.AccountDeletionService;
+import uk.gov.di.accountmanagement.services.InactiveAccountDeletionTokenService;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -23,14 +26,26 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
     private static final Logger LOG = LogManager.getLogger(InactiveAccountDeletionHandler.class);
 
     private final Json objectMapper = SerializationService.getInstance();
-    private final ConfigurationService configurationService;
+    private final InactiveAccountDeletionTokenService tokenService;
+    private final AccountDeletionService accountDeletionService;
 
     public InactiveAccountDeletionHandler() {
         this(ConfigurationService.getInstance());
     }
 
     public InactiveAccountDeletionHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
+        this.tokenService = new InactiveAccountDeletionTokenService(configurationService);
+        var accountDataApiService = new AccountDataApiService(configurationService);
+        this.accountDeletionService =
+                new AccountDeletionService(
+                        null, null, null, configurationService, null, accountDataApiService);
+    }
+
+    public InactiveAccountDeletionHandler(
+            InactiveAccountDeletionTokenService tokenService,
+            AccountDeletionService accountDeletionService) {
+        this.tokenService = tokenService;
+        this.accountDeletionService = accountDeletionService;
     }
 
     @Override
@@ -58,7 +73,8 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                 LOG.info(
                         "Processing inactive account deletion for publicSubjectId: {}",
                         message.publicSubjectId());
-                throw new UnsupportedOperationException("Deletion not yet implemented");
+
+                deleteAccount(message.publicSubjectId());
             } catch (Exception e) {
                 LOG.error(
                         "Failed to process inactive account deletion message with id: {}",
@@ -73,6 +89,17 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                 failures.size(),
                 event.getRecords().size());
         return new SQSBatchResponse(failures);
+    }
+
+    private void deleteAccount(String publicSubjectId) {
+        var tokenResult = tokenService.createAccountDataApiAccessToken(publicSubjectId);
+        if (tokenResult.isFailure()) {
+            throw new RuntimeException(
+                    "Failed to mint account-delete token for publicSubjectId: " + publicSubjectId);
+        }
+        var token = tokenResult.getSuccess().getValue();
+
+        accountDeletionService.deleteAccountViaDataApi(publicSubjectId, token);
     }
 
     private InactiveAccountDeletionMessage parseMessage(SQSMessage msg) throws JsonException {

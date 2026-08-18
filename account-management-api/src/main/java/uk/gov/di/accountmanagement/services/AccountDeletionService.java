@@ -188,7 +188,7 @@ public class AccountDeletionService {
         }
     }
 
-    private void deleteAccountViaDataApi(String publicSubjectId, String token) {
+    public void deleteAccountViaDataApi(String publicSubjectId, String token) {
         try {
             var response = accountDataApiService.deleteAccount(publicSubjectId, token);
             int statusCode = response.statusCode();
