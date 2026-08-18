@@ -75,5 +75,13 @@
   "client-id": {
     "$resolver": "mdc",
     "key": "clientId"
+  },
+  "ip-address": {
+    "$resolver": "mdc",
+    "key": "ipAddress"
+  },
+  "user-agent": {
+    "$resolver": "mdc",
+    "key": "userAgent"
   }
 }
