@@ -109,8 +109,6 @@ Conditions:
 
   #region API Migration Feature Flags
   # Please keep separate from the other ones
-  ProvisionNewApiClientRegistryApiKey:
-    !And [!Condition ProvisionNewApiGateway, !Condition IsNotProduction]
   UseCloudfront:
     !Or [
       !Equals [dev, !Ref Environment],
@@ -4633,7 +4631,7 @@ Resources:
 
   UpdateClientConfigFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiClientRegistryApiKey
+    Condition: IsNotProduction
     Properties:
       FunctionName: !Ref UpdateClientConfigFunction.Alias
       Action: lambda:InvokeFunction
@@ -4815,7 +4813,7 @@ Resources:
 
   ClientRegistrationFunctionOrchestrationApiPermission:
     Type: AWS::Lambda::Permission
-    Condition: ProvisionNewApiClientRegistryApiKey
+    Condition: IsNotProduction
     Properties:
       FunctionName: !Ref ClientRegistrationFunction.Alias
       Action: lambda:InvokeFunction
@@ -6104,7 +6102,7 @@ Resources:
       RetentionInDays: 30
 
   ClientRegistryApiKey:
-    Condition: ProvisionNewApiClientRegistryApiKey
+    Condition: IsNotProduction
     DependsOn:
       - OrchestrationOidcApiStage # Needs to wait for the stage created by the AWS::Serverless::Api
     Type: "AWS::ApiGateway::ApiKey"
@@ -6120,7 +6118,7 @@ Resources:
 
   ClientRegistryApiKeyUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
-    Condition: ProvisionNewApiClientRegistryApiKey
+    Condition: IsNotProduction
     Properties:
       UsagePlanName: !Sub ${Environment}-client-registry-api-key-usage-plan
       ApiStages:
@@ -6129,7 +6127,7 @@ Resources:
 
   ClientRegistryApiKeyUsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
-    Condition: ProvisionNewApiClientRegistryApiKey
+    Condition: IsNotProduction
     Properties:
       KeyId: !Ref ClientRegistryApiKey
       KeyType: API_KEY
