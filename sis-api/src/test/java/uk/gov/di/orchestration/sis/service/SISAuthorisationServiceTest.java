@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.shared.entity.JwksCacheItem;
-import uk.gov.di.orchestration.shared.entity.StateItem;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -49,10 +48,8 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
-import static com.nimbusds.oauth2.sdk.OAuth2Error.INVALID_REQUEST_CODE;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -71,6 +68,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.orchestration.sharedtest.utils.JwtUtils.createDummyJwt;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
+import static uk.gov.di.orchestration.sis.service.SISAuthorisationService.callbackValidator;
 
 class SISAuthorisationServiceTest {
     private static final String KEY_ID = "14342354354353";
@@ -298,41 +296,13 @@ class SISAuthorisationServiceTest {
     }
 
     @Nested
-    class ResponseValidation {
-        @Test
-        void shouldReturnErrorWhenQueryParamsAreNull() {
-            var errorOpt = authorisationService.validateResponse(null, SESSION_ID);
-
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
-            assertThat(error.errorDescription(), equalTo("No query parameters present"));
-            assertFalse(error.userShouldRouteToIpv());
-            assertFalse(error.userRequestedUpdate());
-        }
-
-        @Test
-        void shouldReturnErrorWhenQueryParamsAreEmpty() {
-            var errorOpt = authorisationService.validateResponse(Map.of(), SESSION_ID);
-
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
-            assertThat(error.errorDescription(), equalTo("No query parameters present"));
-            assertFalse(error.userShouldRouteToIpv());
-            assertFalse(error.userRequestedUpdate());
-        }
-
+    class CallbackErrorValidation {
         @Test
         void shouldReturnErrorWhenQueryParamsContainsAccessDeniedError() {
-            var queryParams =
-                    Map.of("error", ACCESS_DENIED_CODE, "error_description", "record_unavailable");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+            var error = callbackValidator(ACCESS_DENIED_CODE, "record_unavailable");
 
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(ACCESS_DENIED_CODE));
-            assertThat(error.errorDescription(), equalTo("record_unavailable"));
+            assertThat(error.code(), equalTo(ACCESS_DENIED_CODE));
+            assertThat(error.description(), equalTo("record_unavailable"));
             assertTrue(error.userShouldRouteToIpv());
             assertFalse(error.userRequestedUpdate());
         }
@@ -340,143 +310,22 @@ class SISAuthorisationServiceTest {
         @Test
         void
                 shouldReturnUserRequestedUpdateErrorWhenQueryParamsContainsUserRequestedUpdateDescription() {
-            var queryParams =
-                    Map.of(
-                            "error",
-                            ACCESS_DENIED_CODE,
-                            "error_description",
-                            "record_update_requested");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+            var error = callbackValidator(ACCESS_DENIED_CODE, "record_update_requested");
 
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(ACCESS_DENIED_CODE));
-            assertThat(error.errorDescription(), equalTo("record_update_requested"));
+            assertThat(error.code(), equalTo(ACCESS_DENIED_CODE));
+            assertThat(error.description(), equalTo("record_update_requested"));
             assertTrue(error.userShouldRouteToIpv());
             assertTrue(error.userRequestedUpdate());
         }
 
         @Test
         void shouldReturnErrorWhenQueryParamsContainsUnexpectedError() {
-            var queryParams = Map.of("error", "unknown-error");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
+            var error = callbackValidator("server_error", "Server Error Description");
 
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo("unknown-error"));
+            assertThat(error.code(), equalTo("server_error"));
+            assertThat(error.description(), equalTo("Server Error Description"));
             assertFalse(error.userShouldRouteToIpv());
             assertFalse(error.userRequestedUpdate());
-        }
-
-        @Test
-        void shouldReturnErrorWhenStateNotPresentInQueryParams() {
-            // Query params needs to be not empty to reach the state check
-            var queryParams = Map.of("unused_param", "test");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
-
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
-            assertThat(
-                    error.errorDescription(),
-                    equalTo("No state param present in Authorisation response"));
-            assertFalse(error.userShouldRouteToIpv());
-            assertFalse(error.userRequestedUpdate());
-        }
-
-        @Test
-        void shouldReturnErrorWhenStateIsEmptyInQueryParams() {
-            var queryParams = Map.of("state", "");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
-
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
-            assertThat(
-                    error.errorDescription(),
-                    equalTo("No state param present in Authorisation response"));
-            assertFalse(error.userShouldRouteToIpv());
-            assertFalse(error.userRequestedUpdate());
-        }
-
-        @Test
-        void shouldReturnErrorWhenStateInDynamoIsEmpty() {
-            when(stateStorageService.getState("sis-state:" + SESSION_ID))
-                    .thenReturn(Optional.empty());
-            var queryParams = Map.of("state", "test-state");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
-
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
-            assertThat(
-                    error.errorDescription(),
-                    equalTo("Invalid state param present in Authorisation response"));
-            assertFalse(error.userShouldRouteToIpv());
-            assertFalse(error.userRequestedUpdate());
-        }
-
-        @Test
-        void shouldReturnErrorWhenStateInDynamoDoesNotMatchStateInQueryParams() {
-            mockStateInDynamo("test-state");
-            var queryParams = Map.of("state", "different-state");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
-
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
-            assertThat(
-                    error.errorDescription(),
-                    equalTo("Invalid state param present in Authorisation response"));
-            assertFalse(error.userShouldRouteToIpv());
-            assertFalse(error.userRequestedUpdate());
-        }
-
-        @Test
-        void shouldReturnErrorWhenCodeIsNotPresentInQueryParams() {
-            mockStateInDynamo("test-state");
-            var queryParams = Map.of("state", "test-state");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
-
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
-            assertThat(
-                    error.errorDescription(),
-                    equalTo("No code param present in Authorisation response"));
-            assertFalse(error.userShouldRouteToIpv());
-            assertFalse(error.userRequestedUpdate());
-        }
-
-        @Test
-        void shouldReturnErrorWhenCodeIsEmptyInQueryParams() {
-            mockStateInDynamo("test-state");
-            var queryParams = Map.of("state", "test-state", "code", "");
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
-
-            assertTrue(errorOpt.isPresent());
-            var error = errorOpt.get();
-            assertThat(error.errorCode(), equalTo(INVALID_REQUEST_CODE));
-            assertThat(
-                    error.errorDescription(),
-                    equalTo("No code param present in Authorisation response"));
-            assertFalse(error.userShouldRouteToIpv());
-            assertFalse(error.userRequestedUpdate());
-        }
-
-        @Test
-        void shouldNotReturnErrorIfResponseIsValid() {
-            mockStateInDynamo("test-state");
-            var queryParams = Map.of("state", "test-state", "code", "test-auth-code");
-
-            var errorOpt = authorisationService.validateResponse(queryParams, SESSION_ID);
-            assertTrue(errorOpt.isEmpty());
-        }
-
-        private void mockStateInDynamo(String state) {
-            when(stateStorageService.getState("sis-state:" + SESSION_ID))
-                    .thenReturn(
-                            Optional.of(new StateItem("sis-state:" + SESSION_ID).withState(state)));
         }
     }
 }
