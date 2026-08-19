@@ -893,7 +893,7 @@ public class ConfigurationService
 
     public boolean isAuthSessionUsingStronglyConsistentReads() {
         return System.getenv()
-                .getOrDefault("AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_OFF)
+                .getOrDefault("AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS", FEATURE_SWITCH_ON)
                 .equals(FEATURE_SWITCH_ON);
     }
 
