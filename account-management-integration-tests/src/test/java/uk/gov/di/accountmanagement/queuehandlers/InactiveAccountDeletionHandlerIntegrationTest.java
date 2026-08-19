@@ -32,6 +32,8 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 
 @ExtendWith(SystemStubsExtension.class)
 class InactiveAccountDeletionHandlerIntegrationTest
@@ -40,6 +42,7 @@ class InactiveAccountDeletionHandlerIntegrationTest
     private static final String TEST_EMAIL = "inactive-account-test@example.com";
     private static final String TEST_PASSWORD = "password-1";
     private static final String IAD_CLIENT_ID = "inactive-account-deletion-client";
+    private static final String INTERNAL_SECTOR_URI = "https://identity.test.account.gov.uk";
 
     private WireMockServer accountDataApiWireMockServer;
     private String publicSubjectId;
@@ -56,11 +59,13 @@ class InactiveAccountDeletionHandlerIntegrationTest
         environment.set("AUTH_ISSUER_CLAIM", "https://signin.account.gov.uk/");
         environment.set("INACTIVE_ACCOUNT_DELETION_CLIENT_ID", IAD_CLIENT_ID);
         environment.set("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", authToAccountDataSigningKey.getKeyId());
+        environment.set("INTERNAl_SECTOR_URI", INTERNAL_SECTOR_URI);
     }
 
     @BeforeEach
     void setUp() {
         publicSubjectId = userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
+        txmaAuditQueue.clear();
 
         accountDataApiWireMockServer =
                 new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
@@ -94,6 +99,8 @@ class InactiveAccountDeletionHandlerIntegrationTest
                 1,
                 deleteRequestedFor(urlPathMatching("/accounts/" + publicSubjectId))
                         .withHeader("Authorization", WireMock.matching("Bearer .+")));
+        assertTxmaAuditEventsSubmittedWithMatchingNames(
+                txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
     }
 
     @Test
@@ -203,6 +210,11 @@ class InactiveAccountDeletionHandlerIntegrationTest
             @Override
             public String getAccountDataURI() {
                 return accountDataUri;
+            }
+
+            @Override
+            public String getTxmaAuditQueueUrl() {
+                return txmaAuditQueue.getQueueUrl();
             }
         };
     }
