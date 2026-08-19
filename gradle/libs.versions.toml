@@ -110,6 +110,6 @@ xray = [
 [plugins]
 dockerCompose = "com.avast.gradle.docker-compose:0.17.21"
 pact = "au.com.dius.pact:4.7.0"
-sonar = "org.sonarqube:7.3.1.8318"
+sonar = "org.sonarqube:7.4.0.8496"
 spotbugs = "com.github.spotbugs:6.5.10"
 spotless = "com.diffplug.spotless:8.9.0"
