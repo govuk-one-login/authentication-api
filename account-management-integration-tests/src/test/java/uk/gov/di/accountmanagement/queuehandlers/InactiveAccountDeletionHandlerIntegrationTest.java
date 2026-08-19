@@ -37,10 +37,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class InactiveAccountDeletionHandlerIntegrationTest
         extends HandlerIntegrationTest<SQSEvent, SQSBatchResponse> {
 
-    private static final String PUBLIC_SUBJECT_ID = "urn:fdc:gov.uk:2022:abc123";
+    private static final String TEST_EMAIL = "inactive-account-test@example.com";
+    private static final String TEST_PASSWORD = "password-1";
     private static final String IAD_CLIENT_ID = "inactive-account-deletion-client";
 
     private WireMockServer accountDataApiWireMockServer;
+    private String publicSubjectId;
 
     @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
 
@@ -58,6 +60,8 @@ class InactiveAccountDeletionHandlerIntegrationTest
 
     @BeforeEach
     void setUp() {
+        publicSubjectId = userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
+
         accountDataApiWireMockServer =
                 new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
         accountDataApiWireMockServer.start();
@@ -78,27 +82,27 @@ class InactiveAccountDeletionHandlerIntegrationTest
     @Test
     void shouldSuccessfullyDeleteAccountViaDataApi() {
         accountDataApiWireMockServer.stubFor(
-                delete(urlPathMatching("/accounts/" + PUBLIC_SUBJECT_ID))
+                delete(urlPathMatching("/accounts/" + publicSubjectId))
                         .willReturn(aResponse().withStatus(204)));
 
-        var event = createSQSEvent(PUBLIC_SUBJECT_ID);
+        var event = createSQSEvent(publicSubjectId);
 
         SQSBatchResponse response = handler.handleRequest(event, context);
 
         assertThat(response.getBatchItemFailures(), is(empty()));
         accountDataApiWireMockServer.verify(
                 1,
-                deleteRequestedFor(urlPathMatching("/accounts/" + PUBLIC_SUBJECT_ID))
+                deleteRequestedFor(urlPathMatching("/accounts/" + publicSubjectId))
                         .withHeader("Authorization", WireMock.matching("Bearer .+")));
     }
 
     @Test
     void shouldReportFailureWhenDataApiReturns404() {
         accountDataApiWireMockServer.stubFor(
-                delete(urlPathMatching("/accounts/" + PUBLIC_SUBJECT_ID))
+                delete(urlPathMatching("/accounts/" + publicSubjectId))
                         .willReturn(aResponse().withStatus(404)));
 
-        var event = createSQSEvent(PUBLIC_SUBJECT_ID);
+        var event = createSQSEvent(publicSubjectId);
 
         SQSBatchResponse response = handler.handleRequest(event, context);
 
@@ -108,10 +112,10 @@ class InactiveAccountDeletionHandlerIntegrationTest
     @Test
     void shouldReportFailureWhenDataApiReturns500() {
         accountDataApiWireMockServer.stubFor(
-                delete(urlPathMatching("/accounts/" + PUBLIC_SUBJECT_ID))
+                delete(urlPathMatching("/accounts/" + publicSubjectId))
                         .willReturn(aResponse().withStatus(500)));
 
-        var event = createSQSEvent(PUBLIC_SUBJECT_ID);
+        var event = createSQSEvent(publicSubjectId);
 
         SQSBatchResponse response = handler.handleRequest(event, context);
 
@@ -140,19 +144,19 @@ class InactiveAccountDeletionHandlerIntegrationTest
 
     @Test
     void shouldProcessBatchWithMixedSuccessAndFailure() {
-        var successSubjectId = "urn:fdc:gov.uk:2022:success";
-        var failSubjectId = "urn:fdc:gov.uk:2022:fail";
+        var successPublicSubjectId = userStore.signUp("success-user@example.com", TEST_PASSWORD);
+        var failPublicSubjectId = userStore.signUp("fail-user@example.com", TEST_PASSWORD);
 
         accountDataApiWireMockServer.stubFor(
-                delete(urlPathMatching("/accounts/" + successSubjectId))
+                delete(urlPathMatching("/accounts/" + successPublicSubjectId))
                         .willReturn(aResponse().withStatus(204)));
         accountDataApiWireMockServer.stubFor(
-                delete(urlPathMatching("/accounts/" + failSubjectId))
+                delete(urlPathMatching("/accounts/" + failPublicSubjectId))
                         .willReturn(aResponse().withStatus(500)));
 
-        var goodMessage = createSQSMessage("msg-good", successSubjectId);
+        var goodMessage = createSQSMessage("msg-good", successPublicSubjectId);
         var badMessage = createRawSQSMessage("msg-bad", "invalid json");
-        var failMessage = createSQSMessage("msg-fail", failSubjectId);
+        var failMessage = createSQSMessage("msg-fail", failPublicSubjectId);
 
         var event = new SQSEvent();
         event.setRecords(List.of(goodMessage, badMessage, failMessage));
@@ -164,9 +168,9 @@ class InactiveAccountDeletionHandlerIntegrationTest
         assertEquals("msg-fail", response.getBatchItemFailures().get(1).getItemIdentifier());
 
         accountDataApiWireMockServer.verify(
-                1, deleteRequestedFor(urlPathMatching("/accounts/" + successSubjectId)));
+                1, deleteRequestedFor(urlPathMatching("/accounts/" + successPublicSubjectId)));
         accountDataApiWireMockServer.verify(
-                1, deleteRequestedFor(urlPathMatching("/accounts/" + failSubjectId)));
+                1, deleteRequestedFor(urlPathMatching("/accounts/" + failPublicSubjectId)));
     }
 
     private SQSEvent createSQSEvent(String publicSubjectId) {

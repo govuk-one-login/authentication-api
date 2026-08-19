@@ -16,6 +16,14 @@ Resources:
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           INACTIVE_ACCOUNT_DELETION_CLIENT_ID:
             !FindInMap [
               EnvironmentConfiguration,
@@ -57,6 +65,8 @@ Resources:
         LogGroup: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref UserProfileTableKmsPolicy
         - Version: 2012-10-17
           Statement:
             - Sid: AllowKmsSignForAccountDataToken
