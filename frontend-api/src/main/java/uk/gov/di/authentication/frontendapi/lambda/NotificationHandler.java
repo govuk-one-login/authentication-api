@@ -97,6 +97,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, SQSBatchRes
 
     public SQSBatchResponse notificationRequestHandler(SQSEvent event) {
         attachTraceId();
+        LOG.info("NotificationHandler called");
 
         var failures = new ArrayList<SQSBatchResponse.BatchItemFailure>();
 

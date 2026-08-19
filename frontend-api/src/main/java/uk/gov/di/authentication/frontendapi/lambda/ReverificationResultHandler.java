@@ -94,6 +94,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             Context context,
             ReverificationResultRequest request,
             UserContext userContext) {
+        LOG.info("ReverificationResultHandler called");
 
         var baseAuditContext =
                 auditContextFromUserContext(

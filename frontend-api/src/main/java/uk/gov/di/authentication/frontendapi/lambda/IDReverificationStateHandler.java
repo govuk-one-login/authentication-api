@@ -59,6 +59,7 @@ public class IDReverificationStateHandler
         try {
             ThreadContext.clearMap();
             attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
+            LOG.info("IDReverificationStateHandler called");
             var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
             var auditContext =
                     AuditContext.emptyAuditContext().withTxmaAuditEncoded(txmaAuditEncoded);

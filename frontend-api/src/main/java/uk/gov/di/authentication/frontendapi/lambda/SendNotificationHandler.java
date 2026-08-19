@@ -192,6 +192,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+        LOG.info("SendNotificationHandler called");
         var auditContext =
                 auditContextFromUserContext(
                         userContext,

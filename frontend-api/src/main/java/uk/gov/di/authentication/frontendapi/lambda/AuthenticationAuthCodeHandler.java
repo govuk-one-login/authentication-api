@@ -91,6 +91,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             AuthCodeRequest authCodeRequest,
             UserContext userContext) {
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
+        LOG.info("AuthenticationAuthCodeHandler called");
+
         try {
             var userProfile = userContext.getUserProfile();
             if (userProfile.isEmpty()) {

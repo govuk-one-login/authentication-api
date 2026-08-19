@@ -138,6 +138,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             Context context,
             AMCAuthorizeRequest request,
             UserContext userContext) {
+        LOG.info("AMCAuthorizeHandler called");
 
         AuthSessionItem authSessionItem = userContext.getAuthSession();
         var userProfile =
