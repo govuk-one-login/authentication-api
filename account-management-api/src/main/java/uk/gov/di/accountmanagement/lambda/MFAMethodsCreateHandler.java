@@ -148,6 +148,8 @@ public class MFAMethodsCreateHandler
 
         addSessionIdToLogs(input);
 
+        LOG.info("MFAMethodsCreateHandler called");
+
         var maybePassedGuardConditions = getUserProfileWhenGuardConditionsPassed(input);
 
         if (maybePassedGuardConditions.isFailure()) {

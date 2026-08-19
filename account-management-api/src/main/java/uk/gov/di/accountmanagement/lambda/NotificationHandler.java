@@ -107,6 +107,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     public void notificationRequestHandler(SQSEvent event) {
         attachTraceId();
+        LOG.info("Account Management NotificationHandler called");
         for (SQSMessage msg : event.getRecords()) {
             processMessage(msg);
         }

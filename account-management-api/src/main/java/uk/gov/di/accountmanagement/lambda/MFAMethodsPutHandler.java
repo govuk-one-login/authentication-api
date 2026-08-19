@@ -147,6 +147,8 @@ public class MFAMethodsPutHandler
             APIGatewayProxyRequestEvent input, Context context) throws Json.JsonException {
         addSessionIdToLogs(input);
 
+        LOG.info("MFAMethodsPutHandler called");
+
         var validRequestOrErrorResponse = validatePutRequest(input);
 
         if (validRequestOrErrorResponse.isFailure()) {

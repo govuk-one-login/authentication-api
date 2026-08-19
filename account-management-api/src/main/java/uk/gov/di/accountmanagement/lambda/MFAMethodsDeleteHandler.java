@@ -98,6 +98,8 @@ public class MFAMethodsDeleteHandler
 
         addSessionIdToLogs(input);
 
+        LOG.info("MFAMethodsDeleteHandler called");
+
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
         var mfaIdentifier = input.getPathParameters().get("mfaIdentifier");
 
