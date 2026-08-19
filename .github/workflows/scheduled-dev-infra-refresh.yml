@@ -1,13 +1,13 @@
-# Scheduled, unattended refresh of the dev (authdev1) API infrastructure.
+# Scheduled, unattended refresh of the dev (authdev1) utils API infrastructure.
 name: "SP - DEV: Scheduled infra refresh"
-run-name: "Scheduled dev infra refresh (${{ github.run_id }})"
+run-name: "Scheduled dev infra refresh - utils (${{ github.run_id }})"
 
 on:
   # schedule:
   #   - cron: "0 0 * * 1" # every day 00:00 UTC
   # push:
   #   branches: ["BAU/wip-add-scheduled-dev-deploy"]   # TEMP
-  workflow_dispatch: {} # allow manual runs to exercise/verify the schedule
+  workflow_dispatch: {} # Allow manual runs for verification
 
 concurrency:
   group: "scheduled-dev-infra-refresh"
@@ -27,15 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: authdev1
-    strategy:
-      fail-fast: false # One API failing must not block refreshing the others
-      matrix:
-        api_name:
-          - account-data
-          - account-management
-          - auth-int-ext
-          - stubs
-          - utils
     permissions:
       id-token: write
       contents: read
@@ -52,11 +43,10 @@ jobs:
       - name: Set up AWS creds
         uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
-          role-to-assume: ${{ matrix.api_name == 'account-data' && secrets.GH_ACTIONS_AD_ROLE_ARN || matrix.api_name == 'account-management' && secrets.GH_ACTIONS_AM_ROLE_ARN || matrix.api_name == 'auth-int-ext' && secrets.GH_ACTIONS_ROLE_ARN || matrix.api_name == 'stubs' && secrets.GH_ACTIONS_ROLE_ARN_STUBS_API || matrix.api_name == 'utils' && secrets.GH_ACTIONS_UT_ROLE_ARN }}
+          role-to-assume: ${{ secrets.GH_ACTIONS_UT_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Safety guard: prove we are in the authdev1 sandbox account before we
-      # build or deploy anything.
+      # Safety guard: prove we are in the authdev1 account prior to build and deploy.
       - name: Confirm target AWS account
         run: |
           ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
@@ -80,7 +70,7 @@ jobs:
           cache-read-only: false
 
       - name: Gradle build
-        run: ${{ matrix.api_name == 'account-data' && './gradlew --no-daemon --parallel :account-data-api:buildZip' || matrix.api_name == 'account-management' && './gradlew --no-daemon --parallel :account-management-api:buildZip' || matrix.api_name == 'auth-int-ext' && './gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip :delivery-receipts-api:buildZip :sis-api:buildZip' || matrix.api_name == 'stubs' && './gradlew --no-daemon --parallel :ticf-cri-stub:buildZip :interventions-api-stub:buildZip' || matrix.api_name == 'utils' && './gradlew --no-daemon --parallel :utils:buildZip :test-services-api:buildZip' }}
+        run: ./gradlew --no-daemon --parallel :utils:buildZip :test-services-api:buildZip
 
       - name: Install Rain
         uses: ./.github/actions/install-rain
@@ -92,14 +82,13 @@ jobs:
       - name: Generate template
         run: "./scripts/merge-templates.sh"
         env:
-          TEMPLATE_SOURCE_DIR: ${{ matrix.api_name == 'account-data' && 'ci/cloudformation/account-data' || matrix.api_name == 'account-management' && 'ci/cloudformation/account-management' || matrix.api_name == 'auth-int-ext' && 'ci/cloudformation/auth' || matrix.api_name == 'stubs' && 'ci/cloudformation/stubs' || matrix.api_name == 'utils' && 'ci/cloudformation/utils' }}
-          TEMPLATE_FILE: ${{ matrix.api_name == 'account-data' && 'ad-template.yaml' || matrix.api_name == 'account-management' && 'am-template.yaml' || matrix.api_name == 'auth-int-ext' && 'auth-template.yaml' || matrix.api_name == 'stubs' && 'stubs-template.yaml' || matrix.api_name == 'utils' && 'utils-template.yaml' }}
+          TEMPLATE_SOURCE_DIR: ci/cloudformation/utils
+          TEMPLATE_FILE: utils-template.yaml
 
       - name: SAM build
         run: |
-          TEMPLATE_FILE="${{ matrix.api_name == 'account-data' && 'ad-template.yaml' || matrix.api_name == 'account-management' && 'am-template.yaml' || matrix.api_name == 'auth-int-ext' && 'auth-template.yaml' || matrix.api_name == 'stubs' && 'stubs-template.yaml' || matrix.api_name == 'utils' && 'utils-template.yaml' }}"
-          sam validate --lint -t $TEMPLATE_FILE
-          sam build --parallel -t $TEMPLATE_FILE
+          sam validate --lint -t utils-template.yaml
+          sam build --parallel -t utils-template.yaml
 
       - name: Extract version info
         id: version_info
@@ -108,7 +97,7 @@ jobs:
       - name: Deploy SAM app
         uses: govuk-one-login/devplatform-upload-action@64e46134b4108ebfa1cf2a64fee00782f8e2e8cf # v4.1.0
         with:
-          artifact-bucket-name: ${{ matrix.api_name == 'account-data' && secrets.ARTIFACT_SOURCE_AD_BUCKET_NAME || matrix.api_name == 'account-management' && secrets.ARTIFACT_SOURCE_AM_BUCKET_NAME || matrix.api_name == 'auth-int-ext' && secrets.ARTIFACT_SOURCE_BUCKET_NAME || matrix.api_name == 'stubs' && secrets.ARTIFACT_BUCKET_STUBS_API || matrix.api_name == 'utils' && secrets.ARTIFACT_SOURCE_UT_BUCKET_NAME }}
+          artifact-bucket-name: ${{ secrets.ARTIFACT_SOURCE_UT_BUCKET_NAME }}
           signing-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
           working-directory: .aws-sam/build
           version: ${{ steps.version_info.outputs.version }}
