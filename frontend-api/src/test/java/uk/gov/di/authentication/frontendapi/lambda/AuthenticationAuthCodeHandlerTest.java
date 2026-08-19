@@ -361,8 +361,7 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndSaveNewAuthCodeRequestWhenOptionalTimeStampPassedThrough()
-            throws URISyntaxException {
+    void shouldReturn200AndSaveNewAuthCodeRequestWhenOptionalTimeStampPassedThrough() {
         var body =
                 format(
                         "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"password-reset-time\": \"%d\" }",
