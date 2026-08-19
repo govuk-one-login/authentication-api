@@ -10,13 +10,16 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.InactiveAccountDeletionMessage;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.InactiveAccountDeletionTokenService;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
@@ -28,6 +31,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
     private final Json objectMapper = SerializationService.getInstance();
     private final InactiveAccountDeletionTokenService tokenService;
     private final AccountDeletionService accountDeletionService;
+    private final DynamoService dynamoService;
 
     public InactiveAccountDeletionHandler() {
         this(ConfigurationService.getInstance());
@@ -39,13 +43,16 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
         this.accountDeletionService =
                 new AccountDeletionService(
                         null, null, null, configurationService, null, accountDataApiService);
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     public InactiveAccountDeletionHandler(
             InactiveAccountDeletionTokenService tokenService,
-            AccountDeletionService accountDeletionService) {
+            AccountDeletionService accountDeletionService,
+            DynamoService dynamoService) {
         this.tokenService = tokenService;
         this.accountDeletionService = accountDeletionService;
+        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -74,6 +81,11 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                         "Processing inactive account deletion for publicSubjectId: {}",
                         message.publicSubjectId());
 
+                var userProfile = getUserProfile(message.publicSubjectId());
+                LOG.info(
+                        "Retrieved UserProfile for publicSubjectId: {}",
+                        userProfile.getPublicSubjectID());
+
                 deleteAccount(message.publicSubjectId());
             } catch (Exception e) {
                 LOG.error(
@@ -89,6 +101,15 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                 failures.size(),
                 event.getRecords().size());
         return new SQSBatchResponse(failures);
+    }
+
+    private UserProfile getUserProfile(String publicSubjectId) {
+        Optional<UserProfile> maybeUserProfile =
+                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+        return maybeUserProfile.orElseThrow(
+                () ->
+                        new RuntimeException(
+                                "UserProfile not found for publicSubjectId: " + publicSubjectId));
     }
 
     private void deleteAccount(String publicSubjectId) {

@@ -11,8 +11,11 @@ import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.InactiveAccountDeletionTokenService;
 import uk.gov.di.authentication.shared.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -38,13 +41,18 @@ class InactiveAccountDeletionHandlerTest {
             mock(InactiveAccountDeletionTokenService.class);
     private final AccountDeletionService accountDeletionService =
             mock(AccountDeletionService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
     private InactiveAccountDeletionHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new InactiveAccountDeletionHandler(tokenService, accountDeletionService);
+        handler =
+                new InactiveAccountDeletionHandler(
+                        tokenService, accountDeletionService, dynamoService);
         when(tokenService.createAccountDataApiAccessToken(any()))
                 .thenReturn(Result.success(new BearerAccessToken(TOKEN_VALUE)));
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(any()))
+                .thenReturn(Optional.of(userProfileWithPublicSubjectId(PUBLIC_SUBJECT_ID)));
     }
 
     @Test
@@ -127,11 +135,39 @@ class InactiveAccountDeletionHandlerTest {
     }
 
     @Test
+    void shouldReportFailureWhenUserProfileNotFound() {
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                .thenReturn(Optional.empty());
+        var event = createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+        SQSBatchResponse response = handler.handleRequest(event, context);
+
+        assertThat(response.getBatchItemFailures(), hasSize(1));
+        assertEquals("msg-1", response.getBatchItemFailures().get(0).getItemIdentifier());
+        verifyNoInteractions(accountDeletionService);
+    }
+
+    @Test
+    void shouldProceedToDeletionWhenUserProfileFound() {
+        var event = createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+        SQSBatchResponse response = handler.handleRequest(event, context);
+
+        assertThat(response.getBatchItemFailures(), is(empty()));
+        verify(dynamoService).getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID);
+        verify(accountDeletionService).deleteAccountViaDataApi(PUBLIC_SUBJECT_ID, TOKEN_VALUE);
+    }
+
+    @Test
     void shouldProcessBatchWithMixedSuccessAndFailure() {
         var goodMessage = createSQSMessage("msg-good", "{\"publicSubjectId\": \"sub-1\"}");
         var badMessage = createSQSMessage("msg-bad", "invalid json");
         var failingMessage = createSQSMessage("msg-fail", "{\"publicSubjectId\": \"sub-2\"}");
 
+        when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-1"))
+                .thenReturn(Optional.of(userProfileWithPublicSubjectId("sub-1")));
+        when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-2"))
+                .thenReturn(Optional.of(userProfileWithPublicSubjectId("sub-2")));
         doNothing().when(accountDeletionService).deleteAccountViaDataApi(eq("sub-1"), any());
         doThrow(new RuntimeException("5xx"))
                 .when(accountDeletionService)
@@ -145,6 +181,12 @@ class InactiveAccountDeletionHandlerTest {
         assertThat(response.getBatchItemFailures(), hasSize(2));
         assertEquals("msg-bad", response.getBatchItemFailures().get(0).getItemIdentifier());
         assertEquals("msg-fail", response.getBatchItemFailures().get(1).getItemIdentifier());
+    }
+
+    private UserProfile userProfileWithPublicSubjectId(String publicSubjectId) {
+        var userProfile = new UserProfile();
+        userProfile.setPublicSubjectID(publicSubjectId);
+        return userProfile;
     }
 
     private SQSEvent createSQSEventWithBody(String body) {
