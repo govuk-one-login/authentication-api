@@ -171,6 +171,11 @@ class AuthenticationAuthCodeHandlerTest {
             assertTrue(uri.getQuery().contains("state"));
             assertTrue(uri.getQuery().contains(TEST_STATE));
             assertFalse(uri.getQuery().contains("random_query_parameter"));
+
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AUTH_CODE_ISSUED,
+                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
         }
 
         @Test
@@ -222,6 +227,12 @@ class AuthenticationAuthCodeHandlerTest {
                 verify(cloudwatchMetricsService)
                         .incrementCounter(
                                 CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
+                                Map.of(
+                                        ENVIRONMENT.getValue(),
+                                        configurationService.getEnvironment()));
+                verify(cloudwatchMetricsService)
+                        .incrementCounter(
+                                CloudwatchMetrics.AUTH_CODE_ISSUED,
                                 Map.of(
                                         ENVIRONMENT.getValue(),
                                         configurationService.getEnvironment()));
@@ -298,6 +309,10 @@ class AuthenticationAuthCodeHandlerTest {
                             eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
             verify(cloudwatchMetricsService, never())
                     .incrementCounter(eq(CloudwatchMetrics.REAUTH_SUCCESS.getValue()), anyMap());
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AUTH_CODE_ISSUED,
+                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
         }
 
         @Test
@@ -388,6 +403,8 @@ class AuthenticationAuthCodeHandlerTest {
                                     ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR)));
             verify(cloudwatchMetricsService, times(1))
                     .incrementCounter("EnhancedAuthCodeBlocked", Map.of("Environment", "test"));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
             verify(dynamoAuthCodeService, never())
                     .saveAuthCode(
                             any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(), any());
@@ -406,6 +423,8 @@ class AuthenticationAuthCodeHandlerTest {
             assertThat(
                     result,
                     hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
         }
 
         @Test
@@ -421,6 +440,8 @@ class AuthenticationAuthCodeHandlerTest {
             assertThat(
                     result,
                     hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
         }
 
         @Test
@@ -439,6 +460,8 @@ class AuthenticationAuthCodeHandlerTest {
             assertThat(
                     result,
                     hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
         }
 
         @Test
@@ -458,6 +481,8 @@ class AuthenticationAuthCodeHandlerTest {
             assertThat(
                     result,
                     hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
         }
 
         @Test
@@ -473,6 +498,8 @@ class AuthenticationAuthCodeHandlerTest {
                     hasBody(
                             objectMapper.writeValueAsString(
                                     ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
         }
     }
 
