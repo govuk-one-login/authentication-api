@@ -354,7 +354,6 @@ class AuthenticationAuthCodeHandlerTest {
 
         @Test
         void shouldReturn200WhenNotPermittedToIssueAuthCodeAndFeatureFlagDisabled() {
-            // Arrange
             when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
             when(configurationService.isEnhancedAuthCodeProtectionEnabled()).thenReturn(false);
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
@@ -364,10 +363,8 @@ class AuthenticationAuthCodeHandlerTest {
                     .thenReturn(Optional.of(userProfile));
             var event = validAuthCodeRequest();
 
-            // Act
             var result = handler.handleRequest(event, context);
 
-            // Assert
             assertThat(result, hasStatus(200));
             verify(dynamoAuthCodeService, times(1))
                     .saveAuthCode(
@@ -386,7 +383,6 @@ class AuthenticationAuthCodeHandlerTest {
     class Failures {
         @Test
         void shouldReturn500WhenNotPermittedToIssueAuthCode() throws Json.JsonException {
-            // Arrange
             var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
             userProfile.setSubjectID(TEST_SUBJECT_ID);
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
@@ -394,10 +390,8 @@ class AuthenticationAuthCodeHandlerTest {
             when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
             var event = validAuthCodeRequest();
 
-            // Act
             var result = handler.handleRequest(event, context);
 
-            // Assert
             assertThat(result, hasStatus(500));
             assertThat(
                     result,
