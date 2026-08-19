@@ -170,8 +170,13 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                         userContext.getAuthSession().withPreservedReauthCountsForAuditMap(null));
             }
 
-            return generateApiGatewayProxyResponse(
-                    200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
+            var response =
+                    generateApiGatewayProxyResponse(
+                            200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
+            cloudwatchMetricsService.incrementCounter(
+                    CloudwatchMetrics.AUTH_CODE_ISSUED,
+                    Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+            return response;
         } catch (JsonException ex) {
             LOG.warn("Exception generating authcode. Returning 1001: ", ex);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
