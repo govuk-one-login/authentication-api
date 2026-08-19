@@ -7,6 +7,8 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import uk.gov.di.audit.AuditContext;
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -410,63 +413,23 @@ class AuthenticationAuthCodeHandlerTest {
                             any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(), any());
         }
 
-        @Test
-        void shouldReturn400ErrorWhenRedirectUriIsInvalid() throws Json.JsonException {
-            var body =
+        private static Stream<String> requestsMissingParameters() {
+            var requestMissingRedirectUri =
                     format(
                             "{ \"email\": \"%s\", \"redirect-uri\": \"%s\" }",
                             CommonTestVariables.EMAIL, "");
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-            var result = handler.handleRequest(event, context);
-            assertThat(result, hasStatus(400));
-            assertThat(
-                    result,
-                    hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
-        }
-
-        @Test
-        void shouldReturn400ErrorWhenStateIsInvalid() throws Json.JsonException {
-            var body =
+            var requestWithInvalidState =
                     format(
                             "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\" }",
                             CommonTestVariables.EMAIL, TEST_REDIRECT_URI, "");
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-            var result = handler.handleRequest(event, context);
-            assertThat(result, hasStatus(400));
-            assertThat(
-                    result,
-                    hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
-        }
-
-        @Test
-        void shouldReturn400ErrorClaimsListIsEmpty() throws Json.JsonException {
-            var body =
+            var requestWithEmptyClaims =
                     format(
                             "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"] }",
                             CommonTestVariables.EMAIL,
                             TEST_REDIRECT_URI,
                             TEST_STATE,
                             Optional.empty());
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-            var result = handler.handleRequest(event, context);
-            assertThat(result, hasStatus(400));
-            assertThat(
-                    result,
-                    hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
-            verify(cloudwatchMetricsService, never())
-                    .incrementCounter(eq(CloudwatchMetrics.AUTH_CODE_ISSUED), anyMap());
-        }
-
-        @Test
-        void shouldReturn400ErrorWhenRPSectorUriIsInvalid() throws Json.JsonException {
-            var body =
+            var requestWithMissingSectorUri =
                     format(
                             "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\", }",
                             CommonTestVariables.EMAIL,
@@ -474,7 +437,18 @@ class AuthenticationAuthCodeHandlerTest {
                             TEST_STATE,
                             List.of("email-verified", "email"),
                             "");
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+            return Stream.of(
+                    requestMissingRedirectUri,
+                    requestWithInvalidState,
+                    requestWithEmptyClaims,
+                    requestWithMissingSectorUri);
+        }
+
+        @ParameterizedTest
+        @MethodSource("requestsMissingParameters")
+        void shouldReturn400ErrorWhenRequestMissingParams(String invalidRequestBody)
+                throws Json.JsonException {
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, invalidRequestBody);
 
             var result = handler.handleRequest(event, context);
             assertThat(result, hasStatus(400));
