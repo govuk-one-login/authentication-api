@@ -441,6 +441,21 @@ class InactiveAccountDataExportHelperTest {
     }
 
     @Test
+    void calculateLastActiveDateShouldHandleTimestampWithUtcOffsetSuffix() {
+        Map<String, AttributeValue> userProfileItem =
+                Map.of(
+                        UserProfile.ATTRIBUTE_CREATED,
+                        AttributeValue.builder().s("2026-08-13T15:22:10.000Z").build(),
+                        UserProfile.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2025-05-19T20:48:40.000375").build());
+
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, null);
+
+        assertEquals("2026-08-13T15:22:10", result.timestamp());
+        assertEquals("UserProfile.Created", result.source());
+    }
+
+    @Test
     void calculateLastActiveDateShouldHandleOnlyCredentialsItemProvided() {
         Map<String, AttributeValue> userCredentialsItem =
                 Map.of(
