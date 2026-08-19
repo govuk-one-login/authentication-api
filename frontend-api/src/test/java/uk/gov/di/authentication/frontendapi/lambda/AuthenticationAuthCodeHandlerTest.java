@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -134,347 +135,369 @@ class AuthenticationAuthCodeHandlerTest {
                         permissionDecisionManager);
     }
 
-    @Test
-    void shouldReturn400ErrorWhenRedirectUriIsInvalid() throws Json.JsonException {
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\" }",
-                        CommonTestVariables.EMAIL, "");
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(
-                result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
-    }
-
-    @Test
-    void shouldReturn400ErrorWhenStateIsInvalid() throws Json.JsonException {
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\" }",
-                        CommonTestVariables.EMAIL, TEST_REDIRECT_URI, "");
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(
-                result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
-    }
-
-    @Test
-    void shouldReturn400ErrorClaimsListIsEmpty() throws Json.JsonException {
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"] }",
-                        CommonTestVariables.EMAIL, TEST_REDIRECT_URI, TEST_STATE, Optional.empty());
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(
-                result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
-    }
-
-    @Test
-    void shouldReturn400ErrorWhenRPSectorUriIsInvalid() throws Json.JsonException {
-        var body =
-                format(
-                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\", }",
-                        CommonTestVariables.EMAIL,
-                        TEST_REDIRECT_URI,
-                        TEST_STATE,
-                        List.of("email-verified", "email"),
-                        "");
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(
-                result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
-    }
-
-    @Test
-    void shouldReturn400ErrorWhenUnableToFetchEmailFromUserProfile() throws Json.JsonException {
-        when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
-                .thenReturn(Optional.empty());
-        var event = validAuthCodeRequest();
-
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(
-                result,
-                hasBody(objectMapper.writeValueAsString(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
-    }
-
-    @Test
-    void shouldReturn200AndSaveNewAuthCodeRequest() throws URISyntaxException {
-        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-        var userProfile = new UserProfile();
-        userProfile.setSubjectID(TEST_SUBJECT_ID);
-        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        var event = validAuthCodeRequest();
-
-        var result = handler.handleRequest(event, context);
-
-        verify(dynamoAuthCodeService, times(1))
-                .saveAuthCode(
-                        eq(userProfile.getSubjectID()),
-                        anyString(),
-                        anyList(),
-                        eq(false),
-                        anyString(),
-                        eq(false),
-                        eq(null),
-                        eq(CLIENT_SESSION_ID));
-        assertThat(result, hasStatus(200));
-        var jsonBody = new JSONObject(result.getBody());
-        assertTrue(jsonBody.has(LOCATION));
-        var location = jsonBody.get(LOCATION);
-        var uri = new URI(location.toString());
-        assertTrue(uri.getQuery().contains("code"));
-        assertTrue(uri.getQuery().contains("state"));
-        assertTrue(uri.getQuery().contains(TEST_STATE));
-        assertFalse(uri.getQuery().contains("random_query_parameter"));
-    }
-
-    @Test
-    void shouldSubmitReauthSuccessfulEventAndCleanUpSessionCountsForSuccessfulReauthJourney() {
-        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
-                Mockito.mockStatic(ClientSubjectHelper.class)) {
-            var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
-            userProfile.setSubjectID(TEST_SUBJECT_ID);
+    @Nested
+    class Success {
+        @Test
+        void shouldReturn200AndSaveNewAuthCodeRequest() throws URISyntaxException {
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+            var userProfile = new UserProfile();
+            userProfile.setSubjectID(TEST_SUBJECT_ID);
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
-            mockedClientSubjectHelperClass
-                    .when(() -> ClientSubjectHelper.getSubject(eq(userProfile), any(), any()))
-                    .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
-            var existingPasswordCount = 1;
-            var existingEmailCount = 2;
-            authSession.setPreservedReauthCountsForAuditMap(
-                    Map.ofEntries(
-                            Map.entry(CountType.ENTER_PASSWORD, existingPasswordCount),
-                            Map.entry(CountType.ENTER_EMAIL, existingEmailCount)));
-
-            var body =
-                    format(
-                            "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"is-reauth-journey\": %b}",
-                            TEST_REDIRECT_URI,
-                            TEST_STATE,
-                            List.of("email-verified", "email"),
-                            TEST_SECTOR_IDENTIFIER,
-                            false,
-                            true);
-
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+            var event = validAuthCodeRequest();
 
             var result = handler.handleRequest(event, context);
 
+            verify(dynamoAuthCodeService, times(1))
+                    .saveAuthCode(
+                            eq(userProfile.getSubjectID()),
+                            anyString(),
+                            anyList(),
+                            eq(false),
+                            anyString(),
+                            eq(false),
+                            eq(null),
+                            eq(CLIENT_SESSION_ID));
             assertThat(result, hasStatus(200));
-
-            var expectedPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("rpPairwiseId", CALCULATED_PAIRWISE_ID),
-                        pair("incorrect_email_attempt_count", existingEmailCount),
-                        pair("incorrect_password_attempt_count", existingPasswordCount),
-                        pair("incorrect_otp_code_attempt_count", 0)
-                    };
-
-            verify(auditService).submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext, expectedPairs);
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
-                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
-            verify(authSessionService, atLeastOnce())
-                    .updateSession(
-                            argThat(s -> Objects.isNull(s.getPreservedReauthCountsForAuditMap())));
+            var jsonBody = new JSONObject(result.getBody());
+            assertTrue(jsonBody.has(LOCATION));
+            var location = jsonBody.get(LOCATION);
+            var uri = new URI(location.toString());
+            assertTrue(uri.getQuery().contains("code"));
+            assertTrue(uri.getQuery().contains("state"));
+            assertTrue(uri.getQuery().contains(TEST_STATE));
+            assertFalse(uri.getQuery().contains("random_query_parameter"));
         }
-    }
 
-    @Test
-    void
-            shouldStillSubmitReauthSuccessfulEventButWithoutCountsForSuccessfulReauthJourneyWhenSessionCountsAreNull() {
-        try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
-                Mockito.mockStatic(ClientSubjectHelper.class)) {
+        @Test
+        void shouldSubmitReauthSuccessfulEventAndCleanUpSessionCountsForSuccessfulReauthJourney() {
+            try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
+                    Mockito.mockStatic(ClientSubjectHelper.class)) {
+                var userProfile =
+                        new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
+                userProfile.setSubjectID(TEST_SUBJECT_ID);
+                when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+                when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                        .thenReturn(Optional.of(userProfile));
+                mockedClientSubjectHelperClass
+                        .when(() -> ClientSubjectHelper.getSubject(eq(userProfile), any(), any()))
+                        .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
+                var existingPasswordCount = 1;
+                var existingEmailCount = 2;
+                authSession.setPreservedReauthCountsForAuditMap(
+                        Map.ofEntries(
+                                Map.entry(CountType.ENTER_PASSWORD, existingPasswordCount),
+                                Map.entry(CountType.ENTER_EMAIL, existingEmailCount)));
+
+                var body =
+                        format(
+                                "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"is-reauth-journey\": %b}",
+                                TEST_REDIRECT_URI,
+                                TEST_STATE,
+                                List.of("email-verified", "email"),
+                                TEST_SECTOR_IDENTIFIER,
+                                false,
+                                true);
+
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertThat(result, hasStatus(200));
+
+                var expectedPairs =
+                        new AuditService.MetadataPair[] {
+                            pair("rpPairwiseId", CALCULATED_PAIRWISE_ID),
+                            pair("incorrect_email_attempt_count", existingEmailCount),
+                            pair("incorrect_password_attempt_count", existingPasswordCount),
+                            pair("incorrect_otp_code_attempt_count", 0)
+                        };
+
+                verify(auditService)
+                        .submitAuditEvent(AUTH_REAUTH_SUCCESS, auditContext, expectedPairs);
+                verify(cloudwatchMetricsService)
+                        .incrementCounter(
+                                CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
+                                Map.of(
+                                        ENVIRONMENT.getValue(),
+                                        configurationService.getEnvironment()));
+                verify(authSessionService, atLeastOnce())
+                        .updateSession(
+                                argThat(
+                                        s ->
+                                                Objects.isNull(
+                                                        s.getPreservedReauthCountsForAuditMap())));
+            }
+        }
+
+        @Test
+        void
+                shouldStillSubmitReauthSuccessfulEventButWithoutCountsForSuccessfulReauthJourneyWhenSessionCountsAreNull() {
+            try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
+                    Mockito.mockStatic(ClientSubjectHelper.class)) {
+                var userProfile =
+                        new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
+                userProfile.setSubjectID(TEST_SUBJECT_ID);
+                when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+                when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                        .thenReturn(Optional.of(userProfile));
+                mockedClientSubjectHelperClass
+                        .when(() -> ClientSubjectHelper.getSubject(eq(userProfile), any(), any()))
+                        .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
+                // This is already the case but just to make it explicit here
+                authSession.setPreservedReauthCountsForAuditMap(null);
+
+                var body =
+                        format(
+                                "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"is-reauth-journey\": %b}",
+                                TEST_REDIRECT_URI,
+                                TEST_STATE,
+                                List.of("email-verified", "email"),
+                                TEST_SECTOR_IDENTIFIER,
+                                false,
+                                true);
+
+                var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+                var result = handler.handleRequest(event, context);
+
+                assertThat(result, hasStatus(200));
+
+                verify(auditService)
+                        .submitAuditEvent(
+                                AUTH_REAUTH_SUCCESS,
+                                auditContext,
+                                pair("rpPairwiseId", CALCULATED_PAIRWISE_ID));
+                verify(cloudwatchMetricsService)
+                        .incrementCounter(
+                                CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
+                                Map.of(
+                                        ENVIRONMENT.getValue(),
+                                        configurationService.getEnvironment()));
+            }
+        }
+
+        @Test
+        void shouldNotSubmitReauthSuccessEventOrCloudwatchMetricForNonReauthJourney() {
+            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
             var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
             userProfile.setSubjectID(TEST_SUBJECT_ID);
-            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
-            mockedClientSubjectHelperClass
-                    .when(() -> ClientSubjectHelper.getSubject(eq(userProfile), any(), any()))
-                    .thenReturn(new Subject(CALCULATED_PAIRWISE_ID));
-            // This is already the case but just to make it explicit here
-            authSession.setPreservedReauthCountsForAuditMap(null);
 
-            var body =
-                    format(
-                            "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"is-reauth-journey\": %b}",
-                            TEST_REDIRECT_URI,
-                            TEST_STATE,
-                            List.of("email-verified", "email"),
-                            TEST_SECTOR_IDENTIFIER,
-                            false,
-                            true);
-
-            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-            var result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(validAuthCodeRequest(), context);
 
             assertThat(result, hasStatus(200));
 
-            verify(auditService)
+            verify(auditService, never())
                     .submitAuditEvent(
-                            AUTH_REAUTH_SUCCESS,
-                            auditContext,
-                            pair("rpPairwiseId", CALCULATED_PAIRWISE_ID));
-            verify(cloudwatchMetricsService)
-                    .incrementCounter(
-                            CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
-                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+                            eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq(CloudwatchMetrics.REAUTH_SUCCESS.getValue()), anyMap());
+        }
+
+        @Test
+        void shouldReturn200AndSaveNewAuthCodeRequestWhenOptionalTimeStampPassedThrough() {
+            var body =
+                    format(
+                            "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"password-reset-time\": \"%d\" }",
+                            TEST_REDIRECT_URI,
+                            TEST_STATE,
+                            List.of("email-verified", "email"),
+                            TEST_SECTOR_IDENTIFIER,
+                            false,
+                            PASSWORD_RESET_TIME);
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+            var userProfile = new UserProfile();
+            userProfile.setSubjectID(TEST_SUBJECT_ID);
+            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+
+            var result = handler.handleRequest(event, context);
+
+            verify(dynamoAuthCodeService, times(1))
+                    .saveAuthCode(
+                            eq(userProfile.getSubjectID()),
+                            anyString(),
+                            anyList(),
+                            eq(false),
+                            anyString(),
+                            eq(false),
+                            eq(PASSWORD_RESET_TIME),
+                            eq(CLIENT_SESSION_ID));
+            assertThat(result, hasStatus(200));
+        }
+
+        @Test
+        void shouldReturn200WhenNotPermittedToIssueAuthCodeAndFeatureFlagDisabled() {
+            // Arrange
+            when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
+            when(configurationService.isEnhancedAuthCodeProtectionEnabled()).thenReturn(false);
+            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+            var userProfile = new UserProfile();
+            userProfile.setSubjectID(TEST_SUBJECT_ID);
+            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            var event = validAuthCodeRequest();
+
+            // Act
+            var result = handler.handleRequest(event, context);
+
+            // Assert
+            assertThat(result, hasStatus(200));
+            verify(dynamoAuthCodeService, times(1))
+                    .saveAuthCode(
+                            eq(userProfile.getSubjectID()),
+                            anyString(),
+                            anyList(),
+                            eq(false),
+                            anyString(),
+                            eq(false),
+                            eq(null),
+                            eq(CLIENT_SESSION_ID));
+        }
+
+        @Test
+        void shouldReturn200WhenPermittedToIssueAuthCode() {
+            // Arrange
+            when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(true);
+            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+            var userProfile = new UserProfile();
+            userProfile.setSubjectID(TEST_SUBJECT_ID);
+            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            var event = validAuthCodeRequest();
+
+            // Act
+            var result = handler.handleRequest(event, context);
+
+            // Assert
+            assertThat(result, hasStatus(200));
+            verify(dynamoAuthCodeService, times(1))
+                    .saveAuthCode(
+                            eq(userProfile.getSubjectID()),
+                            anyString(),
+                            anyList(),
+                            eq(false),
+                            anyString(),
+                            eq(false),
+                            eq(null),
+                            eq(CLIENT_SESSION_ID));
         }
     }
 
-    @Test
-    void shouldNotSubmitReauthSuccessEventOrCloudwatchMetricForNonReauthJourney() {
-        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-        var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
-        userProfile.setSubjectID(TEST_SUBJECT_ID);
-        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
-                .thenReturn(Optional.of(userProfile));
+    @Nested
+    class Failures {
+        @Test
+        void shouldReturn500WhenNotPermittedToIssueAuthCode() throws Json.JsonException {
+            // Arrange
+            var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
+            userProfile.setSubjectID(TEST_SUBJECT_ID);
+            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
+            var event = validAuthCodeRequest();
 
-        var result = handler.handleRequest(validAuthCodeRequest(), context);
+            // Act
+            var result = handler.handleRequest(event, context);
 
-        assertThat(result, hasStatus(200));
+            // Assert
+            assertThat(result, hasStatus(500));
+            assertThat(
+                    result,
+                    hasBody(
+                            objectMapper.writeValueAsString(
+                                    ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR)));
+            verify(cloudwatchMetricsService, times(1))
+                    .incrementCounter("EnhancedAuthCodeBlocked", Map.of("Environment", "test"));
+            verify(dynamoAuthCodeService, never())
+                    .saveAuthCode(
+                            any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(), any());
+        }
 
-        verify(auditService, never())
-                .submitAuditEvent(
-                        eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(eq(CloudwatchMetrics.REAUTH_SUCCESS.getValue()), anyMap());
-    }
+        @Test
+        void shouldReturn400ErrorWhenRedirectUriIsInvalid() throws Json.JsonException {
+            var body =
+                    format(
+                            "{ \"email\": \"%s\", \"redirect-uri\": \"%s\" }",
+                            CommonTestVariables.EMAIL, "");
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-    @Test
-    void shouldReturn200AndSaveNewAuthCodeRequestWhenOptionalTimeStampPassedThrough() {
-        var body =
-                format(
-                        "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\", \"password-reset-time\": \"%d\" }",
-                        TEST_REDIRECT_URI,
-                        TEST_STATE,
-                        List.of("email-verified", "email"),
-                        TEST_SECTOR_IDENTIFIER,
-                        false,
-                        PASSWORD_RESET_TIME);
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+            var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(400));
+            assertThat(
+                    result,
+                    hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+        }
 
-        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-        var userProfile = new UserProfile();
-        userProfile.setSubjectID(TEST_SUBJECT_ID);
-        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
-                .thenReturn(Optional.of(userProfile));
+        @Test
+        void shouldReturn400ErrorWhenStateIsInvalid() throws Json.JsonException {
+            var body =
+                    format(
+                            "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\" }",
+                            CommonTestVariables.EMAIL, TEST_REDIRECT_URI, "");
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-        var result = handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(400));
+            assertThat(
+                    result,
+                    hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+        }
 
-        verify(dynamoAuthCodeService, times(1))
-                .saveAuthCode(
-                        eq(userProfile.getSubjectID()),
-                        anyString(),
-                        anyList(),
-                        eq(false),
-                        anyString(),
-                        eq(false),
-                        eq(PASSWORD_RESET_TIME),
-                        eq(CLIENT_SESSION_ID));
-        assertThat(result, hasStatus(200));
-    }
+        @Test
+        void shouldReturn400ErrorClaimsListIsEmpty() throws Json.JsonException {
+            var body =
+                    format(
+                            "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"] }",
+                            CommonTestVariables.EMAIL,
+                            TEST_REDIRECT_URI,
+                            TEST_STATE,
+                            Optional.empty());
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-    @Test
-    void shouldReturn500WhenNotPermittedToIssueAuthCode() throws Json.JsonException {
-        // Arrange
-        var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
-        userProfile.setSubjectID(TEST_SUBJECT_ID);
-        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
-        var event = validAuthCodeRequest();
+            var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(400));
+            assertThat(
+                    result,
+                    hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+        }
 
-        // Act
-        var result = handler.handleRequest(event, context);
+        @Test
+        void shouldReturn400ErrorWhenRPSectorUriIsInvalid() throws Json.JsonException {
+            var body =
+                    format(
+                            "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\", }",
+                            CommonTestVariables.EMAIL,
+                            TEST_REDIRECT_URI,
+                            TEST_STATE,
+                            List.of("email-verified", "email"),
+                            "");
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-        // Assert
-        assertThat(result, hasStatus(500));
-        assertThat(
-                result,
-                hasBody(
-                        objectMapper.writeValueAsString(
-                                ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR)));
-        verify(cloudwatchMetricsService, times(1))
-                .incrementCounter("EnhancedAuthCodeBlocked", Map.of("Environment", "test"));
-        verify(dynamoAuthCodeService, never())
-                .saveAuthCode(any(), any(), any(), anyBoolean(), any(), anyBoolean(), any(), any());
-    }
+            var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(400));
+            assertThat(
+                    result,
+                    hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
+        }
 
-    @Test
-    void shouldReturn200WhenNotPermittedToIssueAuthCodeAndFeatureFlagDisabled() {
-        // Arrange
-        when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
-        when(configurationService.isEnhancedAuthCodeProtectionEnabled()).thenReturn(false);
-        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-        var userProfile = new UserProfile();
-        userProfile.setSubjectID(TEST_SUBJECT_ID);
-        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        var event = validAuthCodeRequest();
+        @Test
+        void shouldReturn400ErrorWhenUnableToFetchEmailFromUserProfile() throws Json.JsonException {
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.empty());
+            var event = validAuthCodeRequest();
 
-        // Act
-        var result = handler.handleRequest(event, context);
-
-        // Assert
-        assertThat(result, hasStatus(200));
-        verify(dynamoAuthCodeService, times(1))
-                .saveAuthCode(
-                        eq(userProfile.getSubjectID()),
-                        anyString(),
-                        anyList(),
-                        eq(false),
-                        anyString(),
-                        eq(false),
-                        eq(null),
-                        eq(CLIENT_SESSION_ID));
-    }
-
-    @Test
-    void shouldReturn200WhenPermittedToIssueAuthCode() {
-        // Arrange
-        when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(true);
-        when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-        var userProfile = new UserProfile();
-        userProfile.setSubjectID(TEST_SUBJECT_ID);
-        when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
-                .thenReturn(Optional.of(userProfile));
-        var event = validAuthCodeRequest();
-
-        // Act
-        var result = handler.handleRequest(event, context);
-
-        // Assert
-        assertThat(result, hasStatus(200));
-        verify(dynamoAuthCodeService, times(1))
-                .saveAuthCode(
-                        eq(userProfile.getSubjectID()),
-                        anyString(),
-                        anyList(),
-                        eq(false),
-                        anyString(),
-                        eq(false),
-                        eq(null),
-                        eq(CLIENT_SESSION_ID));
+            var result = handler.handleRequest(event, context);
+            assertThat(result, hasStatus(400));
+            assertThat(
+                    result,
+                    hasBody(
+                            objectMapper.writeValueAsString(
+                                    ErrorResponse.EMAIL_HAS_NO_USER_PROFILE)));
+        }
     }
 
     private APIGatewayProxyRequestEvent validAuthCodeRequest() {
