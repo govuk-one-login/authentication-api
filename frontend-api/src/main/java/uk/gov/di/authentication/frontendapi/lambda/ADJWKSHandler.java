@@ -46,7 +46,7 @@ public class ADJWKSHandler implements RequestHandler<Object, Void> {
 
     @Override
     public Void handleRequest(Object event, Context context) {
-        LOG.info("AD JWKS lambda invoked");
+        LOG.info("ADJWKSHandler callled");
         JWK authToADSigningJwk = jwksService.getPublicAuthToAccountDataSigningJwkWithOpaqueId();
 
         var jwks = new JWKSet(authToADSigningJwk).toString(true);

@@ -51,7 +51,7 @@ public class MfaResetStorageTokenJwkHandler
     public APIGatewayProxyResponseEvent mfaResetStorageTokenJwkHandler() {
         try {
             attachTraceId();
-            LOG.info("Request for Auth MFA storage token signature verification key received.");
+            LOG.info("MfaResetStorageTokenJwkHandler called");
 
             List<JWK> signingKeys = new ArrayList<>();
 

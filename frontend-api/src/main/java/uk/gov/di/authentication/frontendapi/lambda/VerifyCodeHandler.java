@@ -174,7 +174,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Context context,
             VerifyCodeRequest codeRequest,
             UserContext userContext) {
-        LOG.info("Processing request");
+        LOG.info("VerifyCodeHandler called");
 
         AuthSessionItem authSession = userContext.getAuthSession();
 

@@ -111,7 +111,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
         try {
-            LOG.info("Processing request");
+            LOG.info("CheckUserExistsHandler called");
 
             String emailAddress = request.getEmail().toLowerCase();
             Optional<ErrorResponse> errorResponse =

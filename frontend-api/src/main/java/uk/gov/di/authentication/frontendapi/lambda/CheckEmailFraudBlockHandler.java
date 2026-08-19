@@ -77,7 +77,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             CheckEmailFraudBlockRequest request,
             UserContext userContext) {
         try {
-            LOG.info("Request received to CheckEmailFraudBlockHandler");
+            LOG.info("CheckEmailFraudBlockHandler called");
             LOG.info("Checking if block is present");
 
             var status = EmailCheckResultStatus.PENDING;

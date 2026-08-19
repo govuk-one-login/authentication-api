@@ -144,7 +144,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         String persistentSessionID =
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
         attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionID);
-        LOG.info("Request received to the AccountInterventionsHandler");
+        LOG.info("AccountInterventionsHandler called");
 
         if (!configurationService.isAccountInterventionServiceCallEnabled()) {
             LOG.info(

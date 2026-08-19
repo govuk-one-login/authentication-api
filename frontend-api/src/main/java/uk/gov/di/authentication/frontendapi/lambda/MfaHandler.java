@@ -161,7 +161,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
             attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
-            LOG.info("MfaHandler received request");
+            LOG.info("MfaHandler called");
 
             String email = request.getEmail().toLowerCase(Locale.ROOT);
             JourneyType journeyType =

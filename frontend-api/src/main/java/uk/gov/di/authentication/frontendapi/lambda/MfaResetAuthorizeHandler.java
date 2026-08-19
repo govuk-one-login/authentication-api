@@ -86,7 +86,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             Context context,
             MfaResetRequest request,
             UserContext userContext) {
-        LOG.info("MFA Reset Authorization request received");
+        LOG.info("MfaResetAuthorizeHandler called");
         try {
             String clientSessionId = userContext.getClientSessionId();
             AuthSessionItem authSession = userContext.getAuthSession();

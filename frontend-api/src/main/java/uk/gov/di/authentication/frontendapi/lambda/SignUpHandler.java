@@ -92,7 +92,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
         AuthSessionItem authSessionItem = userContext.getAuthSession();
 
-        LOG.info("Received request");
+        LOG.info("SignUpHandler called");
 
         Optional<ErrorResponse> passwordValidationError =
                 passwordValidator.validate(request.getPassword());

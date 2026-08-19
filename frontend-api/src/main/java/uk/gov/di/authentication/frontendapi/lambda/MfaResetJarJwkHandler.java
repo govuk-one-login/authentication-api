@@ -48,8 +48,7 @@ public class MfaResetJarJwkHandler
 
     public APIGatewayProxyResponseEvent mfaResetJarJwkHandler() {
         attachTraceId();
-        LOG.info(
-                "Request for Auth reverification request JAR signature verification key received.");
+        LOG.info("MfaResetJarJwkHandler called");
         try {
 
             List<JWK> signingKeys = new ArrayList<>();

@@ -155,7 +155,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             Context context,
             ResetPasswordCompletionRequest request,
             UserContext userContext) {
-        LOG.info("Request received to ResetPasswordHandler");
+        LOG.info("ResetPasswordHandler called");
 
         Optional<ErrorResponse> passwordValidationError =
                 passwordValidator.validate(request.password());
