@@ -123,7 +123,7 @@ public class TokenHandler
 
     public APIGatewayProxyResponseEvent tokenRequestHandler(APIGatewayProxyRequestEvent input) {
         attachTraceId();
-        LOG.info("Request received to the TokenHandler");
+        LOG.info("TokenHandler called");
 
         Map<String, String> requestBody = RequestBodyHelper.parseRequestBody(input.getBody());
         Optional<ErrorObject> invalidRequestParamError =

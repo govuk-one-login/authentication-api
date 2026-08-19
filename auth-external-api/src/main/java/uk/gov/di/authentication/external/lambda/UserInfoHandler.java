@@ -98,7 +98,7 @@ public class UserInfoHandler
     public APIGatewayProxyResponseEvent userInfoRequestHandler(APIGatewayProxyRequestEvent input) {
         ThreadContext.clearMap();
         attachTraceId();
-        LOG.info("Request received to the UserInfoHandler");
+        LOG.info("UserInfoHandler called");
         Map<String, String> headers = input.getHeaders();
 
         Optional<String> authorisationHeader =
