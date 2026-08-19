@@ -187,6 +187,28 @@
           ],
           "file": ".github/workflows/sonar-analysis-on-merge.yml",
           "path": "$.jobs.run-code-analysis"
+        },
+        {
+          "provider": "Stack Orchestration Tool",
+          "phase": "integration",
+          "checks": [
+            {
+              "name": "canary"
+            }
+          ],
+          "file": "ci/stack-orchestration/configuration/integration/integration-orch-be-pipeline/parameters.json",
+          "path": "$[?@.ParameterKey=='LambdaCanaryDeployment']"
+        },
+        {
+          "provider": "Stack Orchestration Tool",
+          "phase": "production",
+          "checks": [
+            {
+              "name": "canary"
+            }
+          ],
+          "file": "ci/stack-orchestration/configuration/production/production-orch-be-pipeline/parameters.json",
+          "path": "$[?@.ParameterKey=='LambdaCanaryDeployment']"
         }
       ]
     },
