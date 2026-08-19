@@ -193,7 +193,9 @@ public class AccountDeletionService {
             var response = accountDataApiService.deleteAccount(publicSubjectId, token);
             int statusCode = response.statusCode();
             if (statusCode == 204) {
-                LOG.info("Successfully deleted account via Data API");
+                LOG.info(
+                        "Successfully deleted account via Data API for publicSubjectId: {}",
+                        publicSubjectId);
             } else if (statusCode == 404) {
                 LOG.error("Account not found in Data API for publicSubjectId: {}", publicSubjectId);
                 throw new RuntimeException(
