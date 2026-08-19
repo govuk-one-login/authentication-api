@@ -20,6 +20,7 @@ env:
   RAIN_VERSION: v1.23.0
   RAIN_ARCH: linux-amd64
   ENVIRONMENT: authdev1
+  EXPECTED_ACCOUNT_ID: "975050272416"
 
 jobs:
   refresh:
@@ -53,6 +54,17 @@ jobs:
         with:
           role-to-assume: ${{ matrix.api_name == 'account-data' && secrets.GH_ACTIONS_AD_ROLE_ARN || matrix.api_name == 'account-management' && secrets.GH_ACTIONS_AM_ROLE_ARN || matrix.api_name == 'auth-int-ext' && secrets.GH_ACTIONS_ROLE_ARN || matrix.api_name == 'stubs' && secrets.GH_ACTIONS_ROLE_ARN_STUBS_API || matrix.api_name == 'utils' && secrets.GH_ACTIONS_UT_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      # Safety guard: prove we are in the authdev1 sandbox account before we
+      # build or deploy anything.
+      - name: Confirm target AWS account
+        run: |
+          ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+          echo "Running against ${ENVIRONMENT} (AWS account: ${ACCOUNT})"
+          if [ "${ACCOUNT}" != "${EXPECTED_ACCOUNT_ID}" ]; then
+            echo "::error::Refusing to deploy: expected ${ENVIRONMENT} account ${EXPECTED_ACCOUNT_ID} but got ${ACCOUNT}"
+            exit 1
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
