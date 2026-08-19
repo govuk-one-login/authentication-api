@@ -80,10 +80,6 @@ public class InactiveAccountDataExportBatchWriteService {
         if (dryRun) {
             totalWritten += itemCount;
             totalBatchesFlushed++;
-            LOG.info(
-                    "Dry-run mode enabled: {} items would have been written to tracker table (batch {})",
-                    itemCount,
-                    totalBatchesFlushed);
             return;
         }
 
@@ -106,11 +102,17 @@ public class InactiveAccountDataExportBatchWriteService {
             if (!writeRequests.isEmpty()) {
                 retryCount++;
                 if (retryCount > maxRetries) {
-                    LOG.error(
-                            "Failed to write {} items after {} retries",
-                            writeRequests.size(),
-                            maxRetries);
                     totalFailed += writeRequests.size();
+                    LOG.error(
+                            "Failed to write {} items to table '{}' after {} retries. "
+                                    + "totalWrittenSoFar={}, totalFailedSoFar={}, batchesFlushedSoFar={}",
+                            writeRequests.size(),
+                            tableName,
+                            maxRetries,
+                            totalWritten,
+                            totalFailed,
+                            totalBatchesFlushed);
+
                     break;
                 }
                 LOG.warn(
