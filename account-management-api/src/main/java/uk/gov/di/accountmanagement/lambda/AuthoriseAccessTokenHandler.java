@@ -64,7 +64,7 @@ public class AuthoriseAccessTokenHandler
 
     public AuthPolicy authoriseAccessTokenHandler(TokenAuthorizerContext input) {
         attachTraceId();
-        LOG.info("Request received in AuthoriseAccessTokenHandler");
+        LOG.info("AuthoriseAccessTokenHandler called");
         try {
             String token = input.getAuthorizationToken();
 

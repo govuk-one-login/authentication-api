@@ -50,7 +50,7 @@ public class PasskeysRetrieveProxyHandler
 
     public APIGatewayProxyResponseEvent passkeyRetrieveProxyHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOG.info("PasskeysRetrieveProxyHandler invoked");
+        LOG.info("PasskeysRetrieveProxyHandler called");
 
         var publicSubjectId = input.getPathParameters().getOrDefault("publicSubjectId", "");
         if (publicSubjectId.isEmpty()) {

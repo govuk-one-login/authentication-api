@@ -107,7 +107,7 @@ public class PasskeysDeleteProxyHandler
 
     public APIGatewayProxyResponseEvent passkeyDeleteProxyHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        LOG.info("PasskeysDeleteProxyHandler invoked");
+        LOG.info("PasskeysDeleteProxyHandler called");
 
         PasskeysDeleteRequest request = extractPasskeyDeleteRequest(input);
 

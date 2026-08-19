@@ -108,7 +108,7 @@ public class RemoveAccountHandler
                             input.getHeaders(), SESSION_ID_HEADER, "");
             attachTraceId();
             attachSessionIdToLogs(sessionId);
-            LOG.info("RemoveAccountHandler received request");
+            LOG.info("RemoveAccountHandler called");
             RemoveAccountRequest removeAccountRequest =
                     objectMapper.readValue(input.getBody(), RemoveAccountRequest.class);
 

@@ -101,7 +101,7 @@ public class UpdatePhoneNumberHandler
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
         attachTraceId();
         attachSessionIdToLogs(sessionId);
-        LOG.info("UpdatePhoneNumberHandler received request");
+        LOG.info("UpdatePhoneNumberHandler called");
         SupportedLanguage userLanguage =
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(
