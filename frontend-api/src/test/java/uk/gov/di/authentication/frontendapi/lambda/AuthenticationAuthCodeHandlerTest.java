@@ -123,7 +123,6 @@ class AuthenticationAuthCodeHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.isEnhancedAuthCodeProtectionEnabled()).thenReturn(true);
-        when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(true);
         handler =
                 new AuthenticationAuthCodeHandler(
                         dynamoAuthCodeService,
@@ -137,6 +136,11 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Nested
     class Success {
+        @BeforeEach
+        void setUp() {
+            when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(true);
+        }
+
         @Test
         void shouldReturn200AndSaveNewAuthCodeRequest() throws URISyntaxException {
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
@@ -335,34 +339,6 @@ class AuthenticationAuthCodeHandlerTest {
             // Arrange
             when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
             when(configurationService.isEnhancedAuthCodeProtectionEnabled()).thenReturn(false);
-            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-            var userProfile = new UserProfile();
-            userProfile.setSubjectID(TEST_SUBJECT_ID);
-            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
-                    .thenReturn(Optional.of(userProfile));
-            var event = validAuthCodeRequest();
-
-            // Act
-            var result = handler.handleRequest(event, context);
-
-            // Assert
-            assertThat(result, hasStatus(200));
-            verify(dynamoAuthCodeService, times(1))
-                    .saveAuthCode(
-                            eq(userProfile.getSubjectID()),
-                            anyString(),
-                            anyList(),
-                            eq(false),
-                            anyString(),
-                            eq(false),
-                            eq(null),
-                            eq(CLIENT_SESSION_ID));
-        }
-
-        @Test
-        void shouldReturn200WhenPermittedToIssueAuthCode() {
-            // Arrange
-            when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(true);
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
             var userProfile = new UserProfile();
             userProfile.setSubjectID(TEST_SUBJECT_ID);
