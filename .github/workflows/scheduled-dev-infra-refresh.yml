@@ -3,10 +3,8 @@ name: "SP - DEV: Scheduled infra refresh"
 run-name: "Scheduled dev infra refresh - utils (${{ github.run_id }})"
 
 on:
-  # schedule:
-  #   - cron: "0 0 * * 1" # every day 00:00 UTC
-  # push:
-  #   branches: ["BAU/wip-add-scheduled-dev-deploy"]   # TEMP
+  schedule:
+    - cron: "0 0 * * *" # Every day 00:00 UTC
   workflow_dispatch: {} # Allow manual runs for verification
 
 concurrency:
