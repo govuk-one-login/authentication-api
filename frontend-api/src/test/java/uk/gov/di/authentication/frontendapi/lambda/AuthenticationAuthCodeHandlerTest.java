@@ -241,13 +241,6 @@ class AuthenticationAuthCodeHandlerTest {
         assertTrue(uri.getQuery().contains("state"));
         assertTrue(uri.getQuery().contains(TEST_STATE));
         assertFalse(uri.getQuery().contains("random_query_parameter"));
-        verify(auditService, never())
-                .submitAuditEvent(
-                        eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
-        verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
-                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     @Test
@@ -349,7 +342,7 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     @Test
-    void shouldNotSubmitReauthSuccessEventForNonReauthJourney() {
+    void shouldNotSubmitReauthSuccessEventOrCloudwatchMetricForNonReauthJourney() {
         when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
         var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
         userProfile.setSubjectID(TEST_SUBJECT_ID);
@@ -364,9 +357,7 @@ class AuthenticationAuthCodeHandlerTest {
                 .submitAuditEvent(
                         eq(AUTH_REAUTH_SUCCESS), any(), any(AuditService.MetadataPair[].class));
         verify(cloudwatchMetricsService, never())
-                .incrementCounter(
-                        CloudwatchMetrics.REAUTH_SUCCESS.getValue(),
-                        Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+                .incrementCounter(eq(CloudwatchMetrics.REAUTH_SUCCESS.getValue()), anyMap());
     }
 
     @Test
