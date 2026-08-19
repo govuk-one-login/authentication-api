@@ -59,7 +59,6 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -1024,8 +1023,8 @@ class RequestObjectAuthorizeValidatorTest {
                             .build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-            // ATO-2769: Throw InvalidAuthorizeRequestException here once we've checked logging
-            assertDoesNotThrow(() -> validator.validate(authRequest));
+            assertThrows(
+                    InvalidAuthorizeRequestException.class, () -> validator.validate(authRequest));
         }
 
         @Test
@@ -1035,8 +1034,8 @@ class RequestObjectAuthorizeValidatorTest {
                             .notBeforeTime(fixedNowClock.nowPlus(2, ChronoUnit.MINUTES))
                             .build();
             var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-            // ATO-2769: Throw InvalidAuthorizeRequestException here once we've checked logging
-            assertDoesNotThrow(() -> validator.validate(authRequest));
+            assertThrows(
+                    InvalidAuthorizeRequestException.class, () -> validator.validate(authRequest));
         }
 
         @Test
