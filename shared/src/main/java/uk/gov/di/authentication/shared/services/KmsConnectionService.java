@@ -41,12 +41,12 @@ public class KmsConnectionService {
     }
 
     public GetPublicKeyResponse getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
-        LOG.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.keyId());
+        LOG.debug("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.keyId());
         return kmsClient.getPublicKey(getPublicKeyRequest);
     }
 
     public SignResponse sign(SignRequest signRequest) {
-        LOG.info("Calling KMS with SignRequest and KeyId {}", signRequest.keyId());
+        LOG.debug("Calling KMS with SignRequest and KeyId {}", signRequest.keyId());
         return kmsClient.sign(signRequest);
     }
 }
