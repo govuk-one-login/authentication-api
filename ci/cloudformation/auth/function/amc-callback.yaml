@@ -130,13 +130,7 @@ Resources:
         - []
       AlarmDescription: !Sub
         - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-amc-callback-lambda function. ${RunbookLink}"
-        - AlarmThreshold:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              lambdaLogAlarmThreshold,
-              DefaultValue: 5,
-            ]
+        - AlarmThreshold: 20
           Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
           RunbookLink:
             !FindInMap [
@@ -156,13 +150,7 @@ Resources:
       Namespace: LambdaErrorsNamespace
       Period: 3600
       Statistic: Sum
-      Threshold:
-        !FindInMap [
-          EnvironmentConfiguration,
-          !Ref Environment,
-          lambdaLogAlarmThreshold,
-          DefaultValue: 5,
-        ]
+      Threshold: 20
 
   AMCCallbackFunctionErrorRateCloudwatchAlarm:
     Type: AWS::CloudWatch::Alarm
