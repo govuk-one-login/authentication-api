@@ -238,3 +238,38 @@ Resources:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Ref PasskeysDeleteProxyFunctionLogGroup
+
+  PasskeysDeleteFailedMetricCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Threshold: &LocalThresholdVar 10
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of passkey deletion attempts have failed in the ${Env}-passkeys-delete-proxy-lambda function. ${RunbookLink}"
+        - AlarmThreshold: *LocalThresholdVar
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "passkeys-delete-proxy",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-passkeys-delete-failed-metric-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: PasskeyDeletionFailed
+      Dimensions:
+        - Name: FailureReason
+          Value: DataApiUnsuccessfulResponse
+        - Name: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: Authentication
+      Period: 3600
+      Statistic: Sum
+      TreatMissingData: notBreaching
