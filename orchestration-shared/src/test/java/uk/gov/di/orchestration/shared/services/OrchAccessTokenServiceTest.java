@@ -30,6 +30,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+// QualityGateUnitTest
 class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenItem> {
 
     private static final String CLIENT_AND_RP_PAIRWISE_ID = "test-clientId.rpPairwiseId";
@@ -61,6 +62,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
     @Nested
     class StoreOrchAccessToken {
+        // QualityGateRegressionTest
         @Test
         void shouldStoreAccessTokenSuccessfully() {
             orchAccessTokenService.saveAccessToken(
@@ -78,6 +80,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             assertTrue(capturedRequest.getTimeToLive() > CREATION_INSTANT.getEpochSecond());
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowWhenDynamoThrowsException() {
             doThrow(DynamoDbException.builder().message("Failed to put item in table").build())
@@ -100,6 +103,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
     @Nested
     class GetOrchAccessTokenByClientAndRpPairwiseIdAndAuthCode {
+        // QualityGateRegressionTest
         @Test
         void shouldGetAccessTokenSuccessfully() {
             var orchAccessTokenItem =
@@ -128,6 +132,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldReturnEmptyWhenNoAccessTokenForClientIdAndRpPairwiseId() {
             when(table.getItem(any(GetItemEnhancedRequest.class))).thenReturn(null);
@@ -138,6 +143,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             assertTrue(actualOrchAccessToken.isEmpty());
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowWhenDynamoThrowsException() {
             doThrow(DynamoDbException.builder().message("Failed to get item from table").build())
@@ -156,6 +162,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
     @Nested
     class GetOrchAccessTokenByAuthCode {
+        // QualityGateRegressionTest
         @Test
         void shouldGetAccessTokenSuccessfully() {
             var orchAccessTokenItem =
@@ -178,6 +185,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldReturnEmptyWhenNoAccessTokenForAuthCode() {
             var spyOrchAccessTokenService = spy(orchAccessTokenService);
@@ -191,6 +199,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             assertTrue(actualOrchAccessToken.isEmpty());
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowWhenDynamoThrowsException() {
             var spyOrchAccessTokenService = spy(orchAccessTokenService);
@@ -208,6 +217,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
 
     @Nested
     class GetOrchAccessTokenByClientAndRpPairwiseIdAndTokenValue {
+        // QualityGateRegressionTest
         @Test
         void shouldGetAccessTokenSuccessfully() {
             var orchAccessTokenItem =
@@ -231,6 +241,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             assertOrchAccessTokenItemMatchesExpected(actualOrchAccessToken.get());
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldReturnEmptyWhenNoMatchForTokenValue() {
             var orchAccessTokenItem =
@@ -253,6 +264,7 @@ class OrchAccessTokenServiceTest extends BaseDynamoServiceTest<OrchAccessTokenIt
             assertTrue(actualOrchAccessToken.isEmpty());
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldThrowWhenDynamoThrowsException() {
             var spyOrchAccessTokenService = spy(orchAccessTokenService);

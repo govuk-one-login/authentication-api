@@ -36,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.sharedtest.utils.KeyPairUtils.generateRsaKeyPair;
 
+// QualityGateUnitTest
 class DocAppUserHelperTest {
 
     private static final ClientID CLIENT_ID = new ClientID("client-id");
@@ -53,6 +54,7 @@ class DocAppUserHelperTest {
         return Stream.of(ClientType.WEB, ClientType.APP);
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("clientTypes")
     void shouldReturnFalseIfAuthRequestDoesNotContainRequestObject(ClientType clientType) {
@@ -62,6 +64,7 @@ class DocAppUserHelperTest {
         Assertions.assertFalse(DocAppUserHelper.isDocCheckingAppUser(userContext));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("clientTypes")
     void shouldReturnFalseIfRequestObjectDoesNotContainDocAppScope(ClientType clientType)
@@ -92,6 +95,7 @@ class DocAppUserHelperTest {
         assertFalse(DocAppUserHelper.isDocCheckingAppUser(userContext));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalseIfClientIsNotAppClient() throws JOSEException {
         var jwtClaimsSet =
@@ -111,6 +115,7 @@ class DocAppUserHelperTest {
         assertFalse(DocAppUserHelper.isDocCheckingAppUser(userContext));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnTrueIfClientIsDocCheckingAppUser() throws JOSEException {
         var jwtClaimsSet =
@@ -130,6 +135,7 @@ class DocAppUserHelperTest {
         assertTrue(DocAppUserHelper.isDocCheckingAppUser(userContext));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnTrueIfClientIsDocCheckingAppUserWithSubject() throws JOSEException {
 
@@ -144,6 +150,7 @@ class DocAppUserHelperTest {
                         userContext.getOrchClientSession()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnFalsIfClientIsDocCheckingAppUserWithoutSubject() throws JOSEException {
 

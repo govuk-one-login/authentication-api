@@ -15,6 +15,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.asJson;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.orchestration.sharedtest.matchers.JsonMatcher.hasNumericFieldWithValue;
 
+// QualityGateUnitTest
 class TxmaAuditEventTest {
 
     enum TestAuditableEvent implements AuditableEvent {
@@ -26,6 +27,7 @@ class TxmaAuditEventTest {
         }
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSerializeEventWithMandatoryFields() {
         var now = NowHelper.now();
@@ -41,6 +43,7 @@ class TxmaAuditEventTest {
                 hasNumericFieldWithValue("event_timestamp_ms", is(now.toInstant().toEpochMilli())));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSerializeEventWithNonMandatoryFields() {
         var event =
@@ -52,6 +55,7 @@ class TxmaAuditEventTest {
         assertThat(payload, hasFieldWithValue("component_id", is("component-id")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSerializeUserSubObject() {
         var user =
@@ -79,6 +83,7 @@ class TxmaAuditEventTest {
         assertThat(payload, hasFieldWithValue("govuk_signin_journey_id", is("journey-id")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSerializeRestrictedSubObject() {
         var event =
@@ -97,6 +102,7 @@ class TxmaAuditEventTest {
         assertThat(subObject, hasFieldWithValue("key3", is("value3")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSerializePlatformSubObject() {
         var event =
@@ -115,6 +121,7 @@ class TxmaAuditEventTest {
         assertThat(subObject, hasFieldWithValue("key3", is("value3")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldSerializeExtensionsSubObject() {
         var event =

@@ -11,7 +11,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// QualityGateUnitTest
 class VtrListUtilsTest {
+    // QualityGateRegressionTest
     @Test
     void shouldBuildVtrLocListFromSingleVtr() {
         var vtrList = List.of(vtrWithLoc(LevelOfConfidence.LOW_LEVEL));
@@ -20,6 +22,7 @@ class VtrListUtilsTest {
         assertThat(vtrStringList, equalTo("P1"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBuildVtrLocListFromMultipleVtrs() {
         var vtrList =
@@ -31,6 +34,7 @@ class VtrListUtilsTest {
         assertThat(vtrStringList, equalTo("P1,P2"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBuildVtrLocListFromMultipleVtrsOutOfOrder() {
         var vtrList =
@@ -42,12 +46,14 @@ class VtrListUtilsTest {
         assertThat(vtrStringList, equalTo("P1,P2"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBuildEmptyVtrLocListFromEmptyVtrList() {
         var vtrStringList = VtrListUtils.getVtrLocsAsCommaSeparatedString(List.of());
         assertTrue(vtrStringList.isEmpty());
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldBuildVtrLocListFromVtrListWithNoLocSet() {
         var vtrList = List.of(vtrWithLoc(null));

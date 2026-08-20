@@ -20,11 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+// QualityGateUnitTest
 class SerializationServiceTest {
     private final SerializationService serializationService = SerializationService.getInstance();
 
     @Nested
     class Deserialise {
+        // QualityGateRegressionTest
         @Test
         void shouldDeserialiseJsonStringWithAllFields() throws Exception {
             var testJsonString =
@@ -41,6 +43,7 @@ class SerializationServiceTest {
             assertEquals(List.of("def", "ghi"), testObject.stringListField);
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldDeserialiseJsonStringWithMissingFields() throws Exception {
             var testJsonString = "{\"int_field\":123, \"string_list_field\":[\"def\", \"ghi\"]}";
@@ -52,6 +55,7 @@ class SerializationServiceTest {
             assertEquals(List.of("def", "ghi"), testObject.stringListField);
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldDeserialiseJsonStringWithExtraFields() throws Exception {
             var testJsonString =
@@ -129,6 +133,7 @@ class SerializationServiceTest {
 
     @Nested
     class Serialise {
+        // QualityGateRegressionTest
         @Test
         void shouldSerialiseObjectWithAllFields() {
             var testObject = new TestObject("abc", 123, List.of("def", "ghi"));
@@ -143,6 +148,7 @@ class SerializationServiceTest {
             assertEquals(expectedJsonString, actualJsonString);
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldSerialiseObjectWithNullFieldToJsonString() {
             var testObject = new TestObject(null, 123, List.of("def", "ghi"));

@@ -12,8 +12,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static uk.gov.di.orchestration.shared.helpers.IpAddressHelper.extractIpAddress;
 
+// QualityGateUnitTest
 class IpAddressHelperTest {
 
+    // QualityGateRegressionTest
     @Test
     void shouldPreferCloudfrontViewerOverXForwarded() {
         var request = new APIGatewayProxyRequestEvent();
@@ -29,6 +31,7 @@ class IpAddressHelperTest {
         assertThat(extractIpAddress(request), is("222.222.222.222"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldRetrieveCloudfrontViewerCaseInsensitively() {
         var request = new APIGatewayProxyRequestEvent();
@@ -39,6 +42,7 @@ class IpAddressHelperTest {
         assertThat(extractIpAddress(request), is("222.222.222.222"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldAcceptCloudfrontViewerWithoutSourcePort() {
         var request = new APIGatewayProxyRequestEvent();
@@ -49,6 +53,7 @@ class IpAddressHelperTest {
         assertThat(extractIpAddress(request), is("222.222.222.222"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldPreferFirstXForwardedForHeader() {
         var request = new APIGatewayProxyRequestEvent();
@@ -60,6 +65,7 @@ class IpAddressHelperTest {
         assertThat(extractIpAddress(request), is("234.234.234.234"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldPreferXForwardedForOverSourceIp() {
         var request = new APIGatewayProxyRequestEvent();
@@ -70,6 +76,7 @@ class IpAddressHelperTest {
         assertThat(extractIpAddress(request), is("123.123.123.123"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldExtractFromXForwardedHeaderRegardlessOfCase() {
         var request = new APIGatewayProxyRequestEvent();
@@ -80,6 +87,7 @@ class IpAddressHelperTest {
         assertThat(extractIpAddress(request), is("123.123.123.123"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldChooseSourceIpAsLastResort() {
         var request = new APIGatewayProxyRequestEvent();
@@ -88,6 +96,7 @@ class IpAddressHelperTest {
         assertThat(extractIpAddress(request), is("111.111.111.111"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldChooseDefaultIfNeitherAvailable() {
         var request = new APIGatewayProxyRequestEvent();

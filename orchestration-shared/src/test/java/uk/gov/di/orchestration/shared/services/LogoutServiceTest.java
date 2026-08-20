@@ -70,6 +70,7 @@ import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
+// QualityGateUnitTest
 class LogoutServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -187,6 +188,7 @@ class LogoutServiceTest {
         clientSubjectHelper.close();
     }
 
+    // QualityGateRegressionTest
     @Test
     void successfullyReturnsClientLogoutResponse() {
         APIGatewayProxyResponseEvent response =
@@ -219,6 +221,7 @@ class LogoutServiceTest {
                 equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
     }
 
+    // QualityGateRegressionTest
     @Test
     void successfullyReturnsLogoutResponseWithoutStateWhenStateIsAbsent() {
         APIGatewayProxyResponseEvent response =
@@ -251,6 +254,7 @@ class LogoutServiceTest {
                 equalTo(DEFAULT_LOGOUT_URI.toString()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void successfullyReturnsDefaultLogoutResponseWithStateWhenStateIsPresent() {
         APIGatewayProxyResponseEvent response =
@@ -283,6 +287,7 @@ class LogoutServiceTest {
                 equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE.getValue()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void successfullyReturnsErrorLogoutResponse() {
         var errorObject = new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
@@ -317,6 +322,7 @@ class LogoutServiceTest {
                 equalTo(ERROR_LOGOUT_URI.toString()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void doseNotIncrementLogoutMetricIfSessionNotPresent() {
         logoutService.handleLogout(
@@ -331,6 +337,7 @@ class LogoutServiceTest {
         verifyNoInteractions(metrics);
     }
 
+    // QualityGateRegressionTest
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsBlocked() {
         AccountIntervention intervention =
@@ -362,6 +369,7 @@ class LogoutServiceTest {
                 equalTo(FRONTEND_BASE_URL + "unavailable-permanent"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsSuspended() {
         AccountIntervention intervention =
@@ -394,6 +402,7 @@ class LogoutServiceTest {
                 equalTo(FRONTEND_BASE_URL + "unavailable-temporary"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldDeleteSessionFromDynamoWhenNoCookieExists() {
         APIGatewayProxyRequestEvent input = new APIGatewayProxyRequestEvent();
@@ -429,6 +438,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void throwsWhenGenerateAccountInterventionLogoutResponseCalledInappropriately() {
         AccountIntervention intervention =
@@ -452,6 +462,7 @@ class LogoutServiceTest {
         assertEquals("Account status must be blocked or suspended", exception.getMessage());
     }
 
+    // QualityGateRegressionTest
     @Test
     void includesRpPairwiseIdInLogOutSuccessAuditEventWhenItIsAvailable() {
 
@@ -473,6 +484,7 @@ class LogoutServiceTest {
                         pair("rpPairwiseId", rpPairwiseId.get()));
     }
 
+    // QualityGateRegressionTest
     @Test
     void sessionsAreAllDeletedOnLogout() {
         setupAdditionalClientSessions();
@@ -531,6 +543,7 @@ class LogoutServiceTest {
         };
     }
 
+    // QualityGateRegressionTest
     @Test
     void successfullyLogsOutAndGeneratesRedirectResponseForeReauthenticationFailure() {
         var response =
@@ -558,6 +571,7 @@ class LogoutServiceTest {
                 is(equalTo(REAUTH_FAILURE_URI.toString())));
     }
 
+    // QualityGateRegressionTest
     @Test
     void handlesAMaxAgeSessionExpiry() {
         var clientSessionId1 = IdGenerator.generate();
@@ -597,6 +611,7 @@ class LogoutServiceTest {
                         expectedExtensions.toArray(AuditService.MetadataPair[]::new));
     }
 
+    // QualityGateRegressionTest
     @Test
     void handlesASessionInvalidatedLogout() {
         APIGatewayProxyResponseEvent response =

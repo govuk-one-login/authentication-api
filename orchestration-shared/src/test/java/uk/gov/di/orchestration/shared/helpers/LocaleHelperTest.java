@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
+// QualityGateUnitTest
 class LocaleHelperTest {
 
     private static Optional<SupportedLanguage> PRIMARY_LANGUAGE_EN =
@@ -100,6 +101,7 @@ class LocaleHelperTest {
                         PRIMARY_LANGUAGE_EN));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("uiLocalesAndPrimaryLanguageCYEnabled")
     void shouldReturnLanguageBasedOnUILocalesCYEnabled(
@@ -123,6 +125,7 @@ class LocaleHelperTest {
                 Arguments.of(Optional.empty(), SupportedLanguage.EN));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("shouldMatchSupportedLanguageSource")
     void shouldMatchSupportedLanguage(Optional<String> language, SupportedLanguage result) {
@@ -137,6 +140,7 @@ class LocaleHelperTest {
                 Arguments.of(Map.of("User-Language", "fr"), Optional.of("fr")));
     }
 
+    // QualityGateRegressionTest
     @ParameterizedTest
     @MethodSource("shouldGetUserLanguageFromRequestHeadersSource")
     void shouldGetUserLanguageFromRequestHeaders(

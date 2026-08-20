@@ -15,8 +15,10 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
+// QualityGateUnitTest
 class ValidScopesTest {
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectClaimsForOpenidScope() {
         MatcherAssert.assertThat(
@@ -24,6 +26,7 @@ class ValidScopesTest {
         assertThat(ValidScopes.getClaimsForListOfScopes(List.of("openid")).size(), equalTo(1));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectClaimsForEmailScope() {
         assertThat(
@@ -32,12 +35,14 @@ class ValidScopesTest {
         assertThat(ValidScopes.getClaimsForListOfScopes(List.of("email")).size(), equalTo(2));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotReturnAnyClaimsForOfflineAccessScope() {
         assertThat(
                 ValidScopes.getClaimsForListOfScopes(List.of("offline_access")).size(), equalTo(0));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectClaimsForPhoneScope() {
         assertThat(
@@ -46,6 +51,7 @@ class ValidScopesTest {
         assertThat(ValidScopes.getClaimsForListOfScopes(List.of("phone")).size(), equalTo(2));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectClaimsForAmScope() {
         assertThat(
@@ -55,6 +61,7 @@ class ValidScopesTest {
         assertThat(ValidScopes.getClaimsForListOfScopes(List.of("am")).size(), equalTo(2));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectClaimsForDocCheckingAppScope() {
         assertThat(
@@ -65,6 +72,7 @@ class ValidScopesTest {
                 equalTo(1));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectClaimsForGovUkAccountScope() {
         assertThat(
@@ -74,6 +82,7 @@ class ValidScopesTest {
                 ValidScopes.getClaimsForListOfScopes(List.of("govuk-account")).size(), equalTo(1));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectClaimsForOIDCAndCustomScopes() {
         assertThat(
@@ -83,6 +92,7 @@ class ValidScopesTest {
                 ValidScopes.getClaimsForListOfScopes(List.of("openid", "am")).size(), equalTo(3));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectClaimsForAllOIDCAndCustomScopes() {
         assertThat(
@@ -104,6 +114,7 @@ class ValidScopesTest {
                 equalTo(7));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnAllValidScopesInCorrectOrder() {
         assertThat(
@@ -119,11 +130,13 @@ class ValidScopesTest {
                         "wallet-subject-id"));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnCorrectNumberOfValidScopes() {
         assertThat(ValidScopes.getAllValidScopes().size(), equalTo(8));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotReturnPrivateScopesWhenPublicRequested() {
         assertThat(ValidScopes.getPublicValidScopes().size(), equalTo(4));
@@ -133,6 +146,7 @@ class ValidScopesTest {
         assertThat(ValidScopes.getPublicValidScopes(), not(contains("am")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnOIDCScopesForWellKnown() {
         var scope = ValidScopes.getScopesForWellKnownHandler();
@@ -141,6 +155,7 @@ class ValidScopesTest {
                 equalTo(List.of("openid", "email", "phone", "offline_access")));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldReturnScopesForListOfValidClaims() {
         var claims =
@@ -156,6 +171,7 @@ class ValidScopesTest {
         assertThat(ValidScopes.getScopesForListOfClaims(claims).size(), equalTo(7));
     }
 
+    // QualityGateRegressionTest
     @Test
     void shouldNotReturnEmailScopesWhenAllEmailsClaimsAreNotGiven() {
         var claims =
@@ -167,8 +183,10 @@ class ValidScopesTest {
                         .contains(OIDCScopeValue.EMAIL.getValue()));
     }
 
+    // TODO: unsure if nested should be tagged as well
     @Nested
     class AreScopesValid {
+        // QualityGateRegressionTest
         @Test
         void shouldReturnTrueWhenAllScopesAreValid() {
             assertThat(
@@ -176,6 +194,7 @@ class ValidScopesTest {
                     equalTo(true));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldReturnFalseWhenScopesAreInvalid() {
             assertThat(
@@ -186,6 +205,7 @@ class ValidScopesTest {
 
     @Nested
     class AreScopesValidAndPublic {
+        // QualityGateRegressionTest
         @Test
         void shouldReturnTrueWhenScopesAreValidAndPublic() {
             assertThat(
@@ -194,6 +214,7 @@ class ValidScopesTest {
                     equalTo(true));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldReturnFalseWhenScopesAreInvalid() {
             assertThat(
@@ -201,6 +222,7 @@ class ValidScopesTest {
                     equalTo(false));
         }
 
+        // QualityGateRegressionTest
         @Test
         void shouldReturnFalseWhenScopesArePrivate() {
             assertThat(
