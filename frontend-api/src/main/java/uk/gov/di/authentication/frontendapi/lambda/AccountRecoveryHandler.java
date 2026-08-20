@@ -71,7 +71,6 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
             UserContext userContext) {
         try {
             LOG.info("AccountRecoveryHandler called");
-            LOG.info("Checking if block is present");
             var commonSubjectId =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userContext.getUserProfile().orElseThrow(),

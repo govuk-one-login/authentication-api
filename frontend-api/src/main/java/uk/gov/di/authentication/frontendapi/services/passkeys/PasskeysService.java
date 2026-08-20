@@ -83,7 +83,7 @@ public class PasskeysService {
                                         .getSuccess()
                                         .toAuthorizationHeader())
                         .build();
-        LOG.info("Sending request to account data api retrieve endpoint");
+        LOG.debug("Sending request to account data api retrieve endpoint");
         try {
             var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -94,7 +94,7 @@ public class PasskeysService {
                 return Result.failure(PasskeyRetrieveError.ERROR_RESPONSE_FROM_PASSKEY_RETRIEVE);
             }
 
-            LOG.info("Successful response received from retrieve passkeys endpoint");
+            LOG.debug("Successful response received from retrieve passkeys endpoint");
             return parseResponse(httpResponse);
         } catch (IOException e) {
             LOG.error("IOException in retrieve passkeys", e);

@@ -48,12 +48,12 @@ public class AccountInterventionsService {
 
     public AccountInterventionsInboundResponse sendAccountInterventionsOutboundRequest(
             String internalPairwiseId) throws UnsuccessfulAccountInterventionsResponseException {
-        LOG.info("Sending account interventions outbound request");
+        LOG.debug("Sending account interventions outbound request");
         var response = sendAccountInterventionsRequest(internalPairwiseId);
         if (response.statusCode() < 200 || response.statusCode() > 299) {
             throw httpResponseCodeException(response.statusCode(), response.body());
         }
-        LOG.info("Received successful account interventions outbound response");
+        LOG.debug("Received successful account interventions outbound response");
         return parseResponse(response);
     }
 
