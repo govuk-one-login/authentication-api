@@ -573,8 +573,6 @@ public class AuthSessionItem {
                 + resetPasswordState
                 + "', resetMfaState = '"
                 + resetMfaState
-                + "', internalCommonSubjectId = '"
-                + internalCommonSubjectId
                 + "', upliftRequired = '"
                 + upliftRequired
                 + "', hasVerifiedWithPassword = '"
