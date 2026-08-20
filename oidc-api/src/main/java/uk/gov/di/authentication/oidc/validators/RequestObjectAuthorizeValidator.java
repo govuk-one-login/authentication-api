@@ -370,12 +370,14 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         return Optional.of(new AuthRequestError(error, uri, state));
     }
 
-    private void validateTimestampClaims(JWTClaimsSet jwtClaimsSet) {
+    private void validateTimestampClaims(JWTClaimsSet jwtClaimsSet)
+            throws InvalidAuthorizeRequestException {
         try {
             claimsVerifier.verify(jwtClaimsSet, null);
         } catch (BadJWTException e) {
             LOG.warn("Error validating time based claims in request object: {}", e.getMessage());
-            // ATO-2769: Throw InvalidAuthorizeRequestException here once we've checked logging
+            throw new InvalidAuthorizeRequestException(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_OBJECT_CODE, "Request expired"));
         }
     }
 
