@@ -13,11 +13,6 @@ PROVISION_CLOUDFRONT_TLS_CERT=false
 PROVISION_CLOUDFRONT=false
 PROVISION_CLOUDFRONT_MONITORING=false
 PROVISION_CLOUDFRONT_NOTIFICATION_STACK=false
-SYNC_SECRETS=false
-# Matches the dev-platform stack default
-PREVIOUS_ORIGIN_CLOAKING_SECRET="none"
-CERT_TO_DEPLOY="live"
-CLOUDFRONT_PARAMS_TO_USE="live"
 
 PROVISION_COMMAND="../../../devplatform-deploy/stack-orchestration-tool/provisioner.sh"
 
@@ -66,38 +61,15 @@ while [[ $# -gt 0 ]]; do
       ;;
     -c | --certificate)
       PROVISION_CLOUDFRONT_TLS_CERT=true
-      CERT_TO_DEPLOY="${2}"
-
-      PERMITTED_VALUES="live alternative"
-
-      if ! [[ ${PERMITTED_VALUES} =~ ( |^)${CERT_TO_DEPLOY}( |$) ]]; then
-        echo "Certificate arg provided: ${CERT_TO_DEPLOY} is not one of ${PERMITTED_VALUES}"
-        exit 1
-      fi
-      shift
       ;;
     -d | --distribution)
       PROVISION_CLOUDFRONT=true
-      CLOUDFRONT_PARAMS_TO_USE="${2}"
-
-      PERMITTED_VALUES="live alternative alt-with-live-cert live-with-rollback"
-
-      if ! [[ ${PERMITTED_VALUES} =~ ( |^)${CLOUDFRONT_PARAMS_TO_USE}( |$) ]]; then
-        echo "Cloudfront distribution arg provided: ${CLOUDFRONT_PARAMS_TO_USE} is not one of ${PERMITTED_VALUES}"
-        exit 1
-      fi
-      shift
       ;;
     -m | --monitoring)
       PROVISION_CLOUDFRONT_MONITORING=true
       ;;
     -n | --notification)
       PROVISION_CLOUDFRONT_NOTIFICATION_STACK=true
-      ;;
-    -s | --sync-secrets)
-      SYNC_SECRETS=true
-      PROFILE_TO_SYNC_SECRET_WITH="${2}"
-      shift
       ;;
     *)
       usage
@@ -109,39 +81,6 @@ done
 
 TAGS_FILE="$(pwd)/configuration/${ENVIRONMENT}/tags.json"
 export TAGS_FILE
-
-function sync_secret_from_auth_account() {
-  local current_aws_profile="${AWS_PROFILE}"
-  local expected_managed_secret_name="${ENVIRONMENT}-oidc-cloudfront-origin-cloaking-header-managed"
-
-  AWS_PROFILE="${PROFILE_TO_SYNC_SECRET_WITH}" aws sso login
-
-  # shellcheck disable=SC2155
-  local account_id=$(aws sts get-caller-identity | jq ".Account")
-
-  echo "Logged into account ${account_id}"
-
-  local secret_value=""
-  secret_value=$(AWS_PROFILE="${PROFILE_TO_SYNC_SECRET_WITH}" aws secretsmanager get-secret-value --secret-id "${expected_managed_secret_name}" | jq -r ".SecretString" || exit 1)
-
-  if [ -z "${secret_value}" ]; then
-    echo "Failed to get previous origin cloaking secret"
-    exit 1
-  fi
-
-  PREVIOUS_ORIGIN_CLOAKING_SECRET="${secret_value}"
-  echo "Retrieved secret value"
-
-  echo "Logging back into previous AWS profile"
-
-  export AWS_PROFILE="${current_aws_profile}"
-  aws sso login
-
-  # shellcheck disable=SC2155
-  local current_account_id=$(aws sts get-caller-identity | jq ".Account")
-
-  echo "Logged into account ${current_account_id}"
-}
 
 function provision_cloudfront_distribution() {
   export AWS_REGION="eu-west-2"
@@ -158,25 +97,7 @@ function provision_cloudfront_distribution() {
     jq -s 'add | group_by(.Key) | map(last)' "${TAGS_FILE}" "${stack_tags_file}" > "${tmp_tags_file}"
   fi
 
-  if [ "${CLOUDFRONT_PARAMS_TO_USE}" == "alternative" ]; then
-    params_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/alternative-parameters.json"
-  elif [ "${CLOUDFRONT_PARAMS_TO_USE}" == "alt-with-live-cert" ]; then
-    params_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/alternative-with-live-cert-parameters.json"
-  elif [ "${CLOUDFRONT_PARAMS_TO_USE}" == "live-with-rollback" ]; then
-    params_file="$(pwd)/configuration/${ENVIRONMENT}/${ENVIRONMENT}-oidc-cloudfront/live-with-rollback-parameters.json"
-  fi
-
-  if [ "${SYNC_SECRETS}" == "true" ]; then
-    echo "Syncing secrets from auth account"
-    sync_secret_from_auth_account
-  fi
-
-  tmp_params_file="$(mktemp)"
-  jq "map(if .ParameterKey == \"PreviousOriginCloakingHeader\" then .ParameterValue = \"${PREVIOUS_ORIGIN_CLOAKING_SECRET}\" else . end)" "${params_file}" > "${tmp_params_file}"
-
-  TAGS_FILE="${tmp_tags_file}" PARAMETERS_FILE="${tmp_params_file}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${ENVIRONMENT}-oidc-cloudfront" "cloudfront-distribution" "${CLOUDFRONT_DISTRIBUTION_STACK_VERSION}"
-  # Remove temp params file
-  rm -f "${tmp_params_file}"
+  TAGS_FILE="${tmp_tags_file}" PARAMETERS_FILE="${params_file}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${ENVIRONMENT}-oidc-cloudfront" "cloudfront-distribution" "${CLOUDFRONT_DISTRIBUTION_STACK_VERSION}"
 
   echo "Provisioned cloudfront stack"
 }
@@ -195,11 +116,6 @@ function provision_cloudfront_certificate() {
   # shellcheck disable=SC2155
   local params_file="$(pwd)/configuration/${ENVIRONMENT}/cloudfront-tls-certificate/parameters.json"
   local stack_name="cloudfront-tls-certificate"
-
-  if [ "${CERT_TO_DEPLOY}" == "alternative" ]; then
-    params_file="$(pwd)/configuration/${ENVIRONMENT}/cloudfront-tls-certificate/alternative-parameters.json"
-    stack_name="cloudfront-tls-certificate-alt-domain"
-  fi
 
   AWS_REGION="us-east-1" PARAMETERS_FILE="${params_file}" ${PROVISION_COMMAND} "${ENVIRONMENT}" "${stack_name}" "certificate" "${CERTIFICATE_STACK_VERSION}"
 
