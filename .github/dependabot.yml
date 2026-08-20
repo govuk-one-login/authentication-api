@@ -11,6 +11,8 @@ updates:
     ignore:
       - dependency-name: "gradle"
         versions: ["[9.0,)"]
+      - dependency-name: "org.sonarqube"
+        versions: ["[7.4.0,)"]
       - dependency-name: "com.nimbusds:oauth2-oidc-sdk"
       - dependency-name: "org.junit*:*"
         update-types: ["version-update:semver-patch"]
