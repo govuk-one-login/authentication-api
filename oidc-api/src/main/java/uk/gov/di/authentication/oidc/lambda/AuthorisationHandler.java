@@ -261,15 +261,7 @@ public class AuthorisationHandler
 
         AuthenticationRequest authRequest;
         try {
-            Map<String, String> parameterMap = input.getQueryStringParameters();
-            Map<String, List<String>> requestParameters =
-                    parameterMap.entrySet().stream()
-                            .collect(
-                                    Collectors.toMap(
-                                            Map.Entry::getKey, entry -> List.of(entry.getValue())));
-            authRequest = AuthenticationRequest.parse(requestParameters);
-            authRequest = stripOutReauthenticateQueryParams(authRequest);
-            authRequest = stripOutLoginHintQueryParams(authRequest);
+            authRequest = parseRequest(input);
         } catch (ParseException e) {
             LOG.warn("Authentication request could not be parsed", e);
             return generateParseExceptionResponse(e, user);
@@ -295,27 +287,13 @@ public class AuthorisationHandler
             return generateBadRequestResponse(user, e.getMessage(), clientId);
         }
 
-        Optional<AuthRequestError> authRequestError;
-        boolean isJarValidationRequired =
+        boolean clientRequiresJarValidation =
                 orchestrationAuthorizationService.isJarValidationRequired(client);
-        if (isJarValidationRequired && authRequest.getRequestObject() == null) {
-            String errorMsg = "JAR required for client but request does not contain Request Object";
-            LOG.warn(errorMsg);
-            if (client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
-                LOG.warn("Redirecting");
-                return generateErrorResponse(
-                        authRequest.getRedirectionURI(),
-                        authRequest.getState(),
-                        authRequest.getResponseMode(),
-                        new ErrorObject(ACCESS_DENIED_CODE, errorMsg),
-                        client.getClientID(),
-                        user);
-            } else {
-                LOG.warn("Redirect URI {} is invalid for client", authRequest.getRedirectionURI());
-                return generateBadRequestResponse(user, errorMsg, client.getClientID());
-            }
+        if (clientRequiresJarValidation && authRequest.getRequestObject() == null) {
+            return handleJarValidationBadRequest(authRequest, client, user);
         }
 
+        Optional<AuthRequestError> authRequestError;
         try {
             if (authRequest.getRequestObject() == null) {
                 LOG.info("Validating request query params");
@@ -492,6 +470,40 @@ public class AuthorisationHandler
             throw new InvalidHttpMethodException(
                     String.format(
                             "Authentication request does not support %s requests", usedHttpMethod));
+        }
+    }
+
+    private AuthenticationRequest parseRequest(APIGatewayProxyRequestEvent input)
+            throws ParseException {
+        AuthenticationRequest authRequest;
+        Map<String, String> parameterMap = input.getQueryStringParameters();
+        Map<String, List<String>> requestParameters =
+                parameterMap.entrySet().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        Map.Entry::getKey, entry -> List.of(entry.getValue())));
+        authRequest = AuthenticationRequest.parse(requestParameters);
+        authRequest = stripOutReauthenticateQueryParams(authRequest);
+        authRequest = stripOutLoginHintQueryParams(authRequest);
+        return authRequest;
+    }
+
+    private APIGatewayProxyResponseEvent handleJarValidationBadRequest(
+            AuthenticationRequest authRequest, ClientRegistry client, TxmaAuditUser user) {
+        String errorMsg = "JAR required for client but request does not contain Request Object";
+        LOG.warn(errorMsg);
+        if (client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+            LOG.warn("Redirecting");
+            return generateErrorResponse(
+                    authRequest.getRedirectionURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    new ErrorObject(ACCESS_DENIED_CODE, errorMsg),
+                    client.getClientID(),
+                    user);
+        } else {
+            LOG.warn("Redirect URI {} is invalid for client", authRequest.getRedirectionURI());
+            return generateBadRequestResponse(user, errorMsg, client.getClientID());
         }
     }
 
