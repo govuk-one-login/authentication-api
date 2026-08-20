@@ -53,7 +53,7 @@ public class TicfCriHandler implements RequestHandler<InternalTICFCRIRequest, Vo
     @Override
     public Void handleRequest(InternalTICFCRIRequest input, Context context) {
         attachTraceId();
-        LOG.debug("TicfCriHandler called");
+        LOG.info("TicfCriHandler called");
         var environmentForMetrics = Map.entry("Environment", configurationService.getEnvironment());
         try {
             var response = sendRequest(input);
