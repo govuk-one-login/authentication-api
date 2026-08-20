@@ -110,7 +110,7 @@ public class StartHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         attachTraceId();
-        LOG.info("StartHandler called");
+        LOG.info("Processing request in Start Handler");
         var sessionIdOpt =
                 getOptionalHeaderValueFromHeaders(
                         input.getHeaders(),
@@ -137,6 +137,7 @@ public class StartHandler
         }
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionIdOpt.get());
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionIdOpt.get());
+        LOG.info("StartHandler called");
 
         StartRequest startRequest;
         try {
