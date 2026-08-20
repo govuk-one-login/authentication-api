@@ -425,8 +425,6 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return true;
         }
 
-        LOG.info("Passkey not verified");
-
         if (!hasVerifiedWithPassword) {
             LOG.info("Auth code blocked: password not verified");
             return false;
