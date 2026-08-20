@@ -34,14 +34,11 @@ function usage {
 
   Options:
     -e, --environment        The environment you wish to deploy to i.e dev, build, staging, integration, or production
-    -c, --certificate         Creates certificate in us-east-1 region for CloudFront Distribution. Can choose between deploying a cert for the
-                             live or alternate domains.
-    -d, --distribution       Creates the CloudFront distribution. Must provide a parameter for the live or alternative parameters to be used.
+    -c, --certificate         Creates certificate in us-east-1 region for CloudFront Distribution.
+    -d, --distribution       Creates the CloudFront distribution.
     -m, --monitoring         Deploys CloudFront Extended Monitoring stack in us-east-1
     -n, --notification        Deploys a stack which allows us to forward our Cloudfront alarms to Slack in our non-prod envs, or PagerDuty in
                              the production environment. This requires us to setup some manual secrets for the relevant webhooks/slack channel IDs.
-   -s, --sync-secrets        Attempts to fetch the current origin cloaking secret from the auth account and apply it as the previous origin cloaking
-                             secret on the new Cloudfront. Requires you to provide a valid AWS profile name to retrieve the secret.
 USAGE
 }
 
