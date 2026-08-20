@@ -39,4 +39,9 @@ data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
-data "aws_availability_zones" "available" {}
+data "aws_availability_zones" "available" {
+  filter {
+    name   = "zone-name"
+    values = ["eu-west-2a", "eu-west-2b", "eu-west-2c"]
+  }
+}
