@@ -88,6 +88,7 @@ public class BulkRemoveAccountHandler
         ThreadContext.clearMap();
         attachTraceId();
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
+        LOG.info("BulkRemoveAccountHandler called");
 
         if (!configurationService.isBulkAccountDeletionEnabled()) {
             throw new BulkRemoveAccountException(
@@ -95,8 +96,6 @@ public class BulkRemoveAccountHandler
         }
 
         try {
-            LOG.info("BulkRemoveAccountHandler received request");
-
             validateRequest(request);
 
             String reference = request.reference();

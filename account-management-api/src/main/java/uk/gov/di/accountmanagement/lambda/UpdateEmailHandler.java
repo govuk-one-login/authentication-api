@@ -123,7 +123,7 @@ public class UpdateEmailHandler
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
         attachTraceId();
         attachSessionIdToLogs(sessionId);
-        LOG.info("UpdateEmailHandler received request");
+        LOG.info("UpdateEmailHandler called");
         SupportedLanguage userLanguage =
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(

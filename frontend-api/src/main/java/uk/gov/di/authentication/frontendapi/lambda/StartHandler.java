@@ -110,7 +110,7 @@ public class StartHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         attachTraceId();
-        LOG.info("Start request received");
+        LOG.info("StartHandler called");
         var sessionIdOpt =
                 getOptionalHeaderValueFromHeaders(
                         input.getHeaders(),

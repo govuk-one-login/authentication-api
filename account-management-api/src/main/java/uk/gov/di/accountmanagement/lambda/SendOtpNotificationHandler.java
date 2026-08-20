@@ -189,7 +189,7 @@ public class SendOtpNotificationHandler
     public APIGatewayProxyResponseEvent sendOtpRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) throws JsonException {
         attachTraceId();
-        LOG.info("Request received in SendOtp Lambda");
+        LOG.info("SendOtpNotificationHandler called");
 
         Map<String, String> headers = input.getHeaders();
         String sessionId = getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");

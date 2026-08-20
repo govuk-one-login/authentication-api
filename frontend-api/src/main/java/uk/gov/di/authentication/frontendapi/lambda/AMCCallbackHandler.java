@@ -124,7 +124,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             AMCCallbackRequest request,
             UserContext userContext) {
 
-        LOG.info("Request received to AMCCallbackHandler");
+        LOG.info("AMCCallbackHandler called");
 
         var verifyStateResult = verifyState(request.state(), userContext);
         if (verifyStateResult.isFailure()) {

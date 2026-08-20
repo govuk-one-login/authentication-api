@@ -48,7 +48,7 @@ public class AMCJWKSHandler implements RequestHandler<Object, Void> {
 
     @Override
     public Void handleRequest(Object event, Context context) {
-        LOG.info("AMC JWKS lambda invoked");
+        LOG.info("AMCJWKSHandler called");
         JWK authToAMCSigningJwk = jwksService.getPublicAuthToAMCSigningJwkWithOpaqueId();
         JWK authToAccountManagementSigningJwk =
                 jwksService.getPublicAuthToAccountManagementSigningJwkWithOpaqueId();

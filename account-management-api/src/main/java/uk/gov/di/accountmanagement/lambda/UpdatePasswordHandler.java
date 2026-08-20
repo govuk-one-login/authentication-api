@@ -107,7 +107,7 @@ public class UpdatePasswordHandler
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
         attachTraceId();
         attachSessionIdToLogs(sessionId);
-        LOG.info("UpdatePasswordHandler received request");
+        LOG.info("UpdatePasswordHandler called");
         SupportedLanguage userLanguage =
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(

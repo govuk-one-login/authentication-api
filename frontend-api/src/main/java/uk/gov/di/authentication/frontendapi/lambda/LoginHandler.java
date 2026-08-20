@@ -182,6 +182,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             Context context,
             LoginRequest request,
             UserContext userContext) {
+        LOG.info("LoginHandler called");
 
         AuthSessionItem authSession = userContext.getAuthSession();
 

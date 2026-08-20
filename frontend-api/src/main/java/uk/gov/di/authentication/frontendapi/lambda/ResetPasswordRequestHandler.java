@@ -151,7 +151,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             UserContext userContext) {
         attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
 
-        LOG.info("Processing request");
+        LOG.info("ResetPasswordRequestHandler called");
         try {
             if (Objects.isNull(userContext.getAuthSession().getEmailAddress())
                     || !userContext.getAuthSession().validateSession(request.getEmail())) {

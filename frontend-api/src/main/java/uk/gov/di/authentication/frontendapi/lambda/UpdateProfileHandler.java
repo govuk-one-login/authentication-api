@@ -97,7 +97,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         AuthSessionItem authSession = userContext.getAuthSession();
         LogLineHelper.attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
-        LOG.info("Processing request");
+        LOG.info("UpdateProfileHandler called");
 
         if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");

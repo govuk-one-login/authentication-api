@@ -77,7 +77,7 @@ public class AuthenticateHandler
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
         attachTraceId();
         attachSessionIdToLogs(sessionId);
-        LOG.info("Request received to the AuthenticateHandler");
+        LOG.info("AuthenticateHandler called");
 
         var auditContext =
                 new AuditContext(

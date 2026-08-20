@@ -191,6 +191,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Context context,
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
+        LOG.info("VerifyMfaCodeHandler called");
 
         AuthSessionItem authSession = userContext.getAuthSession();
 
@@ -208,8 +209,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()));
-
-        LOG.info("Invoking verify MFA code handler");
 
         if (isInvalidCodeRequestType(codeRequest, journeyType))
             return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);

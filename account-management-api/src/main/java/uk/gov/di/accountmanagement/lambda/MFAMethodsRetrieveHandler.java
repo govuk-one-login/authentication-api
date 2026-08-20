@@ -67,6 +67,8 @@ public class MFAMethodsRetrieveHandler
 
         addSessionIdToLogs(input);
 
+        LOG.info("MFAMethodsRetrieveHandlder called");
+
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
 
         if (publicSubjectId.isEmpty()) {

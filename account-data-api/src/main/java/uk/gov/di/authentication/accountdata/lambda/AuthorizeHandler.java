@@ -64,6 +64,7 @@ public class AuthorizeHandler
     @Override
     public IamPolicyResponseV1 handleRequest(
             APIGatewayCustomAuthorizerEvent apiGatewayCustomAuthorizerEvent, Context context) {
+        LOG.info("Account data AuthorizeHandler called");
         var token = apiGatewayCustomAuthorizerEvent.getAuthorizationToken();
         try {
             var accessToken = AccessToken.parse(token, AccessTokenType.BEARER);

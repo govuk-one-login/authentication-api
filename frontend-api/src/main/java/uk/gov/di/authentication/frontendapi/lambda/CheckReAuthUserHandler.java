@@ -121,6 +121,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             CheckReauthUserRequest request,
             UserContext userContext) {
 
+        LOG.info("CheckReAuthUserHandler called");
+
         var internalPairwiseId = userContext.getAuthSession().getInternalCommonSubjectId();
 
         var auditContext =
