@@ -242,7 +242,7 @@ Mappings:
       spotRequestQueueKmsArn: arn:aws:kms:eu-west-2:761723964695:key/2c2b295b-4ec7-41dd-b399-a2e98b7b39f9
       aisUriSecretId: ""
       authStubEnabled: false
-      syncWaitForSpotTimeout: 5000
+      syncWaitForSpotTimeout: 15000
       oldIdTokenECPublicKeys: '[{
         "kty": "EC",
         "use": "sig",
