@@ -268,11 +268,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     private Optional<Boolean> hasActivePasskey(
             String publicSubjectId, AuthSessionItem authSession, boolean supportPasskeyUsage) {
         if (supportPasskeyUsage) {
-            LOG.info("Checking if user has active passkey");
-
             var hasActivePasskeyResult =
                     passkeysService.hasActivePasskey(publicSubjectId, authSession.getSessionId());
             if (hasActivePasskeyResult.isSuccess()) {
+                LOG.info("User has active passkey is {}", hasActivePasskeyResult.getSuccess());
                 return Optional.of(hasActivePasskeyResult.getSuccess());
             } else {
                 LOG.warn(
