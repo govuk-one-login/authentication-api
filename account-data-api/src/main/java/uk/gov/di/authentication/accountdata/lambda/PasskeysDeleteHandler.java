@@ -68,6 +68,7 @@ public class PasskeysDeleteHandler
             APIGatewayProxyRequestEvent input) {
         var publicSubjectId = input.getPathParameters().get("publicSubjectId");
         var passkeyId = input.getPathParameters().get("passkeyId");
+        // Comment to trigger sonar
 
         if (Objects.isNull(publicSubjectId) || publicSubjectId.isEmpty()) {
             return Result.failure(PasskeysDeleteFailureReason.MISSING_SUBJECT_ID);
