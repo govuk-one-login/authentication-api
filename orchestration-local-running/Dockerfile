@@ -4,21 +4,9 @@ WORKDIR /app
 
 RUN yum update -y && yum install -y findutils-4.5.11-6.amzn2 tar-1.26-35.amzn2.0.4 && yum clean all && rm -rf /var/cache/yum
 
-COPY gradle ./gradle
-COPY gradlew ./
-COPY *.gradle ./
+ADD . .
 
 RUN ./gradlew --version
-
-COPY spotbugsExclude.xml ./
-COPY orchestration-local-running ./orchestration-local-running
-COPY orchestration-shared ./orchestration-shared
-COPY oidc-api ./oidc-api
-COPY ipv-api ./ipv-api
-COPY doc-checking-app-api ./doc-checking-app-api
-COPY client-registry-api ./client-registry-api
-COPY sis-api ./sis-api
-
 RUN --mount=type=cache,target=/root/.gradle ./gradlew :orchestration-local-running:build --no-daemon
 RUN mkdir untarred && tar -xvf orchestration-local-running/build/distributions/orchestration-local-running.tar -C ./untarred
 
