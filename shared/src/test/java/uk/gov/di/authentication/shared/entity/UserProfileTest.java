@@ -21,6 +21,7 @@ class UserProfileTest {
     private static final String CLIENT_ID = "client-id";
     private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
     private static final Date UPDATED_DATE_TIME = NowHelper.now();
+    private static final Date LAST_SIGNED_IN_DATE_TIME = NowHelper.now();
     private static final String LEGACY_SUBJECT_ID = new Subject("legacy-subject-id-1").getValue();
     private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
@@ -43,6 +44,7 @@ class UserProfileTest {
         assertThat(userProfile.isPhoneNumberVerified(), equalTo(true));
         assertThat(userProfile.getCreated(), equalTo(CREATED_DATE_TIME.toString()));
         assertThat(userProfile.getUpdated(), equalTo(UPDATED_DATE_TIME.toString()));
+        assertThat(userProfile.getLastSignedIn(), equalTo(LAST_SIGNED_IN_DATE_TIME.toString()));
         assertThat(userProfile.getTermsAndConditions(), equalTo(TERMS_AND_CONDITIONS));
         assertThat(userProfile.getLegacySubjectID(), equalTo(LEGACY_SUBJECT_ID));
         assertThat(userProfile.getSalt(), equalTo(SALT));
@@ -60,6 +62,7 @@ class UserProfileTest {
                 .withTermsAndConditions(TERMS_AND_CONDITIONS)
                 .withSalt(SALT)
                 .withCreated(CREATED_DATE_TIME.toString())
-                .withUpdated(UPDATED_DATE_TIME.toString());
+                .withUpdated(UPDATED_DATE_TIME.toString())
+                .withLastSignedIn(LAST_SIGNED_IN_DATE_TIME.toString());
     }
 }
