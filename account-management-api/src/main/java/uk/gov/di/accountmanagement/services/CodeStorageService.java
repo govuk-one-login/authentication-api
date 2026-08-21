@@ -3,12 +3,15 @@ package uk.gov.di.accountmanagement.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.services.otpcode.DualRepositoryMigrationStrategy;
+import uk.gov.di.accountmanagement.services.otpcode.OtpCodeRepositoryService;
 import uk.gov.di.authentication.shared.helpers.HashHelper;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import static java.lang.String.format;
 
-public class CodeStorageService {
+public class CodeStorageService extends DualRepositoryMigrationStrategy
+        implements OtpCodeRepositoryService {
 
     private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
     private final RedisConnectionService redisConnectionService;
@@ -16,9 +19,11 @@ public class CodeStorageService {
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
 
     public CodeStorageService(RedisConnectionService redisConnectionService) {
+        super();
         this.redisConnectionService = redisConnectionService;
     }
 
+    @Override
     public void saveOtpCode(
             String emailAddress,
             String code,
@@ -34,6 +39,7 @@ public class CodeStorageService {
         }
     }
 
+    @Override
     public void deleteOtpCode(String emailAddress, NotificationType notificationType) {
         String prefix = getPrefixForNotificationType(notificationType);
         long numberOfKeysRemoved =
@@ -45,6 +51,7 @@ public class CodeStorageService {
         }
     }
 
+    @Override
     public boolean isValidOtpCode(
             String emailAddress, String code, NotificationType notificationType) {
         String prefix = getPrefixForNotificationType(notificationType);
