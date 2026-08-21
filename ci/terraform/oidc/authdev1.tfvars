@@ -19,6 +19,21 @@ auth_issuer_claim_for_evcs      = "https://signin.authdev1.dev.account.gov.uk"
 
 ## The IPV public encrypting key that is specific to auth
 
+
+orch_openid_configuration_enabled    = true
+orch_jwks_enabled                    = true
+orch_authorisation_enabled           = true
+orch_auth_code_enabled               = true
+orch_token_enabled                   = true
+orch_userinfo_enabled                = true
+orch_ipv_callback_enabled            = true
+orch_doc_app_callback_enabled        = true
+orch_authentication_callback_enabled = true
+orch_logout_enabled                  = true
+auth_spot_response_disabled          = true
+orch_storage_token_jwk_enabled       = true
+orch_ipv_jwks_enabled                = true
+
 auth_frontend_api_to_ipv_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArJ8oZkHs+ReeZcUsIeWm
@@ -74,7 +89,7 @@ is_orch_stubbed = true
 
 contra_state_bucket = "di-auth-development-tfstate"
 
-orch_redirect_uri = "https://oidc.authdev1.sandpit.account.gov.uk/orchestration-redirect"
+orch_redirect_uri = "https://oidc.authdev1.dev.account.gov.uk/orchestration-redirect"
 
 authorize_protected_subnet_enabled = true
 
