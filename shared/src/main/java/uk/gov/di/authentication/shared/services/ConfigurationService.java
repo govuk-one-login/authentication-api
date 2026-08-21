@@ -754,6 +754,10 @@ public class ConfigurationService
         return System.getenv().getOrDefault("HOME_CLIENT_ID", "");
     }
 
+    public String getInactiveAccountDeletionClientId() {
+        return System.getenv().getOrDefault("INACTIVE_ACCOUNT_DELETION_CLIENT_ID", "");
+    }
+
     public String getAuthToAccountDataSigningKey() {
         return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", "");
     }

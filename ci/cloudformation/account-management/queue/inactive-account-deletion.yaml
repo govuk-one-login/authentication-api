@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Conditions:
+  InactiveAccountDeletionStubEnabled:
+    Fn::Not:
+      - !Condition IsHigherEnv
+
+Resources:
+  # ============================================================================
+  # Stub SQS Queue + DLQ for dev/build environments
+  # ============================================================================
+
+  InactiveAccountDeletionStubQueue:
+    Type: AWS::SQS::Queue
+    Condition: InactiveAccountDeletionStubEnabled
+    Properties:
+      QueueName: !Sub
+        - ${Env}-stub-inactive-account-deletion-queue
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: alias/aws/sqs
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 10
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt InactiveAccountDeletionStubDeadLetterQueue.Arn
+        maxReceiveCount: 1
+      VisibilityTimeout: 60
+      Tags:
+        - Key: Service
+          Value: inactive-account-deletion
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/inactive-account-deletion.yaml
+
+  InactiveAccountDeletionStubDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Condition: InactiveAccountDeletionStubEnabled
+    Properties:
+      QueueName: !Sub
+        - ${Env}-stub-inactive-account-deletion-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsDataKeyReusePeriodSeconds: 300
+      KmsMasterKeyId: alias/aws/sqs
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Service
+          Value: inactive-account-deletion
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/queue/inactive-account-deletion.yaml
+
+  # ============================================================================
+  # Event Source Mappings
+  # ============================================================================
+
+  InactiveAccountDeletionStubEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: InactiveAccountDeletionStubEnabled
+    Properties:
+      EventSourceArn: !GetAtt InactiveAccountDeletionStubQueue.Arn
+      FunctionName: !Ref InactiveAccountDeletionQueueProcessorFunction
+      BatchSize: 1
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+
+  # ============================================================================
+  # SQS IAM Policy for the queue processor Lambda
+  # ============================================================================
+
+  InactiveAccountDeletionStubQueueProcessorSQSPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountDeletionStubEnabled
+    Properties:
+      Description: "IAM policy for the inactive account deletion queue processor to consume from the stub queue"
+      Path: !Sub
+        - /${Env}/account-management/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowSQSAccess
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource:
+              - !GetAtt InactiveAccountDeletionStubQueue.Arn
+              - !GetAtt InactiveAccountDeletionStubDeadLetterQueue.Arn

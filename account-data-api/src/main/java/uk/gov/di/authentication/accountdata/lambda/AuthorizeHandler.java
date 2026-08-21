@@ -171,14 +171,21 @@ public class AuthorizeHandler
             return Result.failure(new UnauthorizedException());
         }
 
-        var amcClientId = configurationService.getAMCClientId();
-        var homeClientId = configurationService.getHomeClientId();
         var clientId = (String) claimsSet.getClaim(CLIENT_ID_CLAIM);
-        if (!amcClientId.equals(clientId) && !homeClientId.equals(clientId)) {
+        if (!isAllowedClientId(clientId)) {
             LOG.warn("Access Token client_id is invalid");
             return Result.failure(new UnauthorizedException());
         }
         return Result.success(claimsSet);
+    }
+
+    private boolean isAllowedClientId(String clientId) {
+        var allowedClientIds =
+                List.of(
+                        configurationService.getAMCClientId(),
+                        configurationService.getHomeClientId(),
+                        configurationService.getInactiveAccountDeletionClientId());
+        return allowedClientIds.contains(clientId);
     }
 
     private IamPolicyResponseV1 getAllowExecuteApiPolicyForSubject(

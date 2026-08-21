@@ -1,0 +1,177 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  InactiveAccountDeletionQueueProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - ${Env}-inactive-account-deletion-queue-processor-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AutoPublishAlias: active
+      ReservedConcurrentExecutions: 2
+      CodeUri: ./account-management-api/build/distributions/account-management-api.zip
+      Handler: uk.gov.di.accountmanagement.lambda.InactiveAccountDeletionHandler::handleRequest
+      Environment:
+        Variables:
+          ENVIRONMENT: !Sub
+            - "${env}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          INACTIVE_ACCOUNT_DELETION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              inactiveAccountDeletionClientId,
+            ]
+          ACCOUNT_DATA_API_URI: !Sub
+            - "https://${ApiId}.execute-api.eu-west-2.amazonaws.com/${EnvOrSubEnv}"
+            - EnvOrSubEnv:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              ApiId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  accountDataApiId,
+                ]
+          AUTH_TO_ACCOUNT_DATA_API_AUDIENCE: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://account.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://account.${Environment}.account.gov.uk"
+            - "https://account.account.gov.uk"
+          AUTH_TO_ACCOUNT_DATA_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${Env}-auth-to-account-data-signing-key
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_ISSUER_CLAIM:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendBaseUrl,
+            ]
+      LoggingConfig:
+        LogGroup: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - Version: 2012-10-17
+          Statement:
+            - Sid: AllowKmsSignForAccountDataToken
+              Effect: Allow
+              Action:
+                - kms:Sign
+                - kms:GetPublicKey
+              Resource:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  authToAccountDataSigningKeyArn,
+                ]
+        - !If
+          - InactiveAccountDeletionStubEnabled
+          - !Ref InactiveAccountDeletionStubQueueProcessorSQSPolicy
+          - !Ref AWS::NoValue
+      SnapStart:
+        ApplyOn: PublishedVersions
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB
+          - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
+
+  InactiveAccountDeletionQueueProcessorFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - /aws/lambda/${Env}-inactive-account-deletion-queue-processor-lambda
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+      RetentionInDays:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          cloudwatchLogRetentionInDays,
+        ]
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-InactiveAccountDeletionQueueProcessorFunctionLogGroup"
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/inactive-account-deletion.yaml
+
+  InactiveAccountDeletionQueueProcessorFunctionErrorMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      FilterName: !Sub
+        - ${Env}-inactive-account-deletion-queue-processor-errors
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      FilterPattern: '{($.level = "ERROR")}'
+      LogGroupName: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
+      MetricTransformations:
+        - MetricName: !Sub
+            - ${Env}-inactive-account-deletion-queue-processor-error-count
+            - Env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MetricNamespace: LambdaErrorsNamespace
+          MetricValue: 1
+
+  InactiveAccountDeletionQueueProcessorFunctionErrorCloudwatchAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-inactive-account-deletion-queue-processor-lambda function. ${RunbookLink}"
+        - AlarmThreshold:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lambdaLogAlarmThreshold,
+              DefaultValue: 5,
+            ]
+          Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink:
+            !FindInMap [
+              LambdaConfiguration,
+              "inactive-account-deletion-queue-processor",
+              RunbookLink,
+              DefaultValue: "",
+            ]
+      AlarmName: !Sub
+        - ${Env}-inactive-account-deletion-queue-processor-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      MetricName: !Sub
+        - ${Env}-inactive-account-deletion-queue-processor-error-count
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Namespace: LambdaErrorsNamespace
+      Period: 3600
+      Statistic: Sum
+      Threshold:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          lambdaLogAlarmThreshold,
+          DefaultValue: 5,
+        ]
+
+  InactiveAccountDeletionQueueProcessorFunctionSubscriptionFilter:
+    Condition: IsSplunkEnabled
+    Type: AWS::Logs::SubscriptionFilter
+    Properties:
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+      FilterPattern: ""
+      LogGroupName: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup

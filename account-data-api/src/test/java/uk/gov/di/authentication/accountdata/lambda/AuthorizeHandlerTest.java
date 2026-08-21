@@ -59,6 +59,7 @@ class AuthorizeHandlerTest {
     private static final String AUDIENCE = "https://account-data.example.com";
     private static final String CLIENT_ID = "some-client-id";
     private static final String HOME_CLIENT_ID = "home-client-id";
+    private static final String INACTIVE_ACCOUNT_DELETION_CLIENT_ID = "inactive-account-deletion";
 
     private static ECKey ecSigningKey;
     private APIGatewayCustomAuthorizerEvent event;
@@ -78,6 +79,8 @@ class AuthorizeHandlerTest {
         when(configurationService.getAuthToAccountDataApiAudience()).thenReturn(AUDIENCE);
         when(configurationService.getAMCClientId()).thenReturn(CLIENT_ID);
         when(configurationService.getHomeClientId()).thenReturn(HOME_CLIENT_ID);
+        when(configurationService.getInactiveAccountDeletionClientId())
+                .thenReturn(INACTIVE_ACCOUNT_DELETION_CLIENT_ID);
     }
 
     @AfterEach
@@ -129,6 +132,46 @@ class AuthorizeHandlerTest {
                             }
                             """
                             .formatted(SUBJECT, scope, METHOD_ARN);
+
+            assertEquals(
+                    JsonParser.parseString(expectedPolicyDocument),
+                    JsonParser.parseString(new Gson().toJson(result)));
+        }
+
+        @Test
+        void authorizeHandlerShouldAllowInactiveAccountDeletionClientId() throws JOSEException {
+            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
+
+            var bearerAccessToken =
+                    createBearerAccessTokenWithExpiry(
+                            expiryDateFiveMinutesFromNow,
+                            ecSigningKey,
+                            AccountDataScope.ACCOUNT_DELETE.getValue(),
+                            INACTIVE_ACCOUNT_DELETION_CLIENT_ID);
+
+            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
+
+            var result = handler.handleRequest(event, context);
+
+            var expectedPolicyDocument =
+                    """
+                            {
+                                "principalId": "%s",
+                                "context": {"scope": "%s"},
+                                "policyDocument": {
+                                    "version": "2012-10-17",
+                                    "statement": [{
+                                        "action": "execute-api:Invoke",
+                                        "effect": "Allow",
+                                        "resource": ["%s"]
+                                    }]
+                                }
+                            }
+                            """
+                            .formatted(
+                                    SUBJECT,
+                                    AccountDataScope.ACCOUNT_DELETE.getValue(),
+                                    METHOD_ARN);
 
             assertEquals(
                     JsonParser.parseString(expectedPolicyDocument),
@@ -373,6 +416,8 @@ class AuthorizeHandlerTest {
         void authorizeHandlerShouldRejectInvalidClientId() throws JOSEException {
             when(configurationService.getAMCClientId()).thenReturn("expected-client-id");
             when(configurationService.getHomeClientId()).thenReturn("expected-home-client-id");
+            when(configurationService.getInactiveAccountDeletionClientId())
+                    .thenReturn("expected-iad-client-id");
 
             var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 

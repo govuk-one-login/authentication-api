@@ -68,6 +68,12 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getInactiveAccountDeletionClientIdShouldDefaultToEmptyString() {
+        environment.set("INACTIVE_ACCOUNT_DELETION_CLIENT_ID", null);
+        assertEquals("", configurationService.getInactiveAccountDeletionClientId());
+    }
+
+    @Test
     void getAuthToAccountDataApiAudienceShouldDefaultToEmptyString() {
         environment.set("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", null);
         assertEquals("", configurationService.getAuthToAccountDataApiAudience());

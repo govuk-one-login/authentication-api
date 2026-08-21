@@ -111,6 +111,59 @@ class AccessTokenConstructorServiceTest {
     }
 
     @Test
+    void shouldCreateAccessTokenWithoutSidClaimWhenSessionIdIsOmitted()
+            throws ParseException, JOSEException {
+        var result =
+                accessTokenConstructorService.createSignedAccessToken(
+                        PUBLIC_SUBJECT_ID,
+                        List.of(AccountDataScope.PASSKEY_CREATE),
+                        NOW,
+                        EXPIRY,
+                        AUDIENCE,
+                        ISSUER,
+                        AMC_CLIENT_ID,
+                        SIGNING_KEY_ALIAS);
+
+        assertTrue(result.isSuccess());
+        var token = result.getSuccess();
+        var signedJWT = SignedJWT.parse(token.getValue());
+        var claims = signedJWT.getJWTClaimsSet();
+
+        assertTrue(signedJWT.verify(new ECDSAVerifier(signingKey.toECPublicKey())));
+        assertEquals("passkey-create", claims.getClaim("scope"));
+        assertEquals(ISSUER, claims.getIssuer());
+        assertEquals(AUDIENCE, claims.getAudience().get(0));
+        assertEquals(PUBLIC_SUBJECT_ID, claims.getSubject());
+        assertEquals(AMC_CLIENT_ID, claims.getClaim("client_id"));
+        assertEquals(null, claims.getClaim("sid"));
+        assertEquals(NOW, claims.getIssueTime());
+        assertEquals(EXPIRY, claims.getExpirationTime());
+        assertEquals(NOW, claims.getNotBeforeTime());
+    }
+
+    @Test
+    void shouldCreateAccessTokenWithoutSidClaimWhenSessionIdIsEmpty() throws ParseException {
+        var result =
+                accessTokenConstructorService.createSignedAccessToken(
+                        PUBLIC_SUBJECT_ID,
+                        List.of(AccountDataScope.PASSKEY_CREATE),
+                        "",
+                        NOW,
+                        EXPIRY,
+                        AUDIENCE,
+                        ISSUER,
+                        AMC_CLIENT_ID,
+                        SIGNING_KEY_ALIAS);
+
+        assertTrue(result.isSuccess());
+        var token = result.getSuccess();
+        var signedJWT = SignedJWT.parse(token.getValue());
+        var claims = signedJWT.getJWTClaimsSet();
+
+        assertEquals(null, claims.getClaim("sid"));
+    }
+
+    @Test
     void shouldReturnJwtFailureReasonIfThereIsSigningFailure() {
         // Arrange
         when(jwtService.signJWT(any(JWTClaimsSet.class), any(String.class)))
