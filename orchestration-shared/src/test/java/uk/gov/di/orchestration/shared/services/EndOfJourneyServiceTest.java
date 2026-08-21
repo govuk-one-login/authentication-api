@@ -12,21 +12,25 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.DestroySessionsRequest;
 import uk.gov.di.orchestration.shared.entity.OrchSessionItem;
+import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class EndOfJourneyServiceTest {
     private static final AccountIntervention NO_INTERVENTION =
@@ -58,6 +62,10 @@ class EndOfJourneyServiceTest {
                     .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
                     .withAuthTime(AUTH_TIME);
     private EndOfJourneyService service;
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(EndOfJourneyService.class);
 
     @BeforeEach
     void setup() {
@@ -210,6 +218,37 @@ class EndOfJourneyServiceTest {
                             + state;
             assertThat(response.getStatusCode(), equalTo(302));
             assertThat(response.getHeaders().get("Location"), equalTo(expectedUri));
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Error in Authorisation Response."
+                                            + " ErrorCode: test_error."
+                                            + " ErrorDescription: Test Description.")));
+        }
+
+        @Test
+        void shouldCreateAuthResponseWithErrorAndAdditionalLogs() {
+            var error = new ErrorObject("test_error", "Test Description");
+            var response =
+                    service.generateAuthenticationErrorResponse(
+                            authRequest, error, "Test additional logs");
+            var expectedUri =
+                    redirectUri
+                            + "?error=test_error"
+                            + "&error_description=Test+Description"
+                            + "&state="
+                            + state;
+            assertThat(response.getStatusCode(), equalTo(302));
+            assertThat(response.getHeaders().get("Location"), equalTo(expectedUri));
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withMessageContaining(
+                                    "Error in Authorisation Response."
+                                            + " ErrorCode: test_error."
+                                            + " ErrorDescription: Test Description."
+                                            + " Test additional logs")));
         }
     }
 }

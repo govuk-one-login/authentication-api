@@ -1,10 +1,10 @@
 package uk.gov.di.orchestration.sis.exception;
 
+import uk.gov.di.orchestration.shared.oauth.CallbackValidationError;
+
 public record SISCallbackValidationError(
-        String errorCode,
-        String errorDescription,
-        boolean userShouldRouteToIpv,
-        boolean userRequestedUpdate) {
+        String code, String description, boolean userShouldRouteToIpv, boolean userRequestedUpdate)
+        implements CallbackValidationError {
 
     public SISCallbackValidationError(String errorCode, String errorDescription) {
         this(errorCode, errorDescription, false, false);
