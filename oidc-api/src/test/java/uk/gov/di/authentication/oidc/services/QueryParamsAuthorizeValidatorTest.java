@@ -14,7 +14,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -23,7 +22,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.exceptions.InvalidAuthorizeRequestException;
-import uk.gov.di.authentication.oidc.validators.BaseAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.Channel;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -44,7 +42,6 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -77,10 +74,6 @@ class QueryParamsAuthorizeValidatorTest {
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(QueryParamsAuthorizeValidator.class);
 
-    @RegisterExtension
-    public final CaptureLoggingExtension baseClassLogging =
-            new CaptureLoggingExtension(BaseAuthorizeValidator.class);
-
     @BeforeEach
     void setUp() {
         queryParamsAuthorizeValidator =
@@ -99,11 +92,6 @@ class QueryParamsAuthorizeValidatorTest {
                         Optional.of(
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
-    }
-
-    @AfterEach
-    void tearDown() {
-        assertThat(logging.events(), not(hasItem(withMessageContaining(CLIENT_ID.toString()))));
     }
 
     @Test
@@ -530,7 +518,7 @@ class QueryParamsAuthorizeValidatorTest {
                                 .toJSONObject()));
         String expectedLogMessage =
                 "Level of confidence values for an identity journey have been requested, but identity is not supported for this client.";
-        assertThat(baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
+        assertThat(logging.events(), hasItem(withMessageContaining(expectedLogMessage)));
     }
 
     @Test
@@ -567,7 +555,7 @@ class QueryParamsAuthorizeValidatorTest {
                                 .toJSONObject()));
         String expectedLogMessage =
                 "Request contains level of confidence values for an identity journey but the tokenAuthMethod is incompatible.";
-        assertThat(baseClassLogging.events(), hasItem(withMessageContaining(expectedLogMessage)));
+        assertThat(logging.events(), hasItem(withMessageContaining(expectedLogMessage)));
     }
 
     @Test

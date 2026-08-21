@@ -32,7 +32,7 @@ public abstract class BaseAuthorizeValidator {
     protected final ConfigurationService configurationService;
     protected final DynamoClientService dynamoClientService;
     protected final IPVCapacityService ipvCapacityService;
-    protected static final Logger LOG = LogManager.getLogger(BaseAuthorizeValidator.class);
+    protected final Logger LOG = LogManager.getLogger(this.getClass());
     protected static final String VTR_NOT_PERMITTED = "Request vtr is not permitted";
 
     protected BaseAuthorizeValidator(
