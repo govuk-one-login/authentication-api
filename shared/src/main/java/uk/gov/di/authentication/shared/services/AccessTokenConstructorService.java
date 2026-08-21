@@ -32,6 +32,27 @@ public class AccessTokenConstructorService {
     public Result<JwtFailureReason, BearerAccessToken> createSignedAccessToken(
             String publicSubjectId,
             List<AccessTokenScope> scopes,
+            Date issueTime,
+            Date expiryDate,
+            String audience,
+            String issuer,
+            String clientId,
+            String signingKey) {
+        return createSignedAccessToken(
+                publicSubjectId,
+                scopes,
+                null,
+                issueTime,
+                expiryDate,
+                audience,
+                issuer,
+                clientId,
+                signingKey);
+    }
+
+    public Result<JwtFailureReason, BearerAccessToken> createSignedAccessToken(
+            String publicSubjectId,
+            List<AccessTokenScope> scopes,
             String sessionId,
             Date issueTime,
             Date expiryDate,
@@ -42,7 +63,7 @@ public class AccessTokenConstructorService {
         var scopeValue =
                 scopes.stream().map(AccessTokenScope::getValue).collect(Collectors.joining(" "));
 
-        var claims =
+        var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopeValue)
                         .issuer(issuer)
@@ -52,9 +73,13 @@ public class AccessTokenConstructorService {
                         .notBeforeTime(issueTime)
                         .subject(publicSubjectId)
                         .claim("client_id", clientId)
-                        .claim("sid", sessionId)
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
+                        .jwtID(UUID.randomUUID().toString());
+
+        if (sessionId != null && !sessionId.isEmpty()) {
+            claimsBuilder.claim("sid", sessionId);
+        }
+
+        var claims = claimsBuilder.build();
 
         return jwtService
                 .signJWT(claims, signingKey)
