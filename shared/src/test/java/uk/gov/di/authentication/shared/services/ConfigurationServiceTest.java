@@ -570,6 +570,16 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getManualAccountDeletionClientIdShouldDefaultToEmptyString() {
+        assertEquals("", configurationService.getManualAccountDeletionClientId());
+    }
+
+    @Test
+    void getBulkAccountDeletionClientIdShouldDefaultToEmptyString() {
+        assertEquals("", configurationService.getBulkAccountDeletionClientId());
+    }
+
+    @Test
     void getMfaResetCallbackURIShouldDefault() {
         assertEquals(URI.create(""), configurationService.getMfaResetCallbackURI());
     }
