@@ -930,7 +930,7 @@ class IPVCallbackHandlerTest {
     class EnhancedCrossBrowserHandling {
 
         private final String clientSessionIdFromState = "state-client-session-id";
-        private final OrchClientSessionItem clientSessionFromState =
+        private final OrchClientSessionItem orchClientSessionFromState =
                 new OrchClientSessionItem(
                                 clientSessionIdFromState,
                                 authRequestParams,
@@ -950,9 +950,17 @@ class IPVCallbackHandlerTest {
 
         @BeforeEach
         void setup() throws ParseException {
+            // Set up default session (from cookie)
             usingValidSession();
             usingValidClientSession();
             usingValidAuthUserInfo();
+
+            // Set up other client session from state
+            when(orchClientSessionService.getClientSession(clientSessionIdFromState))
+                    .thenReturn(Optional.of(orchClientSessionFromState));
+            when(authUserInfoStorageService.getAuthenticationUserInfo(
+                            TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER, clientSessionIdFromState))
+                    .thenReturn(Optional.of(authUserInfo));
 
             when(ipvCallbackHelper.generateAuthenticationErrorResponse(
                             any(), any(), anyBoolean(), anyString(), anyString()))
@@ -966,12 +974,10 @@ class IPVCallbackHandlerTest {
 
         @Test
         void itDoesNotReturnToTheRpIfCrossBrowserServiceReturnsEmptyForMismatchInClientSessionIDs()
-                throws NoSessionException,
-                        UnsuccessfulCredentialResponseException,
-                        Json.JsonException {
+                throws Exception {
 
             when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            anyMap(), anyString(), any()))
+                            anyMap(), anyString()))
                     .thenReturn(Optional.empty());
 
             Map<String, Object> userIdentityAdditionalClaims = new HashMap<>();
@@ -1009,25 +1015,9 @@ class IPVCallbackHandlerTest {
                                     new UserInfo(new JSONObject(claims)), clientRegistry));
 
             assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
-            verify(ipvCallbackHelper)
-                    .queueSPOTRequest(
-                            any(),
-                            anyString(),
-                            eq(authUserInfo),
-                            eq(new Subject(TEST_RP_PAIRWISE_ID)),
-                            any(UserInfo.class),
-                            eq(CLIENT_ID.getValue()));
-            verify(ipvCallbackHelper)
-                    .saveIdentityClaimsToDynamo(
-                            any(String.class),
-                            any(Subject.class),
-                            any(UserInfo.class),
-                            any(Long.class));
 
-            verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED);
+            verifySPOTRequestQueued();
+            verifyAllAuditEvents();
         }
 
         @Test
@@ -1035,13 +1025,13 @@ class IPVCallbackHandlerTest {
                 throws NoSessionException, Json.JsonException {
 
             when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                            anyMap(), anyString(), any()))
+                            anyMap(), anyString()))
                     .thenReturn(
                             Optional.of(
                                     new CrossBrowserEntity(
                                             clientSessionIdFromState,
                                             errorObject,
-                                            clientSessionFromState)));
+                                            orchClientSessionFromState)));
 
             Map<String, String> queryParams = new HashMap<>();
             queryParams.put("error", OAuth2Error.ACCESS_DENIED_CODE);
@@ -1068,6 +1058,50 @@ class IPVCallbackHandlerTest {
                             any(Subject.class),
                             any(UserInfo.class),
                             any(Long.class));
+        }
+
+        @Test
+        void itDoesNotReturnToTheRpIfMismatchedClientSessionIsRecoverable() throws Exception {
+            // Use orch session linked to both client sessions
+            var combinedOrchSession =
+                    new OrchSessionItem(SESSION_ID)
+                            .withInternalCommonSubjectId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
+                            .addClientSession(CLIENT_SESSION_ID)
+                            .addClientSession(clientSessionIdFromState);
+            when(orchSessionService.getSession(SESSION_ID))
+                    .thenReturn(Optional.of(combinedOrchSession));
+
+            when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
+                            anyMap(), anyString()))
+                    .thenReturn(
+                            Optional.of(
+                                    new CrossBrowserEntity(
+                                            clientSessionIdFromState,
+                                            errorObject,
+                                            orchClientSessionFromState)));
+
+            var claims =
+                    new HashMap<String, Object>(
+                            Map.of(
+                                    "sub",
+                                    "sub-val",
+                                    "vot",
+                                    "P2",
+                                    "vtm",
+                                    OIDC_BASE_URL + "/trustmark",
+                                    IdentityClaims.CORE_IDENTITY.getValue(),
+                                    CORE_IDENTITY_CLAIM,
+                                    IdentityClaims.CREDENTIAL_JWT.getValue(),
+                                    CREDENTIAL_JWT_CLAIM));
+
+            var response =
+                    makeHandlerRequest(
+                            getApiGatewayProxyRequestEvent(
+                                    new UserInfo(new JSONObject(claims)), clientRegistry));
+
+            assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
+            verifySPOTRequestQueued();
+            verifyAllAuditEvents(clientSessionIdFromState);
         }
     }
 
@@ -1137,7 +1171,7 @@ class IPVCallbackHandlerTest {
             verify(identityProgressService, times(1))
                     .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
 
-            verifyAllAuditEventsSubmitted();
+            verifyAllAuditEvents();
         }
 
         @Test
@@ -1157,7 +1191,7 @@ class IPVCallbackHandlerTest {
             verify(identityProgressService, times(1))
                     .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
 
-            verifyAllAuditEventsSubmitted();
+            verifyAllAuditEvents();
         }
 
         @Test
@@ -1177,7 +1211,7 @@ class IPVCallbackHandlerTest {
             verify(identityProgressService, times(1))
                     .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
 
-            verifyAllAuditEventsSubmitted();
+            verifyAllAuditEvents();
         }
 
         @Test
@@ -1197,7 +1231,7 @@ class IPVCallbackHandlerTest {
             verify(identityProgressService, times(1))
                     .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
 
-            verifyAllAuditEventsSubmitted();
+            verifyAllAuditEvents();
         }
 
         @Test
@@ -1223,32 +1257,7 @@ class IPVCallbackHandlerTest {
             verify(identityProgressService, times(1))
                     .pollForStatus(eq(CLIENT_SESSION_ID), any(AuditContext.class));
 
-            verifyAllAuditEventsSubmitted();
-        }
-
-        void verifyAllAuditEventsSubmitted() {
-            verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
-            verifyAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED);
-            verifyNoMoreInteractions(auditService);
-        }
-
-        void verifySPOTRequestQueued() throws Exception {
-            verify(ipvCallbackHelper)
-                    .queueSPOTRequest(
-                            any(),
-                            anyString(),
-                            eq(authUserInfo),
-                            eq(new Subject(TEST_RP_PAIRWISE_ID)),
-                            any(UserInfo.class),
-                            eq(CLIENT_ID.getValue()));
-            verify(ipvCallbackHelper)
-                    .saveIdentityClaimsToDynamo(
-                            any(String.class),
-                            any(Subject.class),
-                            any(UserInfo.class),
-                            any(Long.class));
+            verifyAllAuditEvents();
         }
     }
 
@@ -1479,18 +1488,52 @@ class IPVCallbackHandlerTest {
                 .build();
     }
 
+    private void verifySPOTRequestQueued() throws Exception {
+        verify(ipvCallbackHelper)
+                .queueSPOTRequest(
+                        any(),
+                        anyString(),
+                        eq(authUserInfo),
+                        eq(new Subject(TEST_RP_PAIRWISE_ID)),
+                        any(UserInfo.class),
+                        eq(CLIENT_ID.getValue()));
+        verify(ipvCallbackHelper)
+                .saveIdentityClaimsToDynamo(
+                        any(String.class),
+                        any(Subject.class),
+                        any(UserInfo.class),
+                        any(Long.class));
+    }
+
     private void verifyAuditEvent(IPVAuditableEvent auditableEvent) {
+        verifyAuditEvent(auditableEvent, CLIENT_SESSION_ID);
+    }
+
+    private void verifyAuditEvent(IPVAuditableEvent auditableEvent, String clientSessionId) {
         verify(auditService)
                 .submitAuditEvent(
                         auditableEvent,
                         CLIENT_ID.getValue(),
                         TxmaAuditUser.user()
-                                .withGovukSigninJourneyId(CLIENT_SESSION_ID)
+                                .withGovukSigninJourneyId(clientSessionId)
                                 .withSessionId(SESSION_ID)
                                 .withUserId(TEST_INTERNAL_COMMON_SUBJECT_IDENTIFIER)
                                 .withEmail(TEST_EMAIL_ADDRESS)
                                 .withPhone(authUserInfo.getPhoneNumber())
                                 .withPersistentSessionId(PERSISTENT_SESSION_ID));
+    }
+
+    private void verifyAllAuditEvents() {
+        verifyAllAuditEvents(CLIENT_SESSION_ID);
+    }
+
+    private void verifyAllAuditEvents(String clientSessionId) {
+        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED, clientSessionId);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED, clientSessionId);
+        verifyAuditEvent(
+                IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED, clientSessionId);
+        verifyAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED, clientSessionId);
+        verifyNoMoreInteractions(auditService);
     }
 
     private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(
