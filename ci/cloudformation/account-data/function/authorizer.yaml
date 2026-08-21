@@ -47,6 +47,18 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               inactiveAccountDeletionClientId,
             ]
+          MANUAL_ACCOUNT_DELETION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              manualAccountDeletionClientId,
+            ]
+          BULK_ACCOUNT_DELETION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              bulkAccountDeletionClientId,
+            ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:
