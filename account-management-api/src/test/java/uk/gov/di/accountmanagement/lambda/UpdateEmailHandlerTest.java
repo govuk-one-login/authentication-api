@@ -13,8 +13,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
@@ -33,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
@@ -46,6 +43,9 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -97,6 +97,8 @@ class UpdateEmailHandlerTest {
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
+    private static final Clock TEST_NOW_CLOCK =
+            Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneOffset.UTC);
     private final AuditContext auditContext =
             new AuditContext(
                     CLIENT_ID,
@@ -126,7 +128,8 @@ class UpdateEmailHandlerTest {
                         codeStorageService,
                         auditService,
                         configurationService,
-                        structuredAuditService);
+                        structuredAuditService,
+                        TEST_NOW_CLOCK);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
@@ -180,40 +183,33 @@ class UpdateEmailHandlerTest {
         when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
-        long mockedTimestamp = 1719376320;
-        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
-            mockedNowHelperClass
-                    .when(() -> NowHelper.toUnixTimestamp(NowHelper.now()))
-                    .thenReturn(mockedTimestamp);
-            var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
-            handler.handleRequest(event, context);
+        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
+        handler.handleRequest(event, context);
 
-            assertThat(
-                    logging.events(),
-                    hasItem(
-                            withMessageContaining(
-                                    "UpdateEmailHandler: Experian email verification status: PENDING")));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "UpdateEmailHandler: Experian email verification status: PENDING")));
 
-            ArgumentCaptor<AuthEmailFraudCheckBypassed> auditEventCaptor =
-                    ArgumentCaptor.forClass(AuthEmailFraudCheckBypassed.class);
-            verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
+        ArgumentCaptor<AuthEmailFraudCheckBypassed> auditEventCaptor =
+                ArgumentCaptor.forClass(AuthEmailFraudCheckBypassed.class);
+        verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
 
-            AuthEmailFraudCheckBypassed capturedEvent = auditEventCaptor.getValue();
-            assertThat(capturedEvent.eventName(), is("AUTH_EMAIL_FRAUD_CHECK_BYPASSED"));
-            assertThat(capturedEvent.clientId(), is(auditContext.clientId()));
-            assertThat(capturedEvent.user().email(), is(NEW_EMAIL_ADDRESS));
-            assertThat(capturedEvent.user().ipAddress(), is(auditContext.ipAddress()));
-            assertThat(
-                    capturedEvent.user().persistentSessionId(),
-                    is(auditContext.persistentSessionId()));
-            assertThat(capturedEvent.user().govukSigninJourneyId(), is(auditContext.sessionId()));
-            assertThat(capturedEvent.user().userId(), is(expectedCommonSubject));
-            assertThat(
-                    capturedEvent.extensions().journeyType(),
-                    is(JourneyType.REGISTRATION.getValue()));
-            assertThat(
-                    capturedEvent.extensions().assessmentCheckedAtTimestamp(), is(mockedTimestamp));
-        }
+        AuthEmailFraudCheckBypassed capturedEvent = auditEventCaptor.getValue();
+        assertThat(capturedEvent.eventName(), is("AUTH_EMAIL_FRAUD_CHECK_BYPASSED"));
+        assertThat(capturedEvent.clientId(), is(auditContext.clientId()));
+        assertThat(capturedEvent.user().email(), is(NEW_EMAIL_ADDRESS));
+        assertThat(capturedEvent.user().ipAddress(), is(auditContext.ipAddress()));
+        assertThat(
+                capturedEvent.user().persistentSessionId(), is(auditContext.persistentSessionId()));
+        assertThat(capturedEvent.user().govukSigninJourneyId(), is(auditContext.sessionId()));
+        assertThat(capturedEvent.user().userId(), is(expectedCommonSubject));
+        assertThat(
+                capturedEvent.extensions().journeyType(), is(JourneyType.REGISTRATION.getValue()));
+        assertThat(
+                capturedEvent.extensions().assessmentCheckedAtTimestamp(),
+                is(TEST_NOW_CLOCK.instant().getEpochSecond()));
     }
 
     private static Stream<Arguments> successfulEmailCheckResultStatus() {
@@ -249,39 +245,32 @@ class UpdateEmailHandlerTest {
         when(dynamoEmailCheckResultService.getEmailCheckStore(NEW_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(resultStore));
 
-        long mockedTimestamp = 1719376320;
-        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
-            mockedNowHelperClass
-                    .when(() -> NowHelper.toUnixTimestamp(NowHelper.now()))
-                    .thenReturn(mockedTimestamp);
-            var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
-            handler.handleRequest(event, context);
+        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
+        handler.handleRequest(event, context);
 
-            assertThat(
-                    logging.events(),
-                    hasItem(
-                            withMessageContaining(
-                                    String.format(
-                                            "UpdateEmailHandler: Experian email verification status: %s",
-                                            status))));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                String.format(
+                                        "UpdateEmailHandler: Experian email verification status: %s",
+                                        status))));
 
-            ArgumentCaptor<AuthEmailFraudCheckDecisionUsed> auditEventCaptor =
-                    ArgumentCaptor.forClass(AuthEmailFraudCheckDecisionUsed.class);
-            verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
+        ArgumentCaptor<AuthEmailFraudCheckDecisionUsed> auditEventCaptor =
+                ArgumentCaptor.forClass(AuthEmailFraudCheckDecisionUsed.class);
+        verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
 
-            AuthEmailFraudCheckDecisionUsed capturedEvent = auditEventCaptor.getValue();
-            assertThat(capturedEvent.eventName(), is("AUTH_EMAIL_FRAUD_CHECK_DECISION_USED"));
-            assertThat(capturedEvent.clientId(), is(CLIENT_ID));
-            assertThat(capturedEvent.user().email(), is(NEW_EMAIL_ADDRESS));
-            assertThat(capturedEvent.user().ipAddress(), is(auditContext.ipAddress()));
-            assertThat(
-                    capturedEvent.user().persistentSessionId(),
-                    is(auditContext.persistentSessionId()));
-            assertThat(capturedEvent.user().govukSigninJourneyId(), is(auditContext.sessionId()));
-            assertThat(capturedEvent.user().userId(), is(expectedCommonSubject));
-            assertThat(capturedEvent.extensions(), is(expectedExtensions));
-            assertThat(capturedEvent.restricted(), is(expectedRestricted));
-        }
+        AuthEmailFraudCheckDecisionUsed capturedEvent = auditEventCaptor.getValue();
+        assertThat(capturedEvent.eventName(), is("AUTH_EMAIL_FRAUD_CHECK_DECISION_USED"));
+        assertThat(capturedEvent.clientId(), is(CLIENT_ID));
+        assertThat(capturedEvent.user().email(), is(NEW_EMAIL_ADDRESS));
+        assertThat(capturedEvent.user().ipAddress(), is(auditContext.ipAddress()));
+        assertThat(
+                capturedEvent.user().persistentSessionId(), is(auditContext.persistentSessionId()));
+        assertThat(capturedEvent.user().govukSigninJourneyId(), is(auditContext.sessionId()));
+        assertThat(capturedEvent.user().userId(), is(expectedCommonSubject));
+        assertThat(capturedEvent.extensions(), is(expectedExtensions));
+        assertThat(capturedEvent.restricted(), is(expectedRestricted));
     }
 
     @Test

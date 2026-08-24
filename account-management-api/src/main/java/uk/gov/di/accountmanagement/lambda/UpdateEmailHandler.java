@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
@@ -42,6 +41,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.time.Clock;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -70,6 +70,7 @@ public class UpdateEmailHandler
     private final AuditService auditService;
     private final ConfigurationService configurationService;
     private final StructuredAuditService structuredAuditService;
+    private final Clock nowClock;
 
     public UpdateEmailHandler() {
         this(ConfigurationService.getInstance());
@@ -82,7 +83,8 @@ public class UpdateEmailHandler
             CodeStorageService codeStorageService,
             AuditService auditService,
             ConfigurationService configurationService,
-            StructuredAuditService structuredAuditService) {
+            StructuredAuditService structuredAuditService,
+            Clock nowClock) {
         this.dynamoService = dynamoService;
         this.dynamoEmailCheckResultService = dynamoEmailCheckResultService;
         this.sqsClient = sqsClient;
@@ -90,6 +92,7 @@ public class UpdateEmailHandler
         this.auditService = auditService;
         this.configurationService = configurationService;
         this.structuredAuditService = structuredAuditService;
+        this.nowClock = nowClock;
     }
 
     public UpdateEmailHandler(ConfigurationService configurationService) {
@@ -106,6 +109,7 @@ public class UpdateEmailHandler
         this.auditService = new AuditService(configurationService);
         this.configurationService = configurationService;
         this.structuredAuditService = new StructuredAuditService(configurationService);
+        this.nowClock = Clock.systemUTC();
     }
 
     @Override
@@ -264,7 +268,7 @@ public class UpdateEmailHandler
                                 auditContext.sessionId()),
                         new AuthEmailFraudCheckBypassed.Extensions(
                                 JourneyType.REGISTRATION.getValue(),
-                                NowHelper.toUnixTimestamp(NowHelper.now())));
+                                nowClock.instant().getEpochSecond()));
 
         structuredAuditService.submitAuditEvent(newAuditEvent);
     }
