@@ -1,31 +1,41 @@
 package uk.gov.di.accountmanagement.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
+import uk.gov.di.authentication.shared.entity.JwtFailureReason;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class ManualAccountDeletionServiceTest {
     private final AccountDeletionService accountDeletionService =
@@ -45,6 +55,10 @@ class ManualAccountDeletionServiceTest {
             ByteBuffer.wrap(
                     "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw="
                             .getBytes(StandardCharsets.UTF_8));
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(ManualAccountDeletionService.class);
 
     @BeforeEach
     void setUp() {
@@ -68,7 +82,8 @@ class ManualAccountDeletionServiceTest {
                         USER_PROFILE,
                         AuditService.UNKNOWN,
                         AccountDeletionReason.SUPPORT_INITIATED,
-                        true);
+                        true,
+                        Optional.empty());
     }
 
     @Test
@@ -120,13 +135,69 @@ class ManualAccountDeletionServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionIfAccountDeletionFails() throws Json.JsonException {
+    void shouldThrowExceptionIfAccountDeletionFails() {
         // given
-        doThrow(new Json.JsonException("error"))
+        doThrow(new RuntimeException("error"))
                 .when(accountDeletionService)
-                .removeAccount(any(), any(), any(), any(), anyBoolean());
+                .removeAccount(any(), any(), any(), any(), anyBoolean(), any());
 
         // then
         assertThrows(RuntimeException.class, () -> underTest.manuallyDeleteAccount(USER_PROFILE));
+        assertThat(
+                logging.events(), hasItem(withMessageContaining("Error while deleting account")));
+    }
+
+    @Nested
+    class WithTokenMinting {
+        private final AccountDeletionTokenService accountDeletionTokenService =
+                mock(AccountDeletionTokenService.class);
+        private static final String CLIENT_ID = "manual-account-deletion";
+        private static final String TOKEN_VALUE = "test-bearer-token";
+        private final ManualAccountDeletionService underTestWithMinter =
+                new ManualAccountDeletionService(
+                        accountDeletionService,
+                        legacyAccountDeletionSnsClient,
+                        configurationService,
+                        accountDeletionTokenService,
+                        CLIENT_ID);
+
+        @Test
+        void shouldMintTokenAndPassItToRemoveAccount() throws Json.JsonException {
+            // given
+            when(accountDeletionTokenService.createAccountDataApiAccessToken(
+                            PUBLIC_SUBJECT_ID, CLIENT_ID))
+                    .thenReturn(Result.success(new BearerAccessToken(TOKEN_VALUE)));
+
+            // when
+            underTestWithMinter.manuallyDeleteAccount(USER_PROFILE);
+
+            // then
+            verify(accountDeletionService)
+                    .removeAccount(
+                            Optional.empty(),
+                            USER_PROFILE,
+                            AuditService.UNKNOWN,
+                            AccountDeletionReason.SUPPORT_INITIATED,
+                            true,
+                            Optional.of(TOKEN_VALUE));
+        }
+
+        @Test
+        void shouldThrowIfTokenMintingFails() {
+            // given
+            when(accountDeletionTokenService.createAccountDataApiAccessToken(
+                            PUBLIC_SUBJECT_ID, CLIENT_ID))
+                    .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));
+
+            // then
+            assertThrows(
+                    RuntimeException.class,
+                    () -> underTestWithMinter.manuallyDeleteAccount(USER_PROFILE));
+            verify(accountDeletionService, never())
+                    .removeAccount(any(), any(), any(), any(), anyBoolean(), any());
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining("Error while deleting account")));
+        }
     }
 }

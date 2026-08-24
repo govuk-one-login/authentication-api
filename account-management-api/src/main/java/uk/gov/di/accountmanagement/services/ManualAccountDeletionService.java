@@ -8,7 +8,6 @@ import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.entity.LegacyAccountDeletionMessage;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -20,15 +19,33 @@ public class ManualAccountDeletionService {
     private final AccountDeletionService accountDeletionService;
     private final AwsSnsClient legacyAccountDeletionSnsClient;
     private final ConfigurationService configurationService;
+    private final AccountDeletionTokenService accountDeletionTokenService;
+    private final String clientId;
     private static final Logger LOG = LogManager.getLogger(ManualAccountDeletionService.class);
 
     public ManualAccountDeletionService(
             AccountDeletionService accountDeletionService,
             AwsSnsClient legacyAccountDeletionSnsClient,
             ConfigurationService configurationService) {
+        this(
+                accountDeletionService,
+                legacyAccountDeletionSnsClient,
+                configurationService,
+                null,
+                null);
+    }
+
+    public ManualAccountDeletionService(
+            AccountDeletionService accountDeletionService,
+            AwsSnsClient legacyAccountDeletionSnsClient,
+            ConfigurationService configurationService,
+            AccountDeletionTokenService accountDeletionTokenService,
+            String clientId) {
         this.accountDeletionService = accountDeletionService;
         this.legacyAccountDeletionSnsClient = legacyAccountDeletionSnsClient;
         this.configurationService = configurationService;
+        this.accountDeletionTokenService = accountDeletionTokenService;
+        this.clientId = clientId;
     }
 
     public DeletedAccountIdentifiers manuallyDeleteAccount(UserProfile userProfile) {
@@ -55,19 +72,34 @@ public class ManualAccountDeletionService {
                     userProfile,
                     AuditService.UNKNOWN,
                     accountDeletionReason,
-                    sendNotification);
-            var deletedAccountPayload =
-                    SerializationService.getInstance()
-                            .writeValueAsString(legacyAccountDeletionMessage);
-            legacyAccountDeletionSnsClient.publish(deletedAccountPayload);
-            return accountIdentifiers;
-        } catch (Json.JsonException e) {
+                    sendNotification,
+                    getAccountDataApiToken(userProfile));
+        } catch (RuntimeException e) {
             LOG.error(
                     "Error while deleting account: {}. Identifiers: {}",
                     e.getMessage(),
                     accountIdentifiers);
-            throw new RuntimeException(e);
+            throw e;
         }
+        var deletedAccountPayload =
+                SerializationService.getInstance().writeValueAsString(legacyAccountDeletionMessage);
+        legacyAccountDeletionSnsClient.publish(deletedAccountPayload);
+        return accountIdentifiers;
+    }
+
+    private Optional<String> getAccountDataApiToken(UserProfile userProfile) {
+        if (accountDeletionTokenService == null) {
+            return Optional.empty();
+        }
+        var tokenResult =
+                accountDeletionTokenService.createAccountDataApiAccessToken(
+                        userProfile.getPublicSubjectID(), clientId);
+        if (tokenResult.isFailure()) {
+            throw new RuntimeException(
+                    "Failed to mint account-delete token for publicSubjectId: "
+                            + userProfile.getPublicSubjectID());
+        }
+        return Optional.of(tokenResult.getSuccess().getValue());
     }
 
     private String getCommonSubjectId(UserProfile userProfile) {
