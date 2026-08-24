@@ -27,6 +27,8 @@ public interface AuthenticationService {
 
     void updatePhoneNumber(String email, String profileInformation);
 
+    void updateLastSignedIn(String email);
+
     /**
      * Deprecated - use getUserProfileByEmailMaybe instead. Can't literally deprecate it, because
      * -Werror will complain.

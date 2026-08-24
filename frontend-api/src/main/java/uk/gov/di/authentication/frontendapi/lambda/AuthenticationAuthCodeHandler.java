@@ -133,6 +133,9 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
 
             var state = State.parse(authCodeRequest.state());
             var redirectUri = URI.create(authCodeRequest.redirectUri());
+
+            authenticationService.updateLastSignedIn(userProfile.get().getEmail());
+
             var authorizationResponse =
                     new AuthorizationSuccessResponse(
                             redirectUri, authorisationCode, null, state, null);
