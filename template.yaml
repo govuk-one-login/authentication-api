@@ -2906,7 +2906,14 @@ Resources:
                 ]
           AUTHENTICATION_BACKEND_URI: !If
             - UseAuthStub
-            - "https://authstub.oidc.authdev3.dev.account.gov.uk/"
+            - !Sub
+              - https://authstub.${OidcDomain}/
+              - OidcDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    oidcDomainName,
+                  ]
             - !Sub
               - https://${AuthExternalApiId}-${VpcId}.execute-api.eu-west-2.amazonaws.com/${AuthEnvironment}/
               - AuthExternalApiId:
@@ -2966,12 +2973,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}
-              - ServiceDomain:
+              - https://ipvstub.${OidcDomain}
+              - OidcDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    oidcDomainName,
                   ]
           IPV_AUTHORISATION_CALLBACK_URI: !Sub
             - https://oidc.${ServiceDomain}/ipv-callback
@@ -2993,12 +3000,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/authorize
-              - ServiceDomain:
+              - https://ipvstub.${OidcDomain}/authorize
+              - OidcDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    oidcDomainName,
                   ]
           IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
@@ -3012,12 +3019,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/.well-known/jwks.json
-              - ServiceDomain:
+              - https://ipvstub.${OidcDomain}/.well-known/jwks.json
+              - OidcDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    oidcDomainName,
                   ]
           ORCH_CLIENT_ID: orchestrationAuth
           AUTH_SIGNING_KEY_ALIAS: !Ref OrchAuthSigningKmsKeyAlias
@@ -3033,7 +3040,14 @@ Resources:
                 ]
           AUTH_FRONTEND_BASE_URL: !If
             - UseAuthStub
-            - "https://authstub.oidc.authdev3.dev.account.gov.uk/"
+            - !Sub
+              - https://authstub.${OidcDomain}/
+              - OidcDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    oidcDomainName,
+                  ]
             - !Sub
               - https://signin.${ServiceDomain}/
               - ServiceDomain:
@@ -3926,7 +3940,14 @@ Resources:
                 ]
           AUTH_FRONTEND_BASE_URL: !If
             - UseAuthStub
-            - "https://authstub.oidc.authdev3.dev.account.gov.uk/"
+            - !Sub
+              - https://authstub.${OidcDomain}/
+              - OidcDomain:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    oidcDomainName,
+                  ]
             - !Sub
               - https://signin.${ServiceDomain}/
               - ServiceDomain:
@@ -5077,12 +5098,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}
-              - ServiceDomain:
+              - https://ipvstub.${OidcDomain}
+              - OidcDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    oidcDomainName,
                   ]
           IPV_AUTHORISATION_CALLBACK_URI: !If
             - IpvExists
@@ -5095,12 +5116,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/ipv-callback
-              - ServiceDomain:
+              - https://ipvstub.${OidcDomain}/ipv-callback
+              - OidcDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    oidcDomainName,
                   ]
           IPV_AUTHORISATION_CLIENT_ID: authOrchestrator
           IPV_AUTHORISATION_URI: !If
@@ -5114,12 +5135,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}/authorize
-              - ServiceDomain:
+              - https://ipvstub.${OidcDomain}/authorize
+              - OidcDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    oidcDomainName,
                   ]
           IPV_BACKEND_URI: !If
             - IpvExists
@@ -5132,12 +5153,12 @@ Resources:
                     serviceDomain,
                   ]
             - !Sub
-              - https://ipvstub.oidc.${ServiceDomain}
-              - ServiceDomain:
+              - https://ipvstub.${OidcDomain}
+              - OidcDomain:
                   !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    serviceDomain,
+                    oidcDomainName,
                   ]
           IPV_TOKEN_SIGNING_KEY_ALIAS: !Ref OrchIPVTokenSigningKmsKeyAlias
           IPV_JWKS_URL: !If
