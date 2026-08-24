@@ -89,6 +89,23 @@ Resources:
         LogGroup: !Ref ManuallyDeleteAccountFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - Version: 2012-10-17
+          Statement:
+            - Sid: AllowKmsSignForAccountDataToken
+              Effect: Allow
+              Action:
+                - kms:Sign
+                - kms:GetPublicKey
+              Resource:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  authToAccountDataSigningKeyArn,
+                ]
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoUserDeleteAccessPolicy
