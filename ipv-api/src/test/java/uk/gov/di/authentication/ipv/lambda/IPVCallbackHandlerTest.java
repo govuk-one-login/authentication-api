@@ -61,6 +61,7 @@ import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
+import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
@@ -90,6 +91,7 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -1100,6 +1102,14 @@ class IPVCallbackHandlerTest {
                                     new UserInfo(new JSONObject(claims)), clientRegistry));
 
             assertDoesRedirectToFrontendPage(response, FRONT_END_IPV_CALLBACK_URI);
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.SET_COOKIE),
+                    startsWith(
+                            "%s=%s.%s"
+                                    .formatted(
+                                            CookieHelper.SESSION_COOKIE_NAME,
+                                            SESSION_ID,
+                                            clientSessionIdFromState)));
             verifySPOTRequestQueued();
             verifyAllAuditEvents(clientSessionIdFromState);
         }

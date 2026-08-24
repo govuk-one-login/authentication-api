@@ -216,30 +216,6 @@ public class IPVCallbackHandler
                     crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
                             input.getQueryStringParameters(), clientSessionIdFromCookie);
 
-            if (mismatchedEntity.isPresent()) {
-                if (orchSession
-                        .getClientSessions()
-                        .contains(mismatchedEntity.get().getClientSessionId())) {
-                    LOG.info("Recovering client session from state");
-                } else {
-                    var authRequestFromStateDerivedRP =
-                            AuthenticationRequest.parse(
-                                    mismatchedEntity
-                                            .get()
-                                            .getClientSession()
-                                            .getAuthRequestParams());
-                    attachLogFieldToLogs(
-                            CLIENT_ID, authRequestFromStateDerivedRP.getClientID().getValue());
-
-                    return ipvCallbackHelper.generateAuthenticationErrorResponse(
-                            authRequestFromStateDerivedRP,
-                            mismatchedEntity.get().getErrorObject(),
-                            false,
-                            mismatchedEntity.get().getClientSessionId(),
-                            AuditService.UNKNOWN);
-                }
-            }
-
             var clientSessionId =
                     mismatchedEntity
                             .map(CrossBrowserEntity::getClientSessionId)
@@ -252,6 +228,20 @@ public class IPVCallbackHandler
             var authRequest = AuthenticationRequest.parse(orchClientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
+
+            if (mismatchedEntity.isPresent()) {
+                if (orchSession.getClientSessions().contains(clientSessionId)) {
+                    LOG.info("Recovering client session from state");
+                } else {
+                    return ipvCallbackHelper.generateAuthenticationErrorResponse(
+                            authRequest,
+                            mismatchedEntity.get().getErrorObject(),
+                            false,
+                            clientSessionId,
+                            AuditService.UNKNOWN);
+                }
+            }
+
             var clientRegistry =
                     dynamoClientService
                             .getClient(clientId)
@@ -510,8 +500,23 @@ public class IPVCallbackHandler
                 return RedirectService.redirectToFrontendErrorPageWithErrorLog(
                         frontend.errorURI(), new Error("Failed to create redirectURI"));
             }
-            return generateApiGatewayProxyResponse(
-                    302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
+
+            // If we've recovered from a mismatched client session then we need to update the
+            // session cookie
+            var headers =
+                    clientSessionId.equals(clientSessionIdFromCookie)
+                            ? Map.of(ResponseHeaders.LOCATION, redirectURI.toString())
+                            : Map.of(
+                                    ResponseHeaders.LOCATION,
+                                    redirectURI.toString(),
+                                    ResponseHeaders.SET_COOKIE,
+                                    CookieHelper.buildCookieString(
+                                            CookieHelper.SESSION_COOKIE_NAME,
+                                            sessionId + "." + clientSessionId,
+                                            configurationService.getSessionCookieMaxAge(),
+                                            configurationService.getSessionCookieAttributes(),
+                                            configurationService.getDomainName()));
+            return generateApiGatewayProxyResponse(302, "", headers, null);
         } catch (NoSessionException e) {
             return RedirectService.redirectToFrontendErrorPageForNoSession(
                     frontend.errorIpvCallbackURI(), e);
