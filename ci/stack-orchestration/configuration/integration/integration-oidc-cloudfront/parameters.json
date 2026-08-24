@@ -30,13 +30,5 @@
   {
     "ParameterKey": "PreviousOriginCloakingHeader",
     "ParameterValue": "none"
-  },
-  {
-    "ParameterKey": "ApiGatewayOriginDomain",
-    "ParameterValue": "none"
-  },
-  {
-    "ParameterKey": "OriginPath",
-    "ParameterValue": "none"
   }
 ]
