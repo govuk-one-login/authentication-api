@@ -6,17 +6,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.annotations.NotNull;
 import uk.gov.di.authentication.shared.entity.EmailCheckResponse;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 
+import java.time.Clock;
 import java.time.Instant;
-import java.util.Date;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,9 +29,11 @@ class EmailCheckResultWriterHandlerTest {
     private static final String TEST_MSG_EMAIL = "test@test.com";
     private static final long TEST_MSG_TIME_TO_EXIST = 1706870420L;
     private static final String TEST_MSG_REF_NUMBER = "123456-abc1234def5678";
-    private static final long TEST_TIME_OF_INITIAL_REQUEST = Instant.now().toEpochMilli();
+    private static final Clock TEST_TIME_NOW =
+            Clock.fixed(Instant.ofEpochSecond(4102444800L), ZoneOffset.UTC);
     private static final long REQUEST_DURATION = 1000L;
-    private static final long TEST_TIME_NOW = TEST_TIME_OF_INITIAL_REQUEST + REQUEST_DURATION;
+    private static final long TEST_TIME_OF_INITIAL_REQUEST =
+            TEST_TIME_NOW.instant().toEpochMilli() - REQUEST_DURATION;
     private static DynamoEmailCheckResultService dbMock;
     private static CloudwatchMetricsService cloudWatchMock;
     private static ArgumentCaptor<String> emailCaptor;
@@ -57,7 +58,7 @@ class EmailCheckResultWriterHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new EmailCheckResultWriterHandler(dbMock, cloudWatchMock);
+        handler = new EmailCheckResultWriterHandler(dbMock, cloudWatchMock, TEST_TIME_NOW);
         Mockito.reset(dbMock, cloudWatchMock);
     }
 
@@ -65,49 +66,41 @@ class EmailCheckResultWriterHandlerTest {
     void shouldProcessValidSQSEventWithSingleMessageAndSaveToDatabase() {
         var emailCheckResultStatus = EmailCheckResultStatus.ALLOW;
         SQSEvent event = getSqsEventWithSingleMessage(true, emailCheckResultStatus);
-        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
-            mockedNowHelperClass
-                    .when(NowHelper::now)
-                    .thenReturn(Date.from(Instant.ofEpochMilli(TEST_TIME_NOW)));
-            handler.emailCheckResultWriterHandler(event);
+        handler.emailCheckResultWriterHandler(event);
 
-            verify(dbMock)
-                    .saveEmailCheckResult(
-                            emailCaptor.capture(), statusCaptor.capture(),
-                            timeToExistCaptor.capture(), referenceNumberCaptor.capture(),
-                            govukSigninJourneyIdCaptor.capture(),
-                                    emailCheckResponseCaptor.capture());
+        verify(dbMock)
+                .saveEmailCheckResult(
+                        emailCaptor.capture(), statusCaptor.capture(),
+                        timeToExistCaptor.capture(), referenceNumberCaptor.capture(),
+                        govukSigninJourneyIdCaptor.capture(), emailCheckResponseCaptor.capture());
 
-            assertEquals(TEST_MSG_EMAIL, emailCaptor.getValue());
-            assertEquals(emailCheckResultStatus, statusCaptor.getValue());
-            assertEquals(TEST_MSG_TIME_TO_EXIST, timeToExistCaptor.getValue());
-            assertEquals(TEST_MSG_REF_NUMBER, referenceNumberCaptor.getValue());
-            assertEquals("test-journey-id", govukSigninJourneyIdCaptor.getValue());
+        assertEquals(TEST_MSG_EMAIL, emailCaptor.getValue());
+        assertEquals(emailCheckResultStatus, statusCaptor.getValue());
+        assertEquals(TEST_MSG_TIME_TO_EXIST, timeToExistCaptor.getValue());
+        assertEquals(TEST_MSG_REF_NUMBER, referenceNumberCaptor.getValue());
+        assertEquals("test-journey-id", govukSigninJourneyIdCaptor.getValue());
 
-            var capturedEmailCheckResponse = emailCheckResponseCaptor.getValue();
-            assertNotNull(capturedEmailCheckResponse);
+        var capturedEmailCheckResponse = emailCheckResponseCaptor.getValue();
+        assertNotNull(capturedEmailCheckResponse);
 
-            var extensions = capturedEmailCheckResponse.extensions().getAsJsonObject();
-            assertEquals("testValue1", extensions.get("extensionsTestString").getAsString());
-            assertEquals(123, extensions.get("extensionsTestNumber").getAsNumber().intValue());
-            assertEquals(true, extensions.get("extensionsTestBoolean").getAsBoolean());
+        var extensions = capturedEmailCheckResponse.extensions().getAsJsonObject();
+        assertEquals("testValue1", extensions.get("extensionsTestString").getAsString());
+        assertEquals(123, extensions.get("extensionsTestNumber").getAsNumber().intValue());
+        assertEquals(true, extensions.get("extensionsTestBoolean").getAsBoolean());
 
-            var testObject = extensions.get("extensionsTestObject").getAsJsonObject();
-            assertEquals(
-                    "testNestedValue", testObject.get("extensionsTestNestedString").getAsString());
-            assertEquals(
-                    456, testObject.get("extensionsTestNestedNumber").getAsNumber().intValue());
+        var testObject = extensions.get("extensionsTestObject").getAsJsonObject();
+        assertEquals("testNestedValue", testObject.get("extensionsTestNestedString").getAsString());
+        assertEquals(456, testObject.get("extensionsTestNestedNumber").getAsNumber().intValue());
 
-            var testChildObject = testObject.get("extensionsTestChildObject").getAsJsonObject();
-            assertEquals(
-                    "testDeepValue", testChildObject.get("extensionsTestDeepString").getAsString());
-            assertEquals(false, testChildObject.get("extensionsTestDeepBoolean").getAsBoolean());
+        var testChildObject = testObject.get("extensionsTestChildObject").getAsJsonObject();
+        assertEquals(
+                "testDeepValue", testChildObject.get("extensionsTestDeepString").getAsString());
+        assertEquals(false, testChildObject.get("extensionsTestDeepBoolean").getAsBoolean());
 
-            var restricted = capturedEmailCheckResponse.restricted().getAsJsonObject();
-            assertEquals("testValue2", restricted.get("restrictedTestString").getAsString());
+        var restricted = capturedEmailCheckResponse.restricted().getAsJsonObject();
+        assertEquals("testValue2", restricted.get("restrictedTestString").getAsString());
 
-            verify(cloudWatchMock).logEmailCheckDuration(REQUEST_DURATION);
-        }
+        verify(cloudWatchMock).logEmailCheckDuration(REQUEST_DURATION);
     }
 
     @Test

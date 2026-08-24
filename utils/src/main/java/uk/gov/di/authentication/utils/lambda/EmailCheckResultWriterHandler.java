@@ -14,8 +14,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.time.Clock;
+
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.NowHelper.now;
 
 public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, Void> {
 
@@ -23,17 +24,21 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
     private final Json objectMapper = SerializationService.getInstance();
     private final DynamoEmailCheckResultService db;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Clock clock;
 
     public EmailCheckResultWriterHandler(
             DynamoEmailCheckResultService databaseService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            Clock clock) {
         this.db = databaseService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.clock = clock;
     }
 
     public EmailCheckResultWriterHandler(ConfigurationService configService) {
         this.db = new DynamoEmailCheckResultService(configService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configService);
+        this.clock = Clock.systemUTC();
     }
 
     public EmailCheckResultWriterHandler() {
@@ -65,7 +70,7 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
                         emailCheckResult.govukSigninJourneyId(),
                         emailCheckResult.emailCheckResponse());
 
-                long currentTime = now().getTime();
+                long currentTime = clock.millis();
                 long timeOfInitialRequest = emailCheckResult.timeOfInitialRequest();
                 long duration = currentTime - timeOfInitialRequest;
                 LOG.info(
