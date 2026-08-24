@@ -11,6 +11,7 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -33,7 +34,7 @@ public class TokenGeneratorHelper {
         Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
 
         return generateSignedToken(
-                clientId, issuerUrl, scopes, signer, subject, keyId, expiryDate, null);
+                clientId, issuerUrl, scopes, signer, subject, keyId, expiryDate.toInstant(), null);
     }
 
     public static SignedJWT generateSignedToken(
@@ -43,7 +44,7 @@ public class TokenGeneratorHelper {
             JWSSigner signer,
             Subject subject,
             String keyId,
-            Date expiryDate) {
+            Instant expiryDate) {
 
         return generateSignedToken(
                 clientId, issuerUrl, scopes, signer, subject, keyId, expiryDate, null);
@@ -56,14 +57,14 @@ public class TokenGeneratorHelper {
             JWSSigner signer,
             Subject subject,
             String keyId,
-            Date expiryDate,
+            Instant expiryDate,
             OIDCClaimsRequest identityClaims) {
 
         JWTClaimsSet.Builder claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
                         .issuer(issuerUrl)
-                        .expirationTime(expiryDate)
+                        .expirationTime(Date.from(expiryDate))
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
                         .subject(subject.getValue())

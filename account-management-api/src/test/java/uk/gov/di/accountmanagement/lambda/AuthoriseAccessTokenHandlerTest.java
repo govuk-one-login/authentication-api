@@ -15,11 +15,12 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.accountmanagement.services.TokenValidationService;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,18 +44,20 @@ class AuthoriseAccessTokenHandlerTest {
             "arn:aws:execute-api:eu-west-2:123456789012:ymy8tbxw7b/*/POST/";
     private static final List<String> SCOPES = List.of("openid", "email", "phone", "am");
     private static final List<String> INVALID_SCOPES = List.of("openid", "email", "phone");
+    private static final Clock TEST_CLOCK =
+            Clock.fixed(Instant.parse("2026-06-15T12:00:00Z"), ZoneOffset.UTC);
 
     private static final Subject SUBJECT = new Subject("some-subject");
 
     @BeforeEach
     public void setUp() {
-        handler = new AuthoriseAccessTokenHandler(tokenValidationService);
+        handler = new AuthoriseAccessTokenHandler(tokenValidationService, TEST_CLOCK);
     }
 
     @Test
     public void shouldReturnAuthPolicyForSuccessfulRequest() throws JOSEException {
         BearerAccessToken signedAccessToken =
-                new BearerAccessToken(createSignedAccessToken(SCOPES).serialize());
+                new BearerAccessToken(createSignedAccessToken(SCOPES, TEST_CLOCK).serialize());
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
@@ -86,7 +89,7 @@ class AuthoriseAccessTokenHandlerTest {
     @Test
     public void shouldThrowExceptionWhenAccessTokenHasInvalidSignature() throws JOSEException {
         BearerAccessToken signedAccessToken =
-                new BearerAccessToken(createSignedAccessToken(SCOPES).serialize());
+                new BearerAccessToken(createSignedAccessToken(SCOPES, TEST_CLOCK).serialize());
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
@@ -104,7 +107,7 @@ class AuthoriseAccessTokenHandlerTest {
 
     @Test
     public void shouldThrowExceptionWhenInvalidAccessTokenIsSentInRequest() throws JOSEException {
-        String invalidAccessToken = createSignedAccessToken(SCOPES).serialize();
+        String invalidAccessToken = createSignedAccessToken(SCOPES, TEST_CLOCK).serialize();
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(TOKEN_TYPE, invalidAccessToken, METHOD_ARN);
 
@@ -135,7 +138,8 @@ class AuthoriseAccessTokenHandlerTest {
     @Test
     public void shouldThrowExceptionWhenAccessTokenHasInvalidScopes() throws JOSEException {
         BearerAccessToken signedAccessToken =
-                new BearerAccessToken(createSignedAccessToken(INVALID_SCOPES).serialize());
+                new BearerAccessToken(
+                        createSignedAccessToken(INVALID_SCOPES, TEST_CLOCK).serialize());
         TokenAuthorizerContext tokenAuthorizerContext =
                 new TokenAuthorizerContext(
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
@@ -151,15 +155,22 @@ class AuthoriseAccessTokenHandlerTest {
         assertEquals("Unauthorized", exception.getMessage());
     }
 
-    private SignedJWT createSignedAccessToken(List<String> scopes) throws JOSEException {
+    private SignedJWT createSignedAccessToken(List<String> scopes, Clock clock)
+            throws JOSEException {
         ECKey ecJWK = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
         JWSSigner signer = new ECDSASigner(ecJWK);
         return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, "http://example.com", scopes, signer, SUBJECT, "14342354354353");
+                CLIENT_ID,
+                "http://example.com",
+                scopes,
+                signer,
+                SUBJECT,
+                "14342354354353",
+                clock.instant().plus(2, ChronoUnit.MINUTES));
     }
 
     private SignedJWT createSignedExpiredAccessToken(List<String> scopes) throws JOSEException {
-        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
+        Instant expiryDate = Instant.now(TEST_CLOCK).minus(2, ChronoUnit.MINUTES);
         ECKey ecJWK = new ECKeyGenerator(Curve.P_256).keyID(KEY_ID).generate();
         JWSSigner signer = new ECDSASigner(ecJWK);
         return TokenGeneratorHelper.generateSignedToken(

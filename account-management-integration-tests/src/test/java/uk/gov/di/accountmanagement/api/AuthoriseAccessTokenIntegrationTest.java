@@ -33,6 +33,9 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPublicKey;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -61,6 +64,8 @@ class AuthoriseAccessTokenIntegrationTest
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private static KeyPair ecKeyPair;
     private Date validDate;
+    private static final Clock TEST_NOW_CLOCK =
+            Clock.fixed(Instant.ofEpochSecond(4102444800L), ZoneOffset.UTC);
 
     @RegisterExtension public static final JwksExtension jwksExtension = new JwksExtension();
 
@@ -83,7 +88,7 @@ class AuthoriseAccessTokenIntegrationTest
 
     @BeforeEach
     void setup() {
-        handler = new AuthoriseAccessTokenHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new AuthoriseAccessTokenHandler(TEST_CONFIGURATION_SERVICE, TEST_NOW_CLOCK);
         ecKeyPair = createTestEncryptionKeyPair();
         JWKSet jwkSet =
                 new JWKSet(
@@ -95,7 +100,7 @@ class AuthoriseAccessTokenIntegrationTest
                                         .algorithm(JWSAlgorithm.ES256)
                                         .build()));
         jwksExtension.init(jwkSet);
-        validDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
+        validDate = Date.from(TEST_NOW_CLOCK.instant().plus(5, ChronoUnit.MINUTES));
     }
 
     private static KeyPair createTestEncryptionKeyPair() {
@@ -188,7 +193,8 @@ class AuthoriseAccessTokenIntegrationTest
                     }
                 };
 
-        var customHandler = new AuthoriseAccessTokenHandler(configServiceWithTestToken);
+        var customHandler =
+                new AuthoriseAccessTokenHandler(configServiceWithTestToken, TEST_NOW_CLOCK);
 
         var scopes =
                 asList(
@@ -233,7 +239,7 @@ class AuthoriseAccessTokenIntegrationTest
                         .claim("scope", scopes)
                         .issuer("issuer-id")
                         .expirationTime(expiryDate)
-                        .issueTime(NowHelper.now())
+                        .issueTime(Date.from(TEST_NOW_CLOCK.instant()))
                         .subject(publicSubject)
                         .jwtID(UUID.randomUUID().toString());
         clientIdOpt.ifPresent(clientId -> claimsSetBuilder.claim("client_id", clientId));

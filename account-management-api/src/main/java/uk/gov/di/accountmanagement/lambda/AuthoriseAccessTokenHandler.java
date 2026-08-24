@@ -15,12 +15,12 @@ import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.accountmanagement.services.TokenValidationService;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RemoteJwksService;
 
+import java.time.Clock;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -33,18 +33,20 @@ public class AuthoriseAccessTokenHandler
         implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
 
     private static final Logger LOG = LogManager.getLogger(AuthoriseAccessTokenHandler.class);
+    private final Clock clock;
 
     private final TokenValidationService tokenValidationService;
 
-    public AuthoriseAccessTokenHandler(TokenValidationService tokenValidationService) {
+    public AuthoriseAccessTokenHandler(TokenValidationService tokenValidationService, Clock clock) {
         this.tokenValidationService = tokenValidationService;
+        this.clock = clock;
     }
 
     public AuthoriseAccessTokenHandler() {
-        this(ConfigurationService.getInstance());
+        this(ConfigurationService.getInstance(), Clock.systemUTC());
     }
 
-    public AuthoriseAccessTokenHandler(ConfigurationService configurationService) {
+    public AuthoriseAccessTokenHandler(ConfigurationService configurationService, Clock clock) {
         tokenValidationService =
                 new TokenValidationService(
                         new JwksService(
@@ -52,6 +54,7 @@ public class AuthoriseAccessTokenHandler
                                 new KmsConnectionService(configurationService)),
                         new RemoteJwksService(configurationService.getAccessTokenJwksUrl()),
                         configurationService);
+        this.clock = clock;
     }
 
     @Override
@@ -72,7 +75,7 @@ public class AuthoriseAccessTokenHandler
             SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
             JWTClaimsSet claimsSet = signedAccessToken.getJWTClaimsSet();
 
-            Date currentDateTime = NowHelper.now();
+            Date currentDateTime = Date.from(clock.instant());
             if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
                 LOG.warn(
                         "Access Token expires at: {}. CurrentDateTime is: {}",
