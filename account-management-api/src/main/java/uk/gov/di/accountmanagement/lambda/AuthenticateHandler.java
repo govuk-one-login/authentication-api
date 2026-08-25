@@ -79,6 +79,8 @@ public class AuthenticateHandler
         attachSessionIdToLogs(sessionId);
         LOG.info("AuthenticateHandler called");
 
+        LOG.info("jajajajajajaj");
+
         var auditContext =
                 new AuditContext(
                         AuditService.UNKNOWN,
