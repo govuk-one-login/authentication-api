@@ -500,7 +500,7 @@ Mappings:
       inactiveAccountExportTableName: "inactive_account_tracker_store"
       inactiveAccountExportBatchWriteMaxRetries: "7"
       inactiveAccountExportMaxInvocations: "150"
-      inactiveAccountExportTrackerWriteEnabled: "false"
+      inactiveAccountExportTrackerWriteEnabled: "true"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
