@@ -499,8 +499,8 @@ Mappings:
       inactiveAccountExportTableEncryptionKey: arn:aws:kms:eu-west-2:026991849909:key/5489c67b-2c14-4b76-b6a3-a25148b14311
       inactiveAccountExportTableName: "inactive_account_tracker_store"
       inactiveAccountExportBatchWriteMaxRetries: "7"
-      inactiveAccountExportMaxInvocations: "150"
-      inactiveAccountExportTrackerWriteEnabled: "true"
+      inactiveAccountExportMaxInvocations: "0"
+      inactiveAccountExportTrackerWriteEnabled: "false"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
