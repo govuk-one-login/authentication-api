@@ -317,6 +317,7 @@ Mappings:
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/e5a9a634-e113-44c4-8bef-388fb71041a0
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
+      accountDeletionDataApiEnabled: true
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -357,6 +358,7 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/73405f5d-b60a-4b17-881c-b0f3e26ef03d
       manualAccountDeletionClientId: manual-account-deletion
+      accountDeletionDataApiEnabled: true
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
@@ -398,6 +400,7 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/20e15b84-6196-4b0a-8f27-632f4b858bd1
       manualAccountDeletionClientId: manual-account-deletion
+      accountDeletionDataApiEnabled: true
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
@@ -446,6 +449,7 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/c0bc7d31-32f4-4f98-addd-170187956d8d
       manualAccountDeletionClientId: manual-account-deletion
+      accountDeletionDataApiEnabled: true
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
@@ -496,6 +500,7 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:058264536367:key/9a0c6ef7-ce45-42fe-b55e-48b09f9ff53e
       manualAccountDeletionClientId: manual-account-deletion
+      accountDeletionDataApiEnabled: true
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
@@ -548,6 +553,7 @@ Mappings:
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:851725205974:key/ecfc81ec-546e-478d-ae04-5ed5d1b375a9
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
+      accountDeletionDataApiEnabled: false
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -599,6 +605,7 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125600642:key/f0e0c444-b70e-4d2f-9d5a-9f0bcf1d6540
       manualAccountDeletionClientId: manual-account-deletion
+      accountDeletionDataApiEnabled: false
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
@@ -652,6 +659,7 @@ Mappings:
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125303002:key/29d156dd-c893-4221-8fe1-f24882e0e401
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
+      accountDeletionDataApiEnabled: false
       argon2MemoryInKibibytes: "15360"
       argon2Iterations: "2"
       argon2Parallelism: "1"

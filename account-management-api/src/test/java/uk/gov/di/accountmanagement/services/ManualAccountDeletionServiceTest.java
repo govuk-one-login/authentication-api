@@ -34,6 +34,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -164,6 +165,7 @@ class ManualAccountDeletionServiceTest {
         @Test
         void shouldMintTokenAndPassItToRemoveAccount() throws Json.JsonException {
             // given
+            when(configurationService.isAccountDeletionDataApiEnabled()).thenReturn(true);
             when(accountDeletionTokenService.createAccountDataApiAccessToken(
                             PUBLIC_SUBJECT_ID, CLIENT_ID))
                     .thenReturn(Result.success(new BearerAccessToken(TOKEN_VALUE)));
@@ -183,8 +185,29 @@ class ManualAccountDeletionServiceTest {
         }
 
         @Test
+        void shouldFallBackToDynamoWhenFeatureFlagIsOff() throws Json.JsonException {
+            // given
+            when(configurationService.isAccountDeletionDataApiEnabled()).thenReturn(false);
+
+            // when
+            underTestWithMinter.manuallyDeleteAccount(USER_PROFILE);
+
+            // then
+            verify(accountDeletionService)
+                    .removeAccount(
+                            Optional.empty(),
+                            USER_PROFILE,
+                            AuditService.UNKNOWN,
+                            AccountDeletionReason.SUPPORT_INITIATED,
+                            true,
+                            Optional.empty());
+            verifyNoInteractions(accountDeletionTokenService);
+        }
+
+        @Test
         void shouldThrowIfTokenMintingFails() {
             // given
+            when(configurationService.isAccountDeletionDataApiEnabled()).thenReturn(true);
             when(accountDeletionTokenService.createAccountDataApiAccessToken(
                             PUBLIC_SUBJECT_ID, CLIENT_ID))
                     .thenReturn(Result.failure(JwtFailureReason.SIGNING_ERROR));

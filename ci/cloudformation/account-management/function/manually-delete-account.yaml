@@ -76,6 +76,12 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               manualAccountDeletionClientId,
             ]
+          ACCOUNT_DELETION_DATA_API_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              accountDeletionDataApiEnabled,
+            ]
           LEGACY_ACCOUNT_DELETION_TOPIC_ARN: !If
             - IsHigherEnv
             - !FindInMap [

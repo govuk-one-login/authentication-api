@@ -837,6 +837,12 @@ public class ConfigurationService
                 .equals(FEATURE_SWITCH_ON);
     }
 
+    public boolean isAccountDeletionDataApiEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_DELETION_DATA_API_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
     public boolean isBulkAccountDeletionEnabled() {
         return !List.of(INTEGRATION.getValue(), PRODUCTION.getValue()).contains(getEnvironment());
     }

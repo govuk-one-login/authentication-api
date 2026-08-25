@@ -88,7 +88,8 @@ public class ManualAccountDeletionService {
     }
 
     private Optional<String> getAccountDataApiToken(UserProfile userProfile) {
-        if (accountDeletionTokenService == null) {
+        if (accountDeletionTokenService == null
+                || !configurationService.isAccountDeletionDataApiEnabled()) {
             return Optional.empty();
         }
         var tokenResult =
