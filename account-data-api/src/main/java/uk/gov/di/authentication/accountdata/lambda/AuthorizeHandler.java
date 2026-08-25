@@ -81,6 +81,8 @@ public class AuthorizeHandler
                 throw result.getFailure();
             }
 
+            LOG.info("hiya");
+
             var scope = (String) claimsSet.getClaim(SCOPE_CLAIM);
             LOG.info("Request validated, returning access policy");
             return getAllowExecuteApiPolicyForSubject(
