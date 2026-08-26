@@ -144,48 +144,17 @@ class AuthorizeHandlerTest {
                     JsonParser.parseString(new Gson().toJson(result)));
         }
 
-        @Test
-        void authorizeHandlerShouldAllowInactiveAccountDeletionClientId() throws JOSEException {
-            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
-
-            var bearerAccessToken =
-                    createBearerAccessTokenWithExpiry(
-                            expiryDateFiveMinutesFromNow,
-                            ecSigningKey,
-                            AccountDataScope.ACCOUNT_DELETE.getValue(),
-                            INACTIVE_ACCOUNT_DELETION_CLIENT_ID);
-
-            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
-
-            var result = handler.handleRequest(event, context);
-
-            var expectedPolicyDocument =
-                    """
-                            {
-                                "principalId": "%s",
-                                "context": {"scope": "%s"},
-                                "policyDocument": {
-                                    "version": "2012-10-17",
-                                    "statement": [{
-                                        "action": "execute-api:Invoke",
-                                        "effect": "Allow",
-                                        "resource": ["%s"]
-                                    }]
-                                }
-                            }
-                            """
-                            .formatted(
-                                    SUBJECT,
-                                    AccountDataScope.ACCOUNT_DELETE.getValue(),
-                                    METHOD_ARN);
-
-            assertEquals(
-                    JsonParser.parseString(expectedPolicyDocument),
-                    JsonParser.parseString(new Gson().toJson(result)));
+        static Stream<Arguments> deletionClientIds() {
+            return Stream.of(
+                    Arguments.of(INACTIVE_ACCOUNT_DELETION_CLIENT_ID),
+                    Arguments.of(MANUAL_ACCOUNT_DELETION_CLIENT_ID),
+                    Arguments.of(BULK_ACCOUNT_DELETION_CLIENT_ID));
         }
 
-        @Test
-        void authorizeHandlerShouldAllowManualAccountDeletionClientId() throws JOSEException {
+        @ParameterizedTest
+        @MethodSource("deletionClientIds")
+        void authorizeHandlerShouldAllowAccountDeletionClientIds(String clientId)
+                throws JOSEException {
             var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var bearerAccessToken =
@@ -193,47 +162,7 @@ class AuthorizeHandlerTest {
                             expiryDateFiveMinutesFromNow,
                             ecSigningKey,
                             AccountDataScope.ACCOUNT_DELETE.getValue(),
-                            MANUAL_ACCOUNT_DELETION_CLIENT_ID);
-
-            event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
-
-            var result = handler.handleRequest(event, context);
-
-            var expectedPolicyDocument =
-                    """
-                            {
-                                "principalId": "%s",
-                                "context": {"scope": "%s"},
-                                "policyDocument": {
-                                    "version": "2012-10-17",
-                                    "statement": [{
-                                        "action": "execute-api:Invoke",
-                                        "effect": "Allow",
-                                        "resource": ["%s"]
-                                    }]
-                                }
-                            }
-                            """
-                            .formatted(
-                                    SUBJECT,
-                                    AccountDataScope.ACCOUNT_DELETE.getValue(),
-                                    METHOD_ARN);
-
-            assertEquals(
-                    JsonParser.parseString(expectedPolicyDocument),
-                    JsonParser.parseString(new Gson().toJson(result)));
-        }
-
-        @Test
-        void authorizeHandlerShouldAllowBulkAccountDeletionClientId() throws JOSEException {
-            var handler = new AuthorizeHandler(configurationService, remoteJwksService);
-
-            var bearerAccessToken =
-                    createBearerAccessTokenWithExpiry(
-                            expiryDateFiveMinutesFromNow,
-                            ecSigningKey,
-                            AccountDataScope.ACCOUNT_DELETE.getValue(),
-                            BULK_ACCOUNT_DELETION_CLIENT_ID);
+                            clientId);
 
             event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 

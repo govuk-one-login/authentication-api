@@ -500,7 +500,7 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:058264536367:key/9a0c6ef7-ce45-42fe-b55e-48b09f9ff53e
       manualAccountDeletionClientId: manual-account-deletion
-      accountDeletionDataApiEnabled: true
+      accountDeletionDataApiEnabled: false
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"

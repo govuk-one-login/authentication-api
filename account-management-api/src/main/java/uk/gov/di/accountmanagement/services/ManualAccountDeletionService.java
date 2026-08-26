@@ -1,11 +1,14 @@
 package uk.gov.di.accountmanagement.services;
 
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.entity.LegacyAccountDeletionMessage;
+import uk.gov.di.authentication.shared.entity.JwtFailureReason;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -92,15 +95,18 @@ public class ManualAccountDeletionService {
                 || !configurationService.isAccountDeletionDataApiEnabled()) {
             return Optional.empty();
         }
-        var tokenResult =
+        Result<JwtFailureReason, BearerAccessToken> tokenResult =
                 accountDeletionTokenService.createAccountDataApiAccessToken(
                         userProfile.getPublicSubjectID(), clientId);
-        if (tokenResult.isFailure()) {
-            throw new RuntimeException(
-                    "Failed to mint account-delete token for publicSubjectId: "
-                            + userProfile.getPublicSubjectID());
-        }
-        return Optional.of(tokenResult.getSuccess().getValue());
+        return tokenResult.fold(
+                failure -> {
+                    throw new RuntimeException(
+                            "Failed to mint account-delete token for publicSubjectId: "
+                                    + userProfile.getPublicSubjectID()
+                                    + ". Reason: "
+                                    + failure);
+                },
+                token -> Optional.of(token.getValue()));
     }
 
     private String getCommonSubjectId(UserProfile userProfile) {
