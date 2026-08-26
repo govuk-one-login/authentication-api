@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -178,6 +179,14 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .withPhoneNumber(formattedPhoneNumber));
+    }
+
+    @Override
+    public void updateLastSignedIn(String email) {
+        var key = Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build();
+        var userProfile = dynamoUserProfileTable.getItem(key);
+        userProfile.withLastSignedIn(Instant.now().toString());
+        dynamoUserProfileTable.updateItem(userProfile);
     }
 
     @Override

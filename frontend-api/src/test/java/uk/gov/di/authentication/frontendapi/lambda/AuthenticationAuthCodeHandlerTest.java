@@ -147,8 +147,7 @@ class AuthenticationAuthCodeHandlerTest {
         @Test
         void shouldReturn200AndSaveNewAuthCodeRequest() throws URISyntaxException {
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-            var userProfile = new UserProfile();
-            userProfile.setSubjectID(TEST_SUBJECT_ID);
+            var userProfile = new UserProfile().withSubjectID(TEST_SUBJECT_ID).withEmail(EMAIL);
             when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
             var event = validAuthCodeRequest();
@@ -175,6 +174,7 @@ class AuthenticationAuthCodeHandlerTest {
             assertTrue(uri.getQuery().contains(TEST_STATE));
             assertFalse(uri.getQuery().contains("random_query_parameter"));
 
+            verify(authenticationService, times(1)).updateLastSignedIn(EMAIL);
             verify(cloudwatchMetricsService)
                     .incrementCounter(
                             CloudwatchMetrics.AUTH_CODE_ISSUED,

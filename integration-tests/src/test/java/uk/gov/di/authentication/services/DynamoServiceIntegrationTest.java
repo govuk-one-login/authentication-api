@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
@@ -21,6 +22,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -1011,6 +1013,21 @@ class DynamoServiceIntegrationTest {
             assertThat(
                     updatedUserProfile.getLastSkippedAddingPasskey(),
                     equalTo(fixedDateTime.toString()));
+        }
+    }
+
+    @Test
+    void shouldSetLastSignedInOnUserProfile() {
+        userStore.signUp(TEST_EMAIL, "password-1", new Subject());
+        Instant fixedInstant = Instant.parse("2026-01-01T00:00:00Z");
+        try (MockedStatic<Instant> mockedInstant =
+                Mockito.mockStatic(Instant.class, Mockito.CALLS_REAL_METHODS)) {
+            mockedInstant.when(Instant::now).thenReturn(fixedInstant);
+
+            dynamoService.updateLastSignedIn(TEST_EMAIL);
+
+            UserProfile updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+            assertEquals(fixedInstant.toString(), updatedUserProfile.getLastSignedIn());
         }
     }
 
