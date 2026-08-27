@@ -17,6 +17,16 @@ For example:
 
 ## Checklist
 
+<!-- Canary deploy safe
+
+Changes across multiple lambdas may not be safe with our canary deployments, particularly if they make session changes etc.
+
+Consider the impact of a user journey which may hit the new version of one lambda, and the old version of another. Could it go wrong? Think about whether you need to split further.
+
+-->
+
+- [ ] PR is canary deploy safe
+
 <!-- Active user journey impact
 
 It’s crucial that deploying this change to production doesn’t disrupt users with active sessions.
