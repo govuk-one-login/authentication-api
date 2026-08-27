@@ -180,7 +180,7 @@ Mappings:
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
     staging:
-      cloudwatchLogRetentionInDays: 7
+      cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       UseAlarmActions: "Yes"
@@ -214,7 +214,7 @@ Mappings:
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
     production:
-      cloudwatchLogRetentionInDays: 30
+      cloudwatchLogRetentionInDays: 180
       IsSplunkEnabled: "Yes"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       UseAlarmActions: "Yes"

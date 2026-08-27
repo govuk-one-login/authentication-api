@@ -566,7 +566,7 @@ Mappings:
       frontendBaseUrl: https://signin.staging.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
       internationalSmsSendingEnabled: true
-      cloudwatchLogRetentionInDays: 7
+      cloudwatchLogRetentionInDays: 30
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "Yes"
       IPVApiEnabled: true
@@ -700,7 +700,7 @@ Mappings:
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/a6becfd6-a3bb-4bfd-ba2f-2bdf35d36e40
       bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6e0df2dd-520e-4df0-823a-7e5e4d89b0a0
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
-      cloudwatchLogRetentionInDays: 30
+      cloudwatchLogRetentionInDays: 180
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
       customDocAppClaimEnabled: true
       dataStoreAccountId: 172348255554

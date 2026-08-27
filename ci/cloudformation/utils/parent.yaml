@@ -173,7 +173,7 @@ Mappings:
       dataStoreAccountId: 653994557586
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
-      logRetentionDays: 30
+      logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
@@ -215,7 +215,7 @@ Mappings:
       dataStoreAccountId: 653994557586
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
-      logRetentionDays: 30
+      logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
@@ -257,7 +257,7 @@ Mappings:
       dataStoreAccountId: 653994557586
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
-      logRetentionDays: 30
+      logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
@@ -299,7 +299,7 @@ Mappings:
       dataStoreAccountId: 653994557586
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
-      logRetentionDays: 30
+      logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
@@ -341,7 +341,7 @@ Mappings:
       dataStoreAccountId: 761723964695
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
-      logRetentionDays: 30
+      logRetentionDays: 7
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
@@ -383,7 +383,7 @@ Mappings:
       dataStoreAccountId: 758531536632
       lambdaMinConcurrency: 2
       emailCheckResultsWriterProvisionedConcurrency: "5"
-      logRetentionDays: 60
+      logRetentionDays: 7
       lambdaErrorThreshold: 3
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
@@ -427,7 +427,7 @@ Mappings:
       dataStoreAccountId: 761723964695
       lambdaMinConcurrency: 3
       emailCheckResultsWriterProvisionedConcurrency: "7"
-      logRetentionDays: 90
+      logRetentionDays: 30
       lambdaErrorThreshold: 2
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
@@ -471,7 +471,7 @@ Mappings:
       dataStoreAccountId: 172348255554
       lambdaMinConcurrency: 5
       emailCheckResultsWriterProvisionedConcurrency: "10"
-      logRetentionDays: 90
+      logRetentionDays: 180
       lambdaErrorThreshold: 1
       notifyUrl: https://api.notifications.service.gov.uk
       notifyTemplateMap: "{}"
