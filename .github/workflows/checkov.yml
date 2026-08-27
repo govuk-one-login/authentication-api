@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "ci/terraform/**"
-      - "template.yaml"
       - "ci/cloudformation/**"
       - "checkov-policies/**"
   pull_request:
@@ -14,7 +13,6 @@ on:
       - main
     paths:
       - "ci/terraform/**"
-      - "template.yaml"
       - "ci/cloudformation/**"
       - "checkov-policies/**"
       - ".github/workflows/checkov.yml"
@@ -52,31 +50,6 @@ jobs:
         with:
           sarif_file: results.sarif
           category: ${{ matrix.module }}
-
-  scan-orch:
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - name: Checkov GitHub Action
-        uses: bridgecrewio/checkov-action@dfb51aed1b783289b0d3f255028e7a88d5e8caa1 # v12.3105.0
-        with:
-          file: template.yaml
-          framework: cloudformation
-          quiet: true
-          output_format: cli,sarif
-          output_file_path: console,results.sarif
-          external_checks_dirs: checkov-policies
-
-      - name: Upload SARIF file
-        if: always()
-        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v3.25.12v3
-        with:
-          sarif_file: results.sarif
-          category: orch-sam
 
   scan-api-sam:
     strategy:
