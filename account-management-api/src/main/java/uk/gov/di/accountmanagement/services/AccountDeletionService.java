@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -96,8 +97,16 @@ public class AccountDeletionService {
 
         if (sendNotification) sendNotifyRequest(userProfile);
 
-        emitAuditEvent(
-                input, userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+        if (input.isPresent()) {
+            emitAuditEvent(
+                    input.get(),
+                    userProfile,
+                    txmaAuditEncoded,
+                    reason,
+                    internalCommonSubjectIdentifier);
+        } else {
+            emitAuditEvent(userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+        }
     }
 
     public void removeAccount(
@@ -115,8 +124,16 @@ public class AccountDeletionService {
 
         if (sendNotification) sendNotifyRequest(userProfile);
 
-        emitAuditEvent(
-                input, userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+        if (input.isPresent()) {
+            emitAuditEvent(
+                    input.get(),
+                    userProfile,
+                    txmaAuditEncoded,
+                    reason,
+                    internalCommonSubjectIdentifier);
+        } else {
+            emitAuditEvent(userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+        }
     }
 
     private void sendNotifyRequest(UserProfile userProfile) {
@@ -134,65 +151,101 @@ public class AccountDeletionService {
     }
 
     private void emitAuditEvent(
-            Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
             String txmaAuditEncoded,
             AccountDeletionReason reason,
             Subject internalCommonSubjectIdentifier) {
-        String persistentSessionID = StructuredAuditService.UNKNOWN;
-        String ipAddress = StructuredAuditService.UNKNOWN;
-        if (input.isPresent()) {
-            persistentSessionID =
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
-            attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
-            ipAddress = IpAddressHelper.extractIpAddress(input.get());
-        }
-
         try {
-            var clientId =
-                    input.map(
-                                    n ->
-                                            n.getRequestContext()
-                                                    .getAuthorizer()
-                                                    .getOrDefault(
-                                                            "clientId",
-                                                            StructuredAuditService.UNKNOWN)
-                                                    .toString())
-                            .orElse(StructuredAuditService.UNKNOWN);
-            var clientSessionId =
-                    input.map(
-                                    n ->
-                                            ClientSessionIdHelper.extractSessionIdFromHeaders(
-                                                    n.getHeaders()))
-                            .orElse(StructuredAuditService.UNKNOWN);
-            var sessionId =
-                    input.map(
-                                    n ->
-                                            RequestHeaderHelper.getHeaderValueOrElse(
-                                                    n.getHeaders(), SESSION_ID_HEADER, ""))
-                            .orElse(StructuredAuditService.UNKNOWN);
-            var auditContext =
-                    new AuditContext(
-                            clientId,
-                            clientSessionId,
-                            sessionId,
-                            internalCommonSubjectIdentifier.getValue(),
-                            userProfile.getEmail(),
-                            ipAddress,
-                            userProfile.getPhoneNumber(),
-                            persistentSessionID,
-                            txmaAuditEncoded);
             var auditEvent =
-                    AuthDeleteAccount.create(
-                            auditContext,
-                            userProfile.getPublicSubjectID(),
-                            userProfile.getLegacySubjectID(),
-                            reason.name(),
-                            Clock.systemUTC());
+                    createAuditEvent(
+                            userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
             structuredAuditService.submitAuditEvent(auditEvent);
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }
+    }
+
+    private void emitAuditEvent(
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            Subject internalCommonSubjectIdentifier) {
+
+        try {
+            var auditEvent =
+                    createAuditEvent(
+                            input,
+                            userProfile,
+                            txmaAuditEncoded,
+                            reason,
+                            internalCommonSubjectIdentifier);
+            structuredAuditService.submitAuditEvent(auditEvent);
+        } catch (Exception e) {
+            LOG.error("Failed to audit account deletion: ", e);
+        }
+    }
+
+    private static AuthDeleteAccount createAuditEvent(
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            Subject internalCommonSubjectIdentifier) {
+        var auditContext =
+                new AuditContext(
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        internalCommonSubjectIdentifier.getValue(),
+                        userProfile.getEmail(),
+                        AuditService.UNKNOWN,
+                        userProfile.getPhoneNumber(),
+                        AuditService.UNKNOWN,
+                        txmaAuditEncoded);
+        return AuthDeleteAccount.create(
+                auditContext,
+                userProfile.getPublicSubjectID(),
+                userProfile.getLegacySubjectID(),
+                reason.name(),
+                Clock.systemUTC());
+    }
+
+    private static AuthDeleteAccount createAuditEvent(
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            Subject internalCommonSubjectIdentifier) {
+        String ipAddress = StructuredAuditService.UNKNOWN;
+        String persistentSessionID =
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+        attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
+        ipAddress = IpAddressHelper.extractIpAddress(input);
+        var clientId =
+                input.getRequestContext()
+                        .getAuthorizer()
+                        .getOrDefault("clientId", StructuredAuditService.UNKNOWN)
+                        .toString();
+        var clientSessionId = ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders());
+        var sessionId =
+                RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        var auditContext =
+                new AuditContext(
+                        clientId,
+                        clientSessionId,
+                        sessionId,
+                        internalCommonSubjectIdentifier.getValue(),
+                        userProfile.getEmail(),
+                        ipAddress,
+                        userProfile.getPhoneNumber(),
+                        persistentSessionID,
+                        txmaAuditEncoded);
+        return AuthDeleteAccount.create(
+                auditContext,
+                userProfile.getPublicSubjectID(),
+                userProfile.getLegacySubjectID(),
+                reason.name(),
+                Clock.systemUTC());
     }
 
     private Subject calculateICS(UserProfile userProfile) {
