@@ -130,7 +130,7 @@ public class RemoveAccountHandler
 
             if (token.isPresent()) {
                 accountDeletionService.removeAccount(
-                        Optional.of(input),
+                        input,
                         userProfile,
                         TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
                         AccountDeletionReason.USER_INITIATED,
@@ -138,7 +138,7 @@ public class RemoveAccountHandler
                         token.get());
             } else {
                 accountDeletionService.removeAccount(
-                        Optional.of(input),
+                        input,
                         userProfile,
                         TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
                         AccountDeletionReason.USER_INITIATED,

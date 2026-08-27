@@ -31,7 +31,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
@@ -117,10 +116,11 @@ class AccountDeletionServiceTest {
         when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
         // when
         underTest.removeAccount(
-                Optional.of(input),
+                input,
                 userProfile,
                 StructuredAuditService.UNKNOWN,
-                AccountDeletionReason.USER_INITIATED);
+                AccountDeletionReason.USER_INITIATED,
+                true);
         // then
         verify(dynamoDeleteService)
                 .deleteAccount(eq(expectedEmail), any(), eq(TEST_PUBLIC_SUBJECT_ID));
@@ -139,10 +139,11 @@ class AccountDeletionServiceTest {
                 expectedException.getClass(),
                 () ->
                         underTest.removeAccount(
-                                Optional.of(input),
+                                input,
                                 userProfile,
                                 StructuredAuditService.UNKNOWN,
-                                AccountDeletionReason.USER_INITIATED));
+                                AccountDeletionReason.USER_INITIATED,
+                                true));
     }
 
     @Test
@@ -154,10 +155,11 @@ class AccountDeletionServiceTest {
 
         // when
         underTest.removeAccount(
-                Optional.of(input),
+                input,
                 userProfile,
                 StructuredAuditService.UNKNOWN,
-                AccountDeletionReason.USER_INITIATED);
+                AccountDeletionReason.USER_INITIATED,
+                true);
 
         // then
         var captor = ArgumentCaptor.forClass(String.class);
@@ -180,10 +182,11 @@ class AccountDeletionServiceTest {
         assertDoesNotThrow(
                 () ->
                         underTest.removeAccount(
-                                Optional.of(input),
+                                input,
                                 userProfile,
                                 StructuredAuditService.UNKNOWN,
-                                AccountDeletionReason.USER_INITIATED));
+                                AccountDeletionReason.USER_INITIATED,
+                                true));
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Failed to send account deletion email")));
@@ -212,8 +215,7 @@ class AccountDeletionServiceTest {
                 .when(() -> IpAddressHelper.extractIpAddress(input))
                 .thenReturn(TEST_IP_ADDRESS);
 
-        underTest.removeAccount(
-                Optional.of(input), userProfile, StructuredAuditService.UNKNOWN, reason);
+        underTest.removeAccount(input, userProfile, StructuredAuditService.UNKNOWN, reason, true);
 
         var captor = ArgumentCaptor.forClass(AuthDeleteAccount.class);
         verify(structuredAuditService).submitAuditEvent(captor.capture());
@@ -248,10 +250,11 @@ class AccountDeletionServiceTest {
                 .thenReturn(TEST_IP_ADDRESS);
 
         underTest.removeAccount(
-                Optional.of(input),
+                input,
                 userProfile,
                 StructuredAuditService.UNKNOWN,
-                AccountDeletionReason.USER_INITIATED);
+                AccountDeletionReason.USER_INITIATED,
+                true);
 
         var captor = ArgumentCaptor.forClass(AuthDeleteAccount.class);
         verify(structuredAuditService).submitAuditEvent(captor.capture());
@@ -271,10 +274,11 @@ class AccountDeletionServiceTest {
         assertDoesNotThrow(
                 () ->
                         underTest.removeAccount(
-                                Optional.of(input),
+                                input,
                                 userProfile,
                                 StructuredAuditService.UNKNOWN,
-                                AccountDeletionReason.USER_INITIATED));
+                                AccountDeletionReason.USER_INITIATED,
+                                true));
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("Failed to audit account deletion")));
@@ -304,7 +308,7 @@ class AccountDeletionServiceTest {
             when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
 
             underTestWithDataApi.removeAccount(
-                    Optional.of(input),
+                    input,
                     userProfile,
                     StructuredAuditService.UNKNOWN,
                     AccountDeletionReason.USER_INITIATED,
@@ -330,7 +334,7 @@ class AccountDeletionServiceTest {
             when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
 
             underTestWithDataApi.removeAccount(
-                    Optional.of(input),
+                    input,
                     userProfile,
                     StructuredAuditService.UNKNOWN,
                     AccountDeletionReason.USER_INITIATED,
@@ -355,7 +359,7 @@ class AccountDeletionServiceTest {
                     RuntimeException.class,
                     () ->
                             underTestWithDataApi.removeAccount(
-                                    Optional.of(input),
+                                    input,
                                     userProfile,
                                     StructuredAuditService.UNKNOWN,
                                     AccountDeletionReason.USER_INITIATED,
@@ -378,7 +382,7 @@ class AccountDeletionServiceTest {
                     RuntimeException.class,
                     () ->
                             underTestWithDataApi.removeAccount(
-                                    Optional.of(input),
+                                    input,
                                     userProfile,
                                     StructuredAuditService.UNKNOWN,
                                     AccountDeletionReason.USER_INITIATED,

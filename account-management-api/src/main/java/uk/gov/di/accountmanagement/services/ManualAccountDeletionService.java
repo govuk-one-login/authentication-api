@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
-import java.util.Optional;
 
 public class ManualAccountDeletionService {
     private final AccountDeletionService accountDeletionService;
@@ -74,11 +73,7 @@ public class ManualAccountDeletionService {
             if (accountDeletionTokenService == null
                     || !configurationService.isAccountDeletionDataApiEnabled()) {
                 accountDeletionService.removeAccount(
-                        Optional.empty(),
-                        userProfile,
-                        AuditService.UNKNOWN,
-                        accountDeletionReason,
-                        sendNotification);
+                        userProfile, AuditService.UNKNOWN, accountDeletionReason, sendNotification);
 
             } else {
                 Result<JwtFailureReason, BearerAccessToken> adapiTokenResult =
@@ -94,7 +89,6 @@ public class ManualAccountDeletionService {
                 }
 
                 accountDeletionService.removeAccount(
-                        Optional.empty(),
                         userProfile,
                         AuditService.UNKNOWN,
                         accountDeletionReason,
