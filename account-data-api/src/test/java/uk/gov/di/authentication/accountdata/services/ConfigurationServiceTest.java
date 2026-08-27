@@ -74,6 +74,18 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getManualAccountDeletionClientIdShouldDefaultToEmptyString() {
+        environment.set("MANUAL_ACCOUNT_DELETION_CLIENT_ID", null);
+        assertEquals("", configurationService.getManualAccountDeletionClientId());
+    }
+
+    @Test
+    void getBulkAccountDeletionClientIdShouldDefaultToEmptyString() {
+        environment.set("BULK_ACCOUNT_DELETION_CLIENT_ID", null);
+        assertEquals("", configurationService.getBulkAccountDeletionClientId());
+    }
+
+    @Test
     void getAuthToAccountDataApiAudienceShouldDefaultToEmptyString() {
         environment.set("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", null);
         assertEquals("", configurationService.getAuthToAccountDataApiAudience());

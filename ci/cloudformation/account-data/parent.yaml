@@ -121,6 +121,8 @@ Mappings:
       frontendBaseUrl: https://signin.authdev1.dev.account.gov.uk
       amcClientId: auth
       inactiveAccountDeletionClientId: inactive-account-deletion
+      manualAccountDeletionClientId: manual-account-deletion
+      bulkAccountDeletionClientId: bulk-account-deletion
     authdev2:
       cloudwatchLogRetentionInDays: 1
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/88707a9b-53c9-4ad6-ab54-b03b1bf21321
@@ -131,6 +133,8 @@ Mappings:
       frontendBaseUrl: https://signin.authdev2.dev.account.gov.uk
       amcClientId: auth
       inactiveAccountDeletionClientId: inactive-account-deletion
+      manualAccountDeletionClientId: manual-account-deletion
+      bulkAccountDeletionClientId: bulk-account-deletion
     authdev3:
       cloudwatchLogRetentionInDays: 1
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3a47bbdd-4144-4d1a-959f-56b928fcfe3c
@@ -141,6 +145,8 @@ Mappings:
       frontendBaseUrl: https://signin.authdev3.dev.account.gov.uk
       amcClientId: auth
       inactiveAccountDeletionClientId: inactive-account-deletion
+      manualAccountDeletionClientId: manual-account-deletion
+      bulkAccountDeletionClientId: bulk-account-deletion
     dev:
       cloudwatchLogRetentionInDays: 1
       IsSplunkEnabled: "No"
@@ -155,6 +161,8 @@ Mappings:
       frontendBaseUrl: https://signin.dev.account.gov.uk
       amcClientId: auth
       inactiveAccountDeletionClientId: inactive-account-deletion
+      manualAccountDeletionClientId: manual-account-deletion
+      bulkAccountDeletionClientId: bulk-account-deletion
     build:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
@@ -169,6 +177,8 @@ Mappings:
       frontendBaseUrl: https://signin.build.account.gov.uk
       amcClientId: auth
       inactiveAccountDeletionClientId: inactive-account-deletion
+      manualAccountDeletionClientId: manual-account-deletion
+      bulkAccountDeletionClientId: bulk-account-deletion
     staging:
       cloudwatchLogRetentionInDays: 7
       IsSplunkEnabled: "Yes"
@@ -184,6 +194,8 @@ Mappings:
       frontendBaseUrl: https://signin.staging.account.gov.uk
       amcClientId: auth
       inactiveAccountDeletionClientId: inactive-account-deletion
+      manualAccountDeletionClientId: manual-account-deletion
+      bulkAccountDeletionClientId: bulk-account-deletion
     integration:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
@@ -199,6 +211,8 @@ Mappings:
       frontendBaseUrl: https://signin.integration.account.gov.uk
       amcClientId: auth
       inactiveAccountDeletionClientId: inactive-account-deletion
+      manualAccountDeletionClientId: manual-account-deletion
+      bulkAccountDeletionClientId: bulk-account-deletion
     production:
       cloudwatchLogRetentionInDays: 30
       IsSplunkEnabled: "Yes"
@@ -214,6 +228,8 @@ Mappings:
       frontendBaseUrl: https://signin.account.gov.uk
       amcClientId: auth
       inactiveAccountDeletionClientId: inactive-account-deletion
+      manualAccountDeletionClientId: manual-account-deletion
+      bulkAccountDeletionClientId: bulk-account-deletion
   LambdaConfiguration:
     account-delete:
       RunbookLink: "" # TODO: must be populated when runbook is created

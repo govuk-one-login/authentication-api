@@ -11,12 +11,14 @@ import uk.gov.di.accountmanagement.entity.BulkUserDeleteResponse;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.exceptions.BulkRemoveAccountException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
+import uk.gov.di.accountmanagement.services.AccountDeletionTokenService;
 import uk.gov.di.accountmanagement.services.AwsSnsClient;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -65,18 +67,23 @@ public class BulkRemoveAccountHandler
                         configurationService.getSnsEndpointUri());
         var structuredAuditService = new StructuredAuditService(configurationService);
         var dynamoDeleteService = new DynamoDeleteService(configurationService);
+        var accountDataApiService = new AccountDataApiService(configurationService);
         var accountDeletionService =
                 new AccountDeletionService(
                         authenticationService,
                         emailSqsClient,
                         structuredAuditService,
                         configurationService,
-                        dynamoDeleteService);
+                        dynamoDeleteService,
+                        accountDataApiService);
+        var accountDeletionTokenService = new AccountDeletionTokenService(configurationService);
         this.manualAccountDeletionService =
                 new ManualAccountDeletionService(
                         accountDeletionService,
                         legacyAccountDeletionSnsClient,
-                        configurationService);
+                        configurationService,
+                        accountDeletionTokenService,
+                        configurationService.getBulkAccountDeletionClientId());
     }
 
     public BulkRemoveAccountHandler() {

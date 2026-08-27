@@ -234,6 +234,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void isAccountDeletionDataApiEnabledShouldDefaultToFalse() {
+        assertFalse(configurationService.isAccountDeletionDataApiEnabled());
+    }
+
+    @Test
     void getTicfCRILambdaNameShouldDefault() {
         assertEquals("", configurationService.getTicfCRILambdaIdentifier());
     }
@@ -567,6 +572,16 @@ class ConfigurationServiceTest {
     @Test
     void getInactiveAccountDeletionClientIdShouldDefaultToEmptyString() {
         assertEquals("", configurationService.getInactiveAccountDeletionClientId());
+    }
+
+    @Test
+    void getManualAccountDeletionClientIdShouldDefaultToEmptyString() {
+        assertEquals("", configurationService.getManualAccountDeletionClientId());
+    }
+
+    @Test
+    void getBulkAccountDeletionClientIdShouldDefaultToEmptyString() {
+        assertEquals("", configurationService.getBulkAccountDeletionClientId());
     }
 
     @Test

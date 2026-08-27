@@ -758,6 +758,14 @@ public class ConfigurationService
         return System.getenv().getOrDefault("INACTIVE_ACCOUNT_DELETION_CLIENT_ID", "");
     }
 
+    public String getManualAccountDeletionClientId() {
+        return System.getenv().getOrDefault("MANUAL_ACCOUNT_DELETION_CLIENT_ID", "");
+    }
+
+    public String getBulkAccountDeletionClientId() {
+        return System.getenv().getOrDefault("BULK_ACCOUNT_DELETION_CLIENT_ID", "");
+    }
+
     public String getAuthToAccountDataSigningKey() {
         return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", "");
     }
@@ -826,6 +834,12 @@ public class ConfigurationService
     public boolean isTestSigningKeyEnabled() {
         return System.getenv()
                 .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
+                .equals(FEATURE_SWITCH_ON);
+    }
+
+    public boolean isAccountDeletionDataApiEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_DELETION_DATA_API_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 

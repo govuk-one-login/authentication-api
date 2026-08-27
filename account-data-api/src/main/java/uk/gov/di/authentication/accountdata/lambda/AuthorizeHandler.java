@@ -184,7 +184,9 @@ public class AuthorizeHandler
                 List.of(
                         configurationService.getAMCClientId(),
                         configurationService.getHomeClientId(),
-                        configurationService.getInactiveAccountDeletionClientId());
+                        configurationService.getInactiveAccountDeletionClientId(),
+                        configurationService.getManualAccountDeletionClientId(),
+                        configurationService.getBulkAccountDeletionClientId());
         return allowedClientIds.contains(clientId);
     }
 

@@ -39,6 +39,49 @@ Resources:
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          ACCOUNT_DATA_API_URI: !Sub
+            - "https://${ApiId}.execute-api.eu-west-2.amazonaws.com/${EnvOrSubEnv}"
+            - EnvOrSubEnv:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+              ApiId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  accountDataApiId,
+                ]
+          AUTH_TO_ACCOUNT_DATA_SIGNING_KEY: !Sub
+            - arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/${env}-auth-to-account-data-signing-key
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          AUTH_TO_ACCOUNT_DATA_API_AUDIENCE: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://account.${SubEnvironment}.${Environment}.account.gov.uk"
+              - !Sub "https://account.${Environment}.account.gov.uk"
+            - "https://account.account.gov.uk"
+          AUTH_ISSUER_CLAIM:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              frontendBaseUrl,
+            ]
+          MANUAL_ACCOUNT_DELETION_CLIENT_ID:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              manualAccountDeletionClientId,
+            ]
+          ACCOUNT_DELETION_DATA_API_ENABLED:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
+              accountDeletionDataApiEnabled,
+            ]
           LEGACY_ACCOUNT_DELETION_TOPIC_ARN: !If
             - IsHigherEnv
             - !FindInMap [
@@ -52,6 +95,23 @@ Resources:
         LogGroup: !Ref ManuallyDeleteAccountFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - Version: 2012-10-17
+          Statement:
+            - Sid: AllowKmsSignForAccountDataToken
+              Effect: Allow
+              Action:
+                - kms:Sign
+                - kms:GetPublicKey
+              Resource:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !If [
+                    UseSubEnvironment,
+                    !Ref SubEnvironment,
+                    !Ref Environment,
+                  ],
+                  authToAccountDataSigningKeyArn,
+                ]
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
         - !Ref DynamoUserDeleteAccessPolicy

@@ -60,6 +60,8 @@ class AuthorizeHandlerTest {
     private static final String CLIENT_ID = "some-client-id";
     private static final String HOME_CLIENT_ID = "home-client-id";
     private static final String INACTIVE_ACCOUNT_DELETION_CLIENT_ID = "inactive-account-deletion";
+    private static final String MANUAL_ACCOUNT_DELETION_CLIENT_ID = "manual-account-deletion";
+    private static final String BULK_ACCOUNT_DELETION_CLIENT_ID = "bulk-account-deletion";
 
     private static ECKey ecSigningKey;
     private APIGatewayCustomAuthorizerEvent event;
@@ -81,6 +83,10 @@ class AuthorizeHandlerTest {
         when(configurationService.getHomeClientId()).thenReturn(HOME_CLIENT_ID);
         when(configurationService.getInactiveAccountDeletionClientId())
                 .thenReturn(INACTIVE_ACCOUNT_DELETION_CLIENT_ID);
+        when(configurationService.getManualAccountDeletionClientId())
+                .thenReturn(MANUAL_ACCOUNT_DELETION_CLIENT_ID);
+        when(configurationService.getBulkAccountDeletionClientId())
+                .thenReturn(BULK_ACCOUNT_DELETION_CLIENT_ID);
     }
 
     @AfterEach
@@ -138,8 +144,17 @@ class AuthorizeHandlerTest {
                     JsonParser.parseString(new Gson().toJson(result)));
         }
 
-        @Test
-        void authorizeHandlerShouldAllowInactiveAccountDeletionClientId() throws JOSEException {
+        static Stream<Arguments> deletionClientIds() {
+            return Stream.of(
+                    Arguments.of(INACTIVE_ACCOUNT_DELETION_CLIENT_ID),
+                    Arguments.of(MANUAL_ACCOUNT_DELETION_CLIENT_ID),
+                    Arguments.of(BULK_ACCOUNT_DELETION_CLIENT_ID));
+        }
+
+        @ParameterizedTest
+        @MethodSource("deletionClientIds")
+        void authorizeHandlerShouldAllowAccountDeletionClientIds(String clientId)
+                throws JOSEException {
             var handler = new AuthorizeHandler(configurationService, remoteJwksService);
 
             var bearerAccessToken =
@@ -147,7 +162,7 @@ class AuthorizeHandlerTest {
                             expiryDateFiveMinutesFromNow,
                             ecSigningKey,
                             AccountDataScope.ACCOUNT_DELETE.getValue(),
-                            INACTIVE_ACCOUNT_DELETION_CLIENT_ID);
+                            clientId);
 
             event.setAuthorizationToken(bearerAccessToken.toAuthorizationHeader());
 

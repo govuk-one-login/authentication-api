@@ -54,6 +54,14 @@ public class ConfigurationService implements DynamoConfiguration {
         return System.getenv().getOrDefault("INACTIVE_ACCOUNT_DELETION_CLIENT_ID", "");
     }
 
+    public String getManualAccountDeletionClientId() {
+        return System.getenv().getOrDefault("MANUAL_ACCOUNT_DELETION_CLIENT_ID", "");
+    }
+
+    public String getBulkAccountDeletionClientId() {
+        return System.getenv().getOrDefault("BULK_ACCOUNT_DELETION_CLIENT_ID", "");
+    }
+
     public String getAuthToAccountDataApiAudience() {
         return System.getenv().getOrDefault("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "");
     }
