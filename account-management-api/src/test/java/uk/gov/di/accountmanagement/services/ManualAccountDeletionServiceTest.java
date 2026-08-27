@@ -154,7 +154,6 @@ class ManualAccountDeletionServiceTest {
         private final ManualAccountDeletionService underTestWithMinter =
                 new ManualAccountDeletionService(
                         accountDeletionService,
-                        legacyAccountDeletionSnsClient,
                         configurationService,
                         accountDeletionTokenService,
                         CLIENT_ID);

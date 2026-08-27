@@ -103,9 +103,13 @@ public class ManualAccountDeletionService {
             throw e;
         }
 
-        var deletedAccountPayload =
-                SerializationService.getInstance().writeValueAsString(legacyAccountDeletionMessage);
-        legacyAccountDeletionSnsClient.publish(deletedAccountPayload);
+        if (legacyAccountDeletionSnsClient != null) {
+            var deletedAccountPayload =
+                    SerializationService.getInstance()
+                            .writeValueAsString(legacyAccountDeletionMessage);
+            legacyAccountDeletionSnsClient.publish(deletedAccountPayload);
+        }
+
         return accountIdentifiers;
     }
 
