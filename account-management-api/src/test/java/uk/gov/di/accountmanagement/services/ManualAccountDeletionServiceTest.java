@@ -19,8 +19,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -40,21 +38,13 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 class ManualAccountDeletionServiceTest {
     private final AccountDeletionService accountDeletionService =
             mock(AccountDeletionService.class);
-    private final AwsSnsClient legacyAccountDeletionSnsClient = mock(AwsSnsClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ManualAccountDeletionService underTest =
-            new ManualAccountDeletionService(
-                    accountDeletionService, legacyAccountDeletionSnsClient, configurationService);
+            new ManualAccountDeletionService(accountDeletionService, configurationService);
     private static final UserProfile USER_PROFILE = mock(UserProfile.class);
     private static final String PUBLIC_SUBJECT_ID = "publicSubject";
     private static final String LEGACY_SUBJECT_ID = "legacySubject";
     private static final String SUBJECT_ID = "subjectId";
-    private static final String COMMON_SUBJECT_ID =
-            "urn:fdc:gov.uk:2022:xH7hrtJCgdi2NEF7TXcOC6SMz8DohdoLo9hWqQMWPRk";
-    private static final ByteBuffer SALT =
-            ByteBuffer.wrap(
-                    "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw="
-                            .getBytes(StandardCharsets.UTF_8));
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -65,9 +55,6 @@ class ManualAccountDeletionServiceTest {
         when(USER_PROFILE.getPublicSubjectID()).thenReturn(PUBLIC_SUBJECT_ID);
         when(USER_PROFILE.getLegacySubjectID()).thenReturn(LEGACY_SUBJECT_ID);
         when(USER_PROFILE.getSubjectID()).thenReturn(SUBJECT_ID);
-        when(USER_PROFILE.getSalt()).thenReturn(SALT);
-        when(configurationService.getInternalSectorUri())
-                .thenReturn("https://identity.test.account.gov.uk");
     }
 
     @Test
@@ -82,21 +69,6 @@ class ManualAccountDeletionServiceTest {
                         AuditService.UNKNOWN,
                         AccountDeletionReason.SUPPORT_INITIATED,
                         true);
-    }
-
-    @Test
-    void shouldSubmitMessageToLegacyAccountDeletionQueue() {
-        // given
-        var expectedSqsPayload =
-                String.format(
-                        "{\"public_subject_id\":\"%s\",\"legacy_subject_id\":\"%s\",\"user_id\":\"%s\"}",
-                        PUBLIC_SUBJECT_ID, LEGACY_SUBJECT_ID, COMMON_SUBJECT_ID);
-
-        // when
-        underTest.manuallyDeleteAccount(USER_PROFILE);
-
-        // then
-        verify(legacyAccountDeletionSnsClient).publish(expectedSqsPayload);
     }
 
     @ParameterizedTest

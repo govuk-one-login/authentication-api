@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
+import uk.gov.di.accountmanagement.services.AccountDeletionTokenService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
@@ -50,7 +51,6 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
         this.manualAccountDeletionService =
                 new ManualAccountDeletionService(
                         accountDeletionService,
-                        null,
                         configurationService,
                         accountDeletionTokenService,
                         configurationService.getManualAccountDeletionClientId());

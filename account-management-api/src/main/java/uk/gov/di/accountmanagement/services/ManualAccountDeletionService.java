@@ -3,23 +3,16 @@ package uk.gov.di.accountmanagement.services;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
-import uk.gov.di.accountmanagement.entity.LegacyAccountDeletionMessage;
 import uk.gov.di.authentication.shared.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
-
-import java.net.URI;
 
 public class ManualAccountDeletionService {
     private final AccountDeletionService accountDeletionService;
-    private final AwsSnsClient legacyAccountDeletionSnsClient;
     private final ConfigurationService configurationService;
     private final AccountDeletionTokenService accountDeletionTokenService;
     private final String clientId;
@@ -27,24 +20,16 @@ public class ManualAccountDeletionService {
 
     public ManualAccountDeletionService(
             AccountDeletionService accountDeletionService,
-            AwsSnsClient legacyAccountDeletionSnsClient,
             ConfigurationService configurationService) {
-        this(
-                accountDeletionService,
-                legacyAccountDeletionSnsClient,
-                configurationService,
-                null,
-                null);
+        this(accountDeletionService, configurationService, null, null);
     }
 
     public ManualAccountDeletionService(
             AccountDeletionService accountDeletionService,
-            AwsSnsClient legacyAccountDeletionSnsClient,
             ConfigurationService configurationService,
             AccountDeletionTokenService accountDeletionTokenService,
             String clientId) {
         this.accountDeletionService = accountDeletionService;
-        this.legacyAccountDeletionSnsClient = legacyAccountDeletionSnsClient;
         this.configurationService = configurationService;
         this.accountDeletionTokenService = accountDeletionTokenService;
         this.clientId = clientId;
@@ -63,11 +48,6 @@ public class ManualAccountDeletionService {
                         userProfile.getPublicSubjectID(),
                         userProfile.getLegacySubjectID(),
                         userProfile.getSubjectID());
-        var legacyAccountDeletionMessage =
-                new LegacyAccountDeletionMessage(
-                        userProfile.getPublicSubjectID(),
-                        userProfile.getLegacySubjectID(),
-                        getCommonSubjectId(userProfile));
 
         try {
             if (accountDeletionTokenService == null
@@ -103,20 +83,6 @@ public class ManualAccountDeletionService {
             throw e;
         }
 
-        if (legacyAccountDeletionSnsClient != null) {
-            var deletedAccountPayload =
-                    SerializationService.getInstance()
-                            .writeValueAsString(legacyAccountDeletionMessage);
-            legacyAccountDeletionSnsClient.publish(deletedAccountPayload);
-        }
-
         return accountIdentifiers;
-    }
-
-    private String getCommonSubjectId(UserProfile userProfile) {
-        var internalSectorUri = URI.create(configurationService.getInternalSectorUri());
-        var salt = SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray();
-        return ClientSubjectHelper.calculatePairwiseIdentifier(
-                userProfile.getSubjectID(), internalSectorUri, salt);
     }
 }

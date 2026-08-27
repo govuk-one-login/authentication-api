@@ -604,10 +604,6 @@ public class ConfigurationService
         return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS");
     }
 
-    public String getLegacyAccountDeletionTopicArn() {
-        return System.getenv("LEGACY_ACCOUNT_DELETION_TOPIC_ARN");
-    }
-
     private URI getURIOrDefault(String envVar, String defaultUri) {
         return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
     }
