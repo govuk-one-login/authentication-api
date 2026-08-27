@@ -95,8 +95,7 @@ class RemoveAccountHandlerTest {
                         userProfile,
                         TXMA_ENCODED_HEADER_VALUE,
                         AccountDeletionReason.USER_INITIATED,
-                        true,
-                        Optional.empty());
+                        true);
     }
 
     @Test
@@ -122,7 +121,7 @@ class RemoveAccountHandlerTest {
                         TXMA_ENCODED_HEADER_VALUE,
                         AccountDeletionReason.USER_INITIATED,
                         true,
-                        Optional.of("some-access-token"));
+                        "some-access-token");
     }
 
     @Test
@@ -145,8 +144,7 @@ class RemoveAccountHandlerTest {
                         userProfile,
                         StructuredAuditService.UNKNOWN,
                         AccountDeletionReason.USER_INITIATED,
-                        true,
-                        Optional.empty());
+                        true);
     }
 
     @Test

@@ -83,8 +83,7 @@ class ManualAccountDeletionServiceTest {
                         USER_PROFILE,
                         AuditService.UNKNOWN,
                         AccountDeletionReason.SUPPORT_INITIATED,
-                        true,
-                        Optional.empty());
+                        true);
     }
 
     @Test
@@ -140,7 +139,7 @@ class ManualAccountDeletionServiceTest {
         // given
         doThrow(new RuntimeException("error"))
                 .when(accountDeletionService)
-                .removeAccount(any(), any(), any(), any(), anyBoolean(), any());
+                .removeAccount(any(), any(), any(), any(), anyBoolean());
 
         // then
         assertThrows(RuntimeException.class, () -> underTest.manuallyDeleteAccount(USER_PROFILE));
@@ -181,7 +180,7 @@ class ManualAccountDeletionServiceTest {
                             AuditService.UNKNOWN,
                             AccountDeletionReason.SUPPORT_INITIATED,
                             true,
-                            Optional.of(TOKEN_VALUE));
+                            TOKEN_VALUE);
         }
 
         @Test
@@ -199,8 +198,7 @@ class ManualAccountDeletionServiceTest {
                             USER_PROFILE,
                             AuditService.UNKNOWN,
                             AccountDeletionReason.SUPPORT_INITIATED,
-                            true,
-                            Optional.empty());
+                            true);
             verifyNoInteractions(accountDeletionTokenService);
         }
 

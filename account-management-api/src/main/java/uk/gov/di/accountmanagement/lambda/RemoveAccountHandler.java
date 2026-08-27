@@ -128,13 +128,22 @@ public class RemoveAccountHandler
                             .map(headers -> headers.get("X-ADAPI-AccessToken"))
                             .filter(t -> !t.isEmpty());
 
-            accountDeletionService.removeAccount(
-                    Optional.of(input),
-                    userProfile,
-                    TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
-                    AccountDeletionReason.USER_INITIATED,
-                    true,
-                    token);
+            if (token.isPresent()) {
+                accountDeletionService.removeAccount(
+                        Optional.of(input),
+                        userProfile,
+                        TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
+                        AccountDeletionReason.USER_INITIATED,
+                        true,
+                        token.get());
+            } else {
+                accountDeletionService.removeAccount(
+                        Optional.of(input),
+                        userProfile,
+                        TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
+                        AccountDeletionReason.USER_INITIATED,
+                        true);
+            }
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {

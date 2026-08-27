@@ -69,14 +69,38 @@ public class ManualAccountDeletionService {
                         userProfile.getPublicSubjectID(),
                         userProfile.getLegacySubjectID(),
                         getCommonSubjectId(userProfile));
+
         try {
-            accountDeletionService.removeAccount(
-                    Optional.empty(),
-                    userProfile,
-                    AuditService.UNKNOWN,
-                    accountDeletionReason,
-                    sendNotification,
-                    getAccountDataApiToken(userProfile));
+            if (accountDeletionTokenService == null
+                    || !configurationService.isAccountDeletionDataApiEnabled()) {
+                accountDeletionService.removeAccount(
+                        Optional.empty(),
+                        userProfile,
+                        AuditService.UNKNOWN,
+                        accountDeletionReason,
+                        sendNotification);
+
+            } else {
+                Result<JwtFailureReason, BearerAccessToken> adapiTokenResult =
+                        accountDeletionTokenService.createAccountDataApiAccessToken(
+                                userProfile.getPublicSubjectID(), clientId);
+
+                if (adapiTokenResult.isFailure()) {
+                    throw new RuntimeException(
+                            "Failed to mint account-delete token for publicSubjectId: "
+                                    + userProfile.getPublicSubjectID()
+                                    + ". Reason: "
+                                    + adapiTokenResult.getFailure());
+                }
+
+                accountDeletionService.removeAccount(
+                        Optional.empty(),
+                        userProfile,
+                        AuditService.UNKNOWN,
+                        accountDeletionReason,
+                        sendNotification,
+                        adapiTokenResult.getSuccess().getValue());
+            }
         } catch (RuntimeException e) {
             LOG.error(
                     "Error while deleting account: {}. Identifiers: {}",
@@ -84,29 +108,11 @@ public class ManualAccountDeletionService {
                     accountIdentifiers);
             throw e;
         }
+
         var deletedAccountPayload =
                 SerializationService.getInstance().writeValueAsString(legacyAccountDeletionMessage);
         legacyAccountDeletionSnsClient.publish(deletedAccountPayload);
         return accountIdentifiers;
-    }
-
-    private Optional<String> getAccountDataApiToken(UserProfile userProfile) {
-        if (accountDeletionTokenService == null
-                || !configurationService.isAccountDeletionDataApiEnabled()) {
-            return Optional.empty();
-        }
-        Result<JwtFailureReason, BearerAccessToken> tokenResult =
-                accountDeletionTokenService.createAccountDataApiAccessToken(
-                        userProfile.getPublicSubjectID(), clientId);
-        return tokenResult.fold(
-                failure -> {
-                    throw new RuntimeException(
-                            "Failed to mint account-delete token for publicSubjectId: "
-                                    + userProfile.getPublicSubjectID()
-                                    + ". Reason: "
-                                    + failure);
-                },
-                token -> Optional.of(token.getValue()));
     }
 
     private String getCommonSubjectId(UserProfile userProfile) {

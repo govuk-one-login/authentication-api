@@ -1,6 +1,7 @@
 package uk.gov.di.accountmanagement.services;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
@@ -75,9 +76,8 @@ public class AccountDeletionService {
             Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
             String txmaAuditEncoded,
-            AccountDeletionReason reason)
-            throws Json.JsonException {
-        removeAccount(input, userProfile, txmaAuditEncoded, reason, true, Optional.empty());
+            AccountDeletionReason reason) {
+        removeAccount(input, userProfile, txmaAuditEncoded, reason, true);
     }
 
     public void removeAccount(
@@ -85,10 +85,19 @@ public class AccountDeletionService {
             UserProfile userProfile,
             String txmaAuditEncoded,
             AccountDeletionReason reason,
-            boolean sendNotification)
-            throws Json.JsonException {
-        removeAccount(
-                input, userProfile, txmaAuditEncoded, reason, sendNotification, Optional.empty());
+            boolean sendNotification) {
+        var internalCommonSubjectIdentifier = calculateICS(userProfile);
+
+        dynamoDeleteService.deleteAccount(
+                userProfile.getEmail(),
+                internalCommonSubjectIdentifier.getValue(),
+                userProfile.getPublicSubjectID());
+        LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
+
+        if (sendNotification) sendNotifyRequest(userProfile);
+
+        emitAuditEvent(
+                input, userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
     }
 
     public void removeAccount(
@@ -97,41 +106,39 @@ public class AccountDeletionService {
             String txmaAuditEncoded,
             AccountDeletionReason reason,
             boolean sendNotification,
-            Optional<String> accountDataApiToken) {
-        LOG.info("Calculating internal common subject identifier");
-        var internalCommonSubjectIdentifier =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                        userProfile,
-                        configurationService.getInternalSectorUri(),
-                        authenticationService);
-        LOG.info("Internal common subject identifier: {}", internalCommonSubjectIdentifier);
-        var email = userProfile.getEmail();
+            String accountDataApiToken) {
+        var internalCommonSubjectIdentifier = calculateICS(userProfile);
 
         LOG.info("Deleting user account");
-        if (accountDataApiToken.isPresent() && accountDataApiService != null) {
-            deleteAccountViaDataApi(userProfile.getPublicSubjectID(), accountDataApiToken.get());
-        } else {
-            dynamoDeleteService.deleteAccount(
-                    email,
-                    internalCommonSubjectIdentifier.getValue(),
-                    userProfile.getPublicSubjectID());
-            LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
-        }
 
-        if (sendNotification) {
-            try {
-                LOG.info("User account removed. Adding notification message to SQS queue");
-                NotifyRequest notifyRequest =
-                        new NotifyRequest(
-                                email,
-                                NotificationType.DELETE_ACCOUNT,
-                                LocaleHelper.SupportedLanguage.EN);
-                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            } catch (Exception e) {
-                LOG.error("Failed to send account deletion email: ", e);
-            }
-        }
+        deleteAccountViaDataApi(userProfile.getPublicSubjectID(), accountDataApiToken);
 
+        if (sendNotification) sendNotifyRequest(userProfile);
+
+        emitAuditEvent(
+                input, userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+    }
+
+    private void sendNotifyRequest(UserProfile userProfile) {
+        try {
+            LOG.info("User account removed. Adding notification message to SQS queue");
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            userProfile.getEmail(),
+                            NotificationType.DELETE_ACCOUNT,
+                            LocaleHelper.SupportedLanguage.EN);
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+        } catch (Exception e) {
+            LOG.error("Failed to send account deletion email: ", e);
+        }
+    }
+
+    private void emitAuditEvent(
+            Optional<APIGatewayProxyRequestEvent> input,
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            Subject internalCommonSubjectIdentifier) {
         String persistentSessionID = StructuredAuditService.UNKNOWN;
         String ipAddress = StructuredAuditService.UNKNOWN;
         if (input.isPresent()) {
@@ -186,6 +193,17 @@ public class AccountDeletionService {
         } catch (Exception e) {
             LOG.error("Failed to audit account deletion: ", e);
         }
+    }
+
+    private Subject calculateICS(UserProfile userProfile) {
+        LOG.info("Calculating internal common subject identifier");
+        var internalCommonSubjectIdentifier =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                        userProfile,
+                        configurationService.getInternalSectorUri(),
+                        authenticationService);
+        LOG.info("Internal common subject identifier: {}", internalCommonSubjectIdentifier);
+        return internalCommonSubjectIdentifier;
     }
 
     public void deleteAccountViaDataApi(String publicSubjectId, String token) {

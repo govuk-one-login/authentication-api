@@ -309,7 +309,7 @@ class AccountDeletionServiceTest {
                     StructuredAuditService.UNKNOWN,
                     AccountDeletionReason.USER_INITIATED,
                     true,
-                    Optional.of(TEST_ADAPI_TOKEN));
+                    TEST_ADAPI_TOKEN);
 
             verify(accountDataApiService)
                     .deleteAccount(eq(TEST_PUBLIC_SUBJECT_ID), eq(TEST_ADAPI_TOKEN));
@@ -334,8 +334,7 @@ class AccountDeletionServiceTest {
                     userProfile,
                     StructuredAuditService.UNKNOWN,
                     AccountDeletionReason.USER_INITIATED,
-                    true,
-                    Optional.empty());
+                    true);
 
             verify(dynamoDeleteService)
                     .deleteAccount(eq(TEST_EMAIL), any(), eq(TEST_PUBLIC_SUBJECT_ID));
@@ -361,7 +360,7 @@ class AccountDeletionServiceTest {
                                     StructuredAuditService.UNKNOWN,
                                     AccountDeletionReason.USER_INITIATED,
                                     true,
-                                    Optional.of(TEST_ADAPI_TOKEN)));
+                                    TEST_ADAPI_TOKEN));
         }
 
         @Test
@@ -384,7 +383,7 @@ class AccountDeletionServiceTest {
                                     StructuredAuditService.UNKNOWN,
                                     AccountDeletionReason.USER_INITIATED,
                                     true,
-                                    Optional.of(TEST_ADAPI_TOKEN)));
+                                    TEST_ADAPI_TOKEN));
         }
     }
 }
