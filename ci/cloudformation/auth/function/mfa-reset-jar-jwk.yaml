@@ -12,16 +12,6 @@ Resources:
       Environment:
         Variables:
           IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:${IpvReverificationRequestSigningKeyAlias}"
-          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS: !Sub
-            - arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${env}-ipv_reverification_request_signing_key
-            - DataStoreAccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  dataStoreAccountId,
-                ]
-              env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       LoggingConfig:
         LogGroup: !Ref MfaResetJarJwkFunctionLogGroup
       Policies:
