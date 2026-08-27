@@ -41,24 +41,6 @@ When deprecating session data, split the work into two PRs:
 
 - [ ] Assessed the impact on active user sessions and confirmed no breaking changes
 
-<!-- 🚨⚠️ Orchestration and Authentication mutual dependencies ⚠️ 🚨
-
-Be careful when making changes to code in 'shared' components where each team has a copy.
-Check with counterparts to see if changes need to be made in the other team's code.
-
-In particular pay attention to classes representing Session data where changes need to be applied on both sides to avoid deserialization errors.
--->
-
-- [ ] Orch and Auth mutual dependencies have been checked for breaking changes
-
-<!-- Changes required to stub-orchestration?
-
-If the contract between Orch and Auth has changed then this may need to be reflected in updates to [stub-orchestration](https://github.com/govuk-one-login/authentication-stubs/tree/main/orchestration-stub)
-
--->
-
-- [ ] Stub-orchestration has been updated (or no changes required)
-
 <!-- UCD Review
 When a new feature or front-end change goes live, ensure that a review of it has been performed by UCD. The review may have already taken place, but it is important to check that it did before going live.
 
@@ -70,14 +52,6 @@ Delete this item if this PR does not need a UCD review.
 -->
 
 - [ ] A UCD review has been performed (or no review required)
-
-<!-- Pairing
-We want to make sure ensemble commits are correctly attributed to the contributors, so everyone who is not the committer should have a separate `Co-authored-by` line in the trailer of the commit.
-
-See this page for more information: https://gds-way.digital.cabinet-office.gov.uk/standards/pair-programming.html#pair-programming-and-version-control
--->
-
-- [ ] Co-authors have been attributed in commits (using one or more `Co-authored-by` lines) where pairing or mobbing has taken place (or none required)
 
 ## Related PRs
 
