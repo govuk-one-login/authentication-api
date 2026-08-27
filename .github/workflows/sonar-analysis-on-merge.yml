@@ -35,12 +35,6 @@ jobs:
           gradle-version: wrapper
           cache-read-only: false
 
-      - name: Cache Gradle configuration cache
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: .gradle/configuration-cache/
-          key: ${{ runner.os }}-cc-sonar-on-merge-${{ hashFiles('**/build.gradle', 'gradle.properties', 'gradle/libs.versions.toml', 'settings.gradle') }}
-
       - name: Run Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
