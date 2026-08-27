@@ -1,9 +1,82 @@
-# authentication-api PR template picker
+## What
 
-> [!TIP]
-> Please go to the `Preview` tab and select the appropriate sub-template
+<!-- Describe what you have changed and why -->
 
-## Templates
+## How to review
 
-- [Auth Team](?expand=1&template=auth_template.md)
-- [Orchestration Team](?expand=1&template=orch_template.md)
+<!-- Describe the steps required to review this PR.
+For example:
+
+1. Code Review
+1. Deploy to a dev environment using the most appropriate [GitHub dev deployment workflow](https://github.com/govuk-one-login/authentication-api/actions), or using the deployment scripts in this repo for the old account (e.g., `./deploy-authdevs.sh -c -b --all`).
+1. Ensure that resources `x`, `y` and `z` were not changed
+1. Visit [some url](https://some.dev.url/to/visit)
+1. Sign in
+1. Ensure `x` message appears in a modal
+-->
+
+## Checklist
+
+<!-- Active user journey impact
+
+It’s crucial that deploying this change to production doesn’t disrupt users with active sessions.
+
+Existing sessions may contain data that this PR treats as invalid, potentially triggering errors. For example, if you remove support for an enum value that’s already stored in the database, casting the deprecated string back to an enum must handle any errors gracefully.
+
+When deprecating session data, split the work into two PRs:
+
+1. Remove all uses of the deprecated value.
+2. After any sessions containing that data have expired, remove the value’s definition.
+-->
+
+- [ ] Assessed the impact on active user sessions and confirmed no breaking changes
+
+<!-- 🚨⚠️ Orchestration and Authentication mutual dependencies ⚠️ 🚨
+
+Be careful when making changes to code in 'shared' components where each team has a copy.
+Check with counterparts to see if changes need to be made in the other team's code.
+
+In particular pay attention to classes representing Session data where changes need to be applied on both sides to avoid deserialization errors.
+-->
+
+- [ ] Orch and Auth mutual dependencies have been checked for breaking changes
+
+<!-- Changes required to stub-orchestration?
+
+If the contract between Orch and Auth has changed then this may need to be reflected in updates to [stub-orchestration](https://github.com/govuk-one-login/authentication-stubs/tree/main/orchestration-stub)
+
+-->
+
+- [ ] Stub-orchestration has been updated (or no changes required)
+
+<!-- UCD Review
+When a new feature or front-end change goes live, ensure that a review of it has been performed by UCD. The review may have already taken place, but it is important to check that it did before going live.
+
+Think about if the change you are making here will enable a change UCD should review (i.e. toggling a feature flag).
+
+Contact UCD colleagues in the Authentication team to identify the best way to approach the review.
+
+Delete this item if this PR does not need a UCD review.
+-->
+
+- [ ] A UCD review has been performed (or no review required)
+
+<!-- Pairing
+We want to make sure ensemble commits are correctly attributed to the contributors, so everyone who is not the committer should have a separate `Co-authored-by` line in the trailer of the commit.
+
+See this page for more information: https://gds-way.digital.cabinet-office.gov.uk/standards/pair-programming.html#pair-programming-and-version-control
+-->
+
+- [ ] Co-authors have been attributed in commits (using one or more `Co-authored-by` lines) where pairing or mobbing has taken place (or none required)
+
+## Related PRs
+
+<!-- Links to PRs in other repositories that are relevant to this PR.
+
+This could be:
+  - PRs that depend on this one
+  - PRs this one depends on
+  - If this work is being duplicated in other repos, other PRs
+  - PRs which just provide context to this one.
+
+Delete this section if not needed! -->
