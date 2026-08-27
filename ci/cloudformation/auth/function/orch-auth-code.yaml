@@ -164,7 +164,7 @@ Resources:
               EnvironmentConfiguration,
               !Ref Environment,
               lambdaLogAlarmErrorRateThreshold,
-              DefaultValue: 10,
+              DefaultValue: 20,
             ]
           RunbookLink:
             !FindInMap [
@@ -227,7 +227,7 @@ Resources:
           EnvironmentConfiguration,
           !Ref Environment,
           lambdaLogAlarmErrorRateThreshold,
-          DefaultValue: 10,
+          DefaultValue: 20,
         ]
 
   EnhancedAuthCodeProtectionCloudwatchAlarm:
