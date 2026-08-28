@@ -301,6 +301,14 @@ public class StartHandler
                             upliftRequired,
                             mfaRequired(requestedCredentialTrustLevel));
 
+            if (userStartInfo.isAuthenticated()) {
+                var canIssueAuthCode = permissionDecisionManager.canIssueAuthCode(authSession);
+                if (!canIssueAuthCode) {
+                    LOG.warn(
+                            "Orch and auth disagree on whether user is authenticated: problems will likely arise in this journey");
+                }
+            }
+
             StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
             auditService.submitAuditEvent(

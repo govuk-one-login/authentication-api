@@ -7,9 +7,11 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -35,6 +37,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.URI;
@@ -45,6 +48,8 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -72,6 +77,7 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -117,6 +123,9 @@ class StartHandlerTest {
                     AuditService.UNKNOWN,
                     DI_PERSISTENT_SESSION_ID,
                     ENCODED_DEVICE_DETAILS);
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging = new CaptureLoggingExtension(StartHandler.class);
 
     @BeforeEach
     void beforeEach() {
@@ -302,6 +311,40 @@ class StartHandlerTest {
                         eq(true),
                         anyBoolean(),
                         anyBoolean());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void considersUserAuthenticatedButLogsWhenCannotIssueAuthCode(boolean canIssueAuthCode)
+            throws Json.JsonException {
+        withUserProfilePresent();
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        useValidSession();
+
+        when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
+                .thenReturn(canIssueAuthCode);
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(true));
+
+        var result = handler.handleRequest(event, context);
+
+        StartResponse response = objectMapper.readValue(result.getBody(), StartResponse.class);
+        assertTrue(response.user().isAuthenticated());
+
+        var expectedLogIfCannotIssueAuthCode =
+                "Orch and auth disagree on whether user is authenticated";
+        if (canIssueAuthCode) {
+            assertThat(
+                    logging.events(),
+                    not(hasItem(withMessageContaining(expectedLogIfCannotIssueAuthCode))));
+        } else {
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining(expectedLogIfCannotIssueAuthCode)));
+        }
     }
 
     @Test
