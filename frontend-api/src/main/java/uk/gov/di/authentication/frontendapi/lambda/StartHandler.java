@@ -301,7 +301,7 @@ public class StartHandler
                             upliftRequired,
                             mfaRequired(requestedCredentialTrustLevel));
 
-            if (userStartInfo.isAuthenticated()) {
+            if (userStartInfo.isAuthenticated() && !userStartInfo.isUpliftRequired()) {
                 var canIssueAuthCode = permissionDecisionManager.canIssueAuthCode(authSession);
                 if (!canIssueAuthCode) {
                     LOG.warn(
