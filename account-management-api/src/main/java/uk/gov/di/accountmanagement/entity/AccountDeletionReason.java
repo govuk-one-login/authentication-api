@@ -4,4 +4,5 @@ public enum AccountDeletionReason {
     USER_INITIATED,
     SUPPORT_INITIATED,
     SECURITY_INITIATED,
+    INACTIVE_ACCOUNT,
 }
