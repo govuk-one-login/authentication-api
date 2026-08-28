@@ -33,7 +33,11 @@ jobs:
       - name: Check OpenAPI specs
         shell: bash
         run: |
-          find ci/terraform -type f -name "*openapi*.yaml" -exec python scripts/validate_openapi_definition.py {} \;
+          shopt -s globstar
+          for file in ./ci/terraform/**/*api-spec.yaml; do
+            [ -f "$file" ] || continue
+            python scripts/validate_openapi_definition.py "$file" || exit 1
+          done
   build:
     runs-on: ubuntu-24.04-arm
     needs:
