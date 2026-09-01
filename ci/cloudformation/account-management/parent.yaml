@@ -2323,27 +2323,13 @@ Resources:
   ManuallyDeleteAccountFunctionSQSPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for permission to send SQS message and sns mock account SNS topic"
+      Description: "IAM policy for permission to send SQS message"
       Path: !Sub
         - /${Env}/am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowAccessToSNS
-            Effect: Allow
-            Action:
-              - sns:Publish
-            Resource:
-              - !If
-                - IsHigherEnv
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    legacyAccountDeletionTopicArn,
-                    DefaultValue: "",
-                  ]
-                - !Ref MockAccountDeletionTopic
           - Sid: AllowSendSQS
             Effect: Allow
             Action:
@@ -2357,21 +2343,6 @@ Resources:
               - kms:GenerateDataKey
             Resource:
               - !GetAtt MainKmsKey.Arn
-          - !If
-            - IsHigherEnv
-            - Sid: AllowDecryptionHomeSnsTopicKmsKey
-              Effect: Allow
-              Action:
-                - kms:Decrypt
-                - kms:GenerateDataKey
-              Resource:
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    legacyAccountDeletionTopicKmsKeyArn,
-                    DefaultValue: "",
-                  ]
-            - !Ref AWS::NoValue
 
   DynamoAuthSessionStoreReadWriteDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
