@@ -528,7 +528,7 @@ Mappings:
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:758531536632:key/11af3935-0304-4813-bc16-302ab942c75a
       AMApiFMSTagValue: accountmanagementstaging
       frontendBaseUrl: https://signin.staging.account.gov.uk
-      cloudwatchLogRetentionInDays: 7
+      cloudwatchLogRetentionInDays: 30
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       HomeApiVpcEndpointId: ["vpce-0c9ce65be09f99db7", "vpce-0fed7b2d44a0bde33"]
       IsSplunkEnabled: "Yes"
@@ -620,7 +620,7 @@ Mappings:
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/a6becfd6-a3bb-4bfd-ba2f-2bdf35d36e40
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:172348255554:key/01c412c6-98de-48b2-9a6d-51f57e8c3d7a
-      cloudwatchLogRetentionInDays: 30
+      cloudwatchLogRetentionInDays: 180
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
       customDocAppClaimEnabled: true
       dataStoreAccountId: 172348255554
