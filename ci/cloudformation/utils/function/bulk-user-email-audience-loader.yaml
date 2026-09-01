@@ -16,6 +16,7 @@ Resources:
         - !Ref DynamoBulkEmailTablesAccessPolicy
         - !Ref EmailCheckResultsTableWritePolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
+        - !Ref BulkUserEmailAudienceLoaderSelfInvokePolicy
       AutoPublishAlias: live
       LoggingConfig:
         LogGroup: !Ref BulkUserEmailAudienceLoaderLogGroup
