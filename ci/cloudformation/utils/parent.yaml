@@ -177,7 +177,6 @@ Mappings:
       logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -1200,6 +1199,7 @@ Resources:
               - dynamodb:Query
               - dynamodb:Scan
               - dynamodb:PutItem
+              - dynamodb:Get*
               - dynamodb:UpdateItem
               - dynamodb:DescribeTable
             Resource:
