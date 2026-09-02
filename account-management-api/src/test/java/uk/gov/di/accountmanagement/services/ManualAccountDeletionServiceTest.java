@@ -21,7 +21,6 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -79,12 +78,10 @@ class ManualAccountDeletionServiceTest {
         // then
         verify(accountDeletionService)
                 .removeAccount(
-                        Optional.empty(),
                         USER_PROFILE,
                         AuditService.UNKNOWN,
                         AccountDeletionReason.SUPPORT_INITIATED,
-                        true,
-                        Optional.empty());
+                        true);
     }
 
     @Test
@@ -140,7 +137,7 @@ class ManualAccountDeletionServiceTest {
         // given
         doThrow(new RuntimeException("error"))
                 .when(accountDeletionService)
-                .removeAccount(any(), any(), any(), any(), anyBoolean(), any());
+                .removeAccount(any(), any(), any(), anyBoolean());
 
         // then
         assertThrows(RuntimeException.class, () -> underTest.manuallyDeleteAccount(USER_PROFILE));
@@ -176,12 +173,11 @@ class ManualAccountDeletionServiceTest {
             // then
             verify(accountDeletionService)
                     .removeAccount(
-                            Optional.empty(),
                             USER_PROFILE,
                             AuditService.UNKNOWN,
                             AccountDeletionReason.SUPPORT_INITIATED,
                             true,
-                            Optional.of(TOKEN_VALUE));
+                            TOKEN_VALUE);
         }
 
         @Test
@@ -195,12 +191,10 @@ class ManualAccountDeletionServiceTest {
             // then
             verify(accountDeletionService)
                     .removeAccount(
-                            Optional.empty(),
                             USER_PROFILE,
                             AuditService.UNKNOWN,
                             AccountDeletionReason.SUPPORT_INITIATED,
-                            true,
-                            Optional.empty());
+                            true);
             verifyNoInteractions(accountDeletionTokenService);
         }
 
