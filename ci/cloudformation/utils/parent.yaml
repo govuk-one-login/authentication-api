@@ -80,6 +80,11 @@ Conditions:
           - !Ref Environment
           - production
 
+  IsProduction:
+    Fn::Equals:
+      - !Ref Environment
+      - production
+
   AllowBulkTestUsers:
     Fn::Equals:
       - !FindInMap [
@@ -219,7 +224,6 @@ Mappings:
       logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -262,7 +266,6 @@ Mappings:
       logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -305,7 +308,6 @@ Mappings:
       logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -348,7 +350,6 @@ Mappings:
       logRetentionDays: 7
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -391,7 +392,6 @@ Mappings:
       logRetentionDays: 7
       lambdaErrorThreshold: 3
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
@@ -436,7 +436,6 @@ Mappings:
       logRetentionDays: 30
       lambdaErrorThreshold: 2
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
@@ -481,7 +480,6 @@ Mappings:
       logRetentionDays: 180
       lambdaErrorThreshold: 1
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
@@ -508,6 +506,16 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "7"
       inactiveAccountExportMaxInvocations: "0"
       inactiveAccountExportTrackerWriteEnabled: "false"
+
+  ProdNotifyTemplateMap:
+    Templates:
+      TERMSANDCONDITIONSBULKEMAILTEMPLATEID: "173418a1-c442-4c4b-a6d1-d23f473f3dd0"
+      INTERNATIONALNUMBERSFORCEDMFARESETBULKEMAILTEMPLATEID: "c3331551-6814-421b-890f-dfbb9a32bb83"
+
+  NonProdNotifyTemplateMap:
+    Templates:
+      TERMSANDCONDITIONSBULKEMAILTEMPLATEID: "067548f2-420d-4da9-923f-ec9a941706cf"
+      INTERNATIONALNUMBERSFORCEDMFARESETBULKEMAILTEMPLATEID: "fcc5cc49-f896-4887-9ce2-567f93721bc4"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
