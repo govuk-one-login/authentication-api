@@ -1,6 +1,7 @@
 package uk.gov.di.accountmanagement.services;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
@@ -19,12 +20,12 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.Clock;
-import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
@@ -71,33 +72,253 @@ public class AccountDeletionService {
                 null);
     }
 
+    /**
+     * Removes a user account directly via DynamoDB.
+     *
+     * <p>This method calculates the internal common subject identifier, deletes the user's account
+     * records from DynamoDB directly, optionally sends a deletion notification via SQS, and emits a
+     * standard audit event.
+     *
+     * @param userProfile The profile of the user whose account is being deleted.
+     * @param txmaAuditEncoded The encoded TxMA audit information.
+     * @param reason The reason for the account deletion.
+     * @param sendNotification {@code true} to send an account deletion email notification; {@code
+     *     false} otherwise.
+     */
     public void removeAccount(
-            Optional<APIGatewayProxyRequestEvent> input,
-            UserProfile userProfile,
-            String txmaAuditEncoded,
-            AccountDeletionReason reason)
-            throws Json.JsonException {
-        removeAccount(input, userProfile, txmaAuditEncoded, reason, true, Optional.empty());
-    }
-
-    public void removeAccount(
-            Optional<APIGatewayProxyRequestEvent> input,
             UserProfile userProfile,
             String txmaAuditEncoded,
             AccountDeletionReason reason,
-            boolean sendNotification)
-            throws Json.JsonException {
-        removeAccount(
-                input, userProfile, txmaAuditEncoded, reason, sendNotification, Optional.empty());
+            boolean sendNotification) {
+        var internalCommonSubjectIdentifier = calculateICS(userProfile);
+
+        dynamoDeleteService.deleteAccount(
+                userProfile.getEmail(),
+                internalCommonSubjectIdentifier.getValue(),
+                userProfile.getPublicSubjectID());
+        LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
+
+        if (sendNotification) sendNotifyRequest(userProfile);
+
+        emitAuditEvent(userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
     }
 
+    /**
+     * Removes a user account directly via DynamoDB, incorporating HTTP request context for enriched
+     * auditing.
+     *
+     * <p>This method performs a direct DynamoDB deletion and optionally sends a notification.
+     * Unlike the standard method, it extracts IP addresses, session IDs, and client IDs from the
+     * provided API Gateway request event to construct a more detailed audit context.
+     *
+     * @param input The API Gateway request event containing headers and context for auditing.
+     * @param userProfile The profile of the user whose account is being deleted.
+     * @param txmaAuditEncoded The encoded TxMA audit information.
+     * @param reason The reason for the account deletion.
+     * @param sendNotification {@code true} to send an account deletion email notification; {@code
+     *     false} otherwise.
+     */
     public void removeAccount(
-            Optional<APIGatewayProxyRequestEvent> input,
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            boolean sendNotification) {
+        var internalCommonSubjectIdentifier = calculateICS(userProfile);
+
+        dynamoDeleteService.deleteAccount(
+                userProfile.getEmail(),
+                internalCommonSubjectIdentifier.getValue(),
+                userProfile.getPublicSubjectID());
+        LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
+
+        if (sendNotification) sendNotifyRequest(userProfile);
+
+        emitAuditEvent(
+                input, userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+    }
+
+    /**
+     * Removes a user account by delegating to the Account Data API.
+     *
+     * <p>This method deletes the user by invoking the external Account Data API using the provided
+     * authentication token. It optionally sends a deletion notification via SQS and emits a
+     * standard audit event.
+     *
+     * @param userProfile The profile of the user whose account is being deleted.
+     * @param txmaAuditEncoded The encoded TxMA audit information.
+     * @param reason The reason for the account deletion.
+     * @param sendNotification {@code true} to send an account deletion email notification; {@code
+     *     false} otherwise.
+     * @param accountDataApiToken The authorization token required to authenticate with the Account
+     *     Data API.
+     */
+    public void removeAccount(
             UserProfile userProfile,
             String txmaAuditEncoded,
             AccountDeletionReason reason,
             boolean sendNotification,
-            Optional<String> accountDataApiToken) {
+            String accountDataApiToken) {
+        var internalCommonSubjectIdentifier = calculateICS(userProfile);
+
+        LOG.info("Deleting user account");
+
+        deleteAccountViaDataApi(userProfile.getPublicSubjectID(), accountDataApiToken);
+
+        if (sendNotification) sendNotifyRequest(userProfile);
+
+        emitAuditEvent(userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+    }
+
+    /**
+     * Removes a user account by delegating to the Account Data API, incorporating HTTP request
+     * context for enriched auditing.
+     *
+     * <p>This method deletes the user via the external Account Data API and optionally sends a
+     * notification. It extracts IP addresses, session IDs, and client IDs from the provided API
+     * Gateway request event to construct a highly detailed audit context.
+     *
+     * @param input The API Gateway request event containing headers and context for auditing.
+     * @param userProfile The profile of the user whose account is being deleted.
+     * @param txmaAuditEncoded The encoded TxMA audit information.
+     * @param reason The reason for the account deletion.
+     * @param sendNotification {@code true} to send an account deletion email notification; {@code
+     *     false} otherwise.
+     * @param accountDataApiToken The authorization token required to authenticate with the Account
+     *     Data API.
+     */
+    public void removeAccount(
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            boolean sendNotification,
+            String accountDataApiToken) {
+        var internalCommonSubjectIdentifier = calculateICS(userProfile);
+
+        LOG.info("Deleting user account");
+
+        deleteAccountViaDataApi(userProfile.getPublicSubjectID(), accountDataApiToken);
+
+        if (sendNotification) sendNotifyRequest(userProfile);
+
+        emitAuditEvent(
+                input, userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+    }
+
+    private void sendNotifyRequest(UserProfile userProfile) {
+        try {
+            LOG.info("User account removed. Adding notification message to SQS queue");
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            userProfile.getEmail(),
+                            NotificationType.DELETE_ACCOUNT,
+                            LocaleHelper.SupportedLanguage.EN);
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+        } catch (Exception e) {
+            LOG.error("Failed to send account deletion email: ", e);
+        }
+    }
+
+    private void emitAuditEvent(
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            Subject internalCommonSubjectIdentifier) {
+        try {
+            var auditEvent =
+                    createAuditEvent(
+                            userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
+            structuredAuditService.submitAuditEvent(auditEvent);
+        } catch (Exception e) {
+            LOG.error("Failed to audit account deletion: ", e);
+        }
+    }
+
+    private void emitAuditEvent(
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            Subject internalCommonSubjectIdentifier) {
+
+        try {
+            var auditEvent =
+                    createAuditEvent(
+                            input,
+                            userProfile,
+                            txmaAuditEncoded,
+                            reason,
+                            internalCommonSubjectIdentifier);
+            structuredAuditService.submitAuditEvent(auditEvent);
+        } catch (Exception e) {
+            LOG.error("Failed to audit account deletion: ", e);
+        }
+    }
+
+    private static AuthDeleteAccount createAuditEvent(
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            Subject internalCommonSubjectIdentifier) {
+        var auditContext =
+                new AuditContext(
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        internalCommonSubjectIdentifier.getValue(),
+                        userProfile.getEmail(),
+                        AuditService.UNKNOWN,
+                        userProfile.getPhoneNumber(),
+                        AuditService.UNKNOWN,
+                        txmaAuditEncoded);
+        return AuthDeleteAccount.create(
+                auditContext,
+                userProfile.getPublicSubjectID(),
+                userProfile.getLegacySubjectID(),
+                reason.name(),
+                Clock.systemUTC());
+    }
+
+    private static AuthDeleteAccount createAuditEvent(
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            String txmaAuditEncoded,
+            AccountDeletionReason reason,
+            Subject internalCommonSubjectIdentifier) {
+        String ipAddress = StructuredAuditService.UNKNOWN;
+        String persistentSessionID =
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+        attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
+        ipAddress = IpAddressHelper.extractIpAddress(input);
+        var clientId =
+                input.getRequestContext()
+                        .getAuthorizer()
+                        .getOrDefault("clientId", StructuredAuditService.UNKNOWN)
+                        .toString();
+        var clientSessionId = ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders());
+        var sessionId =
+                RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        var auditContext =
+                new AuditContext(
+                        clientId,
+                        clientSessionId,
+                        sessionId,
+                        internalCommonSubjectIdentifier.getValue(),
+                        userProfile.getEmail(),
+                        ipAddress,
+                        userProfile.getPhoneNumber(),
+                        persistentSessionID,
+                        txmaAuditEncoded);
+        return AuthDeleteAccount.create(
+                auditContext,
+                userProfile.getPublicSubjectID(),
+                userProfile.getLegacySubjectID(),
+                reason.name(),
+                Clock.systemUTC());
+    }
+
+    private Subject calculateICS(UserProfile userProfile) {
         LOG.info("Calculating internal common subject identifier");
         var internalCommonSubjectIdentifier =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -105,87 +326,7 @@ public class AccountDeletionService {
                         configurationService.getInternalSectorUri(),
                         authenticationService);
         LOG.info("Internal common subject identifier: {}", internalCommonSubjectIdentifier);
-        var email = userProfile.getEmail();
-
-        LOG.info("Deleting user account");
-        if (accountDataApiToken.isPresent() && accountDataApiService != null) {
-            deleteAccountViaDataApi(userProfile.getPublicSubjectID(), accountDataApiToken.get());
-        } else {
-            dynamoDeleteService.deleteAccount(
-                    email,
-                    internalCommonSubjectIdentifier.getValue(),
-                    userProfile.getPublicSubjectID());
-            LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
-        }
-
-        if (sendNotification) {
-            try {
-                LOG.info("User account removed. Adding notification message to SQS queue");
-                NotifyRequest notifyRequest =
-                        new NotifyRequest(
-                                email,
-                                NotificationType.DELETE_ACCOUNT,
-                                LocaleHelper.SupportedLanguage.EN);
-                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-            } catch (Exception e) {
-                LOG.error("Failed to send account deletion email: ", e);
-            }
-        }
-
-        String persistentSessionID = StructuredAuditService.UNKNOWN;
-        String ipAddress = StructuredAuditService.UNKNOWN;
-        if (input.isPresent()) {
-            persistentSessionID =
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.get().getHeaders());
-            attachLogFieldToLogs(PERSISTENT_SESSION_ID, ipAddress);
-            ipAddress = IpAddressHelper.extractIpAddress(input.get());
-        }
-
-        try {
-            var clientId =
-                    input.map(
-                                    n ->
-                                            n.getRequestContext()
-                                                    .getAuthorizer()
-                                                    .getOrDefault(
-                                                            "clientId",
-                                                            StructuredAuditService.UNKNOWN)
-                                                    .toString())
-                            .orElse(StructuredAuditService.UNKNOWN);
-            var clientSessionId =
-                    input.map(
-                                    n ->
-                                            ClientSessionIdHelper.extractSessionIdFromHeaders(
-                                                    n.getHeaders()))
-                            .orElse(StructuredAuditService.UNKNOWN);
-            var sessionId =
-                    input.map(
-                                    n ->
-                                            RequestHeaderHelper.getHeaderValueOrElse(
-                                                    n.getHeaders(), SESSION_ID_HEADER, ""))
-                            .orElse(StructuredAuditService.UNKNOWN);
-            var auditContext =
-                    new AuditContext(
-                            clientId,
-                            clientSessionId,
-                            sessionId,
-                            internalCommonSubjectIdentifier.getValue(),
-                            userProfile.getEmail(),
-                            ipAddress,
-                            userProfile.getPhoneNumber(),
-                            persistentSessionID,
-                            txmaAuditEncoded);
-            var auditEvent =
-                    AuthDeleteAccount.create(
-                            auditContext,
-                            userProfile.getPublicSubjectID(),
-                            userProfile.getLegacySubjectID(),
-                            reason.name(),
-                            Clock.systemUTC());
-            structuredAuditService.submitAuditEvent(auditEvent);
-        } catch (Exception e) {
-            LOG.error("Failed to audit account deletion: ", e);
-        }
+        return internalCommonSubjectIdentifier;
     }
 
     public void deleteAccountViaDataApi(String publicSubjectId, String token) {
