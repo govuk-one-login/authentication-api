@@ -8,6 +8,7 @@ import software.amazon.awssdk.services.dynamodb.model.Condition;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUser;
+import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -92,9 +93,8 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
         var builder =
                 QueryRequest.builder()
                         .tableName(
-                                configurationService.getEnvironment()
-                                        + "-"
-                                        + BULK_EMAIL_USERS_TABLE)
+                                TableNameHelper.getFullTableName(
+                                        BULK_EMAIL_USERS_TABLE, configurationService))
                         .keyConditions(
                                 Map.of(
                                         BULK_EMAIL_STATUS_FIELD,
@@ -124,9 +124,8 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
         var builder =
                 QueryRequest.builder()
                         .tableName(
-                                configurationService.getEnvironment()
-                                        + "-"
-                                        + BULK_EMAIL_USERS_TABLE)
+                                TableNameHelper.getFullTableName(
+                                        BULK_EMAIL_USERS_TABLE, configurationService))
                         .keyConditions(
                                 Map.of(
                                         DELIVERY_RECEIPT_STATUS_FIELD,
