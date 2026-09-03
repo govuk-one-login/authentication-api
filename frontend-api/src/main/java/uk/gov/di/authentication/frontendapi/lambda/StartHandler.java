@@ -168,8 +168,15 @@ public class StartHandler
             authSession.setSubjectType(startRequest.subjectType());
             authSession.setRpSectorIdentifierHost(startRequest.rpSectorIdentifierHost());
 
-            isUserAuthenticatedWithValidProfile =
-                    startRequest.authenticated() && !startService.isUserProfileEmpty(authSession);
+            if (startRequest.authenticated()) {
+                var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
+                if (isUserProfileEmpty) {
+                    LOG.warn("User profile for authenticated session is empty");
+                }
+                isUserAuthenticatedWithValidProfile = !isUserProfileEmpty;
+            } else {
+                isUserAuthenticatedWithValidProfile = false;
+            }
 
             var upliftRequired =
                     startService.isUpliftRequired(
