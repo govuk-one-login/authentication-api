@@ -12,7 +12,7 @@ fi
 
 if [[ ${ENVIRONMENT} == authdev* ]] || [[ ${ENVIRONMENT} == "dev" ]]; then
   export AWS_PROFILE="di-auth-development-admin"
-elif [ "${ENVIRONMENT}" == "sandpit" ] || [ "${ENVIRONMENT}" == "build" ] || [ "${ENVIRONMENT}" == "integration" ]; then
+elif [ "${ENVIRONMENT}" == "build" ] || [ "${ENVIRONMENT}" == "integration" ]; then
   export AWS_PROFILE="gds-di-development-admin"
 elif [ "${ENVIRONMENT}" == "staging" ]; then
   export AWS_PROFILE="di-auth-staging-admin"

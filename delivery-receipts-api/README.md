@@ -1,7 +1,6 @@
 # delivery-receipts-api
 
-The Delivery Receipts API is a [callback handler](https://docs.notifications.service.gov.uk/java.html#callbacks) for
-consumption by Notify.
+The Delivery Receipts API is a [callback handler](https://docs.notifications.service.gov.uk/java.html#callbacks) for consumption by Notify.
 
 When called by Notify the handler adds a Cloudwatch metric to track how many messages were sent by Notify, whether they
 were emails or SMS, and which template was used.
