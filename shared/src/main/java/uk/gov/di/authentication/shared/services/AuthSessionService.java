@@ -94,6 +94,16 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
 
                 return updatedSession;
             } else {
+                if (previousSessionId.isPresent()) {
+                    var existingSessionWithNewSessionId = getSession(newSessionId);
+                    if (existingSessionWithNewSessionId.isPresent()) {
+                        LOG.info(
+                                "Session already exists with newSessionId {} for previousSessionId {} may cause problems",
+                                newSessionId,
+                                previousSessionId);
+                    }
+                }
+
                 LOG.info("New Auth session item created with sessionId: {}", newSessionId);
                 return generateNewAuthSession(newSessionId);
             }
