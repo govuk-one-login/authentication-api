@@ -223,10 +223,6 @@ variable "shared_state_bucket" {
   default = "digital-identity-dev-tfstate"
 }
 
-variable "contra_state_bucket" {
-  type = string
-}
-
 variable "cloudwatch_log_retention" {
   default     = 30
   type        = number
