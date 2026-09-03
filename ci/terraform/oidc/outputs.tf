@@ -7,7 +7,7 @@ output "frontend_api_base_url" {
 }
 
 output "api_gateway_root_id" {
-  value = aws_api_gateway_rest_api.di_authentication_api.id
+  value = aws_api_gateway_rest_api.di_authentication_api[0].id
 }
 
 output "frontend_api_gateway_root_id" {

@@ -41,9 +41,9 @@ module "ipv-capacity" {
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCapacityHandler::handleRequest"
 
   create_endpoint  = true
-  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_authentication_api.execution_arn
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api[0].id
+  root_resource_id = aws_api_gateway_rest_api.di_authentication_api[0].root_resource_id
+  execution_arn    = aws_api_gateway_rest_api.di_authentication_api[0].execution_arn
 
   memory_size                 = lookup(var.performance_tuning, "ipv-capacity", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "ipv-capacity", local.default_performance_parameters).concurrency

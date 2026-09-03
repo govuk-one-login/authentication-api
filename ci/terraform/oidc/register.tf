@@ -38,9 +38,9 @@ module "register" {
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest"
 
   create_endpoint  = false
-  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id = aws_api_gateway_resource.register_resource.id
-  execution_arn    = aws_api_gateway_rest_api.di_authentication_api.execution_arn
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api[0].id
+  root_resource_id = aws_api_gateway_resource.register_resource[0].id
+  execution_arn    = aws_api_gateway_rest_api.di_authentication_api[0].execution_arn
   memory_size      = lookup(var.performance_tuning, "register", local.default_performance_parameters).memory
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
