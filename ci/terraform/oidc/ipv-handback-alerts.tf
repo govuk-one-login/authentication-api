@@ -73,6 +73,6 @@ resource "aws_cloudwatch_metric_alarm" "ipv_handback_p1_cloudwatch_alarm" {
   statistic           = "Sum"
   threshold           = var.ipv_p1_alarm_error_threshold
   alarm_description   = "${var.ipv_p1_alarm_error_threshold} or more IPV handback errors have occurred in ${var.environment}.ACCOUNT: ${local.aws_account_alias}. Runbook: https://govukverify.atlassian.net/wiki/spaces/Orch/pages/5761204264/Runbook+IPV+handback+alarm"
-  alarm_actions       = [var.environment == "production" ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : local.slack_event_sns_topic_arn]
+  alarm_actions       = [local.slack_event_sns_topic_arn]
   treat_missing_data  = "notBreaching"
 }

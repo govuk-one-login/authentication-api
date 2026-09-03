@@ -429,53 +429,6 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
     }
   }
 
-  dynamic "rule" {
-    for_each = var.environment == "production" || var.environment == "sandpit" ? ["1"] : []
-    content {
-      action {
-        block {}
-      }
-      priority = 4
-      name     = "${var.environment}-smoke-test-client-exception"
-
-      statement {
-        and_statement {
-          statement {
-            label_match_statement {
-              key   = "awswaf:managed:aws:core-rule-set:EC2MetaDataSSRF_QueryArguments"
-              scope = "LABEL"
-            }
-          }
-          statement {
-            not_statement {
-              statement {
-                byte_match_statement {
-                  text_transformation {
-                    priority = 0
-                    type     = "NONE"
-                  }
-                  positional_constraint = "EXACTLY"
-                  search_string         = data.aws_ssm_parameter.smoke_test_client_id[0].value
-                  field_to_match {
-                    single_query_argument {
-                      name = "client_id"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      visibility_config {
-        cloudwatch_metrics_enabled = true
-        metric_name                = "${replace(var.environment, "-", "")}SmokeTestClientExceptionRule"
-        sampled_requests_enabled   = true
-      }
-    }
-  }
-
   rule {
     name     = "default_query_param_limit"
     priority = 5
