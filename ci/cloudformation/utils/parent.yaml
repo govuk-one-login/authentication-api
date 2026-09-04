@@ -80,6 +80,11 @@ Conditions:
           - !Ref Environment
           - production
 
+  IsProduction:
+    Fn::Equals:
+      - !Ref Environment
+      - production
+
   AllowBulkTestUsers:
     Fn::Equals:
       - !FindInMap [
@@ -163,6 +168,7 @@ Mappings:
     authdev1:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7c048d2-6e3c-46a3-b4eb-39fb964bee4f
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5d6c761d-797a-45f7-a3cc-0bd9c10acb28
+      bulkEmailUsersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/565b6192-de93-4ceb-a6b0-6e8760535c92
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d41a1b95-0291-4477-93f7-f1428ceef646
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/aeb88256-7b5d-4707-952e-b522b09d8d5f
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c4d54754-4c7f-47d2-b54f-4868342b3660
@@ -176,7 +182,6 @@ Mappings:
       logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -205,6 +210,7 @@ Mappings:
     authdev2:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/7d25305d-ff63-42ed-827b-83141db54866
+      bulkEmailUsersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/db4d5242-2db0-4d6e-b2c9-6983502dab3d
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/88707a9b-53c9-4ad6-ab54-b03b1bf21321
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/dab5208e-14f1-40c5-b9e6-4dbe8a014d94
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/80a61dd9-80c0-4d09-8b4b-9c1d0752c1a5
@@ -218,7 +224,6 @@ Mappings:
       logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -247,6 +252,7 @@ Mappings:
     authdev3:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9fde06f2-7014-4a13-a57e-7562157bf657
+      bulkEmailUsersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/100431c6-ca2d-4ed5-a7f4-487b0a553c94
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/3a47bbdd-4144-4d1a-959f-56b928fcfe3c
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/e3d591b4-d295-4041-b8f0-f5eb71742014
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ab3306cf-843a-423d-96f8-4c88e3fa1906
@@ -260,7 +266,6 @@ Mappings:
       logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "false"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -289,6 +294,7 @@ Mappings:
     dev:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5e64dd3f-adb6-4a3c-8737-0da6e76b2d95
+      bulkEmailUsersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/70f90941-d094-4df8-ae7d-b5e177341fe5
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/c6a2fb5e-c92b-4129-bc0c-d75b2b72bae8
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/2e7ec5d4-f4b7-4342-a5d6-15952fd9111b
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/348c86dd-4507-4472-ab33-ee7448ce8959
@@ -302,7 +308,6 @@ Mappings:
       logRetentionDays: 1
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -331,6 +336,7 @@ Mappings:
     build:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/13c5043c-3c9e-4370-bff6-b70c2d8bc609
+      bulkEmailUsersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/8f9caa07-f4dc-45e7-a4ed-ddec9ffe46d0
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3c2113fe-9f53-4bed-a46f-c53f02f6c117
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/db350f01-bce4-4da8-9323-e70267569bd8
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2c3850f1-c841-487c-8236-746f01ff707d
@@ -344,7 +350,6 @@ Mappings:
       logRetentionDays: 7
       lambdaErrorThreshold: 5
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI 2049)"
@@ -373,6 +378,7 @@ Mappings:
     staging:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/36434b6d-1d77-4cee-af4b-70cf39109e52
+      bulkEmailUsersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c4b1c79f-1cd1-4ab8-8242-188045fa08b3
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed6c6a2d-866f-4e2e-9ebd-c499ce9513c6
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/9c0cc476-e831-4ebf-81e6-c619e6b795e8
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/ed0ff55f-0ab2-463e-9c76-56be7052a436
@@ -386,7 +392,6 @@ Mappings:
       logRetentionDays: 7
       lambdaErrorThreshold: 3
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
@@ -417,6 +422,7 @@ Mappings:
     integration:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/2f7fd1cc-c0e1-40f5-a747-2ed29e02427d
+      bulkEmailUsersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e3b8282c-f03b-4df0-9e23-492072868a36
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/743b2818-03fd-4414-bfaf-6aa8a4bb4e45
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/85164499-9392-458c-8596-b5a810ca90f6
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
@@ -430,7 +436,6 @@ Mappings:
       logRetentionDays: 30
       lambdaErrorThreshold: 2
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
@@ -461,6 +466,7 @@ Mappings:
     production:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
       userCredentialsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/7f36e093-d4c1-4b18-8cf3-0c11a59e6d67
+      bulkEmailUsersTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6e0df2dd-520e-4df0-823a-7e5e4d89b0a0
       authenticatorTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/b380ea74-d240-4500-b02b-f5c3d414e34e
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/aca649a0-488b-4696-b94a-49156254afd2
@@ -474,7 +480,6 @@ Mappings:
       logRetentionDays: 180
       lambdaErrorThreshold: 1
       notifyUrl: https://api.notifications.service.gov.uk
-      notifyTemplateMap: "{}"
       # To enable this condition, create the bulk user tables in shared terraform
       bulkEmailSendingEnabled: "true"
       bulkEmailSendScheduleExpression: "cron(0 15 ? * FRI *)"
@@ -501,6 +506,16 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "7"
       inactiveAccountExportMaxInvocations: "0"
       inactiveAccountExportTrackerWriteEnabled: "false"
+
+  ProdNotifyTemplateMap:
+    Templates:
+      TERMSANDCONDITIONSBULKEMAILTEMPLATEID: "173418a1-c442-4c4b-a6d1-d23f473f3dd0"
+      INTERNATIONALNUMBERSFORCEDMFARESETBULKEMAILTEMPLATEID: "c3331551-6814-421b-890f-dfbb9a32bb83"
+
+  NonProdNotifyTemplateMap:
+    Templates:
+      TERMSANDCONDITIONSBULKEMAILTEMPLATEID: "067548f2-420d-4da9-923f-ec9a941706cf"
+      INTERNATIONALNUMBERSFORCEDMFARESETBULKEMAILTEMPLATEID: "fcc5cc49-f896-4887-9ce2-567f93721bc4"
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -1192,6 +1207,7 @@ Resources:
               - dynamodb:Query
               - dynamodb:Scan
               - dynamodb:PutItem
+              - dynamodb:Get*
               - dynamodb:UpdateItem
               - dynamodb:DescribeTable
             Resource:
@@ -1223,6 +1239,27 @@ Resources:
                       !Ref SubEnvironment,
                       !Ref Environment,
                     ]
+          - Sid: AllowAccessToBulkEmailUsersTableKmsKey
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    bulkEmailUsersTableEncryptionKey,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    bulkEmailUsersTableEncryptionKey,
+                  ]
 
   # Combined policy for email_check_results table write access and KMS encryption key access
   EmailCheckResultsTableWritePolicy:
@@ -1745,6 +1782,22 @@ Resources:
                     !Ref Environment,
                     cloudwatchEncryptionKey,
                   ]
+
+  # Policy allowing the bulk user email audience loader lambda to invoke itself recursively
+  BulkUserEmailAudienceLoaderSelfInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: BulkEmailSendingEnabled
+    Properties:
+      Description: "IAM policy allowing the bulk user email audience loader lambda to invoke itself recursively"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !Sub
+              - "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvironmentName}-bulk-user-email-audience-loader-lambda"
+              - EnvironmentName:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
 
   # ============================================================================
   # S3 Buckets

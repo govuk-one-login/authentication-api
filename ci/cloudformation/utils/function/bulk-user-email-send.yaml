@@ -41,18 +41,30 @@ Resources:
                 notifyUrl,
               ]
             - !FindInMap [EnvironmentConfiguration, !Ref Environment, notifyUrl]
-          NOTIFY_TEMPLATE_MAP: !If
-            - UseSubEnvironment
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref SubEnvironment,
-                notifyTemplateMap,
-              ]
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                notifyTemplateMap,
-              ]
+          NOTIFY_API_KEY: !Sub
+            - "{{resolve:secretsmanager:/deploy/${env}/notify_api_key}}"
+            - env:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              TERMSANDCONDITIONSBULKEMAILTEMPLATEID,
+            ]
+          INTERNATIONAL_NUMBERS_FORCED_MFA_RESET_BULK_EMAIL_TEMPLATE_ID:
+            !FindInMap [
+              !If [
+                IsProduction,
+                ProdNotifyTemplateMap,
+                NonProdNotifyTemplateMap,
+              ],
+              Templates,
+              INTERNATIONALNUMBERSFORCEDMFARESETBULKEMAILTEMPLATEID,
+            ]
           BULK_USER_EMAIL_BATCH_SIZE: !If
             - UseSubEnvironment
             - !FindInMap [
