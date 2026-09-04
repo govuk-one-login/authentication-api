@@ -49,13 +49,13 @@ class AuthSessionServiceIntegrationTest {
     void shouldReturnUpdatedSessionWhenItExistsAndDeletePrevious() {
         withStoredSession(PREVIOUS_SESSION_ID);
 
-        AuthSessionItem previousSession =
+        var newSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         var previousSessionItem = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
 
         assertTrue(previousSessionItem.isEmpty());
-        assertThat(previousSession.getSessionId(), is(SESSION_ID));
+        assertThat(newSession.getSessionId(), is(SESSION_ID));
     }
 
     @Test
@@ -64,10 +64,10 @@ class AuthSessionServiceIntegrationTest {
 
         assertTrue(previousSessionItem.isEmpty());
 
-        AuthSessionItem previousSession =
+        var newSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
-        assertThat(previousSession.getSessionId(), is(SESSION_ID));
+        assertThat(newSession.getSessionId(), is(SESSION_ID));
     }
 
     @Test
@@ -98,7 +98,7 @@ class AuthSessionServiceIntegrationTest {
         previousSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         authSessionExtension.updateSession(previousSession);
 
-        AuthSessionItem retrievedSession =
+        var retrievedSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         var retrievedPreviousSession = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
