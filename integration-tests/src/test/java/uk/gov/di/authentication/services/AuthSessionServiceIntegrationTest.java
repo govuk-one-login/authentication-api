@@ -92,7 +92,7 @@ class AuthSessionServiceIntegrationTest {
     }
 
     @Test
-    void shouldReturnAPreviousSessionWithRetainedValues() {
+    void shouldReturnAPreviousSessionWithRetainedValuesAndPreviousSessionId() {
         var previousSession = withStoredSession(PREVIOUS_SESSION_ID);
 
         previousSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
@@ -107,6 +107,7 @@ class AuthSessionServiceIntegrationTest {
         assertThat(retrievedSession.getSessionId(), equalTo(SESSION_ID));
         assertThat(
                 retrievedSession.getIsNewAccount(), equalTo(AuthSessionItem.AccountState.EXISTING));
+        assertThat(retrievedSession.getPreviousSessionId(), equalTo(PREVIOUS_SESSION_ID));
     }
 
     @Test

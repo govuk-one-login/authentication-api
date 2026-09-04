@@ -48,6 +48,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_HAS_VERIFIED_WITH_MFA = "HasVerifiedWithMfa";
     public static final String ATTRIBUTE_HAS_VERIFIED_WITH_PASSKEY = "HasVerifiedWithPasskey";
     public static final String ATTRIBUTE_IS_PARTIALLY_CREATED_ACCOUNT = "IsPartiallyCreatedAccount";
+    public static final String ATTRIBUTE_PREVIOUS_SESSION_ID = "PreviousSessionId";
 
     public enum AccountState {
         NEW,
@@ -95,6 +96,7 @@ public class AuthSessionItem {
     private boolean hasVerifiedWithMfa;
     private boolean hasVerifiedWithPasskey;
     private boolean isPartiallyCreatedAccount;
+    private String previousSessionId;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -556,6 +558,20 @@ public class AuthSessionItem {
         return this;
     }
 
+    @DynamoDbAttribute(ATTRIBUTE_PREVIOUS_SESSION_ID)
+    public String getPreviousSessionId() {
+        return previousSessionId;
+    }
+
+    public void setPreviousSessionId(String previousSessionId) {
+        this.previousSessionId = previousSessionId;
+    }
+
+    public AuthSessionItem withPreviousSessionId(String previousSessionId) {
+        this.previousSessionId = previousSessionId;
+        return this;
+    }
+
     /**
      * Return a string representation of the instance that is safe to record in logs (e.g. does not
      * contain PII)
@@ -575,6 +591,8 @@ public class AuthSessionItem {
                 + resetMfaState
                 + "', upliftRequired = '"
                 + upliftRequired
+                + "', previousSessionId = '"
+                + previousSessionId
                 + "', hasVerifiedWithPassword = '"
                 + hasVerifiedWithPassword
                 + "', hasVerifiedWithMfa = '"

@@ -66,41 +66,43 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
     }
 
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
-            Optional<String> previousSessionId, String newSessionId) {
+            Optional<String> maybePreviousSessionId, String newSessionId) {
 
         try {
             Optional<AuthSessionItem> previousAuthSession = Optional.empty();
-            if (previousSessionId.isPresent()) {
-                previousAuthSession = getSession(previousSessionId.get());
+            if (maybePreviousSessionId.isPresent()) {
+                previousAuthSession = getSession(maybePreviousSessionId.get());
             }
 
             if (previousAuthSession.isPresent()) {
+                var previousSessionId = maybePreviousSessionId.get();
                 var updatedSession =
                         previousAuthSession
                                 .get()
                                 .withSessionId(newSessionId)
                                 .withResetPasswordState(AuthSessionItem.ResetPasswordState.NONE)
                                 .withResetMfaState(AuthSessionItem.ResetMfaState.NONE)
+                                .withPreviousSessionId(previousSessionId)
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
                                                 .getEpochSecond());
 
-                delete(previousSessionId.get());
+                delete(previousSessionId);
                 LOG.info(
                         "Existing Auth session updated from previousSessionId: {}, sessionId: {}",
-                        previousSessionId,
+                        maybePreviousSessionId,
                         newSessionId);
 
                 return updatedSession;
             } else {
-                if (previousSessionId.isPresent()) {
+                if (maybePreviousSessionId.isPresent()) {
                     var existingSessionWithNewSessionId = getSession(newSessionId);
                     if (existingSessionWithNewSessionId.isPresent()) {
                         LOG.info(
                                 "Session already exists with newSessionId {} for previousSessionId {} may cause problems",
                                 newSessionId,
-                                previousSessionId);
+                                maybePreviousSessionId);
                     }
                 }
 
