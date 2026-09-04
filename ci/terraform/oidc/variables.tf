@@ -223,10 +223,6 @@ variable "shared_state_bucket" {
   default = "digital-identity-dev-tfstate"
 }
 
-variable "contra_state_bucket" {
-  type = string
-}
-
 variable "cloudwatch_log_retention" {
   default     = 30
   type        = number
@@ -743,6 +739,11 @@ variable "ipv_jwks_call_enabled" {
 
 
 variable "deploy_oidc_api_gateway_domain" {
+  type    = bool
+  default = true
+}
+
+variable "deploy_orch_lambda_and_api" {
   type    = bool
   default = true
 }

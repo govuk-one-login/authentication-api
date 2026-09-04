@@ -3,6 +3,7 @@ locals {
 }
 
 module "openid_configuration_role" {
+  count  = var.deploy_orch_lambda_and_api ? 1 : 0
   source = "../modules/lambda-role"
 
   role_name   = "openid-configuration"
@@ -12,8 +13,14 @@ module "openid_configuration_role" {
     Service = local.openid_configuration_endpoint_name
   }
 }
+moved {
+  from = module.openid_configuration_role
+  to   = module.openid_configuration_role[0]
+}
+
 
 module "openid_configuration_discovery" {
+  count  = var.deploy_orch_lambda_and_api ? 1 : 0
   source = "../modules/endpoint-module-v2"
 
   endpoint_name   = local.openid_configuration_endpoint_name
@@ -28,9 +35,9 @@ module "openid_configuration_discovery" {
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest"
 
-  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id = aws_api_gateway_resource.wellknown_resource.id
-  execution_arn    = aws_api_gateway_rest_api.di_authentication_api.execution_arn
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api[0].id
+  root_resource_id = aws_api_gateway_resource.wellknown_resource[0].id
+  execution_arn    = aws_api_gateway_rest_api.di_authentication_api[0].execution_arn
   memory_size      = lookup(var.performance_tuning, "openid-configuration", local.default_performance_parameters).memory
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
@@ -40,7 +47,7 @@ module "openid_configuration_discovery" {
 
   security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.openid_configuration_role.arn
+  lambda_role_arn                        = module.openid_configuration_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -57,4 +64,8 @@ module "openid_configuration_discovery" {
     module.openid_configuration_role,
 
   ]
+}
+moved {
+  from = module.openid_configuration_discovery
+  to   = module.openid_configuration_discovery[0]
 }

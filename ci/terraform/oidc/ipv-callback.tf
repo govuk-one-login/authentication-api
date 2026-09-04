@@ -1,4 +1,5 @@
 module "ipv_callback_role_2" {
+  count       = var.deploy_orch_lambda_and_api ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "ipv-callback-role"
@@ -22,9 +23,14 @@ module "ipv_callback_role_2" {
     Service = "ipv-callback"
   }
 }
+moved {
+  from = module.ipv_callback_role_2
+  to   = module.ipv_callback_role_2[0]
+}
 
 module "ipv-callback" {
   source = "../modules/endpoint-module-v2"
+  count  = var.deploy_orch_lambda_and_api ? 1 : 0
 
   endpoint_name   = "ipv-callback"
   path_part       = var.orch_ipv_callback_enabled ? "ipv-callback-auth" : "ipv-callback"
@@ -54,9 +60,9 @@ module "ipv-callback" {
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 
   create_endpoint  = true
-  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_authentication_api.execution_arn
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api[0].id
+  root_resource_id = aws_api_gateway_rest_api.di_authentication_api[0].root_resource_id
+  execution_arn    = aws_api_gateway_rest_api.di_authentication_api[0].execution_arn
   memory_size      = lookup(var.performance_tuning, "ipv-callback", local.default_performance_parameters).memory
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
@@ -69,7 +75,7 @@ module "ipv-callback" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.ipv_callback_role_2.arn
+  lambda_role_arn                        = module.ipv_callback_role_2[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -84,4 +90,8 @@ module "ipv-callback" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+moved {
+  from = module.ipv-callback
+  to   = module.ipv-callback[0]
 }

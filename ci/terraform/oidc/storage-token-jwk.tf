@@ -1,4 +1,5 @@
 module "oidc_storage_token_jwk_role" {
+  count       = var.deploy_orch_lambda_and_api ? 1 : 0
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "oidc-storage-token-jwk-role"
@@ -11,9 +12,14 @@ module "oidc_storage_token_jwk_role" {
     Service = "storage-token-jwk.json"
   }
 }
+moved {
+  from = module.oidc_storage_token_jwk_role
+  to   = module.oidc_storage_token_jwk_role[0]
+}
 
 module "storage_token_jwk" {
   source = "../modules/endpoint-module-v2"
+  count  = var.deploy_orch_lambda_and_api ? 1 : 0
 
   endpoint_name           = "storage-token-jwk.json"
   endpoint_name_sanitized = "storage-token-jwkjson"
@@ -30,9 +36,9 @@ module "storage_token_jwk" {
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.StorageTokenJwkHandler::handleRequest"
 
-  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api.id
-  root_resource_id = aws_api_gateway_resource.wellknown_resource.id
-  execution_arn    = aws_api_gateway_rest_api.di_authentication_api.execution_arn
+  rest_api_id      = aws_api_gateway_rest_api.di_authentication_api[0].id
+  root_resource_id = aws_api_gateway_resource.wellknown_resource[0].id
+  execution_arn    = aws_api_gateway_rest_api.di_authentication_api[0].execution_arn
   memory_size      = lookup(var.performance_tuning, "storage-token-jwk", local.default_performance_parameters).memory
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
@@ -42,7 +48,7 @@ module "storage_token_jwk" {
 
   security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_private_subnet_ids
-  lambda_role_arn                        = module.oidc_storage_token_jwk_role.arn
+  lambda_role_arn                        = module.oidc_storage_token_jwk_role[0].arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -57,4 +63,8 @@ module "storage_token_jwk" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+moved {
+  from = module.storage_token_jwk
+  to   = module.storage_token_jwk[0]
 }
