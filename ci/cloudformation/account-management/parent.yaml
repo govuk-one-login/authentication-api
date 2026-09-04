@@ -545,8 +545,6 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
-      legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:539729775994:UserAccountDeletion
-      legacyAccountDeletionTopicKmsKeyArn: arn:aws:kms:eu-west-2:539729775994:key/d33e9077-8d66-4f63-99a1-f90e29b4aabe
       accessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 7xgl7lexy4
       inactiveAccountDeletionClientId: inactive-account-deletion
@@ -598,8 +596,6 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: false
-      legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:666500506359:UserAccountDeletion
-      legacyAccountDeletionTopicKmsKeyArn: arn:aws:kms:eu-west-2:666500506359:key/c54f60d4-122d-44d8-a5d6-d9e984df9f49
       accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
       accountDataApiId: hoidt6wujb
       inactiveAccountDeletionClientId: inactive-account-deletion
@@ -651,8 +647,6 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: false
-      legacyAccountDeletionTopicArn: arn:aws:sns:eu-west-2:026991849909:UserAccountDeletion
-      legacyAccountDeletionTopicKmsKeyArn: arn:aws:kms:eu-west-2:026991849909:key/80c5c2c9-4ff0-4fba-92de-5189957490e9
       accessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 0218o1p9tj
       inactiveAccountDeletionClientId: inactive-account-deletion
@@ -2323,27 +2317,13 @@ Resources:
   ManuallyDeleteAccountFunctionSQSPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: "IAM policy for permission to send SQS message and sns mock account SNS topic"
+      Description: "IAM policy for permission to send SQS message"
       Path: !Sub
         - /${Env}/am-shared/
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: AllowAccessToSNS
-            Effect: Allow
-            Action:
-              - sns:Publish
-            Resource:
-              - !If
-                - IsHigherEnv
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    legacyAccountDeletionTopicArn,
-                    DefaultValue: "",
-                  ]
-                - !Ref MockAccountDeletionTopic
           - Sid: AllowSendSQS
             Effect: Allow
             Action:
@@ -2357,21 +2337,6 @@ Resources:
               - kms:GenerateDataKey
             Resource:
               - !GetAtt MainKmsKey.Arn
-          - !If
-            - IsHigherEnv
-            - Sid: AllowDecryptionHomeSnsTopicKmsKey
-              Effect: Allow
-              Action:
-                - kms:Decrypt
-                - kms:GenerateDataKey
-              Resource:
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    legacyAccountDeletionTopicKmsKeyArn,
-                    DefaultValue: "",
-                  ]
-            - !Ref AWS::NoValue
 
   DynamoAuthSessionStoreReadWriteDeleteAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
