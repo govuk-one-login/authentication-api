@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -97,12 +98,19 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 return updatedSession;
             } else {
                 if (maybePreviousSessionId.isPresent()) {
-                    var existingSessionWithNewSessionId = getSession(newSessionId);
+                    var existingSessionWithNewSessionId =
+                            getSession(newSessionId)
+                                    .filter(
+                                            session ->
+                                                    Objects.equals(
+                                                            session.getPreviousSessionId(),
+                                                            maybePreviousSessionId.get()));
                     if (existingSessionWithNewSessionId.isPresent()) {
                         LOG.info(
-                                "Session already exists with newSessionId {} for previousSessionId {} may cause problems",
+                                "Session already exists with newSessionId {} and previousSessionId {}, reusing",
                                 newSessionId,
                                 maybePreviousSessionId);
+                        return existingSessionWithNewSessionId.get();
                     }
                 }
 

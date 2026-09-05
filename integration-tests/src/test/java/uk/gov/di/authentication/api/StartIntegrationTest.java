@@ -283,6 +283,66 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldHandleMultipleDuplicateRequestsWhenThereIsAnExistingPreviousSession()
+            throws Json.JsonException {
+        var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        var isAuthenticated = true;
+        var sessionId = IdGenerator.generate();
+        authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+        authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
+
+        userStore.signUp(userEmail, "rubbbishPassword");
+        userStore.addVerifiedPhoneNumber(userEmail, "+447316763843");
+
+        var state = new State();
+        var scope = new Scope(OIDCScopeValue.OPENID);
+
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+
+        var requestBody =
+                makeRequestBody(
+                        isAuthenticated,
+                        WITH_PREVIOUS_SESSION,
+                        state.getValue(),
+                        scope.toString(),
+                        REDIRECT_URI.toString(),
+                        Optional.empty(),
+                        MEDIUM_LEVEL,
+                        false);
+
+        var firstResponse =
+                makeRequest(
+                        Optional.of(requestBody),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
+        var firstStartResponse =
+                objectMapper.readValue(firstResponse.getBody(), StartResponse.class);
+        var sessionAfterFirstResponse = authSessionExtension.getSession(sessionId);
+
+        var secondResponse =
+                makeRequest(
+                        Optional.of(requestBody),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
+        var secondStartResponse =
+                objectMapper.readValue(secondResponse.getBody(), StartResponse.class);
+
+        var sessionAfterSecondResponse = authSessionExtension.getSession(sessionId);
+
+        assertThat(firstResponse, hasStatus(200));
+        assertThat(secondResponse, hasStatus(200));
+
+        assertThat(firstStartResponse.user().isAuthenticated(), equalTo(true));
+        assertThat(secondStartResponse.user().isAuthenticated(), equalTo(true));
+
+        assertThat(sessionAfterFirstResponse.isPresent(), equalTo(true));
+        assertThat(sessionAfterSecondResponse.isPresent(), equalTo(true));
+
+        assertThat(sessionAfterFirstResponse.get().getEmailAddress(), equalTo(userEmail));
+        assertThat(sessionAfterSecondResponse.get().getEmailAddress(), equalTo(userEmail));
+    }
+
+    @Test
     void shouldReturn400WhenClientSessionIdMissing() {
         var headers = Map.of("X-API-Key", FRONTEND_API_KEY);
 
