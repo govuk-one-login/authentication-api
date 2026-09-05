@@ -50,7 +50,7 @@ import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-client-id";
