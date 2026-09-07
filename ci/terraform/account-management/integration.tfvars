@@ -8,6 +8,10 @@ access_token_jwks_url = "https://oidc.integration.account.gov.uk/.well-known/jwk
 redis_node_size        = "cache.t2.small"
 lambda_min_concurrency = 0
 
+# SNS
+legacy_account_deletion_topic_arn     = "arn:aws:sns:eu-west-2:666500506359:UserAccountDeletion"
+legacy_account_deletion_topic_key_arn = "arn:aws:kms:eu-west-2:666500506359:key/c54f60d4-122d-44d8-a5d6-d9e984df9f49"
+
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
 

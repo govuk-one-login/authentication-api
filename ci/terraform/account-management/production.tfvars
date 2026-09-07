@@ -22,6 +22,10 @@ notify_template_map = {
 # Sizing
 redis_node_size = "cache.m4.xlarge"
 
+# SNS
+legacy_account_deletion_topic_arn     = "arn:aws:sns:eu-west-2:026991849909:UserAccountDeletion"
+legacy_account_deletion_topic_key_arn = "arn:aws:kms:eu-west-2:026991849909:key/80c5c2c9-4ff0-4fba-92de-5189957490e9"
+
 performance_tuning = {
   authorizer = {
     memory          = 1536

@@ -553,6 +553,11 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getLegacyAccountDeletionTopicArnShouldNotDefault() {
+        assertNull(configurationService.getLegacyAccountDeletionTopicArn());
+    }
+
+    @Test
     void getStorageTokenClaimNameShouldDefault() {
         assertEquals(
                 "https://vocab.account.gov.uk/v1/storageAccessToken",
