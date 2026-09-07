@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -36,7 +37,7 @@ public class InactiveAccountFailsafeCheckHelper {
 
     public static ActivityCheckResult checkForRecentActivity(
             UserProfile userProfile, UserCredentials userCredentials, Clock clock) {
-        var threshold = LocalDateTime.now(clock).minusYears(INACTIVITY_THRESHOLD_YEARS);
+        var threshold = LocalDate.now(clock).minusYears(INACTIVITY_THRESHOLD_YEARS);
 
         return buildTimestampCandidates(userProfile, userCredentials).stream()
                 .filter(candidate -> candidate.timestamp() != null)
@@ -50,9 +51,10 @@ public class InactiveAccountFailsafeCheckHelper {
     }
 
     private static boolean isWithinActivityThreshold(
-            String timestamp, String label, LocalDateTime threshold) {
+            String timestamp, String label, LocalDate threshold) {
         try {
-            return LocalDateTime.parse(timestamp, DATE_TIME_FORMATTER).isAfter(threshold);
+            var candidateDate = LocalDateTime.parse(timestamp, DATE_TIME_FORMATTER).toLocalDate();
+            return candidateDate.isAfter(threshold);
         } catch (Exception e) {
             LOG.warn(
                     "Failed to parse timestamp '{}' from source '{}': {}",

@@ -243,8 +243,22 @@ class InactiveAccountFailsafeCheckHelperTest {
     }
 
     @Test
+    void shouldReturnNotRecentlyActiveWhenTimestampOnSameDateAsThresholdButDifferentTime() {
+        var sameDateLaterTime = "2021-09-04T23:59:59.999999";
+        var userProfile = createUserProfile(sameDateLaterTime, null, null, null);
+        var userCredentials = createUserCredentials(null, null);
+
+        var result =
+                InactiveAccountFailsafeCheckHelper.checkForRecentActivity(
+                        userProfile, userCredentials, FIXED_CLOCK);
+
+        assertThat(result.recentlyActive(), is(false));
+        assertThat(result.triggeringAttribute(), is((String) null));
+    }
+
+    @Test
     void shouldReturnRecentlyActiveWhenTimestampJustInsideThreshold() {
-        var justInsideTimestamp = "2021-09-04T14:00:01";
+        var justInsideTimestamp = "2021-09-05T00:00:00";
         var userProfile = createUserProfile(justInsideTimestamp, null, null, null);
         var userCredentials = createUserCredentials(null, null);
 
