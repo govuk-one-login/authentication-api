@@ -146,6 +146,11 @@ public class StartHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
+        LOG.info(
+                "Request to start handler has previous session id {} and session id {}",
+                startRequest.previousSessionId(),
+                sessionId);
+
         boolean isUserAuthenticatedWithValidProfile;
         try {
             var authSession =
