@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.configuration.DynamoConfiguration;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 
@@ -40,6 +41,10 @@ public class BaseDynamoService<T> {
 
     public void update(T item) {
         dynamoTable.updateItem(item);
+    }
+
+    public void update(UpdateItemRequest updateItemRequest) {
+        client.updateItem(updateItemRequest);
     }
 
     public void put(T item) {
