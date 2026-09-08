@@ -11,6 +11,8 @@ import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.InputSanitiser;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Objects;
@@ -22,6 +24,8 @@ import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOpt
 public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
 
     private static final Logger LOG = LogManager.getLogger(AuthSessionService.class);
+
+    private static final int SESSION_REUSE_TOLERANCE_SECONDS = 1;
 
     private final ConfigurationService configurationService;
 
@@ -51,6 +55,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         return new AuthSessionItem()
                 .withSessionId(sessionId)
                 .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                .withCreatedAt(Instant.now().toString())
                 .withTimeToLive(
                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                 .toInstant()
@@ -84,6 +89,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                                 .withResetPasswordState(AuthSessionItem.ResetPasswordState.NONE)
                                 .withResetMfaState(AuthSessionItem.ResetMfaState.NONE)
                                 .withPreviousSessionId(previousSessionId)
+                                .withCreatedAt(Instant.now().toString())
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
@@ -102,9 +108,8 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                             getSession(newSessionId)
                                     .filter(
                                             session ->
-                                                    Objects.equals(
-                                                            session.getPreviousSessionId(),
-                                                            maybePreviousSessionId.get()));
+                                                    sessionIsEligibleToBeReused(
+                                                            session, maybePreviousSessionId.get()));
                     if (existingSessionWithNewSessionId.isPresent()) {
                         LOG.info(
                                 "Session already exists with newSessionId {} and previousSessionId {}, reusing",
@@ -123,6 +128,35 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                     newSessionId,
                     e.getMessage());
             throw new AuthSessionException(e.getMessage());
+        }
+    }
+
+    private boolean sessionIsEligibleToBeReused(
+            AuthSessionItem retrievedSession, String previousSessionId) {
+        if (!Objects.equals(retrievedSession.getPreviousSessionId(), previousSessionId)) {
+            return false;
+        }
+
+        return parseCreatedAt(retrievedSession.getCreatedAt())
+                .map(
+                        createdAt ->
+                                createdAt.isAfter(
+                                        Instant.now()
+                                                .minus(
+                                                        SESSION_REUSE_TOLERANCE_SECONDS,
+                                                        ChronoUnit.SECONDS)))
+                .orElse(false);
+    }
+
+    private Optional<Instant> parseCreatedAt(String createdAt) {
+        if (createdAt == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Instant.parse(createdAt));
+        } catch (DateTimeParseException e) {
+            LOG.warn("Could not parse created at {} as instant, not reusing session", createdAt);
+            return Optional.empty();
         }
     }
 

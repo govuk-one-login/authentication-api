@@ -49,6 +49,7 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_HAS_VERIFIED_WITH_PASSKEY = "HasVerifiedWithPasskey";
     public static final String ATTRIBUTE_IS_PARTIALLY_CREATED_ACCOUNT = "IsPartiallyCreatedAccount";
     public static final String ATTRIBUTE_PREVIOUS_SESSION_ID = "PreviousSessionId";
+    public static final String ATTRIBUTE_CREATED_AT = "CreatedAt";
 
     public enum AccountState {
         NEW,
@@ -97,6 +98,7 @@ public class AuthSessionItem {
     private boolean hasVerifiedWithPasskey;
     private boolean isPartiallyCreatedAccount;
     private String previousSessionId;
+    private String createdAt;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -569,6 +571,20 @@ public class AuthSessionItem {
 
     public AuthSessionItem withPreviousSessionId(String previousSessionId) {
         this.previousSessionId = previousSessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CREATED_AT)
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public AuthSessionItem withCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
         return this;
     }
 
