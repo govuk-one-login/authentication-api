@@ -374,7 +374,7 @@ Mappings:
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 590183679200
       OrchAccountID: 816047645251
-      OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
+      OrchApiBaseUrl: https://oidc.dev.account.gov.uk # Note authdev3 is directly integrated with orch dev
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/54458128-e8d6-4f3f-bb3f-2737f2717bbf
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/2652846f-2767-4d53-a33c-5d1bd5d3f350
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/6c12b394-e3b7-4ca6-a137-2d3a9da8ad9f
