@@ -175,7 +175,8 @@ Mappings:
       internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a3297748-71d5-49d5-9e04-672ac9c470bd
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/13a8b94f-21da-4835-9882-89fcef4a494a
       s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6531fe18-2d18-40ab-8a35-1691b1fd69f3
+      pendingEmailCheckQueueResultArn: arn:aws:sqs:eu-west-2:590183679200:authdev1-email-check-PendingEmailCheckResultsQueue
+      PendingEmailCheckResultsQueueKmsKeyArn: arn:aws:kms:eu-west-2:590183679200:key/fb09f53c-0d77-42f9-bc25-1e466f513390
       dataStoreAccountId: 653994557586
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
@@ -217,7 +218,8 @@ Mappings:
       internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1f27239b-10fe-42cb-9506-626d40880443
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/86a459b9-4cae-4ed2-99da-dbd0f6eb13a9
       s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/756c3a48-4839-4cdf-b267-495e59c1264d
+      pendingEmailCheckQueueResultArn: arn:aws:sqs:eu-west-2:590183679200:authdev2-email-check-PendingEmailCheckResultsQueue
+      PendingEmailCheckResultsQueueKmsKeyArn: arn:aws:kms:eu-west-2:590183679200:key/97e6bb14-5c86-46dd-8942-8caa3ef623c8
       dataStoreAccountId: 653994557586
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
@@ -259,7 +261,8 @@ Mappings:
       internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f7aad276-068b-4c6d-ab87-973cb70b92ad
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/9d378f4a-de27-486a-93a4-56515d9ab372
       s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/6e26328c-9121-4247-a5a3-6ac3f28fca3f
+      pendingEmailCheckQueueResultArn: arn:aws:sqs:eu-west-2:590183679200:authdev3-email-check-PendingEmailCheckResultsQueue
+      PendingEmailCheckResultsQueueKmsKeyArn: arn:aws:kms:eu-west-2:590183679200:key/29cbc6d9-7906-400e-ad3b-d7429a3edb3b
       dataStoreAccountId: 653994557586
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
@@ -301,7 +304,8 @@ Mappings:
       internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ef0a54ec-1a99-4f8a-b52a-83b69c209550
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/d81e16ea-860d-4e30-b271-d0e658ba8bbc
       s3EncryptionKey: arn:aws:kms:eu-west-2:653994557586:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/1c244203-18da-4a6b-a509-87d2978ecb2b
+      pendingEmailCheckQueueResultArn: arn:aws:sqs:eu-west-2:590183679200:experian-email-check-PendingEmailCheckResultsQueue
+      PendingEmailCheckResultsQueueKmsKeyArn: arn:aws:kms:eu-west-2:590183679200:key/ce6dfccb-729b-458a-8f83-6c195f0edd1a
       dataStoreAccountId: 653994557586
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
@@ -343,7 +347,8 @@ Mappings:
       internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/29a0ed62-d58d-4361-8f5d-8f2580848d03
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/c6826c50-04a2-450a-95c5-0e1309b74d0e
       s3EncryptionKey: arn:aws:kms:eu-west-2:761723964695:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1bb13e98-ff5e-4341-bf6e-0ffc568f95d9
+      pendingEmailCheckQueueResultArn: arn:aws:sqs:eu-west-2:851725166715:experian-email-check-PendingEmailCheckResultsQueue
+      PendingEmailCheckResultsQueueKmsKeyArn: arn:aws:kms:eu-west-2:851725166715:key/6e04ff44-8eca-431c-841b-4a2712d485cb
       dataStoreAccountId: 761723964695
       lambdaMinConcurrency: 0
       emailCheckResultsWriterProvisionedConcurrency: "0"
@@ -385,7 +390,8 @@ Mappings:
       internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/8dd5e3c6-8c95-41ff-825a-c6d65191945d
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/c289d5e1-1fd7-4629-9f3d-c059aabed970
       s3EncryptionKey: arn:aws:kms:eu-west-2:758531536632:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
+      pendingEmailCheckQueueResultArn: arn:aws:sqs:eu-west-2:891377189576:experian-email-check-PendingEmailCheckResultsQueue
+      PendingEmailCheckResultsQueueKmsKeyArn: arn:aws:kms:eu-west-2:891377189576:key/a6c74311-7760-493a-857b-6226f3c8129a
       dataStoreAccountId: 758531536632
       lambdaMinConcurrency: 2
       emailCheckResultsWriterProvisionedConcurrency: "5"
@@ -429,7 +435,8 @@ Mappings:
       internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/3fd823db-5980-4853-bd9b-ed674ea8719e
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       s3EncryptionKey: arn:aws:kms:eu-west-2:761723964695:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/ac2fa7d3-5c80-4a78-905b-e22b2bf525d8
+      pendingEmailCheckQueueResultArn: arn:aws:sqs:eu-west-2:211125427676:experian-email-check-PendingEmailCheckResultsQueue
+      PendingEmailCheckResultsQueueKmsKeyArn: arn:aws:kms:eu-west-2:211125427676:key/f90987b6-d7f6-4769-9879-69ca5c52c5f5
       dataStoreAccountId: 761723964695
       lambdaMinConcurrency: 3
       emailCheckResultsWriterProvisionedConcurrency: "7"
@@ -473,7 +480,8 @@ Mappings:
       internationalSmsSendCountTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6269785d-3811-487d-af5a-a732d318c6ca
       cloudwatchEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
       s3EncryptionKey: arn:aws:kms:eu-west-2:172348255554:alias/aws/s3
-      sqsEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/3688b0a9-3ab1-4cc6-8d00-2f9d565a7d83
+      pendingEmailCheckQueueResultArn: arn:aws:sqs:eu-west-2:637423504848:experian-email-check-PendingEmailCheckResultsQueue
+      PendingEmailCheckResultsQueueKmsKeyArn: arn:aws:kms:eu-west-2:637423504848:key/34350137-3d42-40e5-a59e-289f0e0ef1eb
       dataStoreAccountId: 172348255554
       lambdaMinConcurrency: 5
       emailCheckResultsWriterProvisionedConcurrency: "10"
@@ -1589,14 +1597,18 @@ Resources:
               - sqs:GetQueueAttributes
               - sqs:ChangeMessageVisibility
             Resource:
-              - !Sub
-                - "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${EnvironmentName}-email-check-results-queue"
-                - EnvironmentName:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
+              - !If
+                - UseSubEnvironment
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref SubEnvironment,
+                    pendingEmailCheckQueueResultArn,
+                  ]
+                - !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    pendingEmailCheckQueueResultArn,
+                  ]
 
   # ============================================================================
   # Secrets Manager Access Policies
@@ -1629,7 +1641,7 @@ Resources:
   # ============================================================================
 
   # Policy for SQS queue KMS encryption key access
-  SqsQueueKmsAccessPolicy:
+  PendingEmailCheckResultsQueueKmsAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: "Policy for SQS queue KMS encryption key access"
@@ -1649,12 +1661,12 @@ Resources:
                 - !FindInMap [
                     EnvironmentConfiguration,
                     !Ref SubEnvironment,
-                    sqsEncryptionKey,
+                    PendingEmailCheckResultsQueueKmsKeyArn,
                   ]
                 - !FindInMap [
                     EnvironmentConfiguration,
                     !Ref Environment,
-                    sqsEncryptionKey,
+                    PendingEmailCheckResultsQueueKmsKeyArn,
                   ]
 
   # Policy for S3 bucket KMS encryption key access for bulk test users
