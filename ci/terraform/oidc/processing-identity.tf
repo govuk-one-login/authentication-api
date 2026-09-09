@@ -49,7 +49,8 @@ module "ipv_processing_identity_role_with_orch_session_table_read_write_delete_a
 }
 
 module "processing-identity" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "processing-identity"
   path_part       = "processing-identity"

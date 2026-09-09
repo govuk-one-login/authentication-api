@@ -13,7 +13,8 @@ module "mfa_reset_storage_token_jwk_role" {
 }
 
 module "mfa_reset_storage_token_jwk" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name           = "mfa-reset-jwk.json"
   endpoint_name_sanitized = "mfa-reset-jwkjson"

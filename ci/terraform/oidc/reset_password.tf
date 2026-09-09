@@ -28,7 +28,8 @@ module "frontend_api_reset_password_role" {
 }
 
 module "reset_password" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "reset-password"
   path_part       = "reset-password"

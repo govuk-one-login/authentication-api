@@ -28,7 +28,8 @@ module "frontend_api_orch_auth_code_role" {
 }
 
 module "orch_auth_code" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "orch-auth-code"
   path_part       = "orch-auth-code"

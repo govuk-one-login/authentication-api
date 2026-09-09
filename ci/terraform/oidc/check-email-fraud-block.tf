@@ -22,8 +22,9 @@ module "frontend_api_check_email_fraud_block_role" {
 }
 
 module "check_email_fraud_block" {
-  count  = local.deploy_check_email_fraud_block_count
-  source = "../modules/endpoint-module-v2"
+  count           = local.deploy_check_email_fraud_block_count
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "check-email-fraud-block"
   path_part       = "check-email-fraud-block"

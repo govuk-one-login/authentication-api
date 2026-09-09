@@ -28,7 +28,8 @@ module "frontend_api_verify_code_role_with_combined_auth_attempts_policy" {
 
 
 module "verify_code" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "verify-code"
   path_part       = "verify-code"

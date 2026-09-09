@@ -18,7 +18,8 @@ module "mfa_reset_jar_signing_jwk_role" {
 }
 
 module "mfa_reset_jar_signing_jwk" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name           = local.reverification_jwk_json_endpoint_name
   endpoint_name_sanitized = local.reverification_jwk_json_endpoint_name_sanitized

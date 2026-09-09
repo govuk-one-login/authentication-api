@@ -25,7 +25,8 @@ module "frontend_api_account_recovery_role" {
 
 
 module "account_recovery" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "account-recovery"
   path_part       = "account-recovery"
