@@ -427,7 +427,7 @@ Mappings:
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "Yes"
+      EnforceLambdaDeploymentOrder: "No"
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       EvcsApiVpcEndpointId: ""
@@ -495,7 +495,7 @@ Mappings:
       internationalSmsSendingEnabled: true
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "Yes"
+      EnforceLambdaDeploymentOrder: "No"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
