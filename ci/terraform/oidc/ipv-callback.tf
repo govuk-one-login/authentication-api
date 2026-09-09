@@ -29,8 +29,9 @@ moved {
 }
 
 module "ipv-callback" {
-  source = "../modules/endpoint-module-v2"
-  count  = var.deploy_orch_lambda_and_api ? 1 : 0
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
+  count           = var.deploy_orch_lambda_and_api ? 1 : 0
 
   endpoint_name   = "ipv-callback"
   path_part       = var.orch_ipv_callback_enabled ? "ipv-callback-auth" : "ipv-callback"
@@ -59,7 +60,6 @@ module "ipv-callback" {
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 
-  create_endpoint  = true
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_api[0].id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_api[0].root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_authentication_api[0].execution_arn

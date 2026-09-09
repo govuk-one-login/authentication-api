@@ -14,7 +14,8 @@ module "id_reverification_state_role" {
 }
 
 module "id_reverification_state" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "id-reverification-state"
   path_part       = "id-reverification-state"

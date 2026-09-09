@@ -23,7 +23,8 @@ module "frontend_api_user_exists_role" {
 }
 
 module "userexists" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "user-exists"
   path_part       = "user-exists"

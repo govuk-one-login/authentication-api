@@ -30,7 +30,8 @@ module "frontend_api_login_role_with_combined_auth_attempts_table_policies" {
 }
 
 module "login" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "login"
   path_part       = "login"

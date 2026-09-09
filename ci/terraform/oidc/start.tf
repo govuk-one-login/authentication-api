@@ -25,7 +25,8 @@ module "frontend_api_start_role" {
 }
 
 module "start" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "start"
   path_part       = "start"

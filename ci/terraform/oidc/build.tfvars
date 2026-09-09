@@ -136,3 +136,4 @@ performance_tuning = {
 use_strongly_consistent_reads  = true
 deploy_oidc_api_gateway_domain = false
 deploy_orch_lambda_and_api     = false
+deploy_frontend_api            = false

@@ -23,7 +23,8 @@ module "frontend_api_update_profile_role" {
 }
 
 module "update_profile" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "update-profile"
   path_part       = "update-profile"

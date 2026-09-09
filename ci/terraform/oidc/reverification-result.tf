@@ -20,7 +20,8 @@ module "reverification_result_role" {
 }
 
 module "reverification_result" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "reverification-result"
   path_part       = "reverification-result"

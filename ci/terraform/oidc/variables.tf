@@ -747,3 +747,8 @@ variable "deploy_orch_lambda_and_api" {
   type    = bool
   default = true
 }
+
+variable "deploy_frontend_api" {
+  type    = bool
+  default = true
+}

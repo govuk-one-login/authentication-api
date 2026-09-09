@@ -26,7 +26,8 @@ module "frontend_api_account_interventions_role" {
 module "account_interventions" {
   count = local.deploy_account_interventions_count
 
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "account-interventions"
   path_part       = "account-interventions"

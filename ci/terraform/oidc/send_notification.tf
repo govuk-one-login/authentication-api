@@ -27,7 +27,8 @@ module "frontend_api_send_notification_role" {
 }
 
 module "send_notification" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "send-notification"
   path_part       = "send-notification"

@@ -26,7 +26,8 @@ module "frontend_api_signup_role" {
 }
 
 module "signup" {
-  source = "../modules/endpoint-module-v2"
+  source          = "../modules/endpoint-module-v2"
+  create_endpoint = var.deploy_frontend_api
 
   endpoint_name   = "signup"
   path_part       = "signup"
