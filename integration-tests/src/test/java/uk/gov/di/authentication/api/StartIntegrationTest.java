@@ -106,6 +106,15 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
+        if (isAuthenticated) {
+            authSessionExtension.addAchievedCredentialTrustToSession(
+                    PREVIOUS_SESSION_ID, requestedCredentialTrustLevel);
+            var previousSession =
+                    authSessionExtension.getSession(PREVIOUS_SESSION_ID).orElseThrow();
+            previousSession.setHasVerifiedWithPassword(true);
+            previousSession.setHasVerifiedWithMfa(true);
+            authSessionExtension.updateSession(previousSession);
+        }
         authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
@@ -238,6 +247,11 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
+        authSessionExtension.addAchievedCredentialTrustToSession(PREVIOUS_SESSION_ID, MEDIUM_LEVEL);
+        var previousSession = authSessionExtension.getSession(PREVIOUS_SESSION_ID).orElseThrow();
+        previousSession.setHasVerifiedWithPassword(true);
+        previousSession.setHasVerifiedWithMfa(true);
+        authSessionExtension.updateSession(previousSession);
         authSessionExtension.addSession(sessionId);
 
         userStore.signUp(userEmail, "rubbbishPassword");
