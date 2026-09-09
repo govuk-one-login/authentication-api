@@ -138,6 +138,21 @@ class AuthSessionServiceIntegrationTest {
         assertThat(updatedSession.getPreservedReauthCountsForAuditMap(), equalTo(counts));
     }
 
+    @Test
+    void shouldUpdateSessionPasskeyAssertionRequestWithoutAffectingOtherFields() {
+        withStoredSession(SESSION_ID);
+
+        var session = authSessionExtension.getSession(SESSION_ID).orElseThrow();
+        assertThat(session.getHasVerifiedWithPasskey(), equalTo(false));
+
+        authSessionExtension.updateSession(session.withHasVerifiedWithPasskey(true));
+        authSessionExtension.updateSessionPasskeyAssertionRequest(SESSION_ID, "assertion-2");
+
+        var result = authSessionExtension.getSession(SESSION_ID).orElseThrow();
+        assertThat(result.getHasVerifiedWithPasskey(), equalTo(true));
+        assertThat(result.getPasskeyAssertionRequest(), equalTo("assertion-2"));
+    }
+
     private AuthSessionItem withStoredSession(String sessionId) {
         authSessionExtension.addSession(sessionId);
         return authSessionExtension.getSession(sessionId).get();

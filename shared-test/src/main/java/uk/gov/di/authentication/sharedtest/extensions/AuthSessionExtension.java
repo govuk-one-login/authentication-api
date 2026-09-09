@@ -153,4 +153,10 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
                         .orElseThrow()
                         .incrementCodeRequestCount(notificationType, journeyType));
     }
+
+    public void updateSessionPasskeyAssertionRequest(
+            String sessionId, String assertionRequestJsonToStore) {
+        authSessionService.updateSessionPasskeyAssertionRequest(
+                sessionId, assertionRequestJsonToStore);
+    }
 }
