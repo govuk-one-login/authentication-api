@@ -105,6 +105,12 @@ class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
+        if (isAuthenticated) {
+            authSessionExtension.addAchievedCredentialTrustToSession(
+                    PREVIOUS_SESSION_ID, requestedCredentialTrustLevel);
+            authSessionExtension.addHasVerifiedWithPasswordAndMfaToSession(
+                    PREVIOUS_SESSION_ID, true, true);
+        }
         authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
@@ -237,6 +243,9 @@ class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
+        authSessionExtension.addAchievedCredentialTrustToSession(PREVIOUS_SESSION_ID, MEDIUM_LEVEL);
+        authSessionExtension.addHasVerifiedWithPasswordAndMfaToSession(
+                PREVIOUS_SESSION_ID, true, true);
         authSessionExtension.addSession(sessionId);
 
         userStore.signUp(userEmail, "rubbbishPassword");
@@ -289,6 +298,9 @@ class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
+        authSessionExtension.addAchievedCredentialTrustToSession(PREVIOUS_SESSION_ID, MEDIUM_LEVEL);
+        authSessionExtension.addHasVerifiedWithPasswordAndMfaToSession(
+                PREVIOUS_SESSION_ID, true, true);
 
         userStore.signUp(userEmail, "rubbbishPassword");
         userStore.addVerifiedPhoneNumber(userEmail, "+447316763843");
