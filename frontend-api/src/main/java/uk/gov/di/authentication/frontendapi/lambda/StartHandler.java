@@ -205,6 +205,17 @@ public class StartHandler
                             internalSubjectId);
         }
 
+        var authenticated = isUserAuthenticatedWithValidProfile;
+        var shouldOverrideAuthenticated =
+                authenticated
+                        && !reauthenticate
+                        && !upliftRequired
+                        && !permissionDecisionManager.canIssueAuthCode(authSession);
+        if (shouldOverrideAuthenticated) {
+            authenticated = false;
+            emitAuthenticatedOverrideObservability();
+        }
+
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext,
@@ -214,17 +225,9 @@ public class StartHandler
                         startRequest.isIdentityVerificationRequired(),
                         reauthenticate,
                         isBlockedForReauth,
-                        isUserAuthenticatedWithValidProfile,
+                        authenticated,
                         upliftRequired,
                         mfaRequired(requestedCredentialTrustLevel));
-
-        if (userStartInfo.isAuthenticated() && !userStartInfo.isUpliftRequired()) {
-            var canIssueAuthCode = permissionDecisionManager.canIssueAuthCode(authSession);
-            if (!canIssueAuthCode) {
-                LOG.warn(
-                        "Orch and auth disagree on whether user is authenticated: problems will likely arise in this journey");
-            }
-        }
 
         StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
@@ -370,6 +373,13 @@ public class StartHandler
                             failureReason == null ? "unknown" : failureReason.getValue()));
         }
         return true;
+    }
+
+    private void emitAuthenticatedOverrideObservability() {
+        LOG.warn("Auth code protection did not pass, overriding authenticated to false");
+        cloudwatchMetricsService.incrementCounter(
+                CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue(),
+                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     private void emitReauthRequestedObservability(
