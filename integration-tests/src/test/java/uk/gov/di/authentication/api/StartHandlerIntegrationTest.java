@@ -100,8 +100,7 @@ class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             CredentialTrustLevel requestedCredentialTrustLevel,
             boolean identityRequired,
             boolean isAuthenticated,
-            boolean isMfaRequired)
-            throws Json.JsonException {
+            boolean isMfaRequired) {
         String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
@@ -353,7 +352,7 @@ class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn400WhenRedirectURIIsInvalid() throws Exception {
+    void shouldReturn400WhenRedirectURIIsInvalid() {
         String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(sessionId);
@@ -426,7 +425,7 @@ class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope;
 
         @BeforeEach
-        void setup() throws Json.JsonException {
+        void setup() {
             handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
             sessionId = IdGenerator.generate();
@@ -514,7 +513,7 @@ class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope = new Scope();
 
         @BeforeEach
-        void setup() throws Json.JsonException {
+        void setup() {
             handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
             sessionId = IdGenerator.generate();
