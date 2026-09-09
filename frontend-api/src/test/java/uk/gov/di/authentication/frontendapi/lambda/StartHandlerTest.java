@@ -166,6 +166,8 @@ class StartHandlerTest {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
+        when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
+                .thenReturn(true);
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -293,6 +295,8 @@ class StartHandlerTest {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
+        when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
+                .thenReturn(true);
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -315,7 +319,7 @@ class StartHandlerTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void considersUserAuthenticatedButLogsWhenCannotIssueAuthCode(boolean canIssueAuthCode)
+    void overridesAuthenticatedToFalseWhenOrchAndAuthDisagree(boolean canIssueAuthCode)
             throws Json.JsonException {
         withUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
@@ -329,21 +333,37 @@ class StartHandlerTest {
                 apiRequestEventWithHeadersAndBody(
                         VALID_HEADERS, makeRequestBodyWithAuthenticatedField(true));
 
-        var result = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        StartResponse response = objectMapper.readValue(result.getBody(), StartResponse.class);
-        assertTrue(response.user().isAuthenticated());
+        verify(startService)
+                .buildUserStartInfo(
+                        any(),
+                        any(),
+                        any(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        eq(canIssueAuthCode),
+                        anyBoolean(),
+                        anyBoolean());
 
-        var expectedLogIfCannotIssueAuthCode =
-                "Orch and auth disagree on whether user is authenticated";
+        var expectedLogIfCannotIssueAuthCode = "Auth code protection did not pass for this session";
         if (canIssueAuthCode) {
             assertThat(
                     logging.events(),
                     not(hasItem(withMessageContaining(expectedLogIfCannotIssueAuthCode))));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(
+                            eq(CloudwatchMetrics.AUTH_START_OVERRIDDEN_AUTHENTICATED.getValue()),
+                            any());
         } else {
             assertThat(
                     logging.events(),
                     hasItem(withMessageContaining(expectedLogIfCannotIssueAuthCode)));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AUTH_START_OVERRIDDEN_AUTHENTICATED.getValue(),
+                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
         }
     }
 
@@ -356,6 +376,8 @@ class StartHandlerTest {
         var userStartInfo =
                 new UserStartInfo(false, false, isAuthenticated, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
+                .thenReturn(true);
 
         var event =
                 apiRequestEventWithHeadersAndBody(
