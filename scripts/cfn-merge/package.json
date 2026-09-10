@@ -1,0 +1,10 @@
+{
+  "name": "authentication-api",
+  "type": "module",
+  "scripts": {
+    "merge-templates": "node scripts/merge-templates.js"
+  },
+  "dependencies": {
+    "yaml": "^2.1.3"
+  }
+}

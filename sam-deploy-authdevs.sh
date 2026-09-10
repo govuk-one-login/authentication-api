@@ -9,8 +9,8 @@ environments=("authdev1" "authdev2" "authdev3" "dev")
 # -------------
 # Prerequisites
 # -------------
-if ! command -v rain &> /dev/null; then
-  echo "Merging templates requires rain to be installed. See https://github.com/aws-cloudformation/rain for installation instructions."
+if ! command -v node &> /dev/null; then
+  echo "Merging templates requires node to be installed. See https://nodejs.org for installation instructions."
   exit 1
 fi
 
@@ -38,7 +38,7 @@ Options:
 
 
 Dependencies:
-    AWS CLI, AWS SAM, rain
+    AWS CLI, AWS SAM, node
 USAGE
 }
 
@@ -123,8 +123,7 @@ if [[ ${O_DEPLOYAUTHAPI} -eq 1 ]]; then
   sso_login
 
   echo "Merging all ${DIR}/ci/cloudformation/auth templates into a single ${AUTHAPI_TEMPLATE_FILE}"
-  # shellcheck disable=SC2046
-  rain merge $(find "${DIR}/ci/cloudformation/auth" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${AUTHAPI_TEMPLATE_FILE}"
+  node "${DIR}/scripts/cfn-merge/merge-templates.js" "${DIR}/ci/cloudformation/auth" "${AUTHAPI_TEMPLATE_FILE}"
 
   echo "Lint template file"
   sam validate --lint --template-file="${AUTHAPI_TEMPLATE_FILE}"
@@ -157,8 +156,7 @@ if [[ ${O_DEPLOYAM} -eq 1 ]]; then
   fi
 
   echo "Merging all ${DIR}/ci/cloudformation/account-management templates into a single ${AMAPI_TEMPLATE_FILE}"
-  # shellcheck disable=SC2046
-  rain merge $(find "${DIR}/ci/cloudformation/account-management" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${AMAPI_TEMPLATE_FILE}"
+  node "${DIR}/scripts/cfn-merge/merge-templates.js" "${DIR}/ci/cloudformation/account-management" "${AMAPI_TEMPLATE_FILE}"
 
   echo "Lint template file"
   sam validate --lint --template-file="${AMAPI_TEMPLATE_FILE}"
@@ -191,8 +189,7 @@ if [[ ${O_DEPLOYSTUBSAPI} -eq 1 ]]; then
   fi
 
   echo "Merging all ${DIR}/ci/cloudformation/stubs templates into a single ${STUBSAPI_TEMPLATE_FILE}"
-  # shellcheck disable=SC2046
-  rain merge $(find "${DIR}/ci/cloudformation/stubs" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${STUBSAPI_TEMPLATE_FILE}"
+  node "${DIR}/scripts/cfn-merge/merge-templates.js" "${DIR}/ci/cloudformation/stubs" "${STUBSAPI_TEMPLATE_FILE}"
 
   echo "Lint template file"
   sam validate --lint --template-file="${STUBSAPI_TEMPLATE_FILE}"
@@ -224,9 +221,8 @@ if [[ ${O_DEPLOYACTDATAAPI} -eq 1 ]]; then
     SAM_CONFIG_ENV="${ENVIRONMENT}"
   fi
 
-  echo "Merging all ${DIR}/ci/cloudformation/account-datas templates into a single ${ADAPI_TEMPLATE_FILE}"
-  # shellcheck disable=SC2046
-  rain merge $(find "${DIR}/ci/cloudformation/account-data" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${ADAPI_TEMPLATE_FILE}"
+  echo "Merging all ${DIR}/ci/cloudformation/account-data templates into a single ${ADAPI_TEMPLATE_FILE}"
+  node "${DIR}/scripts/cfn-merge/merge-templates.js" "${DIR}/ci/cloudformation/account-data" "${ADAPI_TEMPLATE_FILE}"
 
   echo "Lint template file"
   sam validate --lint --template-file="${ADAPI_TEMPLATE_FILE}"
@@ -259,10 +255,7 @@ if [[ ${O_DEPLOYUTILS} -eq 1 ]]; then
   fi
 
   echo "Merging all ${DIR}/ci/cloudformation/utils templates into a single ${UTILS_TEMPLATE_FILE}"
-  # shellcheck disable=SC2046
-  rain merge $(find "${DIR}/ci/cloudformation/utils" -type f \( -name "*.yaml" -o -name "*.yml" \) -print) -o "${UTILS_TEMPLATE_FILE}"
-
-  sed -i '' 's/Mode: OFF/Mode: "OFF"/g' "${UTILS_TEMPLATE_FILE}"
+  node "${DIR}/scripts/cfn-merge/merge-templates.js" "${DIR}/ci/cloudformation/utils" "${UTILS_TEMPLATE_FILE}"
 
   echo "Lint template file"
   sam validate --lint --template-file="${UTILS_TEMPLATE_FILE}"
