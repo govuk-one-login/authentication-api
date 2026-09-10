@@ -78,16 +78,7 @@ Resources:
                   ],
                   frontendBaseUrl,
                 ]
-          MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Sub
-            - arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${env}-mfa-reset-token-signing-key-ecc-alias
-            - DataStoreAccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  dataStoreAccountId,
-                ]
-              env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          MFA_RESET_STORAGE_TOKEN_SIGNING_KEY_ALIAS: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:${MfaResetTokenSigningKeyAlias}"
           REDIS_KEY: "session"
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
           AUTH_SESSION_USE_STRONGLY_CONSISTENT_READS:
