@@ -167,3 +167,4 @@ use_strongly_consistent_reads = true
 ipv_jwks_call_enabled          = true
 ipv_jwks_url                   = "https://api.identity.staging.account.gov.uk/.well-known/jwks.json"
 deploy_oidc_api_gateway_domain = false
+deploy_orch_lambda_and_api     = false
