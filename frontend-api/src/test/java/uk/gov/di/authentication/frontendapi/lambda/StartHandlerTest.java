@@ -324,7 +324,11 @@ class StartHandlerTest {
         withUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        useValidSession();
+        var authSession =
+                useValidSession()
+                        .withHasVerifiedWithPassword(true)
+                        .withHasVerifiedWithMfa(true)
+                        .withHasVerifiedWithPasskey(true);
 
         when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
                 .thenReturn(canIssueAuthCode);
@@ -355,6 +359,10 @@ class StartHandlerTest {
             verify(cloudwatchMetricsService, never())
                     .incrementCounter(
                             eq(CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue()), any());
+            verify(authSessionService, never()).updateSession(any());
+            assertTrue(authSession.getHasVerifiedWithPassword());
+            assertTrue(authSession.getHasVerifiedWithMfa());
+            assertTrue(authSession.getHasVerifiedWithPasskey());
         } else {
             assertThat(
                     logging.events(),
@@ -363,6 +371,10 @@ class StartHandlerTest {
                     .incrementCounter(
                             CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue(),
                             Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+            verify(authSessionService).updateSession(authSession);
+            assertFalse(authSession.getHasVerifiedWithPassword());
+            assertFalse(authSession.getHasVerifiedWithMfa());
+            assertFalse(authSession.getHasVerifiedWithPasskey());
         }
     }
 
@@ -489,13 +501,15 @@ class StartHandlerTest {
         return makeRequestBody(null, null, null, authenticated);
     }
 
-    private void useValidSession() {
+    private AuthSessionItem useValidSession() {
+        var authSession =
+                new AuthSessionItem()
+                        .withSessionId(SESSION_ID)
+                        .withClientId(CLIENT_ID)
+                        .withInternalCommonSubjectId(TEST_SUBJECT_ID);
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
-                .thenReturn(
-                        new AuthSessionItem()
-                                .withSessionId(SESSION_ID)
-                                .withClientId(CLIENT_ID)
-                                .withInternalCommonSubjectId(TEST_SUBJECT_ID));
+                .thenReturn(authSession);
+        return authSession;
     }
 
     private ClientStartInfo getClientStartInfo() {
