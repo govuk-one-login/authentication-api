@@ -20,11 +20,31 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
+      # Events will be enabled in a subsequent deployment once policies and permissions are verified
+      # Events:
+      #   EmailCheckResultsQueueEvent:
+      #     Type: SQS
+      #     Properties:
+      #       Queue: !If
+      #         - UseSubEnvironment
+      #         - !FindInMap [
+      #             EnvironmentConfiguration,
+      #             !Ref SubEnvironment,
+      #             pendingEmailCheckQueueResultArn,
+      #           ]
+      #         - !FindInMap [
+      #             EnvironmentConfiguration,
+      #             !Ref Environment,
+      #             pendingEmailCheckQueueResultArn,
+      #           ]
+      #       BatchSize: 1
+      #       FunctionResponseTypes:
+      #         - ReportBatchItemFailures
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref EmailCheckResultsTableWritePolicy
         - !Ref EmailCheckResultsSqsAccessPolicy
-        - !Ref SqsQueueKmsAccessPolicy
+        - !Ref PendingEmailCheckResultsQueueKmsAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
       LoggingConfig:
         LogGroup: !Ref EmailCheckResultsWriterLogGroup
