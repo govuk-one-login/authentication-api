@@ -288,6 +288,16 @@ spotless {
     }
 }
 
+if (!System.getenv('CI') && !System.getenv('GITHUB_ACTIONS') && !System.getenv('CODEBUILD_BUILD_ID')) {
+    tasks.register('ensureDockerRunning', Exec) {
+        group = 'docker'
+        description = 'Checks if Docker daemon is running and attempts to start Docker Desktop if not (macOS only)'
+        commandLine 'bash', "${rootDir}/scripts/ensure-docker-running.sh"
+    }
+
+    tasks.named('composeUp') { dependsOn 'ensureDockerRunning' }
+}
+
 dockerCompose {
     buildBeforeUp = true
     forceRecreate = true
