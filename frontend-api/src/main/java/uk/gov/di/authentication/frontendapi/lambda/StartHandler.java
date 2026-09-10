@@ -182,11 +182,8 @@ public class StartHandler
 
         var reauthenticate = isReauthenticateRequest(input);
         if (reauthenticate) {
-            LOG.info(
-                    "Reauthentication - Setting hasVerifiedWithPassword, hasVerifiedWithMfa & hasVerifiedWithPasskey to false");
-            authSession.setHasVerifiedWithPassword(false);
-            authSession.setHasVerifiedWithMfa(false);
-            authSession.setHasVerifiedWithPasskey(false);
+            LOG.info("Reauthentication - clearing verified state");
+            clearVerifiedState(authSession);
         }
 
         var internalSubjectId = authSession.getInternalCommonSubjectId();
@@ -213,6 +210,8 @@ public class StartHandler
                         && !permissionDecisionManager.canIssueAuthCode(authSession);
         if (shouldOverrideAuthenticated) {
             authenticated = false;
+            clearVerifiedState(authSession);
+            authSessionService.updateSession(authSession);
             emitAuthenticatedOverrideObservability();
         }
 
@@ -375,8 +374,15 @@ public class StartHandler
         return true;
     }
 
+    private void clearVerifiedState(AuthSessionItem authSession) {
+        authSession.setHasVerifiedWithPassword(false);
+        authSession.setHasVerifiedWithMfa(false);
+        authSession.setHasVerifiedWithPasskey(false);
+    }
+
     private void emitAuthenticatedOverrideObservability() {
-        LOG.warn("Auth code protection did not pass, overriding authenticated to false");
+        LOG.warn(
+                "Auth code protection did not pass, clearing verified state and overriding authenticated to false");
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue(),
                 Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
