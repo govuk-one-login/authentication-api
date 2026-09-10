@@ -2,6 +2,8 @@ package uk.gov.di.authentication.services;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -9,14 +11,19 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
@@ -49,13 +56,86 @@ class AuthSessionServiceIntegrationTest {
     void shouldReturnUpdatedSessionWhenItExistsAndDeletePrevious() {
         withStoredSession(PREVIOUS_SESSION_ID);
 
-        AuthSessionItem previousSession =
+        var newSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         var previousSessionItem = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
 
         assertTrue(previousSessionItem.isEmpty());
-        assertThat(previousSession.getSessionId(), is(SESSION_ID));
+        assertThat(newSession.getSessionId(), is(SESSION_ID));
+    }
+
+    @Test
+    void shouldReturnExistingSessionWhenItMatchesTheSessionIdAndPreviousSessionId() {
+        var emailAddressWhichWouldntExistOnGeneratedSession = "test@example.com";
+        var existingSessionItem =
+                new AuthSessionItem()
+                        .withSessionId(SESSION_ID)
+                        .withPreviousSessionId(PREVIOUS_SESSION_ID)
+                        .withCreatedAt(Instant.now().toString())
+                        .withEmailAddress(emailAddressWhichWouldntExistOnGeneratedSession)
+                        .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
+        authSessionExtension.addSession(existingSessionItem);
+
+        var newSession =
+                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                        Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
+
+        assertThat(newSession.getSessionId(), is(SESSION_ID));
+        assertThat(newSession.getPreviousSessionId(), is(PREVIOUS_SESSION_ID));
+        assertThat(
+                newSession.getEmailAddress(), is(emailAddressWhichWouldntExistOnGeneratedSession));
+    }
+
+    @Test
+    void shouldGenerateANewSessionWhenExistingSessionDoesNotMatchPreviousSessionId() {
+        var emailAddressWhichWouldNotExistOnGeneratedSession = "test@example.com";
+        var existingSessionItem =
+                new AuthSessionItem()
+                        .withSessionId(SESSION_ID)
+                        .withPreviousSessionId("foo")
+                        .withCreatedAt(Instant.now().toString())
+                        .withEmailAddress(emailAddressWhichWouldNotExistOnGeneratedSession)
+                        .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
+        authSessionExtension.addSession(existingSessionItem);
+
+        var newSession =
+                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                        Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
+
+        assertThat(newSession.getSessionId(), is(SESSION_ID));
+        assertNull(newSession.getPreviousSessionId());
+        assertNull(newSession.getEmailAddress());
+    }
+
+    private static Stream<AuthSessionItem> authSessionItemsWithIneligibleCreatedAts() {
+        return Stream.of(
+                new AuthSessionItem()
+                        .withCreatedAt(Instant.now().minus(1001, ChronoUnit.MILLIS).toString()),
+                new AuthSessionItem(), // no created at
+                new AuthSessionItem().withCreatedAt("Not a parseable localdate time"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("authSessionItemsWithIneligibleCreatedAts")
+    void shouldGenerateANewSessionWhenExistingSessionIsMoreThanOneSecondOldOrCreationDateNotPresent(
+            AuthSessionItem blankAuthSessionItemWithIneligibleCreatedAt) {
+        var emailAddressWhichWouldNotExistOnGeneratedSession = "test@example.com";
+        var existingSessionItem =
+                blankAuthSessionItemWithIneligibleCreatedAt
+                        .withSessionId(SESSION_ID)
+                        .withPreviousSessionId(PREVIOUS_SESSION_ID)
+                        .withEmailAddress(emailAddressWhichWouldNotExistOnGeneratedSession)
+                        .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
+        authSessionExtension.addSession(existingSessionItem);
+
+        var newSession =
+                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                        Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
+
+        assertThat(newSession.getSessionId(), is(SESSION_ID));
+        assertNull(newSession.getPreviousSessionId());
+        assertNull(newSession.getEmailAddress());
     }
 
     @Test
@@ -64,10 +144,10 @@ class AuthSessionServiceIntegrationTest {
 
         assertTrue(previousSessionItem.isEmpty());
 
-        AuthSessionItem previousSession =
+        var newSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
-        assertThat(previousSession.getSessionId(), is(SESSION_ID));
+        assertThat(newSession.getSessionId(), is(SESSION_ID));
     }
 
     @Test
@@ -92,13 +172,13 @@ class AuthSessionServiceIntegrationTest {
     }
 
     @Test
-    void shouldReturnAPreviousSessionWithRetainedValues() {
+    void shouldReturnAPreviousSessionWithRetainedValuesAndPreviousSessionId() {
         var previousSession = withStoredSession(PREVIOUS_SESSION_ID);
 
         previousSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         authSessionExtension.updateSession(previousSession);
 
-        AuthSessionItem retrievedSession =
+        var retrievedSession =
                 authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         var retrievedPreviousSession = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
@@ -107,6 +187,8 @@ class AuthSessionServiceIntegrationTest {
         assertThat(retrievedSession.getSessionId(), equalTo(SESSION_ID));
         assertThat(
                 retrievedSession.getIsNewAccount(), equalTo(AuthSessionItem.AccountState.EXISTING));
+        assertThat(retrievedSession.getPreviousSessionId(), equalTo(PREVIOUS_SESSION_ID));
+        assertNotNull(retrievedSession.getCreatedAt());
     }
 
     @Test
