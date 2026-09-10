@@ -45,7 +45,8 @@ public enum CloudwatchMetrics {
     PASSKEY_DELETION_FAILED("PasskeyDeletionFailed"),
     PASSWORD_REHASH_COMPLETED("PasswordRehashCompleted"),
     AUTH_CODE_ISSUED("AuthCodeIssued"),
-    ENHANCED_AUTH_CODE_BLOCKED("EnhancedAuthCodeBlocked");
+    ENHANCED_AUTH_CODE_BLOCKED("EnhancedAuthCodeBlocked"),
+    GUARDRAIL_PREVENTED_INACTIVE_ACCOUNT_DELETION("GuardrailPreventedInactiveAccountDeletion");
 
     private String value;
 
