@@ -6,6 +6,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.InputSanitiser;
@@ -220,6 +222,37 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         } catch (Exception e) {
             logAndThrowAuthSessionException(
                     "Failed to update Auth session item", sessionItem.getSessionId(), e);
+        }
+    }
+
+    public void updateSessionPasskeyAssertionRequest(
+            String sessionId, String assertionRequestJsonToStore) {
+        var authSessionTableName = dynamoTable.tableName();
+        try {
+            update(
+                    UpdateItemRequest.builder()
+                            .tableName(authSessionTableName)
+                            .key(
+                                    Map.of(
+                                            AuthSessionItem.ATTRIBUTE_SESSION_ID,
+                                            AttributeValue.fromS(sessionId)))
+                            .updateExpression(
+                                    "SET #PasskeyAssertionRequest = :PasskeyAssertionRequest")
+                            .conditionExpression("attribute_exists(#SessionId)")
+                            .expressionAttributeNames(
+                                    Map.of(
+                                            "#PasskeyAssertionRequest",
+                                                    AuthSessionItem
+                                                            .ATTRIBUTE_PASSKEY_ASSERTION_REQUEST,
+                                            "#SessionId", AuthSessionItem.ATTRIBUTE_SESSION_ID))
+                            .expressionAttributeValues(
+                                    Map.of(
+                                            ":PasskeyAssertionRequest",
+                                            AttributeValue.fromS(assertionRequestJsonToStore)))
+                            .build());
+        } catch (Exception e) {
+            logAndThrowAuthSessionException(
+                    "Failed to update Auth session passkey assertion request", sessionId, e);
         }
     }
 
