@@ -106,18 +106,25 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                 return updatedSession;
             } else {
                 if (maybePreviousSessionId.isPresent()) {
+                    var maybeExistingSession = getSession(newSessionId);
                     var existingSessionWithNewSessionId =
-                            getSession(newSessionId)
-                                    .filter(
-                                            session ->
-                                                    sessionIsEligibleToBeReused(
-                                                            session, maybePreviousSessionId.get()));
+                            maybeExistingSession.filter(
+                                    session ->
+                                            sessionIsEligibleToBeReused(
+                                                    session, maybePreviousSessionId.get()));
                     if (existingSessionWithNewSessionId.isPresent()) {
                         LOG.info(
                                 "Session already exists with newSessionId {} and previousSessionId {}, reusing",
                                 newSessionId,
                                 maybePreviousSessionId);
                         return existingSessionWithNewSessionId.get();
+                    } else if (maybeExistingSession.isPresent()) {
+                        var previousSessionIdOnSession =
+                                maybeExistingSession.get().getPreviousSessionId();
+                        LOG.info(
+                                "Session already exists with newSessionId {} and stored previousSessionId {} but is not eligible to be reused",
+                                newSessionId,
+                                previousSessionIdOnSession);
                     }
                 }
 
