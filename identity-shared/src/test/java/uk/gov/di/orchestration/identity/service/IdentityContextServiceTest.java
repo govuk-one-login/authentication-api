@@ -150,7 +150,7 @@ public class IdentityContextServiceTest {
         usingValidClientSession();
         var request = createRequestEvent();
         when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                        request.getQueryStringParameters(), CLIENT_SESSION_ID, orchSession))
+                        request.getQueryStringParameters(), CLIENT_SESSION_ID))
                 .thenThrow(new NoSessionException("test"));
 
         assertThrows(NoSessionException.class, () -> service.buildContext(request));
@@ -324,7 +324,7 @@ public class IdentityContextServiceTest {
                         new ErrorObject("test-error"),
                         new OrchClientSessionItem("test-csid-2"));
         when(crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                        request.getQueryStringParameters(), CLIENT_SESSION_ID, orchSession))
+                        request.getQueryStringParameters(), CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(crossBrowserEntity));
     }
 }
