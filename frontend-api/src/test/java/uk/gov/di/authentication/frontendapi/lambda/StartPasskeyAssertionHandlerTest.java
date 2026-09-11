@@ -154,7 +154,7 @@ class StartPasskeyAssertionHandlerTest {
             assertThat(result, hasStatus(200));
             assertThat(result.getBody(), equalTo(assertionRequest.toCredentialsGetJson()));
             verify(authSessionService)
-                    .updateSessionPasskeyAssertionRequest(authSession.getSessionId(), expectedJson);
+                    .updateSessionAttribute(authSession.getSessionId(), AuthSessionItem.ATTRIBUTE_PASSKEY_ASSERTION_REQUEST, expectedJson);
         }
 
         @Test

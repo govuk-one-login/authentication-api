@@ -225,10 +225,14 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         }
     }
 
-    public void updateSessionPasskeyAssertionRequest(
-            String sessionId, String assertionRequestJsonToStore) {
+    public void updateSessionAttribute(String sessionId, String attributeToUpdate, String value) {
         var authSessionTableName = dynamoTable.tableName();
+        var attributeNameToUpdatePlaceholder = "#" + attributeToUpdate;
+        var attributeValueToUpdatePlaceholder = ":" + attributeToUpdate;
+        var updateExpression = "SET %s = %s".formatted(attributeNameToUpdatePlaceholder, attributeValueToUpdatePlaceholder);
+
         try {
+            LOG.info("Updating auth session attribute {}", attributeToUpdate);
             update(
                     UpdateItemRequest.builder()
                             .tableName(authSessionTableName)
@@ -236,23 +240,19 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                                     Map.of(
                                             AuthSessionItem.ATTRIBUTE_SESSION_ID,
                                             AttributeValue.fromS(sessionId)))
-                            .updateExpression(
-                                    "SET #PasskeyAssertionRequest = :PasskeyAssertionRequest")
+                            .updateExpression(updateExpression)
                             .conditionExpression("attribute_exists(#SessionId)")
-                            .expressionAttributeNames(
-                                    Map.of(
-                                            "#PasskeyAssertionRequest",
-                                                    AuthSessionItem
-                                                            .ATTRIBUTE_PASSKEY_ASSERTION_REQUEST,
-                                            "#SessionId", AuthSessionItem.ATTRIBUTE_SESSION_ID))
-                            .expressionAttributeValues(
-                                    Map.of(
-                                            ":PasskeyAssertionRequest",
-                                            AttributeValue.fromS(assertionRequestJsonToStore)))
+                            .expressionAttributeNames(Map.of(
+                                    attributeNameToUpdatePlaceholder, attributeToUpdate,
+                                    "#SessionId", AuthSessionItem.ATTRIBUTE_SESSION_ID
+                            ))
+                            .expressionAttributeValues(Map.of(
+                                    attributeValueToUpdatePlaceholder, AttributeValue.fromS(value)
+                            ))
                             .build());
         } catch (Exception e) {
             logAndThrowAuthSessionException(
-                    "Failed to update Auth session passkey assertion request", sessionId, e);
+                    "Failed to update Auth session attribute %s".formatted(attributeToUpdate), sessionId, e);
         }
     }
 

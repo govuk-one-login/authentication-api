@@ -30,6 +30,9 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 class AuthSessionServiceIntegrationTest {
     private static final String SESSION_ID = "test-session-id";
     private static final String PREVIOUS_SESSION_ID = "test-previous-session-id";
+    private static final String TEST_EMAIL = "usery@digital.cabinet-office.gov.uk";
+    private static final String OTHER_EMAIL = "user+other@digital.cabinet-office.gov.uk";
+
 
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
@@ -221,18 +224,18 @@ class AuthSessionServiceIntegrationTest {
     }
 
     @Test
-    void shouldUpdateSessionPasskeyAssertionRequestWithoutAffectingOtherFields() {
+    void shouldUpdateIndividualSessionAttributesWithoutAffectingOtherFields() {
         withStoredSession(SESSION_ID);
 
         var session = authSessionExtension.getSession(SESSION_ID).orElseThrow();
-        assertThat(session.getHasVerifiedWithPasskey(), equalTo(false));
+        assertThat(session.getHasVerifiedWithPassword(), equalTo(false));
+        authSessionExtension.updateSession(session.withEmailAddress(TEST_EMAIL));
 
-        authSessionExtension.updateSession(session.withHasVerifiedWithPasskey(true));
-        authSessionExtension.updateSessionPasskeyAssertionRequest(SESSION_ID, "assertion-2");
+        authSessionExtension.updateSessionAttribute(SESSION_ID, AuthSessionItem.ATTRIBUTE_EMAIL, OTHER_EMAIL);
 
         var result = authSessionExtension.getSession(SESSION_ID).orElseThrow();
-        assertThat(result.getHasVerifiedWithPasskey(), equalTo(true));
-        assertThat(result.getPasskeyAssertionRequest(), equalTo("assertion-2"));
+        assertThat(result.getHasVerifiedWithPassword(), equalTo(false));
+        assertThat(result.getEmailAddress(), equalTo(OTHER_EMAIL));
     }
 
     private AuthSessionItem withStoredSession(String sessionId) {

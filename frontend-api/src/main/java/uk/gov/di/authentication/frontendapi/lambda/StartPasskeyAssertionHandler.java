@@ -18,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.entity.passkeys.audit.PasskeyAuthent
 import uk.gov.di.authentication.frontendapi.services.webauthn.DefaultPasskeyJsonParser;
 import uk.gov.di.authentication.frontendapi.services.webauthn.PasskeyAssertionService;
 import uk.gov.di.authentication.frontendapi.services.webauthn.RelyingPartyProvider;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -130,8 +131,8 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                     500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
         }
 
-        authSessionService.updateSessionPasskeyAssertionRequest(
-                userContext.getAuthSession().getSessionId(), assertionRequestJsonToStore);
+        authSessionService.updateSessionAttribute(
+                userContext.getAuthSession().getSessionId(), AuthSessionItem.ATTRIBUTE_PASSKEY_ASSERTION_REQUEST, assertionRequestJsonToStore);
 
         incrementAuthenticationGeneratedMetric();
         emitAuthPasskeyAuthenticationGeneratedAuditEvent(
