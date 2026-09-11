@@ -5,6 +5,8 @@ Conditions:
     Fn::Not:
       - !Condition IsHigherEnv
 
+  InactiveAccountDeletionCrossAccountEnabled: !Condition IsHigherEnv
+
 Resources:
   # ============================================================================
   # Stub SQS Queue + DLQ for dev/build environments
@@ -89,3 +91,57 @@ Resources:
             Resource:
               - !GetAtt InactiveAccountDeletionStubQueue.Arn
               - !GetAtt InactiveAccountDeletionStubDeadLetterQueue.Arn
+
+  # ============================================================================
+  # Cross-account SQS Queue resources for staging/integration/production
+  # ============================================================================
+
+  InactiveAccountDeletionCrossAccountEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Condition: InactiveAccountDeletionCrossAccountEnabled
+    Properties:
+      EventSourceArn:
+        !FindInMap [
+          EnvironmentConfiguration,
+          !Ref Environment,
+          inactiveAccountDeletionQueueArn,
+        ]
+      FunctionName: !Ref InactiveAccountDeletionQueueProcessorFunction
+      BatchSize: 1
+      FunctionResponseTypes:
+        - ReportBatchItemFailures
+
+  InactiveAccountDeletionCrossAccountQueueProcessorSQSPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountDeletionCrossAccountEnabled
+    Properties:
+      Description: "IAM policy for the inactive account deletion queue processor to consume from the cross-account queue"
+      Path: !Sub
+        - /${Env}/account-management/
+        - Env: !Ref Environment
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowSQSAccess
+            Effect: Allow
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ChangeMessageVisibility
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                inactiveAccountDeletionQueueArn,
+              ]
+          - Sid: AllowKMSDecrypt
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource:
+              !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                inactiveAccountDeletionQueueKmsKeyArn,
+              ]
