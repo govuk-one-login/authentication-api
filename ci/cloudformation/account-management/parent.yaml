@@ -548,6 +548,8 @@ Mappings:
       accessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 7xgl7lexy4
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionQueueArn: TODO
+      inactiveAccountDeletionQueueKmsKeyArn: TODO
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:851725205974:key/ecfc81ec-546e-478d-ae04-5ed5d1b375a9
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
@@ -599,6 +601,8 @@ Mappings:
       accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
       accountDataApiId: hoidt6wujb
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionQueueArn: TODO
+      inactiveAccountDeletionQueueKmsKeyArn: TODO
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125600642:key/f0e0c444-b70e-4d2f-9d5a-9f0bcf1d6540
       manualAccountDeletionClientId: manual-account-deletion
       accountDeletionDataApiEnabled: true
@@ -650,6 +654,8 @@ Mappings:
       accessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 0218o1p9tj
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionQueueArn: TODO
+      inactiveAccountDeletionQueueKmsKeyArn: TODO
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125303002:key/29d156dd-c893-4221-8fe1-f24882e0e401
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
