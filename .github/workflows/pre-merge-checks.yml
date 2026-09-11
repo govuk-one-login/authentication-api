@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Check out repository code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: 3.12
       - name: Install dependencies
@@ -41,23 +41,23 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -80,22 +80,22 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -119,22 +119,22 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -153,7 +153,7 @@ jobs:
 
       - name: Cache Unit Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
           path: |
@@ -220,22 +220,22 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -252,7 +252,7 @@ jobs:
           ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.api.*" :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Cache API Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-api-integration-test-reports-${{ github.sha }}
           path: |
@@ -305,22 +305,22 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -337,7 +337,7 @@ jobs:
           ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.services.*" --tests "uk.gov.di.authentication.shared.services.*" :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Cache Services Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-services-integration-test-reports-${{ github.sha }}
           path: |
@@ -390,22 +390,22 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -422,7 +422,7 @@ jobs:
           ./gradlew :integration-tests:test --tests "uk.gov.di.orchestration.*" :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Cache Orchestration Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-orchestration-integration-test-reports-${{ github.sha }}
           path: |
@@ -475,22 +475,22 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -507,7 +507,7 @@ jobs:
           ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.utils.*" --tests "uk.gov.di.authentication.queuehandlers.*" --tests "uk.gov.di.authentication.contract.*" :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Cache Utils Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-utils-integration-test-reports-${{ github.sha }}
           path: |
@@ -562,22 +562,22 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -607,7 +607,7 @@ jobs:
 
       - name: Cache Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
           path: |
@@ -631,7 +631,7 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.orch_alerting_files_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install dependencies
         if: needs.check-changed-files.outputs.orch_alerting_files_changed == 'true'
         run: npm ci --ignore-scripts
@@ -673,22 +673,22 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -727,24 +727,24 @@ jobs:
     steps:
       - name: Check out repository code
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Set up JDK 17
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c #v6.0.0
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
       - name: Set up Gradle
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v4
         with:
           gradle-version: wrapper
           cache-read-only: true
       - name: Restore Build Cache
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .gradle/
@@ -758,7 +758,7 @@ jobs:
 
       - name: Restore Cached Unit Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
           path: |
@@ -774,7 +774,7 @@ jobs:
             !account-data-api-integration-tests/build/reports/
       - name: Restore Cached Integration Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-api-integration-test-reports-${{ github.sha }}
           path: |
@@ -782,7 +782,7 @@ jobs:
             integration-tests/build/reports/
       - name: Restore Cached Services Integration Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-services-integration-test-reports-${{ github.sha }}
           path: |
@@ -790,7 +790,7 @@ jobs:
             integration-tests/build/reports/
       - name: Restore Cached Orchestration Integration Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-orchestration-integration-test-reports-${{ github.sha }}
           path: |
@@ -798,7 +798,7 @@ jobs:
             integration-tests/build/reports/
       - name: Restore Cached Utils Integration Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-utils-integration-test-reports-${{ github.sha }}
           path: |
@@ -806,7 +806,7 @@ jobs:
             integration-tests/build/reports/
       - name: Restore Cached AM DR Integration Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
           path: |
