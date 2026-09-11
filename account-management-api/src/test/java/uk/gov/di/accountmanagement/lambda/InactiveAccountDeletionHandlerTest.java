@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
@@ -26,6 +27,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,6 +45,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.GUARDRAIL_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.GUARDRAIL_PREVENTED_INACTIVE_ACCOUNT_DELETION;
 
 class InactiveAccountDeletionHandlerTest {
 
@@ -51,6 +56,7 @@ class InactiveAccountDeletionHandlerTest {
     private static final String EMAIL = "test@example.com";
     private static final String TOKEN_VALUE = "test-bearer-token";
     private static final String INTERNAL_SECTOR_URI = "https://identity.test.account.gov.uk";
+    private static final String TEST_ENVIRONMENT = "test";
 
     private static final Clock FIXED_CLOCK =
             Clock.fixed(Instant.parse("2026-09-04T14:00:00Z"), ZoneOffset.UTC);
@@ -67,6 +73,8 @@ class InactiveAccountDeletionHandlerTest {
     private final StructuredAuditService structuredAuditService =
             mock(StructuredAuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private InactiveAccountDeletionHandler handler;
 
     @BeforeEach
@@ -78,6 +86,7 @@ class InactiveAccountDeletionHandlerTest {
                         dynamoService,
                         structuredAuditService,
                         configurationService,
+                        cloudwatchMetricsService,
                         FIXED_CLOCK);
         when(tokenService.createAccountDataApiAccessToken(any()))
                 .thenReturn(Result.success(new BearerAccessToken(TOKEN_VALUE)));
@@ -86,6 +95,7 @@ class InactiveAccountDeletionHandlerTest {
         when(dynamoService.getUserCredentialsFromEmail(any()))
                 .thenReturn(inactiveUserCredentials());
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
         when(dynamoService.getOrGenerateSalt(any())).thenReturn(new byte[] {0x1});
     }
 
@@ -415,6 +425,70 @@ class InactiveAccountDeletionHandlerTest {
             verify(accountDeletionService).deleteAccountViaDataApi(eq("inactive-sub"), any());
             verify(accountDeletionService, never())
                     .deleteAccountViaDataApi(eq("active-sub"), any());
+        }
+
+        @Test
+        void shouldEmitGuardrailMetricWhenAccountHasRecentActivity() {
+            var recentProfile = inactiveUserProfile(PUBLIC_SUBJECT_ID, EMAIL);
+            recentProfile.setUpdated(RECENT_TIMESTAMP);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.of(recentProfile));
+
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            GUARDRAIL_PREVENTED_INACTIVE_ACCOUNT_DELETION.getValue(),
+                            Map.of(
+                                    GUARDRAIL_TYPE.getValue(),
+                                    "AuthUserActivityCheck",
+                                    ENVIRONMENT.getValue(),
+                                    TEST_ENVIRONMENT),
+                            CloudwatchMetricsService.HOME_READ_ONLY_NAMESPACE);
+        }
+
+        @Test
+        void shouldNotEmitGuardrailMetricWhenAccountIsInactive() {
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verifyNoInteractions(cloudwatchMetricsService);
+        }
+
+        @Test
+        void shouldNotEmitGuardrailMetricWhenUserProfileNotFound() {
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.empty());
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verifyNoInteractions(cloudwatchMetricsService);
+        }
+
+        @Test
+        void shouldStillThrowRecentlyActiveAccountExceptionWhenMetricEmissionFails() {
+            var recentProfile = inactiveUserProfile(PUBLIC_SUBJECT_ID, EMAIL);
+            recentProfile.setUpdated(RECENT_TIMESTAMP);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.of(recentProfile));
+            doThrow(new RuntimeException("CloudWatch error"))
+                    .when(cloudwatchMetricsService)
+                    .incrementCounter(any(), any(Map.class), any());
+
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            SQSBatchResponse response = handler.handleRequest(event, context);
+
+            assertThat(response.getBatchItemFailures(), hasSize(1));
+            verifyNoInteractions(accountDeletionService);
         }
     }
 

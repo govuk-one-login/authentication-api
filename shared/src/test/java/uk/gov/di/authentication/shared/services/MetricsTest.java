@@ -28,6 +28,8 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_MANAGEMENT;
+import static uk.gov.di.authentication.shared.services.CloudwatchMetricsService.AUTHENTICATION_NAMESPACE;
+import static uk.gov.di.authentication.shared.services.CloudwatchMetricsService.HOME_READ_ONLY_NAMESPACE;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class MetricsTest {
@@ -61,7 +63,18 @@ class MetricsTest {
 
             service.emitMetric("Metric", 1, Collections.emptyMap(), metricsLogger);
 
-            verify(metricsLogger).setNamespace("Authentication");
+            verify(metricsLogger).setNamespace(AUTHENTICATION_NAMESPACE);
+        }
+
+        @Test
+        void shouldEmitMetricWithCustomNamespace() {
+            var service = new CloudwatchMetricsService(configurationWithEnvironment("test"));
+            var metricsLogger = Mockito.mock(MetricsLogger.class);
+            var namespace = HOME_READ_ONLY_NAMESPACE;
+
+            service.emitMetric("Metric", 1, Collections.emptyMap(), metricsLogger, namespace);
+
+            verify(metricsLogger).setNamespace(namespace);
         }
 
         @Test

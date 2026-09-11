@@ -33,7 +33,8 @@ public enum CloudwatchMetricDimensions {
     OLD_PARALLELISM("OldParallelism"),
     NEW_MEMORY("NewMemory"),
     NEW_ITERATIONS("NewIterations"),
-    NEW_PARALLELISM("NewParallelism");
+    NEW_PARALLELISM("NewParallelism"),
+    GUARDRAIL_TYPE("GuardrailType");
 
     private String value;
 
