@@ -175,16 +175,17 @@ public class StartHandler
         var upliftRequired =
                 startService.isUpliftRequired(
                         requestedCredentialTrustLevel, authSession.getAchievedCredentialStrength());
-        authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
-
-        var userContext = startService.buildUserContext(authSession);
-        var clientStartInfo = buildClientStartInfo(startRequest, authSession);
 
         var reauthenticate = isReauthenticateRequest(input);
         if (reauthenticate) {
             LOG.info("Reauthentication - clearing verified state");
             clearVerifiedState(authSession);
         }
+
+        authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
+
+        var userContext = startService.buildUserContext(authSession);
+        var clientStartInfo = buildClientStartInfo(startRequest, authSession);
 
         var internalSubjectId = authSession.getInternalCommonSubjectId();
         var auditContext =
