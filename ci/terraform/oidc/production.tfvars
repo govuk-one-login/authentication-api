@@ -196,3 +196,4 @@ lambda_max_concurrency = 10
 ipv_jwks_call_enabled          = true
 ipv_jwks_url                   = "https://api.identity.account.gov.uk/.well-known/jwks.json"
 deploy_oidc_api_gateway_domain = false
+deploy_orch_lambda_and_api     = false
