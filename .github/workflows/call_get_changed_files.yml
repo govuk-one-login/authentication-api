@@ -5,16 +5,12 @@ on:
       java_changed:
         description: "Whether any Java files have changed"
         value: ${{ jobs.check-changed-files.outputs.java_changed}}
-      orch_alerting_files_changed:
-        description: "Whether any files have changed in the orchestration-alerting folder"
-        value: ${{ jobs.check-changed-files.outputs.orch_alerting_files_changed}}
 
 jobs:
   check-changed-files:
     runs-on: ubuntu-latest
     outputs:
       java_changed: ${{ steps.changed-java-files.outputs.any_changed }}
-      orch_alerting_files_changed: ${{ steps.changed-orch-alerting-files.outputs.any_changed }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -32,13 +28,6 @@ jobs:
             **/*.properties
             gradle*
             gradle/**
-
-      - name: Get changed files in orchestration-alerting folder
-        id: changed-orch-alerting-files
-        uses: tj-actions/changed-files@934b2d2c7e653bb8c968afed5a0428617f09aa24 # v45.0.7
-        with:
-          files: |
-            orchestration-alerting/**
 
       - name: Find PR comment
         if: github.event_name == 'pull_request'
