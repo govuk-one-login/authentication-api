@@ -926,7 +926,7 @@ class StartHandlerTest {
     }
 
     @Test
-    void shouldResetHasVerifiedOnReauthJourney() throws Json.JsonException {
+    void shouldClearHasVerifiedInMemoryOnReauthJourney() throws Json.JsonException {
         // Arrange
         var authSession =
                 new AuthSessionItem()
