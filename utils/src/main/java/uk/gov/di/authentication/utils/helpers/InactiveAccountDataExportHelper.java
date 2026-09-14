@@ -137,6 +137,11 @@ public class InactiveAccountDataExportHelper {
                     new TimestampCandidate(
                             getTermsAndConditionsTimestamp(userProfileItem),
                             "UserProfile.termsAndConditions.timestamp"));
+            candidates.add(
+                    new TimestampCandidate(
+                            getStringAttribute(
+                                    userProfileItem, UserProfile.ATTRIBUTE_LAST_SIGNED_IN),
+                            "UserProfile.LastSignedIn"));
         }
 
         if (userCredentialsItem != null) {

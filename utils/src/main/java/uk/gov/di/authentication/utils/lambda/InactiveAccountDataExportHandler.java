@@ -50,7 +50,7 @@ public class InactiveAccountDataExportHandler
     private static final int BATCH_GET_ITEM_MAX_SIZE = 100;
 
     private static final String USER_PROFILE_PROJECTION_EXPRESSION =
-            "Email,Created,Updated,termsAndConditions.#ts,PublicSubjectID,SubjectID,salt,PhoneNumberVerified,mfaMethodsMigrated";
+            "Email,Created,Updated,termsAndConditions.#ts,PublicSubjectID,SubjectID,salt,PhoneNumberVerified,mfaMethodsMigrated,LastSignedIn";
     private static final Map<String, String> USER_PROFILE_EXPRESSION_ATTRIBUTE_NAMES =
             Map.of("#ts", "timestamp");
     private static final String USER_CREDENTIALS_PROJECTION_EXPRESSION =
