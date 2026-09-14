@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
@@ -151,185 +152,8 @@ public class StartHandler
                 startRequest.previousSessionId(),
                 sessionId);
 
-        boolean isUserAuthenticatedWithValidProfile;
         try {
-            var authSession =
-                    authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                            Optional.ofNullable(startRequest.previousSessionId())
-                                    .filter(s -> !s.isBlank()),
-                            sessionId);
-            LOG.info("Start session retrieved");
-            var requestedCredentialTrustLevel =
-                    retrieveCredentialTrustLevel(startRequest.requestedCredentialStrength());
-            authSession.setRequestedCredentialStrength(requestedCredentialTrustLevel);
-            if (startRequest.requestedLevelOfConfidence() != null) {
-                authSession.setRequestedLevelOfConfidence(
-                        retrieveLevelOfConfidence(startRequest.requestedLevelOfConfidence()));
-            }
-            authSession.setClientId(startRequest.clientId());
-            authSession.setClientName(startRequest.clientName());
-            authSession.setIsSmokeTest(startRequest.isSmokeTest());
-            authSession.setIsOneLoginService(startRequest.isOneLoginService());
-            authSession.setSubjectType(startRequest.subjectType());
-            authSession.setRpSectorIdentifierHost(startRequest.rpSectorIdentifierHost());
-
-            if (startRequest.authenticated()) {
-                var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
-                if (isUserProfileEmpty) {
-                    LOG.warn("User profile for authenticated session is empty");
-                }
-                isUserAuthenticatedWithValidProfile = !isUserProfileEmpty;
-            } else {
-                isUserAuthenticatedWithValidProfile = false;
-            }
-
-            var upliftRequired =
-                    startService.isUpliftRequired(
-                            requestedCredentialTrustLevel,
-                            authSession.getAchievedCredentialStrength());
-
-            authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
-
-            var userContext = startService.buildUserContext(authSession);
-
-            var scopes = List.of(startRequest.scope().split(" "));
-            var redirectURI = new URI(startRequest.redirectUri());
-            var state = new State(startRequest.state());
-            attachLogFieldToLogs(CLIENT_ID, authSession.getClientId());
-            var clientStartInfo =
-                    startService.buildClientStartInfo(
-                            startRequest.serviceType(),
-                            authSession.getClientName(),
-                            scopes,
-                            redirectURI,
-                            state,
-                            startRequest.isCookieConsentShared(),
-                            startRequest.isOneLoginService());
-
-            var cookieConsent =
-                    startService.getCookieConsentValue(
-                            startRequest.cookieConsent(), startRequest.isCookieConsentShared());
-            var gaTrackingId = startRequest.ga();
-            var reauthenticateHeader =
-                    getHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            REAUTHENTICATE_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
-            var reauthenticate =
-                    reauthenticateHeader != null && reauthenticateHeader.equals("true");
-
-            LOG.info(
-                    "reauthenticateHeader: {} reauthenticate: {}",
-                    reauthenticateHeader,
-                    reauthenticate);
-
-            if (reauthenticate) {
-                LOG.info(
-                        "Reauthentication - Setting hasVerifiedWithPassword, hasVerifiedWithMfa & hasVerifiedWithPasskey to false");
-                authSession.setHasVerifiedWithPassword(false);
-                authSession.setHasVerifiedWithMfa(false);
-                authSession.setHasVerifiedWithPasskey(false);
-            }
-
-            Optional<String> maybeInternalSubject =
-                    Optional.ofNullable(authSession.getInternalCommonSubjectId());
-
-            var clientSessionId =
-                    getHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            CLIENT_SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive());
-            var txmaAuditHeader = getTxmaAuditEncodedHeaderOrUnknown(input);
-            String phoneNumber = AuditService.UNKNOWN;
-
-            var auditContext =
-                    new AuditContext(
-                            authSession.getClientId(),
-                            clientSessionId,
-                            sessionId,
-                            maybeInternalSubject.orElse(AuditService.UNKNOWN),
-                            userContext
-                                    .getUserProfile()
-                                    .map(UserProfile::getEmail)
-                                    .orElse(AuditService.UNKNOWN),
-                            IpAddressHelper.extractIpAddress(input),
-                            phoneNumber,
-                            extractPersistentIdFromHeaders(input.getHeaders()),
-                            txmaAuditHeader);
-
-            if (reauthenticate) {
-                emitReauthRequestedObservability(startRequest, auditContext);
-            }
-
-            boolean isBlockedForReauth = false;
-            if (reauthenticate) {
-                var permissionContext =
-                        buildPermissionContext(authSession, startRequest, userContext);
-                var permissionResult =
-                        permissionDecisionManager.canStartJourney(
-                                JourneyType.REAUTHENTICATION, permissionContext);
-
-                if (permissionResult.isSuccess()
-                        && permissionResult.getSuccess()
-                                instanceof
-                                uk.gov.di.authentication.userpermissions.entity.Decision
-                                        .ReauthLockedOut
-                                lockedOut) {
-                    isBlockedForReauth = true;
-                    if (maybeInternalSubject.isPresent()) {
-                        var reauthCountTypesToCounts = lockedOut.detailedCounts();
-                        var blockedCountTypes = lockedOut.blockedCountTypes();
-                        ReauthFailureReasons failureReason =
-                                getReauthFailureReasonFromCountTypes(blockedCountTypes);
-                        auditService.submitAuditEvent(
-                                FrontendAuditableEvent.AUTH_REAUTH_FAILED,
-                                auditContext,
-                                ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
-                                        .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
-                                        .withFailureReason(failureReason)
-                                        .build());
-                        cloudwatchMetricsService.incrementCounter(
-                                CloudwatchMetrics.REAUTH_FAILED.getValue(),
-                                Map.of(
-                                        ENVIRONMENT.getValue(),
-                                        configurationService.getEnvironment(),
-                                        FAILURE_REASON.getValue(),
-                                        failureReason == null
-                                                ? "unknown"
-                                                : failureReason.getValue()));
-                    }
-                }
-            }
-
-            var userStartInfo =
-                    startService.buildUserStartInfo(
-                            userContext,
-                            cookieConsent,
-                            gaTrackingId,
-                            startRequest.isIdentityVerificationRequired(),
-                            reauthenticate,
-                            isBlockedForReauth,
-                            isUserAuthenticatedWithValidProfile,
-                            upliftRequired,
-                            mfaRequired(requestedCredentialTrustLevel));
-
-            if (userStartInfo.isAuthenticated() && !userStartInfo.isUpliftRequired()) {
-                var canIssueAuthCode = permissionDecisionManager.canIssueAuthCode(authSession);
-                if (!canIssueAuthCode) {
-                    LOG.warn(
-                            "Orch and auth disagree on whether user is authenticated: problems will likely arise in this journey");
-                }
-            }
-
-            StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
-
-            auditService.submitAuditEvent(
-                    FrontendAuditableEvent.AUTH_START_INFO_FOUND,
-                    auditContext,
-                    pair("internalSubjectId", maybeInternalSubject.orElse(AuditService.UNKNOWN)));
-
-            return generateApiGatewayProxyResponse(200, startResponse);
-
+            return buildStartResponse(input, sessionId, startRequest);
         } catch (JsonException e) {
             var errorMessage = "Unable to serialize start response";
             LOG.error(errorMessage, e);
@@ -339,6 +163,229 @@ public class StartHandler
             LOG.error(errorMessage, e);
             return generateApiGatewayProxyResponse(400, errorMessage);
         }
+    }
+
+    private APIGatewayProxyResponseEvent buildStartResponse(
+            APIGatewayProxyRequestEvent input, String sessionId, StartRequest startRequest)
+            throws JsonException, URISyntaxException {
+        var authSession = setUpAuthSession(startRequest, sessionId);
+        var requestedCredentialTrustLevel = authSession.getRequestedCredentialStrength();
+        var isUserAuthenticatedWithValidProfile =
+                isUserAuthenticatedWithValidProfile(startRequest, authSession);
+        var upliftRequired =
+                startService.isUpliftRequired(
+                        requestedCredentialTrustLevel, authSession.getAchievedCredentialStrength());
+        authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
+
+        var userContext = startService.buildUserContext(authSession);
+        var clientStartInfo = buildClientStartInfo(startRequest, authSession);
+
+        var reauthenticate = isReauthenticateRequest(input);
+        if (reauthenticate) {
+            LOG.info("Reauthentication - clearing verified state");
+            clearVerifiedState(authSession);
+        }
+
+        var internalSubjectId = authSession.getInternalCommonSubjectId();
+        var auditContext =
+                buildAuditContext(input, sessionId, authSession, userContext, internalSubjectId);
+
+        var isBlockedForReauth = false;
+        if (reauthenticate) {
+            emitReauthRequestedObservability(startRequest, auditContext);
+            isBlockedForReauth =
+                    handleReauthLockout(
+                            authSession,
+                            startRequest,
+                            userContext,
+                            auditContext,
+                            internalSubjectId);
+        }
+
+        var authenticated = isUserAuthenticatedWithValidProfile;
+        var shouldOverrideAuthenticated =
+                authenticated
+                        && !reauthenticate
+                        && !upliftRequired
+                        && !permissionDecisionManager.canIssueAuthCode(authSession);
+        if (shouldOverrideAuthenticated) {
+            authenticated = false;
+            clearVerifiedState(authSession);
+            authSessionService.updateSession(authSession);
+            emitAuthenticatedOverrideObservability();
+        }
+
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        userContext,
+                        startService.getCookieConsentValue(
+                                startRequest.cookieConsent(), startRequest.isCookieConsentShared()),
+                        startRequest.ga(),
+                        startRequest.isIdentityVerificationRequired(),
+                        reauthenticate,
+                        isBlockedForReauth,
+                        authenticated,
+                        upliftRequired,
+                        mfaRequired(requestedCredentialTrustLevel));
+
+        StartResponse startResponse = new StartResponse(userStartInfo, clientStartInfo);
+
+        auditService.submitAuditEvent(
+                FrontendAuditableEvent.AUTH_START_INFO_FOUND,
+                auditContext,
+                pair(
+                        "internalSubjectId",
+                        internalSubjectId == null ? AuditService.UNKNOWN : internalSubjectId));
+
+        return generateApiGatewayProxyResponse(200, startResponse);
+    }
+
+    private AuthSessionItem setUpAuthSession(StartRequest startRequest, String sessionId) {
+        var authSession =
+                authSessionService.getUpdatedPreviousSessionOrCreateNew(
+                        Optional.ofNullable(startRequest.previousSessionId())
+                                .filter(s -> !s.isBlank()),
+                        sessionId);
+        LOG.info("Start session retrieved");
+        var requestedCredentialTrustLevel =
+                retrieveCredentialTrustLevel(startRequest.requestedCredentialStrength());
+        authSession.setRequestedCredentialStrength(requestedCredentialTrustLevel);
+        if (startRequest.requestedLevelOfConfidence() != null) {
+            authSession.setRequestedLevelOfConfidence(
+                    retrieveLevelOfConfidence(startRequest.requestedLevelOfConfidence()));
+        }
+        authSession.setClientId(startRequest.clientId());
+        authSession.setClientName(startRequest.clientName());
+        authSession.setIsSmokeTest(startRequest.isSmokeTest());
+        authSession.setIsOneLoginService(startRequest.isOneLoginService());
+        authSession.setSubjectType(startRequest.subjectType());
+        authSession.setRpSectorIdentifierHost(startRequest.rpSectorIdentifierHost());
+        return authSession;
+    }
+
+    private boolean isUserAuthenticatedWithValidProfile(
+            StartRequest startRequest, AuthSessionItem authSession) {
+        if (!startRequest.authenticated()) {
+            return false;
+        }
+        var isUserProfileEmpty = startService.isUserProfileEmpty(authSession);
+        if (isUserProfileEmpty) {
+            LOG.warn("User profile for authenticated session is empty");
+        }
+        return !isUserProfileEmpty;
+    }
+
+    private ClientStartInfo buildClientStartInfo(
+            StartRequest startRequest, AuthSessionItem authSession) throws URISyntaxException {
+        var scopes = List.of(startRequest.scope().split(" "));
+        var redirectURI = new URI(startRequest.redirectUri());
+        var state = new State(startRequest.state());
+        attachLogFieldToLogs(CLIENT_ID, authSession.getClientId());
+        return startService.buildClientStartInfo(
+                startRequest.serviceType(),
+                authSession.getClientName(),
+                scopes,
+                redirectURI,
+                state,
+                startRequest.isCookieConsentShared(),
+                startRequest.isOneLoginService());
+    }
+
+    private boolean isReauthenticateRequest(APIGatewayProxyRequestEvent input) {
+        var reauthenticateHeader =
+                getHeaderValueFromHeaders(
+                        input.getHeaders(),
+                        REAUTHENTICATE_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        var reauthenticate = reauthenticateHeader != null && reauthenticateHeader.equals("true");
+        LOG.info(
+                "reauthenticateHeader: {} reauthenticate: {}",
+                reauthenticateHeader,
+                reauthenticate);
+        return reauthenticate;
+    }
+
+    private AuditContext buildAuditContext(
+            APIGatewayProxyRequestEvent input,
+            String sessionId,
+            AuthSessionItem authSession,
+            UserContext userContext,
+            String internalSubjectId) {
+        var clientSessionId =
+                getHeaderValueFromHeaders(
+                        input.getHeaders(),
+                        CLIENT_SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        var txmaAuditHeader = getTxmaAuditEncodedHeaderOrUnknown(input);
+        return new AuditContext(
+                authSession.getClientId(),
+                clientSessionId,
+                sessionId,
+                internalSubjectId == null ? AuditService.UNKNOWN : internalSubjectId,
+                userContext
+                        .getUserProfile()
+                        .map(UserProfile::getEmail)
+                        .orElse(AuditService.UNKNOWN),
+                IpAddressHelper.extractIpAddress(input),
+                AuditService.UNKNOWN,
+                extractPersistentIdFromHeaders(input.getHeaders()),
+                txmaAuditHeader);
+    }
+
+    private boolean handleReauthLockout(
+            AuthSessionItem authSession,
+            StartRequest startRequest,
+            UserContext userContext,
+            AuditContext auditContext,
+            String internalSubjectId) {
+        var permissionContext = buildPermissionContext(authSession, startRequest, userContext);
+        var permissionResult =
+                permissionDecisionManager.canStartJourney(
+                        JourneyType.REAUTHENTICATION, permissionContext);
+
+        if (!(permissionResult.isSuccess()
+                && permissionResult.getSuccess()
+                        instanceof
+                        uk.gov.di.authentication.userpermissions.entity.Decision.ReauthLockedOut
+                        lockedOut)) {
+            return false;
+        }
+
+        if (internalSubjectId != null) {
+            var reauthCountTypesToCounts = lockedOut.detailedCounts();
+            var blockedCountTypes = lockedOut.blockedCountTypes();
+            ReauthFailureReasons failureReason =
+                    getReauthFailureReasonFromCountTypes(blockedCountTypes);
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.AUTH_REAUTH_FAILED,
+                    auditContext,
+                    ReauthMetadataBuilder.builder(startRequest.rpPairwiseIdForReauth())
+                            .withAllIncorrectAttemptCounts(reauthCountTypesToCounts)
+                            .withFailureReason(failureReason)
+                            .build());
+            cloudwatchMetricsService.incrementCounter(
+                    CloudwatchMetrics.REAUTH_FAILED.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            FAILURE_REASON.getValue(),
+                            failureReason == null ? "unknown" : failureReason.getValue()));
+        }
+        return true;
+    }
+
+    private void clearVerifiedState(AuthSessionItem authSession) {
+        authSession.setHasVerifiedWithPassword(false);
+        authSession.setHasVerifiedWithMfa(false);
+        authSession.setHasVerifiedWithPasskey(false);
+    }
+
+    private void emitAuthenticatedOverrideObservability() {
+        LOG.warn(
+                "Auth code protection did not pass, clearing verified state and overriding authenticated to false");
+        cloudwatchMetricsService.incrementCounter(
+                CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue(),
+                Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
     }
 
     private void emitReauthRequestedObservability(
