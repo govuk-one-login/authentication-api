@@ -130,10 +130,8 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
                     500, ErrorResponse.UNEXPECTED_INTERNAL_API_ERROR);
         }
 
-        authSessionService.updateSession(
-                userContext
-                        .getAuthSession()
-                        .withPasskeyAssertionRequest(assertionRequestJsonToStore));
+        authSessionService.updateSessionPasskeyAssertionRequest(
+                userContext.getAuthSession().getSessionId(), assertionRequestJsonToStore);
 
         incrementAuthenticationGeneratedMetric();
         emitAuthPasskeyAuthenticationGeneratedAuditEvent(

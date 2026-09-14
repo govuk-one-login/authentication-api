@@ -1,5 +1,7 @@
 shared_state_bucket = "di-auth-development-tfstate"
 
+environment = "dev"
+
 # FMS
 frontend_api_fms_tag_value = "authfrontenddev"
 
@@ -111,3 +113,5 @@ use_strongly_consistent_reads  = true
 support_reauth_signout_enabled = true
 deploy_oidc_api_gateway_domain = false
 deploy_orch_lambda_and_api     = false
+
+deploy_frontend_api = false

@@ -98,3 +98,5 @@ cmk_for_back_channel_logout_enabled = true
 
 auth_new_account_id        = "975050272416"
 deploy_orch_lambda_and_api = false
+
+deploy_frontend_api = false

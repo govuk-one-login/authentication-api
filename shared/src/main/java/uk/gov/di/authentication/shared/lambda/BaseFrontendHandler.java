@@ -111,6 +111,8 @@ public abstract class BaseFrontendHandler<T>
         ThreadContext.clearMap();
         attachTraceId();
 
+        LOG.info("Processing request in base handler");
+
         String clientSessionId =
                 getHeaderValueFromHeaders(
                         input.getHeaders(),
@@ -128,6 +130,7 @@ public abstract class BaseFrontendHandler<T>
                         input.getHeaders(),
                         SESSION_ID_HEADER,
                         configurationService.getHeadersCaseInsensitive());
+        LOG.info("Retrieving session");
         Optional<AuthSessionItem> authSession =
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
 
@@ -136,6 +139,7 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         } else {
             attachSessionIdToLogs(sessionId.get());
+            LOG.info("Session retrieved");
         }
 
         UserContext.Builder userContextBuilder = UserContext.builder(authSession.get());

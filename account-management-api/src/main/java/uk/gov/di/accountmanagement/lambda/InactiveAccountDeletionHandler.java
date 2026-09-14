@@ -9,30 +9,40 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.InactiveAccountDeletionMessage;
+import uk.gov.di.accountmanagement.exceptions.RecentlyActiveAccountException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.InactiveAccountDeletionTokenService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.InactiveAccountFailsafeCheckHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.GUARDRAIL_TYPE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.GUARDRAIL_PREVENTED_INACTIVE_ACCOUNT_DELETION;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
+import static uk.gov.di.authentication.shared.services.CloudwatchMetricsService.HOME_READ_ONLY_NAMESPACE;
 
 public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
     private static final Logger LOG = LogManager.getLogger(InactiveAccountDeletionHandler.class);
+    private static final String GUARDRAIL_TYPE_VALUE = "AuthUserActivityCheck";
 
     private final Json objectMapper = SerializationService.getInstance();
     private final InactiveAccountDeletionTokenService tokenService;
@@ -40,6 +50,8 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
     private final DynamoService dynamoService;
     private final StructuredAuditService structuredAuditService;
     private final ConfigurationService configurationService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final Clock clock;
 
     public InactiveAccountDeletionHandler() {
         this(ConfigurationService.getInstance());
@@ -54,6 +66,8 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
         this.dynamoService = new DynamoService(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
         this.configurationService = configurationService;
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.clock = Clock.systemUTC();
     }
 
     public InactiveAccountDeletionHandler(
@@ -61,12 +75,16 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
             AccountDeletionService accountDeletionService,
             DynamoService dynamoService,
             StructuredAuditService structuredAuditService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            Clock clock) {
         this.tokenService = tokenService;
         this.accountDeletionService = accountDeletionService;
         this.dynamoService = dynamoService;
         this.structuredAuditService = structuredAuditService;
         this.configurationService = configurationService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.clock = clock;
     }
 
     @Override
@@ -90,15 +108,10 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
 
         for (SQSMessage msg : event.getRecords()) {
             try {
-                var message = parseMessage(msg);
-                LOG.info(
-                        "Processing inactive account deletion for publicSubjectId: {}",
-                        message.publicSubjectId());
-
-                var userProfile = getUserProfile(message.publicSubjectId());
-
-                deleteAccount(message.publicSubjectId());
-                emitAuditEvent(userProfile);
+                processAccountDeletion(msg);
+            } catch (RecentlyActiveAccountException e) {
+                LOG.warn(e.getMessage());
+                failures.add(new SQSBatchResponse.BatchItemFailure(msg.getMessageId()));
             } catch (Exception e) {
                 LOG.error(
                         "Failed to process inactive account deletion message with id: {}",
@@ -115,13 +128,48 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
         return new SQSBatchResponse(failures);
     }
 
-    private UserProfile getUserProfile(String publicSubjectId) {
-        Optional<UserProfile> maybeUserProfile =
-                dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
-        return maybeUserProfile.orElseThrow(
-                () ->
-                        new RuntimeException(
-                                "UserProfile not found for publicSubjectId: " + publicSubjectId));
+    private void processAccountDeletion(SQSMessage msg) throws JsonException {
+        var message = parseMessage(msg);
+        var publicSubjectId = message.publicSubjectId();
+        LOG.info("Processing inactive account deletion for publicSubjectId: {}", publicSubjectId);
+
+        var maybeUserProfile = getUserProfile(publicSubjectId);
+        if (maybeUserProfile.isEmpty()) {
+            LOG.warn(
+                    "User profile not found for publicSubjectId: {}. Account may have already been deleted. Skipping.",
+                    publicSubjectId);
+            return;
+        }
+        var userProfile = maybeUserProfile.get();
+
+        var userCredentials = getUserCredentials(userProfile.getEmail());
+
+        var activityCheck =
+                InactiveAccountFailsafeCheckHelper.checkForRecentActivity(
+                        userProfile, userCredentials, clock);
+        if (activityCheck.recentlyActive()) {
+            emitGuardrailMetric();
+            throw new RecentlyActiveAccountException(
+                    String.format(
+                            "Skipping deletion for publicSubjectId: %s. Account has recent activity on attribute: %s",
+                            publicSubjectId, activityCheck.triggeringAttribute()));
+        }
+
+        deleteAccount(publicSubjectId);
+        emitAuditEvent(userProfile);
+    }
+
+    private Optional<UserProfile> getUserProfile(String publicSubjectId) {
+        return dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
+    }
+
+    private UserCredentials getUserCredentials(String email) {
+        var userCredentials = dynamoService.getUserCredentialsFromEmail(email);
+        if (userCredentials == null) {
+            LOG.info(
+                    "User credentials not found for email. Proceeding with user profile fields only.");
+        }
+        return userCredentials;
     }
 
     private void deleteAccount(String publicSubjectId) {
@@ -166,6 +214,21 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                     "Failed to submit AUTH_DELETE_ACCOUNT audit event for publicSubjectId: {}",
                     userProfile.getPublicSubjectID(),
                     e);
+        }
+    }
+
+    private void emitGuardrailMetric() {
+        try {
+            cloudwatchMetricsService.incrementCounter(
+                    GUARDRAIL_PREVENTED_INACTIVE_ACCOUNT_DELETION.getValue(),
+                    Map.of(
+                            GUARDRAIL_TYPE.getValue(),
+                            GUARDRAIL_TYPE_VALUE,
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment()),
+                    HOME_READ_ONLY_NAMESPACE);
+        } catch (Exception e) {
+            LOG.error("Failed to emit guardrail hit metric", e);
         }
     }
 

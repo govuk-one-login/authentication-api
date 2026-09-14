@@ -12,8 +12,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.accountmanagement.lambda.InactiveAccountDeletionHandler;
+import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
@@ -22,6 +28,7 @@ import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.util.List;
+import java.util.Locale;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
@@ -33,6 +40,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -43,6 +51,7 @@ class InactiveAccountDeletionHandlerIntegrationTest
     private static final String TEST_PASSWORD = "password-1";
     private static final String IAD_CLIENT_ID = "inactive-account-deletion-client";
     private static final String INTERNAL_SECTOR_URI = "https://identity.test.account.gov.uk";
+    private static final String OLD_TIMESTAMP = "2019-01-01T10:00:00.000000";
 
     private WireMockServer accountDataApiWireMockServer;
     private String publicSubjectId;
@@ -85,7 +94,8 @@ class InactiveAccountDeletionHandlerIntegrationTest
     }
 
     @Test
-    void shouldSuccessfullyDeleteAccountViaDataApi() {
+    void shouldSuccessfullyDeleteInactiveAccountViaDataApi() {
+        makeAccountInactive(TEST_EMAIL);
         accountDataApiWireMockServer.stubFor(
                 delete(urlPathMatching("/accounts/" + publicSubjectId))
                         .willReturn(aResponse().withStatus(204)));
@@ -104,7 +114,38 @@ class InactiveAccountDeletionHandlerIntegrationTest
     }
 
     @Test
+    void shouldReportFailureWhenAccountHasRecentActivity() {
+        accountDataApiWireMockServer.stubFor(
+                delete(urlPathMatching("/accounts/" + publicSubjectId))
+                        .willReturn(aResponse().withStatus(204)));
+
+        var event = createSQSEvent(publicSubjectId);
+
+        SQSBatchResponse response = handler.handleRequest(event, context);
+
+        assertThat(response.getBatchItemFailures(), hasSize(1));
+        assertEquals("msg-1", response.getBatchItemFailures().get(0).getItemIdentifier());
+        accountDataApiWireMockServer.verify(0, deleteRequestedFor(urlPathMatching("/accounts/.*")));
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
+    void shouldSkipWithNoFailureWhenUserProfileAlreadyDeleted() {
+        userStore.deleteUserProfile(TEST_EMAIL);
+        userStore.deleteUserCredentials(TEST_EMAIL);
+
+        var event = createSQSEvent(publicSubjectId);
+
+        SQSBatchResponse response = handler.handleRequest(event, context);
+
+        assertThat(response.getBatchItemFailures(), is(empty()));
+        accountDataApiWireMockServer.verify(0, deleteRequestedFor(urlPathMatching("/accounts/.*")));
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
     void shouldReportFailureWhenDataApiReturns404() {
+        makeAccountInactive(TEST_EMAIL);
         accountDataApiWireMockServer.stubFor(
                 delete(urlPathMatching("/accounts/" + publicSubjectId))
                         .willReturn(aResponse().withStatus(404)));
@@ -118,6 +159,7 @@ class InactiveAccountDeletionHandlerIntegrationTest
 
     @Test
     void shouldReportFailureWhenDataApiReturns500() {
+        makeAccountInactive(TEST_EMAIL);
         accountDataApiWireMockServer.stubFor(
                 delete(urlPathMatching("/accounts/" + publicSubjectId))
                         .willReturn(aResponse().withStatus(500)));
@@ -150,34 +192,68 @@ class InactiveAccountDeletionHandlerIntegrationTest
     }
 
     @Test
-    void shouldProcessBatchWithMixedSuccessAndFailure() {
-        var successPublicSubjectId = userStore.signUp("success-user@example.com", TEST_PASSWORD);
-        var failPublicSubjectId = userStore.signUp("fail-user@example.com", TEST_PASSWORD);
+    void shouldProcessBatchWithMixedInactiveActiveAndFailure() {
+        var inactiveEmail = "inactive-user@example.com";
+        var activeEmail = "active-user@example.com";
+        var inactivePublicSubjectId = userStore.signUp(inactiveEmail, TEST_PASSWORD);
+        var activePublicSubjectId = userStore.signUp(activeEmail, TEST_PASSWORD);
+        makeAccountInactive(inactiveEmail);
 
         accountDataApiWireMockServer.stubFor(
-                delete(urlPathMatching("/accounts/" + successPublicSubjectId))
+                delete(urlPathMatching("/accounts/" + inactivePublicSubjectId))
                         .willReturn(aResponse().withStatus(204)));
-        accountDataApiWireMockServer.stubFor(
-                delete(urlPathMatching("/accounts/" + failPublicSubjectId))
-                        .willReturn(aResponse().withStatus(500)));
 
-        var goodMessage = createSQSMessage("msg-good", successPublicSubjectId);
+        var inactiveMessage = createSQSMessage("msg-inactive", inactivePublicSubjectId);
+        var activeMessage = createSQSMessage("msg-active", activePublicSubjectId);
         var badMessage = createRawSQSMessage("msg-bad", "invalid json");
-        var failMessage = createSQSMessage("msg-fail", failPublicSubjectId);
 
         var event = new SQSEvent();
-        event.setRecords(List.of(goodMessage, badMessage, failMessage));
+        event.setRecords(List.of(inactiveMessage, activeMessage, badMessage));
 
         SQSBatchResponse response = handler.handleRequest(event, context);
 
         assertThat(response.getBatchItemFailures(), hasSize(2));
-        assertEquals("msg-bad", response.getBatchItemFailures().get(0).getItemIdentifier());
-        assertEquals("msg-fail", response.getBatchItemFailures().get(1).getItemIdentifier());
+        assertEquals("msg-active", response.getBatchItemFailures().get(0).getItemIdentifier());
+        assertEquals("msg-bad", response.getBatchItemFailures().get(1).getItemIdentifier());
 
         accountDataApiWireMockServer.verify(
-                1, deleteRequestedFor(urlPathMatching("/accounts/" + successPublicSubjectId)));
+                1, deleteRequestedFor(urlPathMatching("/accounts/" + inactivePublicSubjectId)));
         accountDataApiWireMockServer.verify(
-                1, deleteRequestedFor(urlPathMatching("/accounts/" + failPublicSubjectId)));
+                0, deleteRequestedFor(urlPathMatching("/accounts/" + activePublicSubjectId)));
+    }
+
+    private void makeAccountInactive(String email) {
+        var configService = ConfigurationService.getInstance();
+        var dynamoDbEnhancedClient = DynamoClientHelper.createDynamoEnhancedClient(configService);
+
+        var userProfileTableName = TableNameHelper.getFullTableName("user-profile", configService);
+        var userProfileTable =
+                dynamoDbEnhancedClient.table(
+                        userProfileTableName, TableSchema.fromBean(UserProfile.class));
+        var userProfile =
+                userProfileTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        if (userProfile != null) {
+            userProfile.setCreated(OLD_TIMESTAMP);
+            userProfile.setUpdated(OLD_TIMESTAMP);
+            userProfile.setTermsAndConditions(null);
+            userProfile.setLastSignedIn(null);
+            userProfileTable.updateItem(userProfile);
+        }
+
+        var userCredentialsTableName =
+                TableNameHelper.getFullTableName("user-credentials", configService);
+        var userCredentialsTable =
+                dynamoDbEnhancedClient.table(
+                        userCredentialsTableName, TableSchema.fromBean(UserCredentials.class));
+        var userCredentials =
+                userCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        if (userCredentials != null) {
+            userCredentials.setCreated(OLD_TIMESTAMP);
+            userCredentials.setUpdated(OLD_TIMESTAMP);
+            userCredentialsTable.updateItem(userCredentials);
+        }
     }
 
     private SQSEvent createSQSEvent(String publicSubjectId) {

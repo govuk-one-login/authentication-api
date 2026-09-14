@@ -476,6 +476,107 @@ class InactiveAccountDataExportHelperTest {
     }
 
     @Test
+    void calculateLastActiveDateShouldReturnLastSignedInWhenMostRecent() {
+        Map<String, AttributeValue> userProfileItem =
+                Map.of(
+                        UserProfile.ATTRIBUTE_CREATED,
+                        AttributeValue.builder().s("2022-01-01T10:00:00.111111").build(),
+                        UserProfile.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2023-05-10T14:30:00.222222").build(),
+                        UserProfile.ATTRIBUTE_TERMS_AND_CONDITIONS,
+                        AttributeValue.builder()
+                                .m(
+                                        Map.of(
+                                                "timestamp",
+                                                AttributeValue.builder()
+                                                        .s("2024-11-20T09:15:00.123456")
+                                                        .build()))
+                                .build(),
+                        UserProfile.ATTRIBUTE_LAST_SIGNED_IN,
+                        AttributeValue.builder().s("2025-08-01T12:00:00.444444").build());
+
+        Map<String, AttributeValue> userCredentialsItem =
+                Map.of(
+                        UserCredentials.ATTRIBUTE_CREATED,
+                        AttributeValue.builder().s("2022-01-01T10:00:00.111111").build(),
+                        UserCredentials.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2024-06-01T08:00:00.333333").build());
+
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
+
+        assertEquals("2025-08-01T12:00:00.444444", result.timestamp());
+        assertEquals("UserProfile.LastSignedIn", result.source());
+    }
+
+    @Test
+    void calculateLastActiveDateShouldNotReturnLastSignedInWhenNotMostRecent() {
+        Map<String, AttributeValue> userProfileItem =
+                Map.of(
+                        UserProfile.ATTRIBUTE_CREATED,
+                        AttributeValue.builder().s("2020-01-01T00:00:00.111111").build(),
+                        UserProfile.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2021-06-15T12:00:00.222222").build(),
+                        UserProfile.ATTRIBUTE_LAST_SIGNED_IN,
+                        AttributeValue.builder().s("2023-03-10T08:00:00.555555").build());
+
+        Map<String, AttributeValue> userCredentialsItem =
+                Map.of(
+                        UserCredentials.ATTRIBUTE_CREATED,
+                        AttributeValue.builder().s("2020-01-01T00:00:00.111111").build(),
+                        UserCredentials.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2025-03-20T16:45:00.552352138").build());
+
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
+
+        assertEquals("2025-03-20T16:45:00.552352138", result.timestamp());
+        assertEquals("UserCredentials.Updated", result.source());
+    }
+
+    @Test
+    void calculateLastActiveDateShouldReturnLastSignedInWhenOnlyTimestampPresent() {
+        Map<String, AttributeValue> userProfileItem =
+                Map.of(
+                        UserProfile.ATTRIBUTE_LAST_SIGNED_IN,
+                        AttributeValue.builder().s("2024-09-15T11:30:00.123456").build());
+
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, null);
+
+        assertEquals("2024-09-15T11:30:00.123456", result.timestamp());
+        assertEquals("UserProfile.LastSignedIn", result.source());
+    }
+
+    @Test
+    void calculateLastActiveDateShouldHandleLastSignedInNotPresent() {
+        Map<String, AttributeValue> userProfileItem =
+                Map.of(
+                        UserProfile.ATTRIBUTE_CREATED,
+                        AttributeValue.builder().s("2022-01-01T10:00:00.111111").build(),
+                        UserProfile.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2023-05-10T14:30:00.222222").build(),
+                        UserProfile.ATTRIBUTE_TERMS_AND_CONDITIONS,
+                        AttributeValue.builder()
+                                .m(
+                                        Map.of(
+                                                "timestamp",
+                                                AttributeValue.builder()
+                                                        .s("2024-11-20T09:15:00.123456")
+                                                        .build()))
+                                .build());
+
+        Map<String, AttributeValue> userCredentialsItem =
+                Map.of(
+                        UserCredentials.ATTRIBUTE_CREATED,
+                        AttributeValue.builder().s("2022-01-01T10:00:00.111111").build(),
+                        UserCredentials.ATTRIBUTE_UPDATED,
+                        AttributeValue.builder().s("2024-06-01T08:00:00.333333").build());
+
+        LastActiveDate result = calculateLastActiveDate(userProfileItem, userCredentialsItem);
+
+        assertEquals("2024-11-20T09:15:00.123456", result.timestamp());
+        assertEquals("UserProfile.termsAndConditions.timestamp", result.source());
+    }
+
+    @Test
     void calculateDateForDeletionShouldAddFiveYearsToDate() {
         assertEquals("2029-03-15", calculateDateForDeletion("2024-03-15T10:30:00.000000"));
     }

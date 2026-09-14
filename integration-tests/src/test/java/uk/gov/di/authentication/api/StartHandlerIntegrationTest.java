@@ -42,6 +42,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_START_INFO_FOUND;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -50,7 +51,7 @@ import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsSubmittedWithMatchingNames;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String CLIENT_ID = "test-client-id";
@@ -100,12 +101,17 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             CredentialTrustLevel requestedCredentialTrustLevel,
             boolean identityRequired,
             boolean isAuthenticated,
-            boolean isMfaRequired)
-            throws Json.JsonException {
+            boolean isMfaRequired) {
         String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
+        if (isAuthenticated) {
+            authSessionExtension.addAchievedCredentialTrustToSession(
+                    PREVIOUS_SESSION_ID, requestedCredentialTrustLevel);
+            authSessionExtension.addHasVerifiedWithPasswordAndMfaToSession(
+                    PREVIOUS_SESSION_ID, true, true);
+        }
         authSessionExtension.addSession(sessionId);
         var state = new State();
         Scope scope = new Scope();
@@ -225,6 +231,44 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 txmaAuditQueue, List.of(AUTH_START_INFO_FOUND, AUTH_REAUTH_REQUESTED));
     }
 
+    @Test
+    void shouldReturnAuthenticatedFalseWhenAuthCodeProtectionDoesNotPass()
+            throws Json.JsonException {
+        var sessionId = IdGenerator.generate();
+        userStore.signUp(EMAIL, "password");
+        authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+        authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
+        authSessionExtension.addAchievedCredentialTrustToSession(PREVIOUS_SESSION_ID, null);
+        authSessionExtension.addHasVerifiedWithPasswordAndMfaToSession(
+                PREVIOUS_SESSION_ID, false, false);
+        authSessionExtension.addSession(sessionId);
+
+        var state = new State();
+        var scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                makeRequestBody(
+                                        true,
+                                        Optional.of(PREVIOUS_SESSION_ID),
+                                        state.getValue(),
+                                        scope.toString(),
+                                        REDIRECT_URI.toString(),
+                                        Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                        MEDIUM_LEVEL,
+                                        false)),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+
+        StartResponse startResponse =
+                objectMapper.readValue(response.getBody(), StartResponse.class);
+        assertThat(startResponse.user().isAuthenticated(), equalTo(false));
+    }
+
     private static Stream<MFAMethodType> mfaMethodTypes() {
         return Stream.of(MFAMethodType.AUTH_APP, MFAMethodType.SMS, null);
     }
@@ -238,6 +282,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = IdGenerator.generate();
         authSessionExtension.addSession(PREVIOUS_SESSION_ID);
         authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
+        authSessionExtension.addAchievedCredentialTrustToSession(PREVIOUS_SESSION_ID, MEDIUM_LEVEL);
+        authSessionExtension.addHasVerifiedWithPasswordAndMfaToSession(
+                PREVIOUS_SESSION_ID, true, true);
         authSessionExtension.addSession(sessionId);
 
         userStore.signUp(userEmail, "rubbbishPassword");
@@ -283,6 +330,69 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldHandleMultipleDuplicateRequestsWhenThereIsAnExistingPreviousSession()
+            throws Json.JsonException {
+        var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        var isAuthenticated = true;
+        var sessionId = IdGenerator.generate();
+        authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+        authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, userEmail);
+        authSessionExtension.addAchievedCredentialTrustToSession(PREVIOUS_SESSION_ID, MEDIUM_LEVEL);
+        authSessionExtension.addHasVerifiedWithPasswordAndMfaToSession(
+                PREVIOUS_SESSION_ID, true, true);
+
+        userStore.signUp(userEmail, "rubbbishPassword");
+        userStore.addVerifiedPhoneNumber(userEmail, "+447316763843");
+
+        var state = new State();
+        var scope = new Scope(OIDCScopeValue.OPENID);
+
+        KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+
+        var requestBody =
+                makeRequestBody(
+                        isAuthenticated,
+                        WITH_PREVIOUS_SESSION,
+                        state.getValue(),
+                        scope.toString(),
+                        REDIRECT_URI.toString(),
+                        Optional.empty(),
+                        MEDIUM_LEVEL,
+                        false);
+
+        var firstResponse =
+                makeRequest(
+                        Optional.of(requestBody),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
+        var firstStartResponse =
+                objectMapper.readValue(firstResponse.getBody(), StartResponse.class);
+        var sessionAfterFirstResponse = authSessionExtension.getSession(sessionId);
+
+        var secondResponse =
+                makeRequest(
+                        Optional.of(requestBody),
+                        standardHeadersWithSessionId(sessionId),
+                        Map.of());
+        var secondStartResponse =
+                objectMapper.readValue(secondResponse.getBody(), StartResponse.class);
+
+        var sessionAfterSecondResponse = authSessionExtension.getSession(sessionId);
+
+        assertThat(firstResponse, hasStatus(200));
+        assertThat(secondResponse, hasStatus(200));
+
+        assertThat(firstStartResponse.user().isAuthenticated(), equalTo(true));
+        assertThat(secondStartResponse.user().isAuthenticated(), equalTo(true));
+
+        assertThat(sessionAfterFirstResponse.isPresent(), equalTo(true));
+        assertThat(sessionAfterSecondResponse.isPresent(), equalTo(true));
+
+        assertThat(sessionAfterFirstResponse.get().getEmailAddress(), equalTo(userEmail));
+        assertThat(sessionAfterSecondResponse.get().getEmailAddress(), equalTo(userEmail));
+    }
+
+    @Test
     void shouldReturn400WhenClientSessionIdMissing() {
         var headers = Map.of("X-API-Key", FRONTEND_API_KEY);
 
@@ -293,7 +403,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn400WhenRedirectURIIsInvalid() throws Exception {
+    void shouldReturn400WhenRedirectURIIsInvalid() {
         String sessionId = IdGenerator.generate();
         userStore.signUp(EMAIL, "password");
         authSessionExtension.addSession(sessionId);
@@ -366,7 +476,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope;
 
         @BeforeEach
-        void setup() throws Json.JsonException {
+        void setup() {
             handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
             sessionId = IdGenerator.generate();
@@ -454,7 +564,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope = new Scope();
 
         @BeforeEach
-        void setup() throws Json.JsonException {
+        void setup() {
             handler = new StartHandler(new TestConfigurationService());
             txmaAuditQueue.clear();
             sessionId = IdGenerator.generate();
@@ -513,6 +623,33 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
             var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
             assertEquals(isUpliftRequired, startResponse.user().isUpliftRequired());
+        }
+
+        @Test
+        void upliftJourneyIsNotOverriddenWhenAuthCodeProtectionFails() throws Json.JsonException {
+            authSessionExtension.addSession(PREVIOUS_SESSION_ID);
+            authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
+            authSessionExtension.addAchievedCredentialTrustToSession(
+                    PREVIOUS_SESSION_ID, LOW_LEVEL);
+
+            var response =
+                    makeRequest(
+                            Optional.of(
+                                    makeRequestBody(
+                                            true,
+                                            WITH_PREVIOUS_SESSION,
+                                            state.getValue(),
+                                            scope.toString(),
+                                            REDIRECT_URI.toString(),
+                                            Optional.of(LevelOfConfidence.LOW_LEVEL),
+                                            MEDIUM_LEVEL,
+                                            false)),
+                            standardHeadersWithSessionId(sessionId),
+                            Map.of());
+
+            var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
+            assertTrue(startResponse.user().isUpliftRequired());
+            assertTrue(startResponse.user().isAuthenticated());
         }
 
         private static Stream<Arguments> achievedAndRequestedStrengthValues() {

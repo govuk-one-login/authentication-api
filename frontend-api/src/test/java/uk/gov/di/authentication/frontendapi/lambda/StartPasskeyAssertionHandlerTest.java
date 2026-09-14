@@ -41,7 +41,6 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -155,11 +154,7 @@ class StartPasskeyAssertionHandlerTest {
             assertThat(result, hasStatus(200));
             assertThat(result.getBody(), equalTo(assertionRequest.toCredentialsGetJson()));
             verify(authSessionService)
-                    .updateSession(
-                            argThat(
-                                    session ->
-                                            session.getPasskeyAssertionRequest()
-                                                    .equals(expectedJson)));
+                    .updateSessionPasskeyAssertionRequest(authSession.getSessionId(), expectedJson);
         }
 
         @Test

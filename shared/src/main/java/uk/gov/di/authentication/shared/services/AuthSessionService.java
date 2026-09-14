@@ -6,13 +6,18 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.helpers.InputSanitiser;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -21,6 +26,8 @@ import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOpt
 public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
 
     private static final Logger LOG = LogManager.getLogger(AuthSessionService.class);
+
+    private static final int SESSION_REUSE_TOLERANCE_SECONDS = 1;
 
     private final ConfigurationService configurationService;
 
@@ -50,6 +57,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         return new AuthSessionItem()
                 .withSessionId(sessionId)
                 .withAccountState(AuthSessionItem.AccountState.UNKNOWN)
+                .withCreatedAt(Instant.now().toString())
                 .withTimeToLive(
                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                 .toInstant()
@@ -66,41 +74,57 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
     }
 
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
-            Optional<String> previousSessionId, String newSessionId) {
+            Optional<String> maybePreviousSessionId, String newSessionId) {
 
         try {
             Optional<AuthSessionItem> previousAuthSession = Optional.empty();
-            if (previousSessionId.isPresent()) {
-                previousAuthSession = getSession(previousSessionId.get());
+            if (maybePreviousSessionId.isPresent()) {
+                previousAuthSession = getSession(maybePreviousSessionId.get());
             }
 
             if (previousAuthSession.isPresent()) {
+                var previousSessionId = maybePreviousSessionId.get();
                 var updatedSession =
                         previousAuthSession
                                 .get()
                                 .withSessionId(newSessionId)
                                 .withResetPasswordState(AuthSessionItem.ResetPasswordState.NONE)
                                 .withResetMfaState(AuthSessionItem.ResetMfaState.NONE)
+                                .withPreviousSessionId(previousSessionId)
+                                .withCreatedAt(Instant.now().toString())
                                 .withTimeToLive(
                                         NowHelper.nowPlus(timeToLive, ChronoUnit.SECONDS)
                                                 .toInstant()
                                                 .getEpochSecond());
 
-                delete(previousSessionId.get());
+                delete(previousSessionId);
                 LOG.info(
                         "Existing Auth session updated from previousSessionId: {}, sessionId: {}",
-                        previousSessionId,
+                        maybePreviousSessionId,
                         newSessionId);
 
                 return updatedSession;
             } else {
-                if (previousSessionId.isPresent()) {
-                    var existingSessionWithNewSessionId = getSession(newSessionId);
-                    if (existingSessionWithNewSessionId.isPresent()) {
+                if (maybePreviousSessionId.isPresent()) {
+                    var maybeExistingSession = getSession(newSessionId);
+                    var existingSessionToBeReused =
+                            maybeExistingSession.filter(
+                                    session ->
+                                            sessionIsEligibleToBeReused(
+                                                    session, maybePreviousSessionId.get()));
+                    if (existingSessionToBeReused.isPresent()) {
                         LOG.info(
-                                "Session already exists with newSessionId {} for previousSessionId {} may cause problems",
+                                "Session already exists with newSessionId {} and previousSessionId {}, reusing",
                                 newSessionId,
-                                previousSessionId);
+                                maybePreviousSessionId);
+                        return existingSessionToBeReused.get();
+                    } else if (maybeExistingSession.isPresent()) {
+                        var previousSessionIdOnSession =
+                                maybeExistingSession.get().getPreviousSessionId();
+                        LOG.info(
+                                "Session already exists with newSessionId {} and stored previousSessionId {} but is not eligible to be reused",
+                                newSessionId,
+                                previousSessionIdOnSession);
                     }
                 }
 
@@ -113,6 +137,35 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                     newSessionId,
                     e.getMessage());
             throw new AuthSessionException(e.getMessage());
+        }
+    }
+
+    private boolean sessionIsEligibleToBeReused(
+            AuthSessionItem retrievedSession, String previousSessionId) {
+        if (!Objects.equals(retrievedSession.getPreviousSessionId(), previousSessionId)) {
+            return false;
+        }
+
+        return parseCreatedAt(retrievedSession.getCreatedAt())
+                .map(
+                        createdAt ->
+                                createdAt.isAfter(
+                                        Instant.now()
+                                                .minus(
+                                                        SESSION_REUSE_TOLERANCE_SECONDS,
+                                                        ChronoUnit.SECONDS)))
+                .orElse(false);
+    }
+
+    private Optional<Instant> parseCreatedAt(String createdAt) {
+        if (createdAt == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Instant.parse(createdAt));
+        } catch (DateTimeParseException e) {
+            LOG.warn("Could not parse created at {} as instant, not reusing session", createdAt);
+            return Optional.empty();
         }
     }
 
@@ -176,6 +229,37 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         } catch (Exception e) {
             logAndThrowAuthSessionException(
                     "Failed to update Auth session item", sessionItem.getSessionId(), e);
+        }
+    }
+
+    public void updateSessionPasskeyAssertionRequest(
+            String sessionId, String assertionRequestJsonToStore) {
+        var authSessionTableName = dynamoTable.tableName();
+        try {
+            update(
+                    UpdateItemRequest.builder()
+                            .tableName(authSessionTableName)
+                            .key(
+                                    Map.of(
+                                            AuthSessionItem.ATTRIBUTE_SESSION_ID,
+                                            AttributeValue.fromS(sessionId)))
+                            .updateExpression(
+                                    "SET #PasskeyAssertionRequest = :PasskeyAssertionRequest")
+                            .conditionExpression("attribute_exists(#SessionId)")
+                            .expressionAttributeNames(
+                                    Map.of(
+                                            "#PasskeyAssertionRequest",
+                                                    AuthSessionItem
+                                                            .ATTRIBUTE_PASSKEY_ASSERTION_REQUEST,
+                                            "#SessionId", AuthSessionItem.ATTRIBUTE_SESSION_ID))
+                            .expressionAttributeValues(
+                                    Map.of(
+                                            ":PasskeyAssertionRequest",
+                                            AttributeValue.fromS(assertionRequestJsonToStore)))
+                            .build());
+        } catch (Exception e) {
+            logAndThrowAuthSessionException(
+                    "Failed to update Auth session passkey assertion request", sessionId, e);
         }
     }
 
