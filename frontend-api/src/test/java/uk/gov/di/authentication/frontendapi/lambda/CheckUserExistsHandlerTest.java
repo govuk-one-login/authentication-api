@@ -69,7 +69,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -209,8 +208,11 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(result.getBody()),
                     JsonParser.parseString(expectedResponse));
-            verify(authSessionService).updateSession(any(AuthSessionItem.class));
-            assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
+            verify(authSessionService)
+                    .updateSessionAttribute(
+                            SESSION_ID,
+                            AuthSessionItem.ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID,
+                            getExpectedInternalPairwiseId());
         }
 
         private static Stream<Arguments> mfaMethodsToExpectedResponseFields() {
@@ -269,8 +271,11 @@ class CheckUserExistsHandlerTest {
             assertEquals(
                     JsonParser.parseString(expectedResponse),
                     JsonParser.parseString(result.getBody()));
-            verify(authSessionService).updateSession(any(AuthSessionItem.class));
-            assertEquals(getExpectedInternalPairwiseId(), authSession.getInternalCommonSubjectId());
+            verify(authSessionService)
+                    .updateSessionAttribute(
+                            SESSION_ID,
+                            AuthSessionItem.ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID,
+                            getExpectedInternalPairwiseId());
         }
 
         @Test
@@ -359,7 +364,9 @@ class CheckUserExistsHandlerTest {
             var event = userExistsRequest(EMAIL_ADDRESS);
 
             var result = handler.handleRequest(event, context);
-            verify(authSessionService).updateSession(any(AuthSessionItem.class));
+            verify(authSessionService)
+                    .updateSessionAttribute(
+                            SESSION_ID, AuthSessionItem.ATTRIBUTE_EMAIL, EMAIL_ADDRESS);
             assertThat(result, hasStatus(200));
 
             var expectedResponse =
@@ -753,7 +760,9 @@ class CheckUserExistsHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
-            verify(authSessionService, times(1)).updateSession(any(AuthSessionItem.class));
+            verify(authSessionService)
+                    .updateSessionAttribute(
+                            SESSION_ID, AuthSessionItem.ATTRIBUTE_EMAIL, EMAIL_ADDRESS);
             verify(auditService)
                     .submitAuditEvent(
                             AUTH_ACCOUNT_TEMPORARILY_LOCKED,
@@ -920,8 +929,9 @@ class CheckUserExistsHandlerTest {
         assertThat(checkUserExistsResponse.email(), equalTo(EMAIL_ADDRESS));
         assertFalse(checkUserExistsResponse.doesUserExist());
         assertNull(checkUserExistsResponse.hasActivePasskey());
-        assertNull(authSession.getInternalCommonSubjectId());
-        verify(authSessionService).updateSession(any(AuthSessionItem.class));
+        verify(authSessionService)
+                .updateSessionAttribute(
+                        SESSION_ID, AuthSessionItem.ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID, null);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
