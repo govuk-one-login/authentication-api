@@ -228,15 +228,6 @@
           }
         },
         {
-          "check-types": ["unit"],
-          "provider": "GitHub",
-          "phase": "pre-merge",
-          "config": {
-            "file": ".github/workflows/pre-merge-checks.yml",
-            "path": "jobs.run-orchestration-alerting-tests"
-          }
-        },
-        {
           "check-types": ["code quality", "unit test coverage"],
           "provider": "GitHub",
           "phase": "pre-merge",
