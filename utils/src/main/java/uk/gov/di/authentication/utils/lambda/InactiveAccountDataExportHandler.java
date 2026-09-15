@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.utils.lambda;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -13,12 +11,9 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.LambdaPauseHelper;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportRequest;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportResponse;
 import uk.gov.di.authentication.utils.entity.InactiveAccountTrackerItem;
@@ -28,9 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.backoff;
@@ -41,7 +34,7 @@ import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHe
 import static uk.gov.di.authentication.utils.helpers.InactiveAccountDataExportHelper.extractUnprocessedKeys;
 
 public class InactiveAccountDataExportHandler
-        implements RequestHandler<
+        extends ChainedParallelScanHandler<
                 InactiveAccountDataExportRequest, InactiveAccountDataExportResponse> {
 
     private static final Logger LOG = LogManager.getLogger(InactiveAccountDataExportHandler.class);
@@ -57,8 +50,6 @@ public class InactiveAccountDataExportHandler
             "Email,Created,Updated,MigratedPassword,MfaMethods";
 
     private final DynamoDbClient client;
-    private final LambdaInvokerService lambdaInvokerService;
-    private final Json objectMapper = SerializationService.getInstance();
     private final String userProfileTableName;
     private final String userCredentialsTableName;
     private final String exportTableName;
@@ -73,12 +64,16 @@ public class InactiveAccountDataExportHandler
     private final String internalSectorUri;
     private final boolean trackerWriteEnabled;
 
+    private final AtomicLong invocationWrittenCount = new AtomicLong(0);
+    private final AtomicLong invocationMissingCredentialsCount = new AtomicLong(0);
+    private volatile long runningWrittenCount = 0;
+
     public InactiveAccountDataExportHandler(
             ConfigurationService configurationService,
             DynamoDbClient client,
             LambdaInvokerService lambdaInvokerService) {
+        super(lambdaInvokerService);
         this.client = client;
-        this.lambdaInvokerService = lambdaInvokerService;
         this.userProfileTableName =
                 TableNameHelper.getFullTableName(USER_PROFILE_TABLE, configurationService);
         this.userCredentialsTableName =
@@ -107,188 +102,132 @@ public class InactiveAccountDataExportHandler
     }
 
     @Override
-    public InactiveAccountDataExportResponse handleRequest(
-            InactiveAccountDataExportRequest request, Context context) {
-        if (maxItemsPerSegment <= 0) {
-            throw new IllegalStateException(
-                    "INACTIVE_ACCOUNT_EXPORT_MAX_ITEMS_PER_SEGMENT must be greater than 0");
-        }
+    protected int getMaxInvocations() {
+        return maxInvocations;
+    }
 
+    @Override
+    protected int getParallelism() {
+        return parallelism;
+    }
+
+    @Override
+    protected int getTotalSegments() {
+        return totalSegments;
+    }
+
+    @Override
+    protected int getMaxItemsPerSegment() {
+        return maxItemsPerSegment;
+    }
+
+    @Override
+    protected long getPauseBetweenInvocationsMs() {
+        return pauseBetweenInvocationsMs;
+    }
+
+    @Override
+    protected String getLambdaName() {
+        return lambdaName;
+    }
+
+    @Override
+    protected Map<Integer, Map<String, String>> getSegmentKeysFromRequest(
+            InactiveAccountDataExportRequest request) {
+        return request != null ? request.segmentKeys() : null;
+    }
+
+    @Override
+    protected long getProcessedCountFromRequest(InactiveAccountDataExportRequest request) {
+        return request != null && request.processedCount() != null ? request.processedCount() : 0L;
+    }
+
+    @Override
+    protected long getInvocationCountFromRequest(InactiveAccountDataExportRequest request) {
+        return request != null && request.invocationCount() != null
+                ? request.invocationCount()
+                : 0L;
+    }
+
+    @Override
+    protected void beforeScan(InactiveAccountDataExportRequest request) {
         LOG.info("Tracker write enabled: {}", trackerWriteEnabled);
+        runningWrittenCount =
+                request != null && request.writtenCount() != null ? request.writtenCount() : 0L;
+        invocationWrittenCount.set(0);
+        invocationMissingCredentialsCount.set(0);
+    }
 
-        long processedCount =
-                request != null && request.processedCount() != null ? request.processedCount() : 0L;
+    @Override
+    protected void onMaxInvocationsExceeded(
+            long invocationCount, long maxInvocations, long processedCount) {
+        LOG.warn(
+                "INACTIVE_ACCOUNT_DATA_EXPORT_MAX_INVOCATIONS_EXCEEDED: invocationCount={} "
+                        + "has reached or exceeded maxInvocations={}, halting self-invocation "
+                        + "chain. processedCount={}, writtenCount={}",
+                invocationCount,
+                maxInvocations,
+                processedCount,
+                runningWrittenCount);
+    }
+
+    @Override
+    protected InactiveAccountDataExportResponse buildEarlyExitResponse(
+            InactiveAccountDataExportRequest request) {
+        long processedCount = getProcessedCountFromRequest(request);
         long writtenCount =
                 request != null && request.writtenCount() != null ? request.writtenCount() : 0L;
-        long invocationCount =
-                request != null && request.invocationCount() != null
-                        ? request.invocationCount()
-                        : 0L;
+        return new InactiveAccountDataExportResponse(processedCount, writtenCount);
+    }
 
-        if (invocationCount >= maxInvocations) {
-            LOG.warn(
-                    "INACTIVE_ACCOUNT_DATA_EXPORT_MAX_INVOCATIONS_EXCEEDED: invocationCount={} "
-                            + "has reached or exceeded maxInvocations={}, halting self-invocation "
-                            + "chain. processedCount={}, writtenCount={}",
-                    invocationCount,
-                    maxInvocations,
-                    processedCount,
-                    writtenCount);
-            return new InactiveAccountDataExportResponse(processedCount, writtenCount);
-        }
-
-        Map<Integer, Map<String, AttributeValue>> activeSegments =
-                resolveActiveSegments(request, totalSegments);
+    @Override
+    protected void onInvocationComplete(
+            long processedThisInvocation, long totalProcessed, int segmentsRemaining) {
+        long written = invocationWrittenCount.get();
+        long missing = invocationMissingCredentialsCount.get();
+        runningWrittenCount += written;
 
         LOG.info(
-                "Inactive account data export: parallelism={}, totalSegments={}, maxRetries={}, "
-                        + "maxItemsPerSegment={}, activeSegments={}, processedCount={}",
-                parallelism,
-                totalSegments,
-                maxRetries,
-                maxItemsPerSegment,
-                activeSegments.size(),
-                processedCount);
-
-        List<SegmentTask> segmentTasks = new ArrayList<>();
-        ForkJoinPool forkJoinPool = new ForkJoinPool(parallelism);
-
-        try {
-            for (var entry : activeSegments.entrySet()) {
-                int segment = entry.getKey();
-                Map<String, AttributeValue> startKey = entry.getValue();
-                segmentTasks.add(
-                        new SegmentTask(
-                                segment,
-                                forkJoinPool.submit(
-                                        () ->
-                                                scanSegment(
-                                                        segment,
-                                                        totalSegments,
-                                                        maxRetries,
-                                                        maxItemsPerSegment,
-                                                        startKey))));
-            }
-
-            gracefulPoolShutdown(forkJoinPool);
-
-            long totalItemsScanned = 0;
-            long totalMissingCredentials = 0;
-            long totalWritten = 0;
-            Map<Integer, Map<String, String>> remainingSegmentKeys = new HashMap<>();
-
-            for (SegmentTask segmentTask : segmentTasks) {
-                SegmentResult result = segmentTask.task().join();
-                totalItemsScanned += result.itemsScanned();
-                totalMissingCredentials += result.missingCredentialsCount();
-                totalWritten += result.writtenCount();
-
-                if (result.lastEvaluatedKey() != null && !result.lastEvaluatedKey().isEmpty()) {
-                    remainingSegmentKeys.put(
-                            segmentTask.segment(), toSerialisableKeys(result.lastEvaluatedKey()));
-                }
-            }
-
-            processedCount += totalItemsScanned;
-            writtenCount += totalWritten;
-
-            LOG.info(
-                    "Invocation complete: {} items scanned this invocation, {} missing credentials, "
-                            + "{} total processed, {} written this invocation, "
-                            + "{} total written, {} segments remaining",
-                    totalItemsScanned,
-                    totalMissingCredentials,
-                    processedCount,
-                    totalWritten,
-                    writtenCount,
-                    remainingSegmentKeys.size());
-
-            if (!remainingSegmentKeys.isEmpty()) {
-                selfInvoke(remainingSegmentKeys, processedCount, writtenCount, invocationCount);
-            }
-
-            return new InactiveAccountDataExportResponse(processedCount, writtenCount);
-        } finally {
-            forcePoolShutdown(forkJoinPool);
-        }
+                "Invocation complete: {} items scanned this invocation, {} missing credentials, "
+                        + "{} total processed, {} written this invocation, "
+                        + "{} total written, {} segments remaining",
+                processedThisInvocation,
+                missing,
+                totalProcessed,
+                written,
+                runningWrittenCount,
+                segmentsRemaining);
     }
 
-    private Map<Integer, Map<String, AttributeValue>> resolveActiveSegments(
-            InactiveAccountDataExportRequest request, int totalSegments) {
-        Map<Integer, Map<String, AttributeValue>> activeSegments = new HashMap<>();
-
-        if (request == null || request.segmentKeys() == null) {
-            for (int i = 0; i < totalSegments; i++) {
-                activeSegments.put(i, null);
-            }
-        } else {
-            for (var entry : request.segmentKeys().entrySet()) {
-                activeSegments.put(entry.getKey(), toDynamoKeys(entry.getValue()));
-            }
-        }
-
-        return activeSegments;
-    }
-
-    private void selfInvoke(
+    @Override
+    protected InactiveAccountDataExportRequest buildContinuationRequest(
             Map<Integer, Map<String, String>> remainingSegmentKeys,
             long processedCount,
-            long writtenCount,
             long invocationCount) {
-        if (lambdaName == null || lambdaName.isEmpty()) {
-            throw new RuntimeException(
-                    "INACTIVE_ACCOUNT_EXPORT_LAMBDA_NAME not set, cannot self-invoke");
-        }
-
-        LambdaPauseHelper.pauseBetweenInvocations(pauseBetweenInvocationsMs);
-
-        long nextInvocationCount = invocationCount + 1;
-
-        var continuationRequest =
-                new InactiveAccountDataExportRequest(
-                        remainingSegmentKeys, processedCount, writtenCount, nextInvocationCount);
-
-        String payload;
-        try {
-            payload = objectMapper.writeValueAsStringCamelCase(continuationRequest);
-        } catch (Json.JsonException e) {
-            throw new RuntimeException("Failed to serialise continuation request", e);
-        }
-
-        LOG.info(
-                "Self-invoking with {} remaining segments, processedCount={}, invocationCount={}",
-                remainingSegmentKeys.size(),
-                processedCount,
-                nextInvocationCount);
-
-        try {
-            lambdaInvokerService.invokeAsyncWithPayload(payload, lambdaName);
-        } catch (Exception e) {
-            LOG.error("Self-invocation failed", e);
-            throw new RuntimeException("Failed to self-invoke lambda: " + lambdaName, e);
-        }
+        return new InactiveAccountDataExportRequest(
+                remainingSegmentKeys, processedCount, runningWrittenCount, invocationCount);
     }
 
-    private Map<String, AttributeValue> toDynamoKeys(Map<String, String> serialisedKey) {
-        if (serialisedKey == null || serialisedKey.isEmpty()) {
-            return null;
-        }
-        Map<String, AttributeValue> key = new HashMap<>();
-        for (var entry : serialisedKey.entrySet()) {
-            key.put(entry.getKey(), AttributeValue.builder().s(entry.getValue()).build());
-        }
-        return key;
+    @Override
+    protected InactiveAccountDataExportResponse buildResponse(long processedCount) {
+        return new InactiveAccountDataExportResponse(processedCount, runningWrittenCount);
     }
 
-    private Map<String, String> toSerialisableKeys(Map<String, AttributeValue> key) {
-        Map<String, String> serialised = new HashMap<>();
-        for (var entry : key.entrySet()) {
-            serialised.put(entry.getKey(), entry.getValue().s());
-        }
-        return serialised;
+    @Override
+    protected SegmentResult processSegment(
+            int segment,
+            int totalSegments,
+            int maxItemsPerSegment,
+            Map<String, AttributeValue> exclusiveStartKey) {
+        ScanSegmentResult result =
+                scanSegment(
+                        segment, totalSegments, maxRetries, maxItemsPerSegment, exclusiveStartKey);
+        invocationWrittenCount.addAndGet(result.writtenCount());
+        invocationMissingCredentialsCount.addAndGet(result.missingCredentialsCount());
+        return new SegmentResult(result.itemsScanned(), result.lastEvaluatedKey());
     }
 
-    SegmentResult scanSegment(
+    ScanSegmentResult scanSegment(
             int segment,
             int totalSegments,
             int maxRetries,
@@ -367,7 +306,7 @@ public class InactiveAccountDataExportHandler
                 batchWriteService.getTotalBatchesFlushed(),
                 finalKey == null);
 
-        return new SegmentResult(
+        return new ScanSegmentResult(
                 itemsScanned,
                 missingCredentialsCount,
                 batchWriteService.getTotalWritten(),
@@ -473,29 +412,9 @@ public class InactiveAccountDataExportHandler
         return allResults;
     }
 
-    record SegmentTask(int segment, ForkJoinTask<SegmentResult> task) {}
-
-    record SegmentResult(
+    record ScanSegmentResult(
             long itemsScanned,
             long missingCredentialsCount,
             long writtenCount,
             Map<String, AttributeValue> lastEvaluatedKey) {}
-
-    private static void gracefulPoolShutdown(ForkJoinPool forkJoinPool) {
-        forkJoinPool.shutdown();
-        try {
-            if (!forkJoinPool.awaitTermination(15, TimeUnit.MINUTES)) {
-                LOG.warn("ForkJoinPool did not terminate within 15 minutes");
-            }
-        } catch (InterruptedException e) {
-            LOG.error("ForkJoinPool termination interrupted", e);
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    private static void forcePoolShutdown(ForkJoinPool forkJoinPool) {
-        if (!forkJoinPool.isShutdown()) {
-            forkJoinPool.shutdownNow();
-        }
-    }
 }
