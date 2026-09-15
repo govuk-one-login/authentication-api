@@ -135,14 +135,6 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
                         .withHasVerifiedWithPassword(hasVerifiedWithPassword));
     }
 
-    public void addHasVerifiedWithPasskeyToSession(
-            String sessionId, boolean hasVerifiedWithPasskey) {
-        updateSession(
-                getSession(sessionId)
-                        .orElseThrow()
-                        .withHasVerifiedWithPasskey(hasVerifiedWithPasskey));
-    }
-
     public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
             Optional<String> previousSessionId, String sessionId) {
         return authSessionService.getUpdatedPreviousSessionOrCreateNew(
