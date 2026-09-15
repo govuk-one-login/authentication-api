@@ -108,7 +108,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             CheckUserExistsRequest request,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+        var sessionId = userContext.getAuthSession().getSessionId();
+        attachSessionIdToLogs(sessionId);
 
         try {
             LOG.info("CheckUserExistsHandler called");
@@ -144,7 +145,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                             authenticationService)
                                     .getValue()
                             : AuditService.UNKNOWN;
-            userContext.getAuthSession().setEmailAddress(emailAddress);
 
             PermissionContext permissionContext =
                     PermissionContext.builder().withEmailAddress(emailAddress).build();
@@ -159,11 +159,14 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         decisionResult.getFailure());
             }
 
-            if (decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut) {
+            var isUserAccountLocked =
+                    decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
+            if (isUserAccountLocked) {
                 LOG.info("User account is locked");
-                auditContext = auditContext.withSubjectId(internalCommonSubjectId);
-                authSessionService.updateSession(userContext.getAuthSession());
+                authSessionService.updateSessionAttribute(
+                        sessionId, AuthSessionItem.ATTRIBUTE_EMAIL, emailAddress);
 
+                auditContext = auditContext.withSubjectId(internalCommonSubjectId);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.AUTH_ACCOUNT_TEMPORARILY_LOCKED,
                         auditContext,
@@ -185,6 +188,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
             AuthSessionItem authSession = userContext.getAuthSession();
 
+            String internalCommonSubjectIdToBeUpdatedInSession;
             if (userExists) {
                 var userProfile = maybeUserProfile.get();
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_KNOWN_EMAIL;
@@ -195,9 +199,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         authenticationService)
                                 .getValue();
 
-                LOG.info("Setting internal common subject identifier in user session");
-
-                authSession.setInternalCommonSubjectId(internalCommonSubjectId);
+                internalCommonSubjectIdToBeUpdatedInSession = internalCommonSubjectId;
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
                 userMfaDetail = getUserMFADetail(userCredentials, userProfile);
@@ -223,7 +225,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         .map(Object::toString)
                                         .orElse(AuditService.UNKNOWN)));
             } else {
-                authSession.setInternalCommonSubjectId(null);
+                internalCommonSubjectIdToBeUpdatedInSession = null;
                 auditableEvent = FrontendAuditableEvent.AUTH_CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
 
@@ -254,7 +256,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             needsForcedMFAResetAfterMFACheck,
                             shouldSuppressPasskeyRegistrationPrompt);
 
-            authSessionService.updateSession(authSession);
+            authSessionService.updateSessionAttribute(
+                    sessionId,
+                    AuthSessionItem.ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID,
+                    internalCommonSubjectIdToBeUpdatedInSession);
+            authSessionService.updateSessionAttribute(
+                    sessionId, AuthSessionItem.ATTRIBUTE_EMAIL, emailAddress);
 
             LOG.info("Successfully processed request");
 
