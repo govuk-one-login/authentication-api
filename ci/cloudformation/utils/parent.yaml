@@ -1914,11 +1914,20 @@ Resources:
           AttributeType: S
         - AttributeName: commonSubjectId
           AttributeType: S
+        - AttributeName: emailAddress
+          AttributeType: S
       KeySchema:
         - AttributeName: dateForDeletion
           KeyType: HASH
         - AttributeName: commonSubjectId
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: EmailAddressIndex
+          KeySchema:
+            - AttributeName: emailAddress
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       SSESpecification:
         SSEEnabled: true
         SSEType: KMS
