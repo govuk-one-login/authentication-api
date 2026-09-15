@@ -548,6 +548,8 @@ Mappings:
       accessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 7xgl7lexy4
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:539729775994:account-mgmt-backend-AccountDeletionQueue-78ywESZuToOZ
+      inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:539729775994:key/12bd1a88-0ddd-4957-9335-c99febdc0cf1
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:851725205974:key/ecfc81ec-546e-478d-ae04-5ed5d1b375a9
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
@@ -599,6 +601,8 @@ Mappings:
       accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
       accountDataApiId: hoidt6wujb
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:666500506359:account-mgmt-backend-AccountDeletionQueue-xmOv6h9q3FZR
+      inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:666500506359:key/c7ad515e-5298-46f9-8964-0902eb89a156
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125600642:key/f0e0c444-b70e-4d2f-9d5a-9f0bcf1d6540
       manualAccountDeletionClientId: manual-account-deletion
       accountDeletionDataApiEnabled: true
@@ -650,6 +654,8 @@ Mappings:
       accessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 0218o1p9tj
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:026991849909:account-mgmt-backend-AccountDeletionQueue-aYZntrp3UhPl
+      inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:026991849909:key/3ee752ee-1ac2-4926-8d5b-a57861da60fc
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125303002:key/29d156dd-c893-4221-8fe1-f24882e0e401
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
