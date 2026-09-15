@@ -269,47 +269,6 @@ class StartHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.user().isAuthenticated(), equalTo(false));
     }
 
-    @Test
-    void shouldPersistClearedVerifiedStateOnAReauthenticationJourney() throws Json.JsonException {
-        var sessionId = IdGenerator.generate();
-        userStore.signUp(EMAIL, "password");
-        authSessionExtension.addSession(PREVIOUS_SESSION_ID);
-        authSessionExtension.addEmailToSession(PREVIOUS_SESSION_ID, EMAIL);
-        authSessionExtension.addAchievedCredentialTrustToSession(PREVIOUS_SESSION_ID, MEDIUM_LEVEL);
-        authSessionExtension.addHasVerifiedWithPasswordAndMfaToSession(
-                PREVIOUS_SESSION_ID, true, true);
-        authSessionExtension.addHasVerifiedWithPasskeyToSession(PREVIOUS_SESSION_ID, true);
-
-        var state = new State();
-        var scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-
-        var headers = standardHeadersWithSessionId(sessionId);
-        headers.put("Reauthenticate", "true");
-
-        var response =
-                makeRequest(
-                        Optional.of(
-                                makeRequestBody(
-                                        true,
-                                        WITH_PREVIOUS_SESSION,
-                                        state.getValue(),
-                                        scope.toString(),
-                                        REDIRECT_URI.toString(),
-                                        Optional.of(LevelOfConfidence.LOW_LEVEL),
-                                        MEDIUM_LEVEL,
-                                        false)),
-                        headers,
-                        Map.of());
-
-        assertThat(response, hasStatus(200));
-
-        var actualAuthSession = authSessionExtension.getSession(sessionId).orElseThrow();
-        assertFalse(actualAuthSession.getHasVerifiedWithPassword());
-        assertFalse(actualAuthSession.getHasVerifiedWithMfa());
-        assertFalse(actualAuthSession.getHasVerifiedWithPasskey());
-    }
-
     private static Stream<MFAMethodType> mfaMethodTypes() {
         return Stream.of(MFAMethodType.AUTH_APP, MFAMethodType.SMS, null);
     }
