@@ -1,0 +1,149 @@
+Resources:
+  LastSignedInBackfillLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub
+        - "${EnvironmentName}-last-signed-in-backfill-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      CodeUri: ./utils/build/distributions/utils.zip
+      Handler: uk.gov.di.authentication.utils.lambda.LastSignedInBackfillHandler::handleRequest
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          ENVIRONMENT:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          LAST_SIGNED_IN_BACKFILL_LAMBDA_NAME: !Sub
+            - "${EnvironmentName}-last-signed-in-backfill-lambda"
+            - EnvironmentName:
+                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          LAST_SIGNED_IN_BACKFILL_PARALLELISM:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lastSignedInBackfillParallelism,
+            ]
+          LAST_SIGNED_IN_BACKFILL_TOTAL_SEGMENTS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lastSignedInBackfillTotalSegments,
+            ]
+          LAST_SIGNED_IN_BACKFILL_MAX_ITEMS_PER_SEGMENT:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lastSignedInBackfillMaxItemsPerSegment,
+            ]
+          LAST_SIGNED_IN_BACKFILL_PAUSE_BETWEEN_INVOCATIONS_MS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lastSignedInBackfillPauseBetweenInvocationsMs,
+            ]
+          LAST_SIGNED_IN_BACKFILL_MAX_INVOCATIONS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lastSignedInBackfillMaxInvocations,
+            ]
+          LAST_SIGNED_IN_BACKFILL_TRACKER_TABLE_NAME: !If
+            - InactiveAccountTrackerCrossAccountWriteEnabled
+            - !Sub
+              - "arn:aws:dynamodb:${AWS::Region}:${AccountId}:table/${TableName}"
+              - AccountId:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    inactiveAccountExportTableAccountId,
+                  ]
+                TableName:
+                  !FindInMap [
+                    EnvironmentConfiguration,
+                    !Ref Environment,
+                    inactiveAccountExportTableName,
+                  ]
+            - !Sub
+              - ${Env}-stub-inactive-account-tracker
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+      Policies:
+        - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoUserReadWriteAccessPolicy
+        - !Ref CloudWatchLogsKmsAccessPolicy
+        - !Ref LastSignedInBackfillSelfInvokePolicy
+        - !If
+          - InactiveAccountTrackerCrossAccountWriteEnabled
+          - !Ref LastSignedInBackfillTrackerCrossAccountReadPolicy
+          - !Ref AWS::NoValue
+        - !If
+          - InactiveAccountTrackerStubEnabled
+          - !Ref LastSignedInBackfillTrackerStubReadPolicy
+          - !Ref AWS::NoValue
+      AutoPublishAlias: live
+      LoggingConfig:
+        LogGroup: !Ref LastSignedInBackfillLogGroup
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdA"
+          - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
+      Tags:
+        Name: !Sub
+          - "${EnvironmentName}-last-signed-in-backfill-lambda"
+          - EnvironmentName:
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        Environment:
+          !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+
+  LastSignedInBackfillLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub
+        - "/aws/lambda/${EnvironmentName}-last-signed-in-backfill-lambda"
+        - EnvironmentName:
+            !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      RetentionInDays: !If
+        - UseSubEnvironment
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref SubEnvironment,
+            logRetentionDays,
+          ]
+        - !FindInMap [
+            EnvironmentConfiguration,
+            !Ref Environment,
+            logRetentionDays,
+          ]
+      KmsKeyId: !GetAtt MainKmsKey.Arn
+
+  LastSignedInBackfillLogSubscription:
+    Type: AWS::Logs::SubscriptionFilter
+    Condition: IsSplunkEnabled
+    Properties:
+      LogGroupName: !Ref LastSignedInBackfillLogGroup
+      FilterPattern: ""
+      DestinationArn: !Ref LoggingSubscriptionEndpointArn
+
+  LastSignedInBackfillSelfInvokePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !Sub
+              - "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvironmentName}-last-signed-in-backfill-lambda"
+              - EnvironmentName:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]

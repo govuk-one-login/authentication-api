@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.utils.helpers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -8,6 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 
 public class LastSignedInBackfillHelper {
+
+    private static final Logger LOG = LogManager.getLogger(LastSignedInBackfillHelper.class);
 
     public static final String TRACKER_ATTRIBUTE_EMAIL = "emailAddress";
     public static final String TRACKER_ATTRIBUTE_USER_LAST_ACTIVE = "userLastActive";
@@ -34,6 +38,14 @@ public class LastSignedInBackfillHelper {
         }
 
         return Optional.of(new TrackerFields(emailAttr.s(), userLastActiveAttr.s()));
+    }
+
+    public static void logInvalidTrackerFields(Map<String, AttributeValue> item) {
+        LOG.warn(
+                "Skipping tracker item due to missing or blank required fields:"
+                        + " email={}, userLastActive={}",
+                item.containsKey(TRACKER_ATTRIBUTE_EMAIL) ? "present" : "absent",
+                item.containsKey(TRACKER_ATTRIBUTE_USER_LAST_ACTIVE) ? "present" : "absent");
     }
 
     public static UpdateItemRequest buildConditionalUpdateRequest(
