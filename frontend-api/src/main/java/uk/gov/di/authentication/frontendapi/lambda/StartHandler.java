@@ -51,6 +51,7 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.retrie
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.retrieveLevelOfConfidence;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -111,6 +112,7 @@ public class StartHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         attachTraceId();
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         LOG.info("Processing request in Start Handler");
         var sessionIdOpt =
                 getOptionalHeaderValueFromHeaders(
