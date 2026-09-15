@@ -96,7 +96,7 @@ Resources:
         - !If
           - InactiveAccountDeletionStubEnabled
           - !Ref InactiveAccountDeletionStubQueueProcessorSQSPolicy
-          - !Ref AWS::NoValue
+          - !Ref InactiveAccountDeletionCrossAccountQueueProcessorSQSPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
