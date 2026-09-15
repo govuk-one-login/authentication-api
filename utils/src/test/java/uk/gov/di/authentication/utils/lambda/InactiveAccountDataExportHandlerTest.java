@@ -1,8 +1,5 @@
 package uk.gov.di.authentication.utils.lambda;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -19,8 +16,10 @@ import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.utils.entity.InactiveAccountDataExportRequest;
 
 import java.nio.ByteBuffer;
@@ -53,7 +52,7 @@ class InactiveAccountDataExportHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoDbClient client = mock(DynamoDbClient.class);
     private final LambdaInvokerService lambdaInvokerService = mock(LambdaInvokerService.class);
-    private final Context context = mock(Context.class);
+    private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     void setUp() {
@@ -87,7 +86,7 @@ class InactiveAccountDataExportHandlerTest {
         mockScanWithPagination(0, 1);
 
         var handler = createHandler();
-        var response = handler.handleRequest(null, context);
+        var response = handler.handleRequest(null);
 
         assertEquals(0, response.processedCount());
         assertEquals(0, response.writtenCount());
@@ -102,7 +101,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         assertEquals(itemCount, response.writtenCount());
@@ -118,7 +117,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
     }
@@ -134,7 +133,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        assertThrows(DynamoDbException.class, () -> handler.handleRequest(request, context));
+        assertThrows(DynamoDbException.class, () -> handler.handleRequest(request));
     }
 
     @Test
@@ -146,7 +145,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         verify(client, times(1)).batchGetItem(any(BatchGetItemRequest.class));
@@ -202,7 +201,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         verify(client, times(2)).batchGetItem(any(BatchGetItemRequest.class));
@@ -257,7 +256,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         // Initial call + 2 retries = 3 calls
@@ -271,7 +270,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(0, response.processedCount());
         verify(client, never()).batchGetItem(any(BatchGetItemRequest.class));
@@ -286,7 +285,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         verify(client, times(1)).batchGetItem(any(BatchGetItemRequest.class));
@@ -301,7 +300,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         // 101 items = batch of 100 + final batch of 1 = 2 calls
@@ -318,7 +317,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         // 25 items < 100 so only final partial batch = 1 call
@@ -336,7 +335,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(10, response.processedCount());
     }
@@ -408,7 +407,7 @@ class InactiveAccountDataExportHandlerTest {
         segmentKeys.put(1, Map.of("Email", "user5@example.com"));
 
         var request = new InactiveAccountDataExportRequest(segmentKeys, 100L, 0L, null);
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(105, response.processedCount());
         assertEquals(5, response.writtenCount());
@@ -424,22 +423,21 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, 500L, 0L, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(505, response.processedCount());
         assertEquals(itemCount, response.writtenCount());
     }
 
     @Test
-    void shouldSerialiseContinuationStateAsJson() {
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
-
+    void shouldSerialiseContinuationStateAsJson() throws Json.JsonException {
         var request =
                 new InactiveAccountDataExportRequest(
                         Map.of(0, Map.of("Email", "user5@example.com")), 100L, 0L, 2L);
 
-        String json = gson.toJson(request);
-        var deserialised = gson.fromJson(json, InactiveAccountDataExportRequest.class);
+        String json = objectMapper.writeValueAsString(request);
+        var deserialised =
+                objectMapper.readValueUnchecked(json, InactiveAccountDataExportRequest.class);
 
         assertEquals(request.processedCount(), deserialised.processedCount());
         assertEquals(request.writtenCount(), deserialised.writtenCount());
@@ -451,9 +449,8 @@ class InactiveAccountDataExportHandlerTest {
 
     @Test
     void shouldDeserialiseEmptyPayloadAsFirstInvocation() {
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
-
-        var deserialised = gson.fromJson("{}", InactiveAccountDataExportRequest.class);
+        var deserialised =
+                objectMapper.readValueUnchecked("{}", InactiveAccountDataExportRequest.class);
 
         assertNull(deserialised.segmentKeys());
         assertNull(deserialised.processedCount());
@@ -472,7 +469,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        handler.handleRequest(request, context);
+        handler.handleRequest(request);
 
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
@@ -488,7 +485,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        handler.handleRequest(request, context);
+        handler.handleRequest(request);
 
         verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
     }
@@ -504,16 +501,16 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 3L);
 
-        handler.handleRequest(request, context);
+        handler.handleRequest(request);
 
         var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
                         payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
 
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
         var continuation =
-                gson.fromJson(payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
+                objectMapper.readValueUnchecked(
+                        payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
 
         assertNotNull(continuation.segmentKeys());
         assertEquals(105, continuation.processedCount());
@@ -532,16 +529,16 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        handler.handleRequest(request, context);
+        handler.handleRequest(request);
 
         var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
                         payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
 
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
         var continuation =
-                gson.fromJson(payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
+                objectMapper.readValueUnchecked(
+                        payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
 
         assertEquals(1L, continuation.invocationCount());
     }
@@ -584,16 +581,16 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        handler.handleRequest(request, context);
+        handler.handleRequest(request);
 
         var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(
                         payloadCaptor.capture(), eq("test-inactive-account-data-export-lambda"));
 
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
         var continuation =
-                gson.fromJson(payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
+                objectMapper.readValueUnchecked(
+                        payloadCaptor.getValue(), InactiveAccountDataExportRequest.class);
 
         // Only segment 1 should remain
         assertEquals(1, continuation.segmentKeys().size());
@@ -616,7 +613,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        assertThrows(RuntimeException.class, () -> handler.handleRequest(request, context));
+        assertThrows(RuntimeException.class, () -> handler.handleRequest(request));
     }
 
     @Test
@@ -631,7 +628,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        assertThrows(RuntimeException.class, () -> handler.handleRequest(request, context));
+        assertThrows(RuntimeException.class, () -> handler.handleRequest(request));
     }
 
     @Test
@@ -641,7 +638,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertNotNull(response);
         verify(client, never()).scan(any(ScanRequest.class));
@@ -660,7 +657,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 2L);
 
-        handler.handleRequest(request, context);
+        handler.handleRequest(request);
 
         verify(lambdaInvokerService)
                 .invokeAsyncWithPayload(any(), eq("test-inactive-account-data-export-lambda"));
@@ -673,7 +670,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, 100L, 0L, 3L);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertNotNull(response);
         assertEquals(100L, response.processedCount());
@@ -700,7 +697,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         assertEquals(itemCount, response.writtenCount());
@@ -715,7 +712,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         assertEquals(itemCount, response.writtenCount());
@@ -733,7 +730,7 @@ class InactiveAccountDataExportHandlerTest {
         var handler = createHandler();
         var request = new InactiveAccountDataExportRequest(null, null, null, null);
 
-        var response = handler.handleRequest(request, context);
+        var response = handler.handleRequest(request);
 
         assertEquals(itemCount, response.processedCount());
         verify(client, times(1)).batchGetItem(any(BatchGetItemRequest.class));
