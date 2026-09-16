@@ -278,6 +278,47 @@ public class ConfigurationService
                 .equals(FEATURE_SWITCH_ON);
     }
 
+    public String getLastSignedInBackfillLambdaName() {
+        return System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_LAMBDA_NAME", "");
+    }
+
+    public int getLastSignedInBackfillParallelism() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_PARALLELISM", "200"));
+    }
+
+    public int getLastSignedInBackfillTotalSegments() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_TOTAL_SEGMENTS", "200"));
+    }
+
+    public int getLastSignedInBackfillMaxRetries() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_MAX_RETRIES", "3"));
+    }
+
+    public int getLastSignedInBackfillMaxItemsPerSegment() {
+        return Integer.parseInt(
+                System.getenv()
+                        .getOrDefault("LAST_SIGNED_IN_BACKFILL_MAX_ITEMS_PER_SEGMENT", "7500"));
+    }
+
+    public long getLastSignedInBackfillPauseBetweenInvocationsMs() {
+        return Long.parseLong(
+                System.getenv()
+                        .getOrDefault(
+                                "LAST_SIGNED_IN_BACKFILL_PAUSE_BETWEEN_INVOCATIONS_MS", "60000"));
+    }
+
+    public int getLastSignedInBackfillMaxInvocations() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_MAX_INVOCATIONS", "0"));
+    }
+
+    public String getLastSignedInBackfillTrackerTableName() {
+        return System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_TRACKER_TABLE_NAME", "");
+    }
+
     public String getTicfCRILambdaIdentifier() {
         return System.getenv().getOrDefault("TICF_CRI_LAMBDA_IDENTIFIER", "");
     }
