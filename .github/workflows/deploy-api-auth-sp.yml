@@ -27,7 +27,6 @@ on:
       - "interventions-api-stub/**"
       - "orchestration-*/**"
       - "doc-checking-app-api/**"
-      - "client-registry-api/**"
       - "ipv-api-integration-tests/**"
       - "identity-shared/**"
       - "http/**"

@@ -29,7 +29,6 @@ on:
       - "sis-api/**"
       - "orchestration-*/**"
       - "doc-checking-app-api/**"
-      - "client-registry-api/**"
       - "auth-external-api/**"
       - "ipv-api-integration-tests/**"
       - "identity-shared/**"
