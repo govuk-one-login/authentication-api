@@ -106,7 +106,6 @@ jobs:
     strategy:
       matrix:
         module:
-          - client-registry-api
           - doc-checking-app-api
           - frontend-api
           - ipv-api

@@ -17,7 +17,6 @@ dependencies {
             libs.awsCloudwatchEmf,
             libs.jetbrainsAnnotations,
             project(":orchestration-shared"),
-            project(":client-registry-api"),
             libs.crac
 
     runtimeOnly platform(libs.openTelemetryBom),
