@@ -113,7 +113,6 @@ jobs:
     strategy:
       matrix:
         module:
-          - account-management-api
           - client-registry-api
           - doc-checking-app-api
           - frontend-api
@@ -151,8 +150,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - module_name: account-management-api
-            terraform_directory_name: account-management
           - module_name: utils
             terraform_directory_name: utils
     permissions:
@@ -162,6 +159,17 @@ jobs:
     with:
       module_name: ${{ matrix.module_name }}
       terraform_directory_name: ${{ matrix.terraform_directory_name }}
+
+  create-promotion-artifact-account-management:
+    name: Create Account Management Promotion artifact
+    needs:
+      - set-up
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/call_create-tf-only-promotion-artifact.yml
+    with:
+      terraform_directory_name: account-management
 
   create-promotion-artifact-oidc:
     name: Create OIDC Promotion artifact
@@ -188,6 +196,7 @@ jobs:
       - set-up
       - create-promotion-artifact-shared
       - create-promotion-artifacts-simple-modules
+      - create-promotion-artifact-account-management
       - create-promotion-artifact-oidc
     permissions:
       id-token: write
