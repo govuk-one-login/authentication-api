@@ -33,14 +33,10 @@ data "aws_iam_policy_document" "sns_topic_policy" {
   statement {
     actions = [
       "SNS:Subscribe",
-      "SNS:SetTopicAttributes",
-      "SNS:RemovePermission",
       "SNS:Receive",
       "SNS:Publish",
       "SNS:ListSubscriptionsByTopic",
       "SNS:GetTopicAttributes",
-      "SNS:DeleteTopic",
-      "SNS:AddPermission",
     ]
 
     effect = "Allow"
@@ -48,6 +44,12 @@ data "aws_iam_policy_document" "sns_topic_policy" {
     principals {
       type        = "AWS"
       identifiers = ["*"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalOrgID"
+      values   = ["o-pjzf8d99ys", "o-dpp53lco28"]
     }
 
     resources = [
