@@ -27,7 +27,6 @@ dependencies {
     implementation project(":shared-test"), noXray
     implementation project(":orchestration-shared-test"), noXray
     implementation project(":audit-events"), noXray
-    implementation project(":oidc-api"), noXray
     implementation project(":frontend-api"), noXray
     implementation project(":auth-external-api"), noXray
     implementation project(":client-registry-api"), noXray
@@ -111,14 +110,12 @@ jacocoTestReport {
     }
     sourceDirectories.from(
             project(":frontend-api").sourceSets.main.java,
-            project(":oidc-api").sourceSets.main.java,
             project(":client-registry-api").sourceSets.main.java,
             project(":shared").sourceSets.main.java,
             project(":utils").sourceSets.main.java)
     classDirectories.from(
             project(":client-registry-api").sourceSets.main.output,
             project(":frontend-api").sourceSets.main.output,
-            project(":oidc-api").sourceSets.main.output,
             project(":shared").sourceSets.main.output,
             project(":utils").sourceSets.main.output)
 }
