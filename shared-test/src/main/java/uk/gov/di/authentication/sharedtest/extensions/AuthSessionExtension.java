@@ -15,14 +15,13 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
-import java.util.Map;
 import java.util.Optional;
 
 public class AuthSessionExtension extends DynamoExtension implements AfterEachCallback {
 
     public static final String TABLE_NAME = "local-auth-session";
     public static final String SESSION_ID_FIELD = "SessionId";
-    private final AuthSessionService authSessionService;
+    public final AuthSessionService authSessionService;
 
     public AuthSessionExtension() {
         createInstance();
@@ -72,10 +71,6 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
 
     public void addSession(String sessionId) {
         authSessionService.addSession(authSessionService.generateNewAuthSession(sessionId));
-    }
-
-    public void addSession(AuthSessionItem sessionItem) {
-        authSessionService.addSession(sessionItem);
     }
 
     public void addEmailToSession(String sessionId, String email) {
@@ -131,19 +126,8 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
                         .withHasVerifiedWithPassword(hasVerifiedWithPassword));
     }
 
-    public AuthSessionItem getUpdatedPreviousSessionOrCreateNew(
-            Optional<String> previousSessionId, String sessionId) {
-        return authSessionService.getUpdatedPreviousSessionOrCreateNew(
-                previousSessionId, sessionId);
-    }
-
     public void updateSession(AuthSessionItem sessionItem) {
         authSessionService.updateSession(sessionItem);
-    }
-
-    public Optional<AuthSessionItem> getSessionFromRequestHeaders(
-            Map<String, String> requestHeaders) {
-        return authSessionService.getSessionFromRequestHeaders(requestHeaders);
     }
 
     public void incrementSessionCodeRequestCount(
@@ -152,9 +136,5 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
                 getSession(sessionId)
                         .orElseThrow()
                         .incrementCodeRequestCount(notificationType, journeyType));
-    }
-
-    public void updateSessionAttribute(String sessionId, String attributeToUpdate, String value) {
-        authSessionService.updateSessionAttribute(sessionId, attributeToUpdate, value);
     }
 }
