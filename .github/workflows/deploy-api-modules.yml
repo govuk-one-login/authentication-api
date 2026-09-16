@@ -117,7 +117,6 @@ jobs:
           - doc-checking-app-api
           - frontend-api
           - ipv-api
-          - oidc-api
           - utils
     permissions:
       id-token: write
@@ -175,18 +174,11 @@ jobs:
     name: Create OIDC Promotion artifact
     needs:
       - set-up
-      - build
     permissions:
       id-token: write
       contents: read
-    uses: ./.github/workflows/call_create-oidc-promotion-artifact.yml
+    uses: ./.github/workflows/call_create-tf-only-promotion-artifact.yml
     with:
-      oidc_api_module_name: oidc-api
-      client_registry_api_module_name: client-registry-api
-      doc_checking_app_api_module_name: doc-checking-app-api
-      frontend_api_module_name: frontend-api
-      ipv_api_module_name: ipv-api
-
       terraform_directory_name: oidc
 
   gather-and-trigger-codepipeline:
