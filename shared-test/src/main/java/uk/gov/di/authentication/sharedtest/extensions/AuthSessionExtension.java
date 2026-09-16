@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Map;
@@ -23,20 +22,17 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
 
     public static final String TABLE_NAME = "local-auth-session";
     public static final String SESSION_ID_FIELD = "SessionId";
-    private AuthSessionService authSessionService;
-    private final ConfigurationService configuration;
+    private final AuthSessionService authSessionService;
 
     public AuthSessionExtension() {
         createInstance();
-        this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT);
+        var configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT);
         authSessionService = new AuthSessionService(configuration);
     }
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
-
-        authSessionService = new AuthSessionService(configuration);
     }
 
     @Override
