@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
 import java.time.Instant;
@@ -36,11 +37,14 @@ class AuthSessionServiceIntegrationTest {
     @RegisterExtension
     protected static final AuthSessionExtension authSessionExtension = new AuthSessionExtension();
 
+    private static final AuthSessionService authSessionService =
+            authSessionExtension.authSessionService;
+
     @Test
     void shouldAddNewSessionWithExpectedDefaultValues() {
         withStoredSession(SESSION_ID);
 
-        Optional<AuthSessionItem> retrievedSession = authSessionExtension.getSession(SESSION_ID);
+        Optional<AuthSessionItem> retrievedSession = authSessionService.getSession(SESSION_ID);
 
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
@@ -59,7 +63,7 @@ class AuthSessionServiceIntegrationTest {
         withStoredSession(PREVIOUS_SESSION_ID);
 
         var newSession =
-                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                authSessionService.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         var previousSessionItem = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
 
@@ -77,10 +81,10 @@ class AuthSessionServiceIntegrationTest {
                         .withCreatedAt(Instant.now().toString())
                         .withEmailAddress(emailAddressWhichWouldntExistOnGeneratedSession)
                         .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
-        authSessionExtension.addSession(existingSessionItem);
+        authSessionService.addSession(existingSessionItem);
 
         var newSession =
-                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                authSessionService.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
 
         assertThat(newSession.getSessionId(), is(SESSION_ID));
@@ -99,10 +103,10 @@ class AuthSessionServiceIntegrationTest {
                         .withCreatedAt(Instant.now().toString())
                         .withEmailAddress(emailAddressWhichWouldNotExistOnGeneratedSession)
                         .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
-        authSessionExtension.addSession(existingSessionItem);
+        authSessionService.addSession(existingSessionItem);
 
         var newSession =
-                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                authSessionService.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
 
         assertThat(newSession.getSessionId(), is(SESSION_ID));
@@ -129,10 +133,10 @@ class AuthSessionServiceIntegrationTest {
                         .withPreviousSessionId(PREVIOUS_SESSION_ID)
                         .withEmailAddress(emailAddressWhichWouldNotExistOnGeneratedSession)
                         .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
-        authSessionExtension.addSession(existingSessionItem);
+        authSessionService.addSession(existingSessionItem);
 
         var newSession =
-                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                authSessionService.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
 
         assertThat(newSession.getSessionId(), is(SESSION_ID));
@@ -142,12 +146,12 @@ class AuthSessionServiceIntegrationTest {
 
     @Test
     void shouldReturnNewSessionWhenPreviousDoesNotExist() {
-        var previousSessionItem = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
+        var previousSessionItem = authSessionService.getSession(PREVIOUS_SESSION_ID);
 
         assertTrue(previousSessionItem.isEmpty());
 
         var newSession =
-                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                authSessionService.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
         assertThat(newSession.getSessionId(), is(SESSION_ID));
     }
@@ -160,7 +164,7 @@ class AuthSessionServiceIntegrationTest {
         session.setRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
         session.setRequestedLevelOfConfidence(LevelOfConfidence.MEDIUM_LEVEL);
         session.setClientId("test-client-id");
-        authSessionExtension.updateSession(session);
+        authSessionService.updateSession(session);
         var updatedSession = authSessionExtension.getSession(SESSION_ID).get();
         assertThat(
                 updatedSession.getIsNewAccount(), equalTo(AuthSessionItem.AccountState.EXISTING));
@@ -178,12 +182,12 @@ class AuthSessionServiceIntegrationTest {
         var previousSession = withStoredSession(PREVIOUS_SESSION_ID);
 
         previousSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
-        authSessionExtension.updateSession(previousSession);
+        authSessionService.updateSession(previousSession);
 
         var retrievedSession =
-                authSessionExtension.getUpdatedPreviousSessionOrCreateNew(
+                authSessionService.getUpdatedPreviousSessionOrCreateNew(
                         Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
-        var retrievedPreviousSession = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
+        var retrievedPreviousSession = authSessionService.getSession(PREVIOUS_SESSION_ID);
 
         assertTrue(retrievedPreviousSession.isEmpty());
         assertThat(retrievedSession.getSessionId(), equalTo(SESSION_ID));
@@ -199,7 +203,7 @@ class AuthSessionServiceIntegrationTest {
 
         var headersWithSessionId = Map.of(SESSION_ID_HEADER, SESSION_ID);
         Optional<AuthSessionItem> retrievedSession =
-                authSessionExtension.getSessionFromRequestHeaders(headersWithSessionId);
+                authSessionService.getSessionFromRequestHeaders(headersWithSessionId);
         assertThat(retrievedSession.isPresent(), equalTo(true));
         assertThat(retrievedSession.get().getSessionId(), equalTo(SESSION_ID));
     }
@@ -217,7 +221,7 @@ class AuthSessionServiceIntegrationTest {
                 };
 
         session.setPreservedReauthCountsForAuditMap(counts);
-        authSessionExtension.updateSession(session);
+        authSessionService.updateSession(session);
         var updatedSession = authSessionExtension.getSession(SESSION_ID).get();
         assertThat(updatedSession.getPreservedReauthCountsForAuditMap(), equalTo(counts));
     }
@@ -226,14 +230,14 @@ class AuthSessionServiceIntegrationTest {
     void shouldUpdateIndividualSessionAttributesWithoutAffectingOtherFields() {
         withStoredSession(SESSION_ID);
 
-        var session = authSessionExtension.getSession(SESSION_ID).orElseThrow();
+        var session = authSessionService.getSession(SESSION_ID).orElseThrow();
         assertThat(session.getHasVerifiedWithPassword(), equalTo(false));
-        authSessionExtension.updateSession(session.withEmailAddress(TEST_EMAIL));
+        authSessionService.updateSession(session.withEmailAddress(TEST_EMAIL));
 
-        authSessionExtension.updateSessionAttribute(
+        authSessionService.updateSessionAttribute(
                 SESSION_ID, AuthSessionItem.ATTRIBUTE_EMAIL, OTHER_EMAIL);
 
-        var result = authSessionExtension.getSession(SESSION_ID).orElseThrow();
+        var result = authSessionService.getSession(SESSION_ID).orElseThrow();
         assertThat(result.getHasVerifiedWithPassword(), equalTo(false));
         assertThat(result.getEmailAddress(), equalTo(OTHER_EMAIL));
     }
@@ -242,13 +246,13 @@ class AuthSessionServiceIntegrationTest {
     void shouldRemoveIndividualSessionAttributesIfPassingInNull() {
         withStoredSession(SESSION_ID);
 
-        var session = authSessionExtension.getSession(SESSION_ID).orElseThrow();
-        authSessionExtension.updateSession(session.withEmailAddress(TEST_EMAIL));
+        var session = authSessionService.getSession(SESSION_ID).orElseThrow();
+        authSessionService.updateSession(session.withEmailAddress(TEST_EMAIL));
 
-        authSessionExtension.updateSessionAttribute(
+        authSessionService.updateSessionAttribute(
                 SESSION_ID, AuthSessionItem.ATTRIBUTE_EMAIL, null);
 
-        var result = authSessionExtension.getSession(SESSION_ID).orElseThrow();
+        var result = authSessionService.getSession(SESSION_ID).orElseThrow();
         assertThat(result.getEmailAddress(), equalTo(null));
     }
 
