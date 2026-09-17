@@ -83,7 +83,7 @@ public class IdentityContextService {
 
         var mismatchedEntity =
                 crossBrowserOrchestrationService.generateEntityForMismatchInClientSessionId(
-                        input.getQueryStringParameters(), clientSessionId, orchSession);
+                        input.getQueryStringParameters(), clientSessionId);
         if (mismatchedEntity.isPresent()) {
             throw new CrossBrowserStateMismatchException(mismatchedEntity.get());
         }
