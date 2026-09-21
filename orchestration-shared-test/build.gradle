@@ -24,7 +24,6 @@ dependencies {
 
     implementation project(":orchestration-shared")
     implementation project(":frontend-api")
-    implementation project(":doc-checking-app-api")
 }
 
 test {

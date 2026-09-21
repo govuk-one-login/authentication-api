@@ -62,7 +62,7 @@ test {
 
 var pactDir = layout.buildDirectory.dir("pacts").get().asFile.path
 
-task pactConsumerTests (type: Test, group: "verification") {
+task pactConsumerTests(type: Test, group: "verification") {
     useJUnitPlatform()
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath

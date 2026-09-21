@@ -32,7 +32,6 @@ dependencies {
     implementation project(":ipv-api"), noXray
     implementation project(":sis-api"), noXray
     implementation project(":interventions-api-stub"), noXray
-    implementation project(":doc-checking-app-api"), noXray
     implementation project(":utils"), noXray
     implementation project(":user-permissions"), noXray
 
@@ -79,7 +78,7 @@ test {
 
 pactPublish.enabled = false
 
-task pactProviderTests (type: Test, group: "verification") {
+task pactProviderTests(type: Test, group: "verification") {
     useJUnitPlatform()
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
