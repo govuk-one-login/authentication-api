@@ -12,8 +12,8 @@ buildscript {
                 because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
             }
 
-            add('classpath', 'org.bouncycastle:bcprov-jdk18on:[1.84,)') {
-                because 'CVE-2026-5598 is fixed in org.bouncycastle:bcprov-jdk18on 1.84 and higher'
+            add('classpath', 'org.bouncycastle:bcprov-jdk18on:[1.85,)') {
+                because 'CVE-2026-8763 is fixed in org.bouncycastle:bcprov-jdk18on 1.85 and higher'
             }
 
             add('classpath', 'com.fasterxml.jackson.core:jackson-databind:[2.21.4,)') {
@@ -115,6 +115,11 @@ ext {
             'com.google.protobuf:protobuf-java',
             '[3.25.5,)',
             'CVE-2024-7254 is fixed in 3.25.5 and above'
+        ],
+        [
+            'org.bouncycastle:bcprov-jdk18on',
+            '[1.85,)',
+            'CVE-2026-8763 is fixed in org.bouncycastle:bcprov-jdk18on 1.85 and higher'
         ],
         [
             'io.opentelemetry:opentelemetry-api',
