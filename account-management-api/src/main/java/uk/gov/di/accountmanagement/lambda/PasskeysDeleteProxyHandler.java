@@ -18,6 +18,7 @@ import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -30,6 +31,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
 import java.time.Clock;
+import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED;
@@ -130,12 +132,14 @@ public class PasskeysDeleteProxyHandler
         }
         var auditContext = auditContextResult.getSuccess();
 
-        var currentPasskeyCountResult = getPasskeyCount(request);
-        if (currentPasskeyCountResult.isFailure()) {
+        var userPasskeysResult = getUserPasskeys(request);
+        if (userPasskeysResult.isFailure()) {
             reportDeletionFailed(auditContext, request, "DataApiRetrievePasskeysError");
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
-        var currentPasskeyCount = currentPasskeyCountResult.getSuccess();
+        var userPasskeys = userPasskeysResult.getSuccess();
+
+        var currentPasskeyCount = userPasskeys.passkeys().size();
 
         var deletePasskeyResponseResult = deletePasskey(request);
         if (deletePasskeyResponseResult.isFailure()) {
@@ -198,12 +202,11 @@ public class PasskeysDeleteProxyHandler
         return Result.success(userProfile.get());
     }
 
-    private Result<PasskeysDeleteProxyFailureReason, Integer> getPasskeyCount(
-            PasskeysDeleteRequest request) {
+    private Result<PasskeysDeleteProxyFailureReason, PasskeysRetrieveResponse> getUserPasskeys(
+            PasskeysDeleteRequest request
+    ) {
         try {
-            var userPasskeys =
-                    accountDataApiService.retrievePasskeys(request.publicSubjectId, request.token);
-            return Result.success(userPasskeys.passkeys().size());
+            return Result.success(accountDataApiService.retrievePasskeys(request.publicSubjectId, request.token));
         } catch (UnsuccessfulAccountDataApiResponseException | Json.JsonException e) {
             LOG.warn(
                     "Attempted to retrieve passkeys for user with publicSubjectId '{}' but failed due to '{}'",
@@ -212,6 +215,7 @@ public class PasskeysDeleteProxyHandler
             return Result.failure(
                     PasskeysDeleteProxyFailureReason.FAILED_TO_RETRIEVE_PASSKEY_COUNT);
         }
+
     }
 
     private Result<PasskeysDeleteProxyFailureReason, HttpResponse<String>> deletePasskey(
