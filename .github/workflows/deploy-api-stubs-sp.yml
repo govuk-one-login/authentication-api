@@ -27,7 +27,6 @@ on:
       - "ipv-api/**"
       - "sis-api/**"
       - "orchestration-*/**"
-      - "doc-checking-app-api/**"
       - "delivery-receipts-api/**"
       - "auth-external-api/**"
       - "ipv-api-integration-tests/**"

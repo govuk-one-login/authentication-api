@@ -12,7 +12,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SystemService;
 import uk.gov.di.orchestration.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.ClientStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.ParameterStoreExtension;
@@ -152,10 +151,6 @@ public class IntegrationTest {
 
     @RegisterExtension
     protected static final IdentityStoreExtension identityStore = new IdentityStoreExtension(180);
-
-    @RegisterExtension
-    protected static final DocumentAppCredentialStoreExtension documentAppCredentialStore =
-            new DocumentAppCredentialStoreExtension(180);
 
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();

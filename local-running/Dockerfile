@@ -19,7 +19,6 @@ COPY frontend-api ./frontend-api
 COPY audit-events ./audit-events
 COPY account-data-api ./account-data-api
 COPY orchestration-shared ./orchestration-shared
-COPY client-registry-api ./client-registry-api
 COPY deprecation-checker ./deprecation-checker
 COPY interventions-api-stub ./interventions-api-stub
 COPY account-data-api-integration-tests ./account-data-api-integration-tests
@@ -27,16 +26,13 @@ COPY test-services-api ./test-services-api
 COPY utils ./utils
 COPY identity-shared ./identity-shared
 COPY orchestration-shared-test ./orchestration-shared-test
-COPY oidc-api ./oidc-api
 COPY ipv-api ./ipv-api
 COPY account-management-api ./account-management-api
 COPY shared-test ./shared-test
 COPY delivery-receipts-api ./delivery-receipts-api
 COPY ticf-cri-stub ./ticf-cri-stub
 COPY sis-api ./sis-api
-COPY doc-checking-app-api ./doc-checking-app-api
 COPY delivery-receipts-integration-tests ./delivery-receipts-integration-tests
-COPY orchestration-local-running ./orchestration-local-running
 COPY integration-tests ./integration-tests
 COPY account-management-integration-tests ./account-management-integration-tests
 

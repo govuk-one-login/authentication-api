@@ -27,7 +27,6 @@ on:
       - "interventions-api-stub/**"
       - "sis-api/**"
       - "orchestration-*/**"
-      - "doc-checking-app-api/**"
       - "delivery-receipts-api/**"
       - "auth-external-api/**"
       - "account-data-api-integration-tests/**"

@@ -384,7 +384,9 @@ tasks.register('searchForDependency') {
         allprojects {project ->
             project.configurations.each { config ->
                 if (config.canBeResolved) {
-                    config.incoming.artifactView { it.lenient(true) }.artifacts.each { artifact ->
+                    config.incoming.artifactView {
+                        it.lenient(true)
+                    }.artifacts.each { artifact ->
                         def id = artifact.variant.owner
                         if (id instanceof ModuleComponentIdentifier) {
                             if (id.group == targetGroup && id.module == targetName) {
@@ -408,12 +410,16 @@ tasks.register('searchForDependency') {
 }
 
 static int compareVersions(String v1, String v2) {
-    def parts1 = v1.tokenize('.-').collect { it.isInteger() ? it.toInteger() : 0 }
-    def parts2 = v2.tokenize('.-').collect { it.isInteger() ? it.toInteger() : 0 }
+    def parts1 = v1.tokenize('.-').collect {
+        it.isInteger() ? it.toInteger() : 0
+    }
+    def parts2 = v2.tokenize('.-').collect {
+        it.isInteger() ? it.toInteger() : 0
+    }
     def maxLen = Math.max(parts1.size(), parts2.size())
-    for (int i = 0; i < maxLen; i++) {
-        def p1 = i < parts1.size() ? parts1[i] : 0
-        def p2 = i < parts2.size() ? parts2[i] : 0
+    for (int i = 0; i <maxLen; i++) {
+        def p1 = i <parts1.size() ? parts1[i] : 0
+        def p2 = i <parts2.size() ? parts2[i] : 0
         if (p1 != p2) return p1 <=> p2
     }
     return 0
