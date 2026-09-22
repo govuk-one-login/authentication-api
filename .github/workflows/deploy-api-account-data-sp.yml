@@ -29,7 +29,6 @@ on:
       - "orchestration-*/**"
       - "doc-checking-app-api/**"
       - "delivery-receipts-api/**"
-      - "client-registry-api/**"
       - "auth-external-api/**"
       - "account-data-api-integration-tests/**"
       - "ipv-api-integration-tests/**"
