@@ -25,7 +25,6 @@ on:
       - "ipv-api/**"
       - "ticf-cri-stub/**"
       - "interventions-api-stub/**"
-      - "sis-api/**"
       - "orchestration-*/**"
       - "delivery-receipts-api/**"
       - "auth-external-api/**"
