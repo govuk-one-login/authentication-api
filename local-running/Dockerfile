@@ -31,7 +31,6 @@ COPY account-management-api ./account-management-api
 COPY shared-test ./shared-test
 COPY delivery-receipts-api ./delivery-receipts-api
 COPY ticf-cri-stub ./ticf-cri-stub
-COPY sis-api ./sis-api
 COPY delivery-receipts-integration-tests ./delivery-receipts-integration-tests
 COPY integration-tests ./integration-tests
 COPY account-management-integration-tests ./account-management-integration-tests
