@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
 import java.time.Clock;
-import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_FAILED;
@@ -159,11 +158,35 @@ public class PasskeysDeleteProxyHandler
                     request.publicSubjectId);
             reportDeletionFailed(auditContext, request, "DataApiUnsuccessfulResponse");
         } else {
-            reportDeleteSuccess(auditContext, request, currentPasskeyCount);
+            var deletedPasskeyResult = getDeletedPasskey(userPasskeys, request);
+            if (deletedPasskeyResult.isFailure()) {
+                return generateApiGatewayProxyErrorResponse(
+                        500, ErrorResponse.INTERNAL_SERVER_ERROR);
+            }
+
+            reportDeleteSuccess(
+                    auditContext, request, currentPasskeyCount, deletedPasskeyResult.getSuccess());
             sendEmailNotification(request, userEmail, currentPasskeyCount);
         }
 
         return deletePasskeyProxyResponse;
+    }
+
+    private Result<PasskeysDeleteProxyFailureReason, PasskeysRetrieveResponse.PasskeyResponse>
+            getDeletedPasskey(
+                    PasskeysRetrieveResponse passkeysRetrieveResponse,
+                    PasskeysDeleteRequest request) {
+        var maybeDeletedPasskey =
+                passkeysRetrieveResponse.passkeys().stream()
+                        .filter(passkey -> passkey.passkeyId().equals(request.passkeyId))
+                        .findFirst();
+        if (maybeDeletedPasskey.isEmpty()) {
+            LOG.warn(
+                    "Passkey targeted for deletion was not found in the user's retrieved passkeys");
+            return Result.failure(
+                    PasskeysDeleteProxyFailureReason.FAILED_TO_RETRIEVE_DELETED_PASSKEY);
+        }
+        return Result.success(maybeDeletedPasskey.get());
     }
 
     private PasskeysDeleteRequest extractPasskeyDeleteRequest(APIGatewayProxyRequestEvent input) {
@@ -203,10 +226,10 @@ public class PasskeysDeleteProxyHandler
     }
 
     private Result<PasskeysDeleteProxyFailureReason, PasskeysRetrieveResponse> getUserPasskeys(
-            PasskeysDeleteRequest request
-    ) {
+            PasskeysDeleteRequest request) {
         try {
-            return Result.success(accountDataApiService.retrievePasskeys(request.publicSubjectId, request.token));
+            return Result.success(
+                    accountDataApiService.retrievePasskeys(request.publicSubjectId, request.token));
         } catch (UnsuccessfulAccountDataApiResponseException | Json.JsonException e) {
             LOG.warn(
                     "Attempted to retrieve passkeys for user with publicSubjectId '{}' but failed due to '{}'",
@@ -215,7 +238,6 @@ public class PasskeysDeleteProxyHandler
             return Result.failure(
                     PasskeysDeleteProxyFailureReason.FAILED_TO_RETRIEVE_PASSKEY_COUNT);
         }
-
     }
 
     private Result<PasskeysDeleteProxyFailureReason, HttpResponse<String>> deletePasskey(
@@ -251,8 +273,11 @@ public class PasskeysDeleteProxyHandler
     }
 
     private void reportDeleteSuccess(
-            AuditContext auditContext, PasskeysDeleteRequest request, int currentPasskeyCount) {
-        emitSuccessAuditEvent(auditContext, request, currentPasskeyCount);
+            AuditContext auditContext,
+            PasskeysDeleteRequest request,
+            int currentPasskeyCount,
+            PasskeysRetrieveResponse.PasskeyResponse deletedPasskey) {
+        emitSuccessAuditEvent(auditContext, request, currentPasskeyCount, deletedPasskey);
         emitDeletionSuccessMetric();
     }
 
@@ -262,13 +287,24 @@ public class PasskeysDeleteProxyHandler
     }
 
     private void emitSuccessAuditEvent(
-            AuditContext auditContext, PasskeysDeleteRequest request, int currentPasskeyCount) {
+            AuditContext auditContext,
+            PasskeysDeleteRequest request,
+            int currentPasskeyCount,
+            PasskeysRetrieveResponse.PasskeyResponse deletedPasskey) {
         var newPasskeyCount = currentPasskeyCount - 1;
         var passkeyId = request.passkeyId;
+        var passkeyCredentialDeviceType =
+                deletedPasskey.isBackUpEligible() ? "multi-device" : "single-device";
+        var passkeyAaguid = deletedPasskey.aaguid();
 
         var event =
                 AuthPasskeyDeleteSuccessful.create(
-                        auditContext, newPasskeyCount, passkeyId, Clock.systemUTC());
+                        auditContext,
+                        newPasskeyCount,
+                        passkeyId,
+                        passkeyAaguid,
+                        passkeyCredentialDeviceType,
+                        Clock.systemUTC());
 
         structuredAuditService.submitAuditEvent(event);
     }

@@ -4,7 +4,8 @@ public enum PasskeysDeleteProxyFailureReason {
     FAILED_TO_DELETE_PASSKEY("failed_to_delete_passkey"),
     FAILED_TO_RETRIEVE_PASSKEY_COUNT("failed_to_retrieve_passkey_count"),
     FAILED_TO_FIND_USER_PROFILE("failed_to_find_user_profile"),
-    FAILED_TO_RETRIEVE_PASSKEYS("failed_retrieve_passkeys");
+    FAILED_TO_RETRIEVE_PASSKEYS("failed_retrieve_passkeys"),
+    FAILED_TO_RETRIEVE_DELETED_PASSKEY("failed_to_retrieve_deleted_passkey");
 
     private final String value;
 

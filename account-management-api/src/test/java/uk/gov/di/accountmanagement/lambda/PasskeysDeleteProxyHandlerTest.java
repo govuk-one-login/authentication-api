@@ -178,8 +178,16 @@ class PasskeysDeleteProxyHandlerTest {
             assertThat(sentNotifyRequest.getLanguage(), equalTo(SupportedLanguage.EN));
         }
 
-        @Test
-        void shouldEmitSuccessAuditEventAndMetricsOnSuccessfulDeletion()
+        static Stream<Arguments> successAuditEventValues() {
+            return Stream.of(
+                    Arguments.of("passkey-aaguid", true, "multi-device"),
+                    Arguments.of("passkey-aaguid", false, "single-device"));
+        }
+
+        @ParameterizedTest
+        @MethodSource("successAuditEventValues")
+        void shouldEmitSuccessAuditEventWithCorrectValuesAndMetricsOnSuccessfulDeletion(
+                String passkeyAaguid, boolean isBackupEligible, String expectedCredentialDeviceType)
                 throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
             // Arrange
             var mockHttpResponse = mock(HttpResponse.class);
@@ -187,7 +195,10 @@ class PasskeysDeleteProxyHandlerTest {
                     .thenReturn(
                             new PasskeysRetrieveResponse(
                                     List.of(
-                                            aPasskeyResponse(PASSKEY_IDENTIFIER),
+                                            aPasskeyResponse(
+                                                    PASSKEY_IDENTIFIER,
+                                                    passkeyAaguid,
+                                                    isBackupEligible),
                                             aPasskeyResponse(OTHER_PASSKEY_IDENTIFIER))));
             when(mockHttpResponse.statusCode()).thenReturn(204);
             when(mockHttpResponse.body()).thenReturn("");
@@ -209,6 +220,10 @@ class PasskeysDeleteProxyHandlerTest {
             assertEquals(
                     PASSKEY_IDENTIFIER,
                     submittedAuditEvent.restricted().passkey().passkeyCredentialId());
+            assertEquals(passkeyAaguid, submittedAuditEvent.restricted().passkey().passkeyAaguid());
+            assertEquals(
+                    expectedCredentialDeviceType,
+                    submittedAuditEvent.restricted().passkey().passkeyCredentialDeviceType());
             var expectedDimensions = Map.of("Environment", ENV);
             verify(cloudwatchMetricsService)
                     .incrementCounter(PASSKEY_DELETION_SUCCESSFUL, expectedDimensions);
@@ -329,14 +344,19 @@ class PasskeysDeleteProxyHandlerTest {
     }
 
     private static PasskeysRetrieveResponse.PasskeyResponse aPasskeyResponse(String passkeyId) {
+        return aPasskeyResponse(passkeyId, "some-aaguid", true);
+    }
+
+    private static PasskeysRetrieveResponse.PasskeyResponse aPasskeyResponse(
+            String passkeyId, String aaguid, boolean isBackupEligible) {
         return new PasskeysRetrieveResponse.PasskeyResponse(
                 passkeyId,
                 "cHVibGljLWtleS1jb3Nl",
-                "some-aaguid",
+                aaguid,
                 true,
                 5,
                 List.of(),
-                true,
+                isBackupEligible,
                 true,
                 true,
                 "some-timestamp",
