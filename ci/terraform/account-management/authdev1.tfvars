@@ -12,7 +12,7 @@ test_signing_key_enabled                     = true
 openapi_spec_filename = "openapi_v2.yaml"
 
 # URIs
-internal_sector_uri   = "https://identity.authdev1.sandpit.account.gov.uk"
+internal_sector_uri   = "https://identity.authdev1.dev.account.gov.uk"
 access_token_jwks_url = "https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json"
 
 # CIDR blocks

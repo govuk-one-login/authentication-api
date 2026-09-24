@@ -108,7 +108,7 @@ variable "tools_account_id" {
 
 variable "enforce_code_signing" {
   default     = true
-  description = "Whether the code signing policy will reject unsigned code. (only set to false in sandpit environments)"
+  description = "Whether the code signing policy will reject unsigned code. (only set to false in authdevs environments)"
   type        = bool
 }
 
