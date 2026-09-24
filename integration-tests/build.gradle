@@ -30,7 +30,6 @@ dependencies {
     implementation project(":frontend-api"), noXray
     implementation project(":auth-external-api"), noXray
     implementation project(":ipv-api"), noXray
-    implementation project(":sis-api"), noXray
     implementation project(":interventions-api-stub"), noXray
     implementation project(":utils"), noXray
     implementation project(":user-permissions"), noXray

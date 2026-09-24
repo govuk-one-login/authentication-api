@@ -26,7 +26,6 @@ on:
       - "ticf-cri-stub/**"
       - "interventions-api-stub/**"
       - "ipv-api/**"
-      - "sis-api/**"
       - "orchestration-*/**"
       - "doc-checking-app-api/**"
       - "auth-external-api/**"

@@ -28,7 +28,6 @@ on:
       - "orchestration-*/**"
       - "doc-checking-app-api/**"
       - "ipv-api-integration-tests/**"
-      - "identity-shared/**"
       - "http/**"
       - "tools/**"
 
@@ -77,7 +76,7 @@ jobs:
 
       - name: Gradle build
         run: |
-          ./gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip :delivery-receipts-api:buildZip :sis-api:buildZip
+          ./gradlew --no-daemon --parallel :auth-external-api:buildZip :frontend-api:buildZip :ipv-api:buildZip :delivery-receipts-api:buildZip
 
       - name: Install Rain
         uses: ./.github/actions/install-rain

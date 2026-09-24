@@ -25,7 +25,6 @@ on:
       - "test-services-api/**"
       - "utils/**"
       - "ipv-api/**"
-      - "sis-api/**"
       - "orchestration-*/**"
       - "delivery-receipts-api/**"
       - "auth-external-api/**"
