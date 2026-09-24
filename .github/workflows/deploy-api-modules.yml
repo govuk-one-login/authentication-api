@@ -17,8 +17,7 @@ on:
     branches:
       - main
     paths-ignore:
-      - "ci/cloudformation/auth/**"
-      - "ci/cloudformation/account-data/**"
+      - "ci/cloudformation/**"
       - "scripts/dev-samconfig.toml"
       - "sam-deploy-authdevs.sh"
       - "docs/**"
