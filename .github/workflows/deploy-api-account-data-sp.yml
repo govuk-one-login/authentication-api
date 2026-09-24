@@ -30,7 +30,6 @@ on:
       - "auth-external-api/**"
       - "account-data-api-integration-tests/**"
       - "ipv-api-integration-tests/**"
-      - "identity-shared/**"
       - "http/**"
       - "user-permissions/**"
 

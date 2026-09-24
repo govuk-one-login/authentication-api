@@ -30,7 +30,6 @@ on:
       - "doc-checking-app-api/**"
       - "auth-external-api/**"
       - "ipv-api-integration-tests/**"
-      - "identity-shared/**"
       - "http/**"
       - "tools/**"
 

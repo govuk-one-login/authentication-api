@@ -29,7 +29,6 @@ on:
       - "delivery-receipts-api/**"
       - "auth-external-api/**"
       - "ipv-api-integration-tests/**"
-      - "identity-shared/**"
       - "http/**"
       - "tools/**"
 
