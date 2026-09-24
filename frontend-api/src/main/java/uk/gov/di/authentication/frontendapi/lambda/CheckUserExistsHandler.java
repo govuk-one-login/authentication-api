@@ -159,6 +159,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         decisionResult.getFailure());
             }
 
+            String existingSessionEmail = userContext.getAuthSession().getEmailAddress();
+            if (existingSessionEmail != null
+                    && !existingSessionEmail.equalsIgnoreCase(emailAddress)) {
+                LOG.info("Session email is changing on an existing session");
+            }
+
             var isUserAccountLocked =
                     decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
             if (isUserAccountLocked) {
