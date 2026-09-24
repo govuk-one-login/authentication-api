@@ -21,7 +21,6 @@ dependencies {
             libs.bundles.nimbus
 
     implementation project(":orchestration-shared")
-    implementation project(":identity-shared")
 
     runtimeOnly libs.bundles.loggingRuntime,
             platform(libs.openTelemetryBom),
