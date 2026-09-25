@@ -30,6 +30,7 @@ on:
       - "ipv-api-integration-tests/**"
       - "http/**"
       - "tools/**"
+      - "ci/terraform/**"
 
 env:
   AWS_REGION: eu-west-2
