@@ -24,7 +24,6 @@ COPY interventions-api-stub ./interventions-api-stub
 COPY account-data-api-integration-tests ./account-data-api-integration-tests
 COPY test-services-api ./test-services-api
 COPY utils ./utils
-COPY identity-shared ./identity-shared
 COPY orchestration-shared-test ./orchestration-shared-test
 COPY ipv-api ./ipv-api
 COPY account-management-api ./account-management-api
