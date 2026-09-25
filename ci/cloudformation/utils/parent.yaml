@@ -147,7 +147,7 @@ Conditions:
                 ]
               - "0"
 
-  InactiveAccountTrackerCrossAccountWriteEnabled:
+  InactiveAccountTrackerCrossAccountAccessEnabled:
     Fn::Or:
       - Fn::Equals:
           - !Ref Environment
@@ -161,7 +161,7 @@ Conditions:
 
   InactiveAccountTrackerStubEnabled:
     Fn::Not:
-      - !Condition InactiveAccountTrackerCrossAccountWriteEnabled
+      - !Condition InactiveAccountTrackerCrossAccountAccessEnabled
 
 Mappings:
   EnvironmentConfiguration:
@@ -1447,7 +1447,7 @@ Resources:
   # Policy for cross-account write access to the inactive account tracker table
   InactiveAccountTrackerCrossAccountWritePolicy:
     Type: AWS::IAM::ManagedPolicy
-    Condition: InactiveAccountTrackerCrossAccountWriteEnabled
+    Condition: InactiveAccountTrackerCrossAccountAccessEnabled
     Properties:
       Description: "IAM policy for writing to the inactive account tracker table in the home-team account"
       Path: !Sub
@@ -1526,7 +1526,7 @@ Resources:
 
   LastSignedInBackfillTrackerCrossAccountReadPolicy:
     Type: AWS::IAM::ManagedPolicy
-    Condition: InactiveAccountTrackerCrossAccountWriteEnabled
+    Condition: InactiveAccountTrackerCrossAccountAccessEnabled
     Properties:
       Description: "IAM policy for scanning the inactive account tracker table in the home-team account for the lastSignedIn backfill"
       Path: !Sub

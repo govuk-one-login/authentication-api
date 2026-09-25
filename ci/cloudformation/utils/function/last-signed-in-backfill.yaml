@@ -56,7 +56,7 @@ Resources:
               lastSignedInBackfillMaxInvocations,
             ]
           LAST_SIGNED_IN_BACKFILL_TRACKER_TABLE_NAME: !If
-            - InactiveAccountTrackerCrossAccountWriteEnabled
+            - InactiveAccountTrackerCrossAccountAccessEnabled
             - !Sub
               - "arn:aws:dynamodb:${AWS::Region}:${AccountId}:table/${TableName}"
               - AccountId:
@@ -82,7 +82,7 @@ Resources:
         - !Ref CloudWatchLogsKmsAccessPolicy
         - !Ref LastSignedInBackfillSelfInvokePolicy
         - !If
-          - InactiveAccountTrackerCrossAccountWriteEnabled
+          - InactiveAccountTrackerCrossAccountAccessEnabled
           - !Ref LastSignedInBackfillTrackerCrossAccountReadPolicy
           - !Ref AWS::NoValue
         - !If
