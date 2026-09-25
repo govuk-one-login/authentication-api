@@ -234,6 +234,47 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getLastSignedInBackfillLambdaNameShouldDefault() {
+        assertEquals("", configurationService.getLastSignedInBackfillLambdaName());
+    }
+
+    @Test
+    void getLastSignedInBackfillParallelismShouldDefault() {
+        assertEquals(200, configurationService.getLastSignedInBackfillParallelism());
+    }
+
+    @Test
+    void getLastSignedInBackfillTotalSegmentsShouldDefault() {
+        assertEquals(200, configurationService.getLastSignedInBackfillTotalSegments());
+    }
+
+    @Test
+    void getLastSignedInBackfillMaxRetriesShouldDefault() {
+        assertEquals(3, configurationService.getLastSignedInBackfillMaxRetries());
+    }
+
+    @Test
+    void getLastSignedInBackfillMaxItemsPerSegmentShouldDefault() {
+        assertEquals(7500, configurationService.getLastSignedInBackfillMaxItemsPerSegment());
+    }
+
+    @Test
+    void getLastSignedInBackfillPauseBetweenInvocationsMsShouldDefault() {
+        assertEquals(
+                60000, configurationService.getLastSignedInBackfillPauseBetweenInvocationsMs());
+    }
+
+    @Test
+    void getLastSignedInBackfillMaxInvocationsShouldDefault() {
+        assertEquals(0, configurationService.getLastSignedInBackfillMaxInvocations());
+    }
+
+    @Test
+    void getLastSignedInBackfillTrackerTableNameShouldDefault() {
+        assertEquals("", configurationService.getLastSignedInBackfillTrackerTableName());
+    }
+
+    @Test
     void isAccountDeletionDataApiEnabledShouldDefaultToFalse() {
         assertFalse(configurationService.isAccountDeletionDataApiEnabled());
     }

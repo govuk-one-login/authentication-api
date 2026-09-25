@@ -1,13 +1,13 @@
 Resources:
-  InactiveAccountDataExportLambda:
+  LastSignedInBackfillLambda:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub
-        - "${EnvironmentName}-inactive-account-data-export-lambda"
+        - "${EnvironmentName}-last-signed-in-backfill-lambda"
         - EnvironmentName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       CodeUri: ./utils/build/distributions/utils.zip
-      Handler: uk.gov.di.authentication.utils.lambda.InactiveAccountDataExportHandler::handleRequest
+      Handler: uk.gov.di.authentication.utils.lambda.LastSignedInBackfillHandler::handleRequest
       ReservedConcurrentExecutions: 1
       Environment:
         Variables:
@@ -21,41 +21,41 @@ Resources:
                   !Ref Environment,
                   dataStoreAccountId,
                 ]
-          INACTIVE_ACCOUNT_EXPORT_PARALLELISM:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              inactiveAccountExportParallelism,
-            ]
-          INACTIVE_ACCOUNT_EXPORT_TOTAL_SEGMENTS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              inactiveAccountExportTotalSegments,
-            ]
-          INACTIVE_ACCOUNT_EXPORT_MAX_RETRIES:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              inactiveAccountExportMaxRetries,
-            ]
-          INACTIVE_ACCOUNT_EXPORT_LAMBDA_NAME: !Sub
-            - "${EnvironmentName}-inactive-account-data-export-lambda"
+          LAST_SIGNED_IN_BACKFILL_LAMBDA_NAME: !Sub
+            - "${EnvironmentName}-last-signed-in-backfill-lambda"
             - EnvironmentName:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          INACTIVE_ACCOUNT_EXPORT_MAX_ITEMS_PER_SEGMENT:
+          LAST_SIGNED_IN_BACKFILL_PARALLELISM:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
-              inactiveAccountExportMaxItemsPerSegment,
+              lastSignedInBackfillParallelism,
             ]
-          INACTIVE_ACCOUNT_EXPORT_PAUSE_BETWEEN_INVOCATIONS_MS:
+          LAST_SIGNED_IN_BACKFILL_TOTAL_SEGMENTS:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
-              inactiveAccountExportPauseBetweenInvocationsMs,
+              lastSignedInBackfillTotalSegments,
             ]
-          INACTIVE_ACCOUNT_EXPORT_TABLE_NAME: !If
+          LAST_SIGNED_IN_BACKFILL_MAX_ITEMS_PER_SEGMENT:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lastSignedInBackfillMaxItemsPerSegment,
+            ]
+          LAST_SIGNED_IN_BACKFILL_PAUSE_BETWEEN_INVOCATIONS_MS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lastSignedInBackfillPauseBetweenInvocationsMs,
+            ]
+          LAST_SIGNED_IN_BACKFILL_MAX_INVOCATIONS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              lastSignedInBackfillMaxInvocations,
+            ]
+          LAST_SIGNED_IN_BACKFILL_TRACKER_TABLE_NAME: !If
             - InactiveAccountTrackerCrossAccountAccessEnabled
             - !Sub
               - "arn:aws:dynamodb:${AWS::Region}:${AccountId}:table/${TableName}"
@@ -75,49 +75,23 @@ Resources:
               - ${Env}-stub-inactive-account-tracker
               - Env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-          INACTIVE_ACCOUNT_EXPORT_BATCH_WRITE_MAX_RETRIES:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              inactiveAccountExportBatchWriteMaxRetries,
-            ]
-          INACTIVE_ACCOUNT_EXPORT_MAX_INVOCATIONS:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              inactiveAccountExportMaxInvocations,
-            ]
-          INTERNAl_SECTOR_URI: !If
-            - IsNotProduction
-            - !If
-              - UseSubEnvironment
-              - !Sub "https://identity.${SubEnvironment}.${Environment}.account.gov.uk"
-              - !Sub "https://identity.${Environment}.account.gov.uk"
-            - "https://identity.account.gov.uk"
-          INACTIVE_ACCOUNT_EXPORT_TRACKER_WRITE_ENABLED:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !Ref Environment,
-              inactiveAccountExportTrackerWriteEnabled,
-            ]
 
       Policies:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
-        - !Ref DynamoCredentialReadAccessPolicy
         - !Ref CloudWatchLogsKmsAccessPolicy
-        - !Ref InactiveAccountDataExportSelfInvokePolicy
+        - !Ref LastSignedInBackfillSelfInvokePolicy
         - !If
           - InactiveAccountTrackerCrossAccountAccessEnabled
-          - !Ref InactiveAccountTrackerCrossAccountWritePolicy
+          - !Ref LastSignedInBackfillTrackerCrossAccountReadPolicy
           - !Ref AWS::NoValue
         - !If
           - InactiveAccountTrackerStubEnabled
-          - !Ref InactiveAccountTrackerStubWritePolicy
+          - !Ref LastSignedInBackfillTrackerStubReadPolicy
           - !Ref AWS::NoValue
       AutoPublishAlias: live
       LoggingConfig:
-        LogGroup: !Ref InactiveAccountDataExportLogGroup
+        LogGroup: !Ref LastSignedInBackfillLogGroup
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -126,17 +100,17 @@ Resources:
           - Fn::ImportValue: !Sub "${VpcStackName}-PrivateSubnetIdB"
       Tags:
         Name: !Sub
-          - "${EnvironmentName}-inactive-account-data-export-lambda"
+          - "${EnvironmentName}-last-signed-in-backfill-lambda"
           - EnvironmentName:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
         Environment:
           !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
 
-  InactiveAccountDataExportLogGroup:
+  LastSignedInBackfillLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub
-        - "/aws/lambda/${EnvironmentName}-inactive-account-data-export-lambda"
+        - "/aws/lambda/${EnvironmentName}-last-signed-in-backfill-lambda"
         - EnvironmentName:
             !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       RetentionInDays: !If
@@ -153,15 +127,15 @@ Resources:
           ]
       KmsKeyId: !GetAtt MainKmsKey.Arn
 
-  InactiveAccountDataExportLogSubscription:
+  LastSignedInBackfillLogSubscription:
     Type: AWS::Logs::SubscriptionFilter
     Condition: IsSplunkEnabled
     Properties:
-      LogGroupName: !Ref InactiveAccountDataExportLogGroup
+      LogGroupName: !Ref LastSignedInBackfillLogGroup
       FilterPattern: ""
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
 
-  InactiveAccountDataExportSelfInvokePolicy:
+  LastSignedInBackfillSelfInvokePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
@@ -170,6 +144,6 @@ Resources:
           - Effect: Allow
             Action: lambda:InvokeFunction
             Resource: !Sub
-              - "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvironmentName}-inactive-account-data-export-lambda"
+              - "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${EnvironmentName}-last-signed-in-backfill-lambda"
               - EnvironmentName:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]

@@ -147,7 +147,7 @@ Conditions:
                 ]
               - "0"
 
-  InactiveAccountTrackerCrossAccountWriteEnabled:
+  InactiveAccountTrackerCrossAccountAccessEnabled:
     Fn::Or:
       - Fn::Equals:
           - !Ref Environment
@@ -161,7 +161,7 @@ Conditions:
 
   InactiveAccountTrackerStubEnabled:
     Fn::Not:
-      - !Condition InactiveAccountTrackerCrossAccountWriteEnabled
+      - !Condition InactiveAccountTrackerCrossAccountAccessEnabled
 
 Mappings:
   EnvironmentConfiguration:
@@ -207,6 +207,11 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "3"
       inactiveAccountExportMaxInvocations: "40"
       inactiveAccountExportTrackerWriteEnabled: "true"
+      lastSignedInBackfillParallelism: "3"
+      lastSignedInBackfillTotalSegments: "5"
+      lastSignedInBackfillMaxItemsPerSegment: "25"
+      lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
+      lastSignedInBackfillMaxInvocations: "40"
 
     authdev2:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/5159e290-3b74-45c0-9ba8-eaab516ccb9a
@@ -250,6 +255,11 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "3"
       inactiveAccountExportMaxInvocations: "40"
       inactiveAccountExportTrackerWriteEnabled: "true"
+      lastSignedInBackfillParallelism: "3"
+      lastSignedInBackfillTotalSegments: "5"
+      lastSignedInBackfillMaxItemsPerSegment: "25"
+      lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
+      lastSignedInBackfillMaxInvocations: "40"
 
     authdev3:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
@@ -293,6 +303,11 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "3"
       inactiveAccountExportMaxInvocations: "40"
       inactiveAccountExportTrackerWriteEnabled: "true"
+      lastSignedInBackfillParallelism: "3"
+      lastSignedInBackfillTotalSegments: "5"
+      lastSignedInBackfillMaxItemsPerSegment: "25"
+      lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
+      lastSignedInBackfillMaxInvocations: "40"
 
     dev:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
@@ -336,6 +351,11 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "3"
       inactiveAccountExportMaxInvocations: "40"
       inactiveAccountExportTrackerWriteEnabled: "true"
+      lastSignedInBackfillParallelism: "3"
+      lastSignedInBackfillTotalSegments: "5"
+      lastSignedInBackfillMaxItemsPerSegment: "25"
+      lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
+      lastSignedInBackfillMaxInvocations: "40"
 
     build:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
@@ -379,6 +399,11 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "3"
       inactiveAccountExportMaxInvocations: "0"
       inactiveAccountExportTrackerWriteEnabled: "false"
+      lastSignedInBackfillParallelism: "200"
+      lastSignedInBackfillTotalSegments: "200"
+      lastSignedInBackfillMaxItemsPerSegment: "7500"
+      lastSignedInBackfillPauseBetweenInvocationsMs: "60000"
+      lastSignedInBackfillMaxInvocations: "0"
 
     staging:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/a152899b-1c48-4053-b883-74855739fc16
@@ -424,6 +449,11 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "7"
       inactiveAccountExportMaxInvocations: "40"
       inactiveAccountExportTrackerWriteEnabled: "true"
+      lastSignedInBackfillParallelism: "5"
+      lastSignedInBackfillTotalSegments: "125"
+      lastSignedInBackfillMaxItemsPerSegment: "2000"
+      lastSignedInBackfillPauseBetweenInvocationsMs: "60000"
+      lastSignedInBackfillMaxInvocations: "40"
 
     integration:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
@@ -469,6 +499,11 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "7"
       inactiveAccountExportMaxInvocations: "150"
       inactiveAccountExportTrackerWriteEnabled: "false"
+      lastSignedInBackfillParallelism: "5"
+      lastSignedInBackfillTotalSegments: "125"
+      lastSignedInBackfillMaxItemsPerSegment: "2000"
+      lastSignedInBackfillPauseBetweenInvocationsMs: "60000"
+      lastSignedInBackfillMaxInvocations: "150"
 
     production:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/365c4de5-6a6d-43db-8569-eca00e889177
@@ -514,6 +549,11 @@ Mappings:
       inactiveAccountExportBatchWriteMaxRetries: "7"
       inactiveAccountExportMaxInvocations: "0"
       inactiveAccountExportTrackerWriteEnabled: "false"
+      lastSignedInBackfillParallelism: "5"
+      lastSignedInBackfillTotalSegments: "125"
+      lastSignedInBackfillMaxItemsPerSegment: "2000"
+      lastSignedInBackfillPauseBetweenInvocationsMs: "60000"
+      lastSignedInBackfillMaxInvocations: "0"
 
   ProdNotifyTemplateMap:
     Templates:
@@ -1407,7 +1447,7 @@ Resources:
   # Policy for cross-account write access to the inactive account tracker table
   InactiveAccountTrackerCrossAccountWritePolicy:
     Type: AWS::IAM::ManagedPolicy
-    Condition: InactiveAccountTrackerCrossAccountWriteEnabled
+    Condition: InactiveAccountTrackerCrossAccountAccessEnabled
     Properties:
       Description: "IAM policy for writing to the inactive account tracker table in the home-team account"
       Path: !Sub
@@ -1480,6 +1520,80 @@ Resources:
               - kms:Encrypt
               - kms:Decrypt
               - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              - !GetAtt InactiveAccountTrackerStubKmsKey.Arn
+
+  LastSignedInBackfillTrackerCrossAccountReadPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountTrackerCrossAccountAccessEnabled
+    Properties:
+      Description: "IAM policy for scanning the inactive account tracker table in the home-team account for the lastSignedIn backfill"
+      Path: !Sub
+        - /${Env}/utils/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowScanTrackerTable
+            Effect: Allow
+            Action:
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${TableName}
+                - DataStoreAccountId:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      inactiveAccountExportTableAccountId,
+                    ]
+                  TableName:
+                    !FindInMap [
+                      EnvironmentConfiguration,
+                      !Ref Environment,
+                      inactiveAccountExportTableName,
+                    ]
+          - Sid: AllowAccessToTrackerTableKmsForRead
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  inactiveAccountExportTableEncryptionKey,
+                ]
+
+  LastSignedInBackfillTrackerStubReadPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountTrackerStubEnabled
+    Properties:
+      Description: "IAM policy for scanning the inactive account tracker stub table for the lastSignedIn backfill"
+      Path: !Sub
+        - /${Env}/utils/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowScanTrackerStubTable
+            Effect: Allow
+            Action:
+              - dynamodb:Scan
+            Resource:
+              - !Sub
+                - arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Env}-stub-inactive-account-tracker
+                - Env:
+                    !If [
+                      UseSubEnvironment,
+                      !Ref SubEnvironment,
+                      !Ref Environment,
+                    ]
+          - Sid: AllowAccessToTrackerStubTableKmsForRead
+            Effect: Allow
+            Action:
+              - kms:Decrypt
               - kms:DescribeKey
             Resource:
               - !GetAtt InactiveAccountTrackerStubKmsKey.Arn
@@ -1926,11 +2040,20 @@ Resources:
           AttributeType: S
         - AttributeName: commonSubjectId
           AttributeType: S
+        - AttributeName: emailAddress
+          AttributeType: S
       KeySchema:
         - AttributeName: dateForDeletion
           KeyType: HASH
         - AttributeName: commonSubjectId
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: EmailAddressIndex
+          KeySchema:
+            - AttributeName: emailAddress
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       SSESpecification:
         SSEEnabled: true
         SSEType: KMS
