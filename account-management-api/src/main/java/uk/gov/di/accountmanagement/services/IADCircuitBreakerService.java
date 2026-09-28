@@ -2,15 +2,14 @@ package uk.gov.di.accountmanagement.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.accountmanagement.entity.IADCircuitBreakerItem;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.Clock;
@@ -18,6 +17,8 @@ import java.time.Instant;
 import java.util.Map;
 
 import static uk.gov.di.accountmanagement.entity.IADCircuitBreakerItem.PARTITION_KEY;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 
 public class IADCircuitBreakerService {
 
@@ -28,10 +29,10 @@ public class IADCircuitBreakerService {
     private final Json serialisationService;
 
     public IADCircuitBreakerService(String tableName) {
-        var client = DynamoDbClient.create();
-        var enhancedClient = DynamoDbEnhancedClient.builder().dynamoDbClient(client).build();
+        var enhancedClient = createDynamoEnhancedClient(ConfigurationService.getInstance());
         this.dynamoTable =
                 enhancedClient.table(tableName, TableSchema.fromBean(IADCircuitBreakerItem.class));
+        warmUp(dynamoTable);
         this.clock = Clock.systemUTC();
         this.serialisationService = SerializationService.getInstance();
     }

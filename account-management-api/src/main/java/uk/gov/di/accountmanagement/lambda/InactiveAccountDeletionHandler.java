@@ -11,6 +11,7 @@ import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.InactiveAccountDeletionMessage;
 import uk.gov.di.accountmanagement.exceptions.RecentlyActiveAccountException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
+import uk.gov.di.accountmanagement.services.IADCircuitBreakerService;
 import uk.gov.di.accountmanagement.services.InactiveAccountDeletionTokenService;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -51,6 +53,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
     private final StructuredAuditService structuredAuditService;
     private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final IADCircuitBreakerService iadCircuitBreakerService;
     private final Clock clock;
 
     public InactiveAccountDeletionHandler() {
@@ -67,6 +70,8 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
         this.structuredAuditService = new StructuredAuditService(configurationService);
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.iadCircuitBreakerService =
+                new IADCircuitBreakerService(configurationService.getIADCircuitBreakerTableName());
         this.clock = Clock.systemUTC();
     }
 
@@ -77,6 +82,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
             StructuredAuditService structuredAuditService,
             ConfigurationService configurationService,
             CloudwatchMetricsService cloudwatchMetricsService,
+            IADCircuitBreakerService iadCircuitBreakerService,
             Clock clock) {
         this.tokenService = tokenService;
         this.accountDeletionService = accountDeletionService;
@@ -84,6 +90,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
         this.structuredAuditService = structuredAuditService;
         this.configurationService = configurationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.iadCircuitBreakerService = iadCircuitBreakerService;
         this.clock = clock;
     }
 
@@ -108,6 +115,10 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
 
         for (SQSMessage msg : event.getRecords()) {
             try {
+                if (iadCircuitBreakerService.isCircuitBreakerActive()) {
+                    failRemainingMessages(event, msg, failures);
+                    break;
+                }
                 processAccountDeletion(msg);
             } catch (RecentlyActiveAccountException e) {
                 LOG.warn(e.getMessage());
@@ -229,6 +240,23 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                     HOME_READ_ONLY_NAMESPACE);
         } catch (Exception e) {
             LOG.error("Failed to emit guardrail hit metric", e);
+        }
+    }
+
+    private void failRemainingMessages(
+            SQSEvent event,
+            SQSMessage currentMsg,
+            List<SQSBatchResponse.BatchItemFailure> failures) {
+        var records = event.getRecords();
+        var startIndex = records.indexOf(currentMsg);
+        var remainingCount = records.size() - startIndex;
+
+        LOG.warn(
+                "IAD circuit breaker is active. Aborting processing. Reporting current and remaining {} messages as batch item failures.",
+                remainingCount);
+
+        for (int i = startIndex; i < records.size(); i++) {
+            failures.add(new SQSBatchResponse.BatchItemFailure(records.get(i).getMessageId()));
         }
     }
 
