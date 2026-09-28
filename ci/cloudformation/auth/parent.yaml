@@ -272,6 +272,8 @@ Mappings:
       supportPasskeys: true
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.authdev1.dev.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -331,6 +333,8 @@ Mappings:
       supportPasskeys: true
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.authdev2.dev.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -394,6 +398,8 @@ Mappings:
       amcCreatePasskeyRedirectUri: https://signin.authdev3.dev.account.gov.uk/create-passkey-callback
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.authdev3.dev.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -462,6 +468,8 @@ Mappings:
       supportPasskeys: true
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.dev.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -535,6 +543,8 @@ Mappings:
       amcCreatePasskeyRedirectUri: https://signin.build.account.gov.uk/create-passkey-callback
       bulkEmailSendingEnabled: "false"
       amcJwksUrl: https://amcstub.signin.build.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
