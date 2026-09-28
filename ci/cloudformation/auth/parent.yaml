@@ -333,8 +333,6 @@ Mappings:
       supportPasskeys: true
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.authdev2.dev.account.gov.uk/.well-known/amc-jwks.json
-      amcJwksReadTimeout: "6000"
-      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
