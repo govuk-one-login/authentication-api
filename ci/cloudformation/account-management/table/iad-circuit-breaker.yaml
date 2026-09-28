@@ -84,3 +84,39 @@ Resources:
               - kms:DescribeKey
             Resource:
               - !GetAtt IADCircuitBreakerStubKmsKey.Arn
+
+  IADCircuitBreakerCrossAccountAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountDeletionCrossAccountEnabled
+    Properties:
+      Description: "IAM policy for reading and writing to the IAD circuit breaker table in the home-team account"
+      Path: !Sub
+        - /${Env}/account-management/
+        - Env: !Ref Environment
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDynamoDbAccess
+            Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:PutItem
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  iadCircuitBreakerTableArn,
+                ]
+          - Sid: AllowKmsAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  iadCircuitBreakerTableKmsKeyArn,
+                ]
