@@ -7,6 +7,7 @@ import software.amazon.awssdk.enhanced.dynamodb.model.Page;
 import software.amazon.awssdk.enhanced.dynamodb.model.PageIterable;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import uk.gov.di.accountmanagement.entity.IADCircuitBreakerItem;
+import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -14,18 +15,23 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @SuppressWarnings("unchecked")
 class IADCircuitBreakerServiceTest {
 
-    private static final Clock FIXED_CLOCK =
-            Clock.fixed(Instant.parse("2026-09-04T14:00:00Z"), ZoneOffset.UTC);
+    private static final Instant FIXED_INSTANT = Instant.parse("2026-09-04T14:00:00Z");
+    private static final Clock FIXED_CLOCK = Clock.fixed(FIXED_INSTANT, ZoneOffset.UTC);
+
+    private static final String PUBLIC_SUBJECT_ID = "public-subject-id";
 
     private final DynamoDbTable<IADCircuitBreakerItem> dynamoTable = mock(DynamoDbTable.class);
     private final IADCircuitBreakerService service =
@@ -76,7 +82,59 @@ class IADCircuitBreakerServiceTest {
         verify(dynamoTable).query(captor.capture());
         var request = captor.getValue();
         assertFalse(request.scanIndexForward());
-        assertTrue(request.limit() == 1);
+        assertEquals(1, request.limit());
+    }
+
+    @Test
+    void shouldPutItemWithEnabledTrueWhenTrippingCircuitBreaker() {
+        var captor = ArgumentCaptor.forClass(IADCircuitBreakerItem.class);
+
+        service.tripCircuitBreaker("AuthUserActivityCheck", PUBLIC_SUBJECT_ID);
+
+        verify(dynamoTable).putItem(captor.capture());
+        var item = captor.getValue();
+        assertEquals("IAD", item.getPk());
+        assertTrue(item.isEnabled());
+    }
+
+    @Test
+    void shouldUseDatetimeFromClockWhenTrippingCircuitBreaker() {
+        var captor = ArgumentCaptor.forClass(IADCircuitBreakerItem.class);
+
+        service.tripCircuitBreaker("AuthUserActivityCheck", PUBLIC_SUBJECT_ID);
+
+        verify(dynamoTable).putItem(captor.capture());
+        assertEquals(FIXED_INSTANT.toEpochMilli(), captor.getValue().getDatetime());
+    }
+
+    @Test
+    void shouldSerializeMetadataAsJsonWithExpectedFields() {
+        var captor = ArgumentCaptor.forClass(IADCircuitBreakerItem.class);
+
+        service.tripCircuitBreaker("AuthUserActivityCheck", PUBLIC_SUBJECT_ID);
+
+        verify(dynamoTable).putItem(captor.capture());
+        var metadataJson = captor.getValue().getMetadataJson();
+        assertTrue(metadataJson.contains("\"guardrailType\":\"AuthUserActivityCheck\""));
+        assertTrue(metadataJson.contains("\"publicSubjectId\":\"" + PUBLIC_SUBJECT_ID + "\""));
+    }
+
+    @Test
+    void shouldStillWriteItemWhenMetadataSerializationFails() throws Json.JsonException {
+        var failingSerializer = mock(Json.class);
+        when(failingSerializer.writeValueAsStringCamelCase(any()))
+                .thenThrow(new Json.JsonException("serialization error"));
+        var serviceWithFailingSerializer =
+                new IADCircuitBreakerService(dynamoTable, FIXED_CLOCK, failingSerializer);
+        var captor = ArgumentCaptor.forClass(IADCircuitBreakerItem.class);
+
+        serviceWithFailingSerializer.tripCircuitBreaker("AuthUserActivityCheck", PUBLIC_SUBJECT_ID);
+
+        verify(dynamoTable).putItem(captor.capture());
+        var item = captor.getValue();
+        assertTrue(item.isEnabled());
+        assertEquals("IAD", item.getPk());
+        assertNull(item.getMetadataJson());
     }
 
     private IADCircuitBreakerItem makeItem(boolean enabled) {

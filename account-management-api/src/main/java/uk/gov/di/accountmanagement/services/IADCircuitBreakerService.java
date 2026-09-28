@@ -10,8 +10,12 @@ import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import uk.gov.di.accountmanagement.entity.IADCircuitBreakerItem;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.util.Map;
 
 import static uk.gov.di.accountmanagement.entity.IADCircuitBreakerItem.PARTITION_KEY;
 
@@ -21,6 +25,7 @@ public class IADCircuitBreakerService {
 
     private final DynamoDbTable<IADCircuitBreakerItem> dynamoTable;
     private final Clock clock;
+    private final Json serialisationService;
 
     public IADCircuitBreakerService(String tableName) {
         var client = DynamoDbClient.create();
@@ -28,11 +33,22 @@ public class IADCircuitBreakerService {
         this.dynamoTable =
                 enhancedClient.table(tableName, TableSchema.fromBean(IADCircuitBreakerItem.class));
         this.clock = Clock.systemUTC();
+        this.serialisationService = SerializationService.getInstance();
     }
 
     public IADCircuitBreakerService(DynamoDbTable<IADCircuitBreakerItem> dynamoTable, Clock clock) {
         this.dynamoTable = dynamoTable;
         this.clock = clock;
+        this.serialisationService = SerializationService.getInstance();
+    }
+
+    IADCircuitBreakerService(
+            DynamoDbTable<IADCircuitBreakerItem> dynamoTable,
+            Clock clock,
+            Json serialisationService) {
+        this.dynamoTable = dynamoTable;
+        this.clock = clock;
+        this.serialisationService = serialisationService;
     }
 
     public boolean isCircuitBreakerActive() {
@@ -57,5 +73,36 @@ public class IADCircuitBreakerService {
 
         LOG.info("IAD circuit breaker status: active={}", active);
         return active;
+    }
+
+    public void tripCircuitBreaker(String guardrailType, String publicSubjectId) {
+        LOG.warn(
+                "Tripping IAD circuit breaker. guardrailType={}, publicSubjectId={}",
+                guardrailType,
+                publicSubjectId);
+
+        var now = Instant.now(clock).toEpochMilli();
+        String metadataJson = null;
+        try {
+            metadataJson =
+                    serialisationService.writeValueAsStringCamelCase(
+                            Map.of(
+                                    "guardrailType", guardrailType,
+                                    "publicSubjectId", publicSubjectId));
+        } catch (Json.JsonException e) {
+            LOG.warn(
+                    "Failed to serialise circuit breaker metadata, writing item without metadata to ensure circuit breaker tripped",
+                    e);
+        }
+
+        var item = new IADCircuitBreakerItem();
+        item.setPk(PARTITION_KEY);
+        item.setDatetime(now);
+        item.setEnabled(true);
+        item.setMetadataJson(metadataJson);
+
+        dynamoTable.putItem(item);
+
+        LOG.info("Successfully wrote IAD circuit breaker item. datetime={}", now);
     }
 }
