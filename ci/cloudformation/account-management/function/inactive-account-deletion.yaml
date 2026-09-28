@@ -69,6 +69,13 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
+          IAD_CIRCUIT_BREAKER_TABLE_NAME: !If
+            - InactiveAccountDeletionStubEnabled
+            - !Sub
+              - ${Env}-stub-inactive-account-circuit-breaker
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - inactive_account_circuit_breaker
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
       Policies:
@@ -97,6 +104,10 @@ Resources:
           - InactiveAccountDeletionStubEnabled
           - !Ref InactiveAccountDeletionStubQueueProcessorSQSPolicy
           - !Ref InactiveAccountDeletionCrossAccountQueueProcessorSQSPolicy
+        - !If
+          - InactiveAccountDeletionStubEnabled
+          - !Ref IADCircuitBreakerStubAccessPolicy
+          - !Ref IADCircuitBreakerCrossAccountAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

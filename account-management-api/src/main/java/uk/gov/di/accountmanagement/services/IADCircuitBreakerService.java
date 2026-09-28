@@ -18,7 +18,6 @@ import java.util.Map;
 
 import static uk.gov.di.accountmanagement.entity.IADCircuitBreakerItem.PARTITION_KEY;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
-import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
 
 public class IADCircuitBreakerService {
 
@@ -32,7 +31,6 @@ public class IADCircuitBreakerService {
         var enhancedClient = createDynamoEnhancedClient(ConfigurationService.getInstance());
         this.dynamoTable =
                 enhancedClient.table(tableName, TableSchema.fromBean(IADCircuitBreakerItem.class));
-        warmUp(dynamoTable);
         this.clock = Clock.systemUTC();
         this.serialisationService = SerializationService.getInstance();
     }
