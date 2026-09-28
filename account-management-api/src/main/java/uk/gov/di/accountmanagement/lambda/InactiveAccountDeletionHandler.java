@@ -160,6 +160,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                         userProfile, userCredentials, clock);
         if (activityCheck.recentlyActive()) {
             emitGuardrailMetric();
+            tripCircuitBreaker(publicSubjectId);
             throw new RecentlyActiveAccountException(
                     String.format(
                             "Skipping deletion for publicSubjectId: %s. Account has recent activity on attribute: %s",
@@ -240,6 +241,17 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                     HOME_READ_ONLY_NAMESPACE);
         } catch (Exception e) {
             LOG.error("Failed to emit guardrail hit metric", e);
+        }
+    }
+
+    private void tripCircuitBreaker(String publicSubjectId) {
+        try {
+            iadCircuitBreakerService.tripCircuitBreaker(GUARDRAIL_TYPE_VALUE, publicSubjectId);
+        } catch (Exception e) {
+            LOG.error(
+                    "Failed to trip IAD circuit breaker for publicSubjectId: {}",
+                    publicSubjectId,
+                    e);
         }
     }
 

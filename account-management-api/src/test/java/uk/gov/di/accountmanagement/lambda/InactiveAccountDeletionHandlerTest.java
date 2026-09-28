@@ -495,6 +495,63 @@ class InactiveAccountDeletionHandlerTest {
             assertThat(response.getBatchItemFailures(), hasSize(1));
             verifyNoInteractions(accountDeletionService);
         }
+
+        @Test
+        void shouldTripCircuitBreakerWhenGuardrailHit() {
+            var recentProfile = inactiveUserProfile(PUBLIC_SUBJECT_ID, EMAIL);
+            recentProfile.setUpdated(RECENT_TIMESTAMP);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.of(recentProfile));
+
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verify(iadCircuitBreakerService)
+                    .tripCircuitBreaker("AuthUserActivityCheck", PUBLIC_SUBJECT_ID);
+        }
+
+        @Test
+        void shouldNotTripCircuitBreakerWhenAccountIsInactive() {
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verify(iadCircuitBreakerService, never()).tripCircuitBreaker(any(), any());
+        }
+
+        @Test
+        void shouldNotTripCircuitBreakerWhenUserProfileNotFound() {
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.empty());
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verify(iadCircuitBreakerService, never()).tripCircuitBreaker(any(), any());
+        }
+
+        @Test
+        void shouldStillThrowRecentlyActiveAccountExceptionWhenCircuitBreakerWriteFails() {
+            var recentProfile = inactiveUserProfile(PUBLIC_SUBJECT_ID, EMAIL);
+            recentProfile.setUpdated(RECENT_TIMESTAMP);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.of(recentProfile));
+            doThrow(new RuntimeException("DynamoDB error"))
+                    .when(iadCircuitBreakerService)
+                    .tripCircuitBreaker(any(), any());
+
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            SQSBatchResponse response = handler.handleRequest(event, context);
+
+            assertThat(response.getBatchItemFailures(), hasSize(1));
+            verifyNoInteractions(accountDeletionService);
+        }
     }
 
     @Nested
