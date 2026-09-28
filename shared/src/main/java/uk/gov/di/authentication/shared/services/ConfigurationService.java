@@ -813,6 +813,26 @@ public class ConfigurationService
         }
     }
 
+    public Optional<Integer> getAmcJwksConnectionTimeout() {
+        try {
+            return Optional.ofNullable(System.getenv("AMC_JWKS_CONNECTION_TIMEOUT"))
+                    .map(Integer::parseInt);
+        } catch (NumberFormatException e) {
+            LOG.warn("malformatted amc jwks connection timeout");
+            return Optional.empty();
+        }
+    }
+
+    public Optional<Integer> getAmcJwksReadTimeout() {
+        try {
+            return Optional.ofNullable(System.getenv("AMC_JWKS_READ_TIMEOUT"))
+                    .map(Integer::parseInt);
+        } catch (NumberFormatException e) {
+            LOG.warn("malformatted amc jwks read timeout");
+            return Optional.empty();
+        }
+    }
+
     public Long getPasskeyPromptSuppressionInMinutes() {
         var oneWeekInMinutes = "10080";
         return Long.parseLong(
