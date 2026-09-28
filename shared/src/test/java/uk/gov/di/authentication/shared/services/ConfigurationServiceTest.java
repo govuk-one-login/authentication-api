@@ -717,6 +717,22 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getAmcJwksConnectionTimeoutShouldBeEmptyWhenEnvVarBlank() {
+        environment.set("AMC_JWKS_CONNECTION_TIMEOUT", "");
+        assertTrue(configurationService.getAmcJwksConnectionTimeout().isEmpty());
+
+        environment.set("AMC_JWKS_CONNECTION_TIMEOUT", "   ");
+        assertTrue(configurationService.getAmcJwksConnectionTimeout().isEmpty());
+
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withLevelAndMessageContaining(
+                                        Level.WARN, "malformatted amc jwks connection timeout"))));
+    }
+
+    @Test
     void getAmcJwksConnectionTimeoutShouldReturnValueWhenSet() {
         environment.set("AMC_JWKS_CONNECTION_TIMEOUT", "6000");
         assertEquals(Optional.of(6000), configurationService.getAmcJwksConnectionTimeout());
@@ -743,6 +759,22 @@ class ConfigurationServiceTest {
     void getAmcJwksReadTimeoutShouldBeEmptyWhenEnvVarUnset() {
         environment.remove("AMC_JWKS_READ_TIMEOUT");
         assertTrue(configurationService.getAmcJwksReadTimeout().isEmpty());
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withLevelAndMessageContaining(
+                                        Level.WARN, "malformatted amc jwks read timeout"))));
+    }
+
+    @Test
+    void getAmcJwksReadTimeoutShouldBeEmptyWhenEnvVarBlank() {
+        environment.set("AMC_JWKS_READ_TIMEOUT", "");
+        assertTrue(configurationService.getAmcJwksReadTimeout().isEmpty());
+
+        environment.set("AMC_JWKS_READ_TIMEOUT", "   ");
+        assertTrue(configurationService.getAmcJwksReadTimeout().isEmpty());
+
         assertThat(
                 logging.events(),
                 not(

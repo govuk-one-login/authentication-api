@@ -30,12 +30,14 @@ Resources:
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcJwksReadTimeout,
+              DefaultValue: "",
             ]
           AMC_JWKS_CONNECTION_TIMEOUT:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcJwksConnectionTimeout,
+              DefaultValue: "",
             ]
           AMC_CLIENT_ID:
             !FindInMap [

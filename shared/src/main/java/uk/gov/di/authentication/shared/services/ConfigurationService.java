@@ -816,6 +816,7 @@ public class ConfigurationService
     public Optional<Integer> getAmcJwksConnectionTimeout() {
         try {
             return Optional.ofNullable(System.getenv("AMC_JWKS_CONNECTION_TIMEOUT"))
+                    .filter(s -> !s.isBlank())
                     .map(Integer::parseInt);
         } catch (NumberFormatException e) {
             LOG.warn("malformatted amc jwks connection timeout");
@@ -826,6 +827,7 @@ public class ConfigurationService
     public Optional<Integer> getAmcJwksReadTimeout() {
         try {
             return Optional.ofNullable(System.getenv("AMC_JWKS_READ_TIMEOUT"))
+                    .filter(s -> !s.isBlank())
                     .map(Integer::parseInt);
         } catch (NumberFormatException e) {
             LOG.warn("malformatted amc jwks read timeout");
