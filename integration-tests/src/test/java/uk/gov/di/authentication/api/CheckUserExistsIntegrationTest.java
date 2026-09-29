@@ -278,6 +278,33 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertExpectedAuditEvents(AUTH_CHECK_USER_KNOWN_EMAIL);
     }
 
+    @Test
+    void userVerificationInformationWipedOnSessionWhenEmailChanges() {
+        var sessionId = setupUserAndSession(TEST_EMAIL_1, MFAMethodType.AUTH_APP);
+
+        var session = authSessionStore.getSession(sessionId).get();
+        authSessionStore.updateSession(
+                session.withEmailAddress(TEST_EMAIL_1)
+                        .withHasVerifiedWithMfa(true)
+                        .withHasVerifiedWithPassword(true));
+
+        var clientSessionId = IdGenerator.generate();
+
+        var request = new CheckUserExistsRequest(TEST_EMAIL_2);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(session.getSessionId(), clientSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+
+        var sessionAfterUpdate = authSessionStore.getSession(sessionId).get();
+        assertFalse(sessionAfterUpdate.getHasVerifiedWithPasskey());
+        assertFalse(sessionAfterUpdate.getHasVerifiedWithMfa());
+        assertFalse(sessionAfterUpdate.getHasVerifiedWithPassword());
+    }
+
     @Nested
     @DisplayName("Forced MFA reset after MFA check")
     class ForcedMFAResetAfterMFACheck {

@@ -159,18 +159,13 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         decisionResult.getFailure());
             }
 
-            String existingSessionEmail = userContext.getAuthSession().getEmailAddress();
-            if (existingSessionEmail != null
-                    && !existingSessionEmail.equalsIgnoreCase(emailAddress)) {
-                LOG.info("Session email is changing on an existing session");
-            }
-
             var isUserAccountLocked =
                     decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
             if (isUserAccountLocked) {
                 LOG.info("User account is locked");
-                authSessionService.updateSessionAttribute(
-                        sessionId, AuthSessionItem.ATTRIBUTE_EMAIL, emailAddress);
+                String existingSessionEmail = userContext.getAuthSession().getEmailAddress();
+                updateEmailAndResetReverificationInformationIfRequired(
+                        existingSessionEmail, emailAddress, sessionId);
 
                 auditContext = auditContext.withSubjectId(internalCommonSubjectId);
                 auditService.submitAuditEvent(
@@ -266,8 +261,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     sessionId,
                     AuthSessionItem.ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID,
                     internalCommonSubjectIdToBeUpdatedInSession);
-            authSessionService.updateSessionAttribute(
-                    sessionId, AuthSessionItem.ATTRIBUTE_EMAIL, emailAddress);
+
+            String existingSessionEmail = userContext.getAuthSession().getEmailAddress();
+            updateEmailAndResetReverificationInformationIfRequired(
+                    existingSessionEmail, emailAddress, sessionId);
 
             LOG.info("Successfully processed request");
 
@@ -347,5 +344,21 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         }
 
         return Result.success(lockoutInformation);
+    }
+
+    private void updateEmailAndResetReverificationInformationIfRequired(
+            String emailOnSession, String emailInRequest, String sessionId) {
+        resetReverificationInformationIfEmailChanged(emailOnSession, emailInRequest, sessionId);
+        authSessionService.updateSessionAttribute(
+                sessionId, AuthSessionItem.ATTRIBUTE_EMAIL, emailInRequest);
+    }
+
+    private void resetReverificationInformationIfEmailChanged(
+            String emailOnSession, String emailInRequest, String sessionId) {
+        if (emailOnSession != null && !emailOnSession.equalsIgnoreCase(emailInRequest)) {
+            LOG.info(
+                    "Session email is changing on an existing session, ensuring session does not contain verified with info");
+            authSessionService.resetVerificationInformation(sessionId);
+        }
     }
 }

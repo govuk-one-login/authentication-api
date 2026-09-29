@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.exceptions.AuthSessionException;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
 
@@ -23,8 +24,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
@@ -254,6 +257,40 @@ class AuthSessionServiceIntegrationTest {
 
         var result = authSessionService.getSession(SESSION_ID).orElseThrow();
         assertThat(result.getEmailAddress(), equalTo(null));
+    }
+
+    @Test
+    void shouldResetSessionVerificationInformationWithoutRewritingOtherFields() {
+        var initialSession = withStoredSession(SESSION_ID);
+
+        authSessionService.updateSession(
+                initialSession
+                        .withHasVerifiedWithMfa(true)
+                        .withHasVerifiedWithPassword(true)
+                        .withHasVerifiedWithPasskey(true));
+
+        // Set another variable on the session just before resetting the verification information to
+        // make sure the session in general remains the same
+        authSessionService.updateSessionAttribute(
+                SESSION_ID, AuthSessionItem.ATTRIBUTE_EMAIL, TEST_EMAIL);
+
+        authSessionService.resetVerificationInformation(SESSION_ID);
+
+        var result = authSessionService.getSession(SESSION_ID).orElseThrow();
+        assertThat(result.getEmailAddress(), equalTo(TEST_EMAIL));
+
+        assertFalse(result.getHasVerifiedWithMfa());
+        assertFalse(result.getHasVerifiedWithPasskey());
+        assertFalse(result.getHasVerifiedWithPassword());
+    }
+
+    @Test
+    void shouldThrowWhenResettingVerificationInformationForNonExistentSession() {
+        assertTrue(authSessionService.getSession(SESSION_ID).isEmpty());
+
+        assertThrows(
+                AuthSessionException.class,
+                () -> authSessionService.resetVerificationInformation(SESSION_ID));
     }
 
     private AuthSessionItem withStoredSession(String sessionId) {

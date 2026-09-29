@@ -232,6 +232,43 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         }
     }
 
+    public void resetVerificationInformation(String sessionId) {
+        var authSessionTableName = dynamoTable.tableName();
+
+        var updateExpression =
+                "SET #hasVerifiedWithPassword = :false, #hasVerifiedWithMfa = :false, #hasVerifiedWithPasskey = :false";
+
+        var updateItemRequest =
+                UpdateItemRequest.builder()
+                        .tableName(authSessionTableName)
+                        .key(
+                                Map.of(
+                                        AuthSessionItem.ATTRIBUTE_SESSION_ID,
+                                        AttributeValue.fromS(sessionId)))
+                        .conditionExpression("attribute_exists(#SessionId)")
+                        .updateExpression(updateExpression)
+                        .expressionAttributeNames(
+                                Map.of(
+                                        "#hasVerifiedWithPassword",
+                                        AuthSessionItem.ATTRIBUTE_HAS_VERIFIED_WITH_PASSWORD,
+                                        "#hasVerifiedWithMfa",
+                                        AuthSessionItem.ATTRIBUTE_HAS_VERIFIED_WITH_MFA,
+                                        "#hasVerifiedWithPasskey",
+                                        AuthSessionItem.ATTRIBUTE_HAS_VERIFIED_WITH_PASSKEY,
+                                        "#SessionId",
+                                        AuthSessionItem.ATTRIBUTE_SESSION_ID))
+                        .expressionAttributeValues(Map.of(":false", AttributeValue.fromBool(false)))
+                        .build();
+
+        try {
+            LOG.info("Resetting auth session verification information");
+            update(updateItemRequest);
+        } catch (Exception e) {
+            logAndThrowAuthSessionException(
+                    "Failed to reset Auth session verification information", sessionId, e);
+        }
+    }
+
     public void updateSessionAttribute(String sessionId, String attributeToUpdate, String value) {
         var authSessionTableName = dynamoTable.tableName();
         var attributeNameToUpdatePlaceholder = "#" + attributeToUpdate;
