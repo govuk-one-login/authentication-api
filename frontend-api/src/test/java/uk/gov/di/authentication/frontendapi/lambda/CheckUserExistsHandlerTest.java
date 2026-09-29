@@ -68,6 +68,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -769,6 +770,29 @@ class CheckUserExistsHandlerTest {
                             AUDIT_CONTEXT.withSubjectId(getExpectedInternalPairwiseId()),
                             pair("number_of_attempts_user_allowed_to_login", 5));
         }
+
+        @Test
+        void shouldResetVerificationInformationOnLockedAccountPathWhenEmailChanges() {
+            authSessionExistsWithEmail("previous.email@example.com");
+            var lockedOutDecision =
+                    new Decision.TemporarilyLockedOut(
+                            uk.gov.di.authentication.userpermissions.entity.ForbiddenReason
+                                    .EXCEEDED_INCORRECT_PASSWORD_SUBMISSION_LIMIT,
+                            5,
+                            java.time.Instant.now().plusSeconds(3600),
+                            false);
+            when(permissionDecisionManager.canReceivePassword(any(), any()))
+                    .thenReturn(Result.success(lockedOutDecision));
+
+            var result = handler.handleRequest(userExistsRequest(EMAIL_ADDRESS), context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ACCT_TEMPORARILY_LOCKED));
+            verify(authSessionService).resetVerificationInformation(SESSION_ID);
+            verify(authSessionService)
+                    .updateSessionAttribute(
+                            SESSION_ID, AuthSessionItem.ATTRIBUTE_EMAIL, EMAIL_ADDRESS);
+        }
     }
 
     @Test
@@ -817,6 +841,43 @@ class CheckUserExistsHandlerTest {
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertNull(checkUserExistsResponse.hasActivePasskey());
         verifyNoInteractions(passkeysService);
+    }
+
+    private static Stream<Arguments>
+            emailAddressOnSessionInRequestAndWhetherReverificationIsReset() {
+        return Stream.of(
+                Arguments.of("another.email@example.com", EMAIL_ADDRESS, true),
+                Arguments.of(EMAIL_ADDRESS, EMAIL_ADDRESS, false),
+                Arguments.of(null, EMAIL_ADDRESS, false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("emailAddressOnSessionInRequestAndWhetherReverificationIsReset")
+    void shouldResetVerificationInformationOnSessionWhenEmailChanges(
+            String emailAddressOnSession,
+            String emailAddressInRequest,
+            boolean verificationStateShouldBeWiped) {
+        authSessionExistsWithEmail(emailAddressOnSession);
+        var userProfile =
+                generateUserProfile().withPhoneNumber(CommonTestVariables.UK_MOBILE_NUMBER);
+        setupUserProfileAndClient(Optional.of(userProfile));
+        when(authenticationService.getUserCredentialsFromEmail(emailAddressInRequest))
+                .thenReturn(new UserCredentials().withMfaMethods(List.of()));
+
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withHeaders(VALID_HEADERS)
+                        .withBody(format("{\"email\": \"%s\"}", emailAddressInRequest))
+                        .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        if (verificationStateShouldBeWiped) {
+            verify(authSessionService).resetVerificationInformation(SESSION_ID);
+        } else {
+            verify(authSessionService, never()).resetVerificationInformation(SESSION_ID);
+        }
     }
 
     @Test
@@ -989,6 +1050,11 @@ class CheckUserExistsHandlerTest {
     private void authSessionExists() {
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
+    }
+
+    private void authSessionExistsWithEmail(String email) {
+        when(authSessionService.getSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(authSession.withEmailAddress(email)));
     }
 
     private void authSessionMissing() {
