@@ -453,7 +453,7 @@ Mappings:
       lastSignedInBackfillTotalSegments: "125"
       lastSignedInBackfillMaxItemsPerSegment: "2000"
       lastSignedInBackfillPauseBetweenInvocationsMs: "60000"
-      lastSignedInBackfillMaxInvocations: "40"
+      lastSignedInBackfillMaxInvocations: "80"
 
     integration:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/7f17084d-14a7-4482-8a7b-e392d1f60d41
