@@ -25,10 +25,14 @@ import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static java.lang.String.format;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_PASSKEY_DELETE_SUCCESSFUL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PASSKEY_DELETED_NONE_REMAINING;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -37,25 +41,28 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
 
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
+    private static final String PASSKEY_ID = "abcd123456";
     private static final String passkeyRetrieveResponse =
-            """
+            format(
+                    """
                     {
                       "passkeys": [
                         {
-                          "id": "123456",
+                          "id": "%s",
                           "credential": "credential1",
                           "aaguid": "some-aaguid",
                           "isAttested": true,
                           "signCount": 1,
                           "transports": [],
-                          "isBackupEligible": true,
+                          "isBackUpEligible": true,
                           "isBackedUp": true,
                           "createdAt": "some-timestamp",
                           "lastUsedAt": "another-timestamp"
                         }
                       ]
                     }
-                    """;
+                    """,
+                    PASSKEY_ID);
 
     private static final String TEST_CLIENT_ID = "test-client-id";
 
@@ -82,7 +89,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     }
 
     @Test
-    void shouldProxy204ResponseFromAccountDataApi() {
+    void shouldProxy204ResponseFromAccountDataApiAndSendSuccessAuditEvent() {
         // Arrange
         var publicSubjectId = userStore.signUp(TEST_EMAIL, TEST_PASSWORD);
         userStore.addSalt(TEST_EMAIL);
@@ -91,7 +98,6 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         supportPasskeysAndTxmaEnabledConfigurationService(
                                 "http://localhost:" + accountDataApiWireMockServer.port()));
 
-        var passkeyId = "def";
         var token = "hij";
 
         accountDataApiWireMockServer.stubFor(
@@ -100,7 +106,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                                         "/accounts/"
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys/"
-                                                + passkeyId))
+                                                + PASSKEY_ID))
                         .withHeader("Authorization", WireMock.equalTo("Bearer " + token))
                         .willReturn(aResponse().withStatus(204)));
 
@@ -114,7 +120,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         Optional.empty(),
                         Map.of("X-ADAPI-AccessToken", token),
                         Collections.emptyMap(),
-                        Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", passkeyId),
+                        Map.of("publicSubjectId", publicSubjectId, "passkeyIdentifier", PASSKEY_ID),
                         Map.ofEntries(Map.entry("clientId", TEST_CLIENT_ID)),
                         Optional.of("delete"));
 
@@ -127,8 +133,24 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                                         "/accounts/"
                                                 + publicSubjectId
                                                 + "/authenticators/passkeys/"
-                                                + passkeyId))
+                                                + PASSKEY_ID))
                         .withHeader("Authorization", WireMock.equalTo("Bearer " + token)));
+
+        List<String> rawEvents =
+                assertTxmaAuditEventsReceived(
+                        txmaAuditQueue, List.of(AUTH_PASSKEY_DELETE_SUCCESSFUL), false);
+        assertThatJson(rawEvents.get(0))
+                .node("restricted.passkey")
+                .isEqualTo(
+                        format(
+                                """
+                        {
+                          "passkey_credential_id": "%s",
+                          "passkey_aaguid": "some-aaguid",
+                          "passkey_credential_device_type": "multi-device"
+                        }
+                        """,
+                                PASSKEY_ID));
     }
 
     @Test
@@ -155,7 +177,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         .willReturn(aResponse().withStatus(204)));
 
         var passkeyRetrieveResponse =
-                String.format(
+                format(
                         """
                         {
                           "passkeys": [
