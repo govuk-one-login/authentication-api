@@ -7,20 +7,53 @@ Parameters:
     Description: Name of the VPC stack to import values from
     Default: vpc
 
-  CertificateArn:
+  SubDomain:
     Type: String
-    Description: ACM Certificate ARN for HTTPS listener
-    Default: ""
+    Description: Subdomain for the ALB DNS record under authdev2.dev.account.gov.uk
+    Default: test-alb
 
   AllowedCIDRs:
     Type: CommaDelimitedList
     Description: Comma-separated list of CIDR blocks allowed to access the ALB
     Default: "85.119.84.27/32,217.196.229.74/32,217.196.229.79/32,217.196.229.80/32,217.196.229.81/32,51.149.8.0/25,51.149.8.128/29,159.254.101.107/32,159.254.101.75/32,164.137.3.121/32,164.137.3.89/32,3.9.56.99/32"
 
+Conditions:
+  IsDevAccount: !Equals [!Ref AWS::AccountId, "975050272416"]
+
 Resources:
+  # ACM Certificate with DNS validation
+  ALBCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Condition: IsDevAccount
+    Properties:
+      DomainName: !Sub "${SubDomain}.authdev2.dev.account.gov.uk"
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub "${SubDomain}.authdev2.dev.account.gov.uk"
+          HostedZoneId: Z0150260NL8JWTP2R1YQ
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-certificate"
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/test-alb-account-mgmt/alb-to-private-api.yaml
+
+  # Route53 Alias record pointing to ALB
+  ALBDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: IsDevAccount
+    Properties:
+      HostedZoneId: Z0150260NL8JWTP2R1YQ
+      Name: !Sub "${SubDomain}.authdev2.dev.account.gov.uk"
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt ApplicationLoadBalancer.DNSName
+        EvaluateTargetHealth: true
+        HostedZoneId: !GetAtt ApplicationLoadBalancer.CanonicalHostedZoneID
+
   # Security Group for ALB
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: IsDevAccount
     Properties:
       GroupName: !Sub "${AWS::StackName}-alb-sg"
       GroupDescription: Security group for internet-facing ALB
@@ -165,6 +198,7 @@ Resources:
   # Internet-facing ALB
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: IsDevAccount
     Properties:
       Name: !Sub "${AWS::StackName}-alb"
       Type: application
@@ -188,6 +222,7 @@ Resources:
   # Target Group for Private API
   PrivateAPITargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: IsDevAccount
     Properties:
       Name: !Sub "${AWS::StackName}-private-api-tg"
       Port: 443
@@ -226,67 +261,112 @@ Resources:
         - Key: Source
           Value: govuk-one-login/authentication-api/ci/cloudformation/test-alb-account-mgmt/alb-to-private-api.yaml
 
-  # HTTP Listener with path-based routing
+  # HTTP Listener - redirects all traffic to HTTPS
   HTTPListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: IsDevAccount
     Properties:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 80
       Protocol: HTTP
       DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref PrivateAPITargetGroup
-          ForwardConfig:
-            TargetGroups:
-              - TargetGroupArn: !Ref PrivateAPITargetGroup
-                Weight: 1
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: "443"
+            StatusCode: HTTP_301
 
-  # Listener Rule to set Host header for API Gateway
-  ListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      ListenerArn: !Ref HTTPListener
-      Priority: 1
-      Conditions:
-        - Field: path-pattern
-          Values:
-            - "/*"
-      Actions:
-        - Type: forward
-          TargetGroupArn: !Ref PrivateAPITargetGroup
-
-  # HTTPS Listener (optional, requires certificate)
+  # HTTPS Listener - required, certificate must be provided
   HTTPSListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
-    Condition: HasCertificate
+    Condition: IsDevAccount
     Properties:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 443
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !Ref CertificateArn
+        - CertificateArn: !Ref ALBCertificate
       DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: "404"
+            ContentType: application/json
+            MessageBody: '{"message": "Not found"}'
+
+  # Listener Rule for v1 API paths (mfa-methods, passkeys)
+  ListenerRuleV1:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: IsDevAccount
+    Properties:
+      ListenerArn: !Ref HTTPSListener
+      Priority: 1
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - "/*/v1/*"
+      Actions:
         - Type: forward
           TargetGroupArn: !Ref PrivateAPITargetGroup
 
-Conditions:
-  HasCertificate: !Not [!Equals [!Ref CertificateArn, ""]]
+  # Listener Rule for account management flat paths
+  ListenerRuleFlat:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: IsDevAccount
+    Properties:
+      ListenerArn: !Ref HTTPSListener
+      Priority: 2
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - "/*/authenticate"
+            - "/*/update-password"
+            - "/*/update-email"
+            - "/*/update-phone-number"
+            - "/*/delete-account"
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref PrivateAPITargetGroup
+
+  # Listener Rule for send-otp-notification
+  ListenerRuleOtp:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: IsDevAccount
+    Properties:
+      ListenerArn: !Ref HTTPSListener
+      Priority: 3
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - "/*/send-otp-notification"
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref PrivateAPITargetGroup
 
 Outputs:
+  ALBEndpoint:
+    Description: HTTPS endpoint for the ALB
+    Condition: IsDevAccount
+    Value: !Sub "https://${SubDomain}.authdev2.dev.account.gov.uk"
+    Export:
+      Name: !Sub "${AWS::StackName}-ALB-Endpoint"
+
   LoadBalancerDNS:
     Description: DNS name of the internet-facing ALB
+    Condition: IsDevAccount
     Value: !GetAtt ApplicationLoadBalancer.DNSName
     Export:
       Name: !Sub "${AWS::StackName}-ALB-DNS"
 
   LoadBalancerArn:
     Description: ARN of the ALB
+    Condition: IsDevAccount
     Value: !Ref ApplicationLoadBalancer
     Export:
       Name: !Sub "${AWS::StackName}-ALB-ARN"
 
   TargetGroupArn:
     Description: ARN of the target group
+    Condition: IsDevAccount
     Value: !Ref PrivateAPITargetGroup
     Export:
       Name: !Sub "${AWS::StackName}-TargetGroup-ARN"

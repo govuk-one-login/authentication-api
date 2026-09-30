@@ -5,6 +5,7 @@ set -e
 STACK_NAME="auth-test-alb"
 TEMPLATE_FILE="alb-to-private-api.yaml"
 VPC_STACK_NAME="${1:-vpc}"
+SUB_DOMAIN="${2:-test-alb}"
 
 # Set AWS profile and load credentials
 export AWS_PROFILE="di-authentication-development-AdministratorAccessPermission"
@@ -18,12 +19,14 @@ source "${DIR}/export_aws_creds.sh"
 
 echo "Deploying CloudFormation stack: ${STACK_NAME}"
 echo "VPC Stack: ${VPC_STACK_NAME}"
+echo "Sub Domain: ${SUB_DOMAIN}.authdev2.dev.account.gov.uk"
 
 aws cloudformation deploy \
   --template-file "${PROJECT_ROOT}/ci/cloudformation/test-alb-account-mgmt/${TEMPLATE_FILE}" \
   --stack-name "${STACK_NAME}" \
   --parameter-overrides \
   VpcStackName="${VPC_STACK_NAME}" \
+  SubDomain="${SUB_DOMAIN}" \
   --capabilities CAPABILITY_NAMED_IAM \
   --region eu-west-2
 
