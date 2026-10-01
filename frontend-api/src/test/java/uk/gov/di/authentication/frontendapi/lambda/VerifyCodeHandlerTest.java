@@ -247,9 +247,12 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturn400IfSessionIdIsInvalid() {
+        when(authSessionService.getSessionFromRequestHeaders(any())).thenReturn(Optional.empty());
         String body =
                 format("{ \"code\": \"%s\", \"notificationType\": \"%s\"  }", CODE, VERIFY_EMAIL);
-        APIGatewayProxyResponseEvent result = makeCallWithCode(body, Optional.empty());
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        var result = handler.handleRequest(request, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
@@ -376,7 +379,9 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, VERIFY_EMAIL);
-        var result = makeCallWithCode(body, Optional.of(authSession));
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        var result = handler.handleRequest(request, context);
 
         assertThat(result, hasStatus(204));
         verifyNoInteractions(accountModifiersService);
@@ -410,7 +415,9 @@ class VerifyCodeHandlerTest {
         authSession.setClientId(TEST_CLIENT_ID);
         String body =
                 format("{ \"code\": \"%s\", \"notificationType\": \"%s\"  }", CODE, VERIFY_EMAIL);
-        var result = makeCallWithCode(body, Optional.of(authSession));
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        var result = handler.handleRequest(request, context);
 
         assertThat(result, hasStatus(204));
         verifyNoInteractions(accountModifiersService);
@@ -829,7 +836,9 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, RESET_PASSWORD_WITH_CODE);
-        APIGatewayProxyResponseEvent result = makeCallWithCode(body, Optional.of(authSession));
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        var result = handler.handleRequest(request, context);
 
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE);
@@ -870,7 +879,9 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, RESET_PASSWORD_WITH_CODE);
-        APIGatewayProxyResponseEvent result = makeCallWithCode(body, Optional.of(authSession));
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        var result = handler.handleRequest(request, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(expectedError));
@@ -889,7 +900,9 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, SIGN_IN);
-        makeCallWithCode(body, Optional.of(authSession));
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        handler.handleRequest(request, context);
 
         verify(codeStorageService, never())
                 .isBlockedForEmail(
@@ -1039,7 +1052,9 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         code, notificationType);
-        return makeCallWithCode(body, Optional.of(authSession));
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        return handler.handleRequest(request, context);
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(
@@ -1051,7 +1066,9 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\" }",
                         code, notificationType, journeyType.getValue());
-        return makeCallWithCode(body, Optional.of(authSession));
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+        return handler.handleRequest(request, context);
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(
@@ -1063,17 +1080,9 @@ class VerifyCodeHandlerTest {
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\", \"mfaMethodId\":\"%s\" }",
                         code, notificationType, journeyType.getValue(), mfaMethodId);
-        return makeCallWithCode(body, Optional.of(authSession));
-    }
+        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
-    private APIGatewayProxyResponseEvent makeCallWithCode(
-            String body, Optional<AuthSessionItem> session) {
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        when(authSessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(session);
-
-        return handler.handleRequest(event, context);
+        return handler.handleRequest(request, context);
     }
 
     private static Stream<Arguments> codeRequestTypes() {
