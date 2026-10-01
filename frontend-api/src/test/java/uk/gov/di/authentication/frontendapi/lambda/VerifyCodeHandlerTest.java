@@ -461,8 +461,7 @@ class VerifyCodeHandlerTest {
     void
             shouldReturnMaxReachedAndNotSetBlockWhenRegistrationEmailCodeAttemptsExceedMaxRetryCount() {
         setupOtpCode(CODE, EMAIL, VERIFY_EMAIL);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES + 1);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES + 1);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
         var result = makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.name());
@@ -554,8 +553,7 @@ class VerifyCodeHandlerTest {
 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
         when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(false);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES + 1);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES + 1);
 
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
@@ -580,10 +578,9 @@ class VerifyCodeHandlerTest {
     void shouldReturn204ForValidMfaSmsRequestAndRemoveAccountRecoveryBlockWhenPresent(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES - 1);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES - 1);
         when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
@@ -641,10 +638,9 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturn204ForValidIdentifiedBackupSmsMfaMethod() {
         setupOtpCode(CODE, EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES - 1);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD, BACKUP_SMS_METHOD)));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES - 1);
         when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
@@ -679,8 +675,7 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturn204ForValidMfaSmsRequestAndNotRemoveAccountRecoveryBlockWhenNotPresent() {
         setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES - 1);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES - 1);
         when(accountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(false);
         when(mfaMethodsService.getMfaMethods(EMAIL))
@@ -727,10 +722,9 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldUpdateAuthSessionMfaTypeAndAchievedCredentialStrength() {
         setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES - 1);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES - 1);
         when(accountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
                 .thenReturn(false);
 
@@ -750,10 +744,9 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturnMfaCodeNotValidWhenCodeIsInvalid() {
         setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES - 1);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES - 1);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
 
@@ -792,10 +785,9 @@ class VerifyCodeHandlerTest {
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES + 1);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES + 1);
 
         var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
 
@@ -836,10 +828,9 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenPasswordResetExceedMaxRetryCount() {
         setupOtpCode(CODE, EMAIL, RESET_PASSWORD_WITH_CODE);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES + 1);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
-                .thenReturn(MAX_RETRIES + 1);
 
         var result = makeCallWithCode(INVALID_CODE, RESET_PASSWORD_WITH_CODE.toString());
 
@@ -1169,9 +1160,9 @@ class VerifyCodeHandlerTest {
     void shouldCallCorrectSmsOtpReceivedWhenMfaSmsCodeIsValid() {
         // Arrange
         setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
+        setupIncorrectMfaCodeAttemptsCount(EMAIL, 0);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
 
         // Act
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
@@ -1190,13 +1181,13 @@ class VerifyCodeHandlerTest {
 
         @BeforeEach
         void setUp() {
+            setupIncorrectMfaCodeAttemptsCount(EMAIL, 0);
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
             when(codeStorageService.getOtpCode(
                             EMAIL.concat(INTERNATIONAL_SMS_METHOD.getDestination()), MFA_SMS))
                     .thenReturn(Optional.of(CODE));
             when(mfaMethodsService.getMfaMethods(EMAIL))
                     .thenReturn(Result.success(List.of(INTERNATIONAL_SMS_METHOD)));
-            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
             authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
         }
 
@@ -1285,6 +1276,10 @@ class VerifyCodeHandlerTest {
             String otpCode, String identifier, NotificationType notificationType) {
         when(codeStorageService.getOtpCode(identifier, notificationType))
                 .thenReturn(Optional.of(otpCode));
+    }
+
+    private void setupIncorrectMfaCodeAttemptsCount(String email, int count) {
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(email)).thenReturn(count);
     }
 
     private AuthCodeVerified captureAuthCodeVerifiedEvent() {
