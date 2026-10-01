@@ -232,6 +232,7 @@ class VerifyCodeHandlerTest {
         when(configurationService.getMaxPasswordRetries()).thenReturn(MAX_RETRIES);
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
     }
 
     @Test
@@ -272,8 +273,7 @@ class VerifyCodeHandlerTest {
     @ParameterizedTest
     @MethodSource("emailNotificationTypes")
     void shouldReturn204ForValidEmailCodeRequest(NotificationType emailNotificationType) {
-        when(codeStorageService.getOtpCode(EMAIL, emailNotificationType))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL, emailNotificationType);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
         APIGatewayProxyResponseEvent result =
@@ -309,8 +309,7 @@ class VerifyCodeHandlerTest {
     @MethodSource("emailNotificationTypes")
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided(
             NotificationType emailNotificationType) {
-        when(codeStorageService.getOtpCode(EMAIL, emailNotificationType))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL, emailNotificationType);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
 
@@ -343,8 +342,7 @@ class VerifyCodeHandlerTest {
     @MethodSource("emailNotificationTypes")
     void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode(
             NotificationType emailNotificationType) {
-        when(codeStorageService.getOtpCode(EMAIL, emailNotificationType))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL, emailNotificationType);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
 
@@ -404,7 +402,6 @@ class VerifyCodeHandlerTest {
         when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         when(mfaMethodsService.getMfaMethods(email))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
         authSession.setEmailAddress(email);
@@ -437,10 +434,10 @@ class VerifyCodeHandlerTest {
     void
             shouldReturn200AndUseDefaultCodeForVerifyEmailRequestUsingTestClientWhenEmailDoesNotMatchAllowlist(
                     String email) {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        setupOtpCode(CODE, email, VERIFY_EMAIL);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(mfaMethodsService.getMfaMethods(email))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
         authSession.setEmailAddress(email);
@@ -463,9 +460,9 @@ class VerifyCodeHandlerTest {
     @Test
     void
             shouldReturnMaxReachedAndNotSetBlockWhenRegistrationEmailCodeAttemptsExceedMaxRetryCount() {
+        setupOtpCode(CODE, EMAIL, VERIFY_EMAIL);
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
                 .thenReturn(MAX_RETRIES + 1);
-        when(codeStorageService.getOtpCode(EMAIL, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
         var result = makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.name());
@@ -552,7 +549,6 @@ class VerifyCodeHandlerTest {
     @Test
     void
             shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
-        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
 
@@ -583,9 +579,7 @@ class VerifyCodeHandlerTest {
     @MethodSource("codeRequestTypes")
     void shouldReturn204ForValidMfaSmsRequestAndRemoveAccountRecoveryBlockWhenPresent(
             CodeRequestType codeRequestType, JourneyType journeyType) {
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
@@ -646,9 +640,7 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturn204ForValidIdentifiedBackupSmsMfaMethod() {
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL.concat(BACKUP_SMS_METHOD.getDestination()), MFA_SMS);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD, BACKUP_SMS_METHOD)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
@@ -686,9 +678,7 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturn204ForValidMfaSmsRequestAndNotRemoveAccountRecoveryBlockWhenNotPresent() {
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
                 .thenReturn(MAX_RETRIES - 1);
         when(accountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_COMMON_SUBJECT_ID))
@@ -736,9 +726,7 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldUpdateAuthSessionMfaTypeAndAchievedCredentialStrength() {
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
@@ -761,9 +749,7 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMfaCodeNotValidWhenCodeIsInvalid() {
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
@@ -805,10 +791,7 @@ class VerifyCodeHandlerTest {
     @MethodSource("codeRequestTypes")
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
             CodeRequestType codeRequestType, JourneyType journeyType) {
-        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
@@ -852,9 +835,7 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenPasswordResetExceedMaxRetryCount() {
-        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        when(codeStorageService.getOtpCode(EMAIL, RESET_PASSWORD_WITH_CODE))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL, RESET_PASSWORD_WITH_CODE);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL))
@@ -887,10 +868,6 @@ class VerifyCodeHandlerTest {
         when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(
-                        TEST_CLIENT_EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()),
-                        RESET_PASSWORD_WITH_CODE))
-                .thenReturn(Optional.of(CODE));
         when(mfaMethodsService.getMfaMethods(TEST_CLIENT_EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
 
@@ -931,10 +908,6 @@ class VerifyCodeHandlerTest {
         when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(
-                        TEST_CLIENT_EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()),
-                        RESET_PASSWORD_WITH_CODE))
-                .thenReturn(Optional.of(CODE));
         when(mfaMethodsService.getMfaMethods(TEST_CLIENT_EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(codeStorageService.isBlockedForEmail(TEST_CLIENT_EMAIL, blockKeyPrefix))
@@ -957,9 +930,6 @@ class VerifyCodeHandlerTest {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(
-                        TEST_CLIENT_EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
         when(mfaMethodsService.getMfaMethods(TEST_CLIENT_EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
 
@@ -981,9 +951,7 @@ class VerifyCodeHandlerTest {
     @MethodSource("codeRequestTypes")
     void shouldDeleteCountOnSuccessfulSMSCodeRequest(
             CodeRequestType codeRequestType, JourneyType journeyType) {
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         var existingCounts = Map.of(ENTER_EMAIL, 5, ENTER_PASSWORD, 1);
@@ -1200,9 +1168,7 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldCallCorrectSmsOtpReceivedWhenMfaSmsCodeIsValid() {
         // Arrange
-        when(codeStorageService.getOtpCode(
-                        EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                .thenReturn(Optional.of(CODE));
+        setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL)).thenReturn(0);
@@ -1252,9 +1218,7 @@ class VerifyCodeHandlerTest {
 
         @Test
         void shouldNotEmitMfaResetAuditEventOrMetricForDomesticNumber() {
-            when(codeStorageService.getOtpCode(
-                            EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS))
-                    .thenReturn(Optional.of(CODE));
+            setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
             when(mfaMethodsService.getMfaMethods(EMAIL))
                     .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
 
@@ -1315,6 +1279,12 @@ class VerifyCodeHandlerTest {
                                     MFA_RESET_TYPE.getValue(),
                                     MfaResetType.FORCED_INTERNATIONAL_NUMBERS.toString()));
         }
+    }
+
+    private void setupOtpCode(
+            String otpCode, String identifier, NotificationType notificationType) {
+        when(codeStorageService.getOtpCode(identifier, notificationType))
+                .thenReturn(Optional.of(otpCode));
     }
 
     private AuthCodeVerified captureAuthCodeVerifiedEvent() {
