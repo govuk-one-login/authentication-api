@@ -499,7 +499,8 @@ class VerifyCodeHandlerTest {
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(true);
 
-        var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
+        var request = verifyCodeRequest(CODE, MFA_SMS.name(), journeyType);
+        var result = handler.handleRequest(request, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
@@ -518,7 +519,9 @@ class VerifyCodeHandlerTest {
                                 MFAMethodType.SMS, journeyType);
         when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(true);
 
-        var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
+        var request = verifyCodeRequest(CODE, MFA_SMS.name(), journeyType);
+
+        var result = handler.handleRequest(request, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED));
@@ -571,7 +574,9 @@ class VerifyCodeHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
 
-        var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
+        var request = verifyCodeRequest(CODE, MFA_SMS.toString(), journeyType);
+
+        var result = handler.handleRequest(request, context);
 
         assertThat(result, hasStatus(204));
         assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
@@ -773,7 +778,9 @@ class VerifyCodeHandlerTest {
         setupIncorrectMfaCodeAttemptsCount(EMAIL, MAX_RETRIES + 1);
         setupMfaMethodsForUser(EMAIL, List.of(DEFAULT_SMS_METHOD));
 
-        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
+        var request = verifyCodeRequest(INVALID_CODE, MFA_SMS.name(), journeyType);
+
+        var result = handler.handleRequest(request, context);
 
         assertThat(result, hasStatus(400));
         if (journeyType != REAUTHENTICATION) {
@@ -938,7 +945,9 @@ class VerifyCodeHandlerTest {
                 .thenReturn(existingCounts);
         when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-        var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
+        var request = verifyCodeRequest(CODE, MFA_SMS.toString(), journeyType);
+
+        var result = handler.handleRequest(request, context);
 
         List.of(TEST_SUBJECT_ID, expectedPairwiseId)
                 .forEach(
@@ -981,7 +990,9 @@ class VerifyCodeHandlerTest {
                 .when(() -> NowHelper.nowPlus(ttl, ChronoUnit.SECONDS))
                 .thenReturn(Date.from(Instant.parse("2099-01-01T00:00:00.00Z")));
 
-        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.name(), REAUTHENTICATION);
+        var request = verifyCodeRequest(INVALID_CODE, MFA_SMS.name(), REAUTHENTICATION);
+
+        var result = handler.handleRequest(request, context);
 
         verify(authenticationAttemptsService, times(1))
                 .createOrIncrementCount(
@@ -1038,7 +1049,9 @@ class VerifyCodeHandlerTest {
                                             any(AuthenticationService.class)))
                     .thenReturn(subject);
 
-            var result = makeCallWithCode(CODE, MFA_SMS.name(), REAUTHENTICATION);
+            var request = verifyCodeRequest(CODE, MFA_SMS.name(), REAUTHENTICATION);
+
+            var result = handler.handleRequest(request, context);
 
             verify(auditService, times(1))
                     .submitAuditEvent(
@@ -1061,21 +1074,6 @@ class VerifyCodeHandlerTest {
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
         }
-    }
-
-    private APIGatewayProxyResponseEvent makeCallWithCode(
-            String code, String notificationType, JourneyType journeyType) {
-        if (journeyType == null) {
-            var request = verifyCodeRequest(code, notificationType);
-            return handler.handleRequest(request, context);
-        }
-        String body =
-                format(
-                        "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\" }",
-                        code, notificationType, journeyType.getValue());
-        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
-
-        return handler.handleRequest(request, context);
     }
 
     private static Stream<Arguments> codeRequestTypes() {
@@ -1153,7 +1151,9 @@ class VerifyCodeHandlerTest {
         void shouldNotEmitMfaResetAuditEventOrMetricWhenFeatureFlagDisabled() {
             when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
 
-            var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.SIGN_IN);
+            var request = verifyCodeRequest(CODE, MFA_SMS.toString(), SIGN_IN);
+
+            var result = handler.handleRequest(request, context);
 
             assertThat(result, hasStatus(204));
             verify(auditService, never())
@@ -1170,7 +1170,9 @@ class VerifyCodeHandlerTest {
             setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
             setupMfaMethodsForUser(EMAIL, List.of(DEFAULT_SMS_METHOD));
 
-            var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.SIGN_IN);
+            var request = verifyCodeRequest(CODE, MFA_SMS.toString(), SIGN_IN);
+
+            var result = handler.handleRequest(request, context);
 
             assertThat(result, hasStatus(204));
             verify(auditService, never())
@@ -1184,7 +1186,9 @@ class VerifyCodeHandlerTest {
 
         @Test
         void shouldNotEmitMfaResetAuditEventOrMetricForAccountRecoveryJourney() {
-            var result = makeCallWithCode(CODE, MFA_SMS.toString(), JourneyType.ACCOUNT_RECOVERY);
+            var request = verifyCodeRequest(CODE, MFA_SMS.toString(), ACCOUNT_RECOVERY);
+
+            var result = handler.handleRequest(request, context);
 
             assertThat(result, hasStatus(204));
             verify(auditService, never())
@@ -1202,7 +1206,9 @@ class VerifyCodeHandlerTest {
                 names = {"SIGN_IN", "REAUTHENTICATION", "PASSWORD_RESET_MFA"})
         void shouldEmitMfaResetAuditEventAndMetricForSmsUserWithInternationalNumber(
                 JourneyType journeyType) {
-            var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
+            var request = verifyCodeRequest(CODE, MFA_SMS.toString(), journeyType);
+
+            var result = handler.handleRequest(request, context);
 
             assertThat(result, hasStatus(204));
             verify(auditService)
@@ -1249,6 +1255,18 @@ class VerifyCodeHandlerTest {
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         code, notificationType);
         return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+    }
+
+    private APIGatewayProxyRequestEvent verifyCodeRequest(String code, String notificationType, JourneyType journeyType) {
+        if (Objects.isNull(journeyType)) {
+            return verifyCodeRequest(code, notificationType);
+        } else {
+            var body =
+                    format(
+                            "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\" }",
+                            code, notificationType, journeyType);
+            return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+        }
     }
 
     private String verifyCodeBody(
