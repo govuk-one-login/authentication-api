@@ -2,134 +2,245 @@
 
 ## Context
 
-The authentication service uses AWS KMS keys to sign JWTs for MFA reset journeys). These keys need periodic rotation for security compliance, but the current system lacks a mechanism to rotate keys without service downtime.
+The authentication service uses AWS KMS keys to sign JSON Web Tokens (JWTs)
+for MFA reset journeys sent to the Identity Proofing and Verification (IPV)
+service. External services like IPV verify these signatures by retrieving
+public keys from JWKS (JSON Web Key Set) endpoints that the authentication
+service exposes.
 
-The existing architecture has:
+Security compliance requires periodic key rotation, but the system must
+maintain zero downtime during this process. The primary challenge is ensuring
+continuous signature verification during key rotation—both old and new keys
+must remain available for verification while signing operations transition to
+the new key.
 
-- KMS keys for signing JWTs sent to IPV during MFA reset
-- A main signing alias (`ipv_reverification_request_signing_key_alias`) used by signing lambda handlers
-- JWKS endpoint handlers that publish public keys for external verification and cache resolved keys indefinitely until container recycling
-- Signing lambda handlers that resolve KMS alias names to key IDs at runtime
-- External services that may cache JWKs and take time to process signed requests
+JWKS endpoints implement aggressive caching for performance, serving the same
+cached public key until container restart. This creates a coordination problem
+during rotation: signing operations can immediately switch to a new key, but
+JWKS endpoints continue serving the old cached public key, causing signature
+verification failures.
 
-The core challenge is ensuring that during key rotation, both old and new keys remain valid for signature verification while transitioning signing operations to the new key.
+## Existing Architecture
 
-**Key Challenge - JWKS Caching:**
-The JWKS endpoint handlers cache keys indefinitely until container recycling, making simple alias switching impossible. If we updated an alias to point to a new key, the JWKS endpoint would continue serving the cached old key, breaking verification for new signatures.
+Before implementing rotation support, the system used a simple key
+architecture with direct alias references.
+
+### Key Infrastructure
+
+The system uses AWS KMS aliases—human-readable names that point to KMS
+keys—instead of cryptographic key IDs for easier identification and
+management.
+
+Two signing keys support MFA reset operations:
+
+- **MFA Reset Storage Token Key** (`mfa_reset_token_signing_key_ecc`)
+  - Type: ECC P-256
+  - Purpose: Signs the storage token claim within MFA reset JARs
+  - JWKS endpoint: `/.well-known/mfa-reset-storage-token-jwk.json`
+
+- **IPV Reverification Request Key** (`ipv_reverification_request_signing_key`)
+  - Type: ECC P-256
+  - Purpose: Signs the complete JAR sent to IPV for MFA reset
+  - Alias: `ipv_reverification_request_signing_key_alias`
+  - JWKS endpoint: `/.well-known/reverification-jwk.json`
+  - Lambda configuration: `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = ipv_reverification_request_signing_key_alias`
+
+### JWKS Endpoint Behavior
+
+JWKS (JSON Web Key Set) endpoints serve public keys to external services
+for signature verification. These endpoints implement aggressive caching:
+
+1. On first request, retrieve public key from KMS using the configured alias
+2. Cache the key in memory indefinitely
+3. Serve cached key for all subsequent requests until container restart
+4. No additional KMS calls after initial retrieval
+
+This caching strategy optimizes performance but creates the core rotation
+challenge.
 
 ## Decision
 
-We will implement a zero-downtime key rotation process using a main signing alias plus "versioned" aliases, working around JWKS caching limitations by using environment variable updates to control which keys the JWKS endpoint serves.
+We implemented zero-downtime key rotation using versioned KMS keys with
+dual-key JWKS serving during transition periods.
 
-### Architecture
+### The Core Problem
 
-- **Main Signing Alias** (`ipv_reverification_request_signing_key_alias`): Always points to the current active key for signing operations
-- **Versioned Aliases**: Individual aliases for each key version (`ipv_reverification_request_signing_key_v1_alias`, `ipv_reverification_request_signing_key_v2_alias`, etc.)
+JWKS endpoints cache keys indefinitely until container recycling. A naive
+rotation approach—simply updating the main signing alias to point to a new
+KMS key—would create a verification failure:
 
-### Key Components
+1. Signing lambdas immediately use the new key for signatures
+2. JWKS endpoint continues serving the cached old public key
+3. IPV attempts to verify new signatures using the old public key
+4. Verification fails, breaking the service
 
-- **JWKS Lambda Environment Variables**:
-  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` - references current versioned alias for primary key
-  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS` - references previous versioned alias for backward compatibility during the transition
-- **Signing Lambda Environment Variable**:
-  - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` - references main signing alias (not a "versioned" alias)
-- **Versioned Keys**: Each key has a corresponding versioned alias (`_v1_alias`, `_v2_alias`, etc.)
+### Solution Architecture
 
-### Process
+#### Steady-State Configuration
 
-#### Terraform
+During normal operations (no rotation in progress), the system maintains a
+simple configuration:
 
-1. **Create New Versioned Key** (Single Terraform Deployment):
-   - Create new "versioned" KMS key and a new versioned alias (e.g., `ipv_reverification_request_signing_key_v2` and `ipv_reverification_request_signing_key_v2_alias`)
-   - Raise a PR / run `terraform apply`
-   - **Result**: New versioned key and alias deployed to all environments.
+```
+┌─────────────────┐    ┌──────────────────────────────────────┐
+│   Signing       │    │              KMS                     │
+│   Lambdas       │    │                                      │
+│                 │    │  ┌─────────────────────────────────┐ │
+│  Uses alias: ───┼────┼─►│ ipv_reverification_request_     │ │
+│  ...alias       │    │  │ signing_key_alias               │ │
+│                 │    │  │           │                     │ │
+└─────────────────┘    │  │           ▼                     │ │
+                       │  │  ┌─────────────────────────────┐│ │
+┌─────────────────┐    │  │  │ ipv_reverification_request_ ││ │
+│   JWKS          │    │  │  │ signing_key (v2)            ││ │
+│   Lambda        │    │  │  │                             ││ │
+│                 │    │  │  └─────────────────────────────┘│ │
+│  Env var: ──────┼────┼─►└─────────────────────────────────┘ │
+│  ...ALIAS       │    │                                      │
+│                 │    └──────────────────────────────────────┘
+│  Serves: ───────┼───► Single key in JWKS response
+│  Public key     │
+└─────────────────┘
+```
 
-2. **Update JWKS** (Single Terraform Deployment):
-   - Update JWKS lambda environment variables, taking care to ensure the old key is still referenced in the same way:
-     - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` → `_v2_alias` (alias for the new primary signing key)
-     - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS` → `_v1_alias` (alias for the old signing key for compatibility)
-   - **Note:** We must ensure that this lambda has permissions to access the new "versioned" key
-   - Raise a PR / run `terraform apply`
-   - **Result**: JWKS serves both keys, signing continues with old key via main alias
-   - **Note:** We MUST only use the "versioned" aliases for this lambda. If we use the main signing alias here, we could end up in a situation in step (2) where we are publishing the new "v2" key twice and breaking backwards compatibility during the key transition.
-   - **Note:** This has been split out from step (1) for additional safety, to ensure the new alias resource we will be referencing in the "main alias" environment variable is guaranteed to be created
+**Key Infrastructure:**
+- Primary key: `ipv_reverification_request_signing_key` (ECC P-256)
+- Main signing alias: `ipv_reverification_request_signing_key_alias`
 
-3. **Switch Signing to New Key** (Single Terraform Deployment):
-   - Update the main signing alias' `target_key_id` argument to point to the new key: `ipv_reverification_request_signing_key_alias` → `_v2` key
-     - Currently, the main signing alias is the `ipv_reverification_request_signing_key_alias` resource.
-   - **Note:** We must ensure that any signing lambdas have permissions to access the new "versioned" key
-   - Raise a PR / run `terraform apply`
-   - **Result**: New lambda invocations sign using the new key, the JWKS still serves both keys to enable verification of either key during the transition period
-   - **Note**: If this process is not automated, i.e. if we have to manually raise a PR, we should inform IPV that we are performing a rotation in case it causes any issues
+**Lambda Configuration:**
+- Signing lambdas: Use `ipv_reverification_request_signing_key_alias` for all signing operations
+- JWKS lambda: Configured with `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = ipv_reverification_request_signing_key_alias`
 
-4. **IPV to update their fallback signing public key**
-   - IPV maintains a copy of our signing key JWK for use as a fallback in the case that they are unable to retrieve the key from our JWKS endpoint
-   - Ask IPV to update their fallback to the new JWK being published on our JWKS endpoint. This is done manually at present.
+**JWKS Endpoint Operation:**
+1. Read `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS` environment variable
+2. Resolve alias to `ipv_reverification_request_signing_key_alias`
+3. Retrieve public key from KMS using this alias
+4. Cache key in memory until container restart
+5. Serve the single cached key in all JWKS responses
 
-5. **Stop Publishing Old Key** (Single Terraform Deployment):
-   - Ideally, wait at least 15 minutes from the point that we started signing using the new key. This will give the opportunity for any verification using the old deprecated key to be completed
-   - Update JWKS lambda environment variables to remove the deprecated alias value (taking care to ensure that no changes are made to the old key):
-     - `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS` should be removed so the old key is no longer published
-   - Raise a PR / run `terraform apply`
-   - **Result**: The JWKS endpoint should now only serve a single key (the new signing key)
+#### Key Rotation Strategy
 
-6. **Cleanup Old Key Resources** (Single Terraform Deployment, after external cache expiry):
-   - Wait a small amount of time in case there are any issues related to the changes made as part of step (5) above
-   - Delete old key and the versioned alias associated with this key (e.g., `_v1_alias`) (which shouldn't be referenced anywhere)
-     - The old key should be marked for deletion
-   - Raise a PR / run `terraform apply`
+**Why Create New Keys Instead of Using AWS Automatic Rotation**
 
-#### AWS CloudFormation
+AWS KMS automatic key rotation only rotates the underlying key material
+while preserving the same key ID and aliases. This approach would not solve
+our caching problem—the JWKS endpoint would continue serving the same cached
+public key even after automatic rotation, since the key ID remains unchanged.
 
-The new production infrastructure, making use of AWS CloudFormation, will require a new secret be added when a new "versioned" alias is added in the Terraform. This is due to the IAM policy requiring reference to the underlying key resource (not the alias). It would be unfeasible to use a single secret here as we will be supporting two different signing keys during the transition period. This is equivalent to the changes being made in the Terraform.
+By creating entirely new keys with new key IDs, we gain precise control over
+which key version the JWKS endpoint serves through environment variable
+configuration.
 
-### Deployment Timeline
+**Alias Architecture**
 
-Note: We can likely reduce this timing by moving away from manual key rotation.
+The rotation solution employs a three-tier alias strategy:
 
-**Day 1 - Create Resources and Publish in JWKS Set:**
+1. **Versioned aliases** (e.g., `ipv_reverification_request_signing_key_v1_alias`)
+   - Always point to specific key versions
+   - Never change once created
+   - Enable precise key identification
 
-1. **Step 1**: Create new versioned key → Merge PR / run `terraform apply`
-2. **Step 2**: Update JWKS environment variables → Merge PR / run `terraform apply`
-3. **Wait**: Allow time for the new key to be picked up
+2. **Main signing alias** (`ipv_reverification_request_signing_key_alias`)
+   - Points to the current active key for signing operations
+   - Updated during rotation to switch signing operations
+   - Used by signing lambdas
 
-**Day 2 - Switch to Sign With New Key, IPV to Update Their Fallback, Stop Publishing Old Key:** 4. **Step 3**: Switch the main signing alias to point to the new key → Merge PR / run `terraform apply` 5. **Step 4**: IPV to update their fallback signing key to the new key 6. **Wait**: Allow time for the key transition 7. **Step 5**: Stop publishing the old key 8. **Step 6**: Mark the old key resources for deletion
+3. **Environment variable control**
+   - JWKS lambda uses environment variables to determine which versioned aliases to serve
+   - Enables independent control of signing vs. serving operations
+   - Allows dual-key serving during rotation
 
-**Timeline**: Steps 1-2 can be done immediately, Steps 3-4 after a short wait, and Steps 5-6 after another short wait
+**Dual-Key Serving Mechanism**
 
-### Terraform Dependency Management
+The `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS` environment
+variable controls dual-key serving:
 
-Terraform's dependency resolution ensures safe deployment ordering:
+```
+During Rotation (Dual-Key Mode):
 
-- KMS keys are created before aliases that reference them
-- Aliases are created before environment variables that reference them
-- Lambda deployments occur after all referenced resources exist
+┌─────────────────┐    ┌──────────────────────────────────────┐
+│   JWKS          │    │              KMS                     │
+│   Lambda        │    │                                      │
+│                 │    │  ┌─────────────────────────────────┐ │
+│  Primary env: ──┼────┼─►│ ...signing_key_v2_alias         │ │
+│  ...ALIAS       │    │  │           │                     │ │
+│                 │    │  │           ▼                     │ │
+│  Deprecated: ───┼────┼─►│ ...signing_key_v1_alias         │ │
+│  ...DEPRECATED_ │    │  │           │                     │ │
+│  ALIAS          │    │  │           ▼                     │ │
+│                 │    │  │  ┌─────────────────────────────┐│ │
+│  Serves: ───────┼───►│  │  │ v2 key + v1 key             ││ │
+│  Both keys      │    │  │  │ in same JWKS response       ││ │
+└─────────────────┘    │  │  └─────────────────────────────┘│ │
+                       │  └─────────────────────────────────┘ │
+                       └──────────────────────────────────────┘
+```
 
-This prevents environment variables from referencing non-existent resources during deployment.
+- **When unset**: JWKS serves only the primary key
+- **When set**: JWKS serves both primary and old keys in the same response
+- **Transition control**: Enables switching between single-key and dual-key modes without code changes
+
+This mechanism prevents verification failures by ensuring both old and new
+keys remain available for signature verification during the rotation window.
+
+#### Rotation Process
+
+```
+Rotation Timeline:
+
+Phase 1: Infrastructure    Phase 2: Versioning       Phase 3: Dual Serving
+┌─────────────────────┐   ┌─────────────────────┐   ┌─────────────────────┐
+│ Create v2 key       │──►│ Create v1/v2 aliases│──►│ JWKS serves both    │
+│ Create temp alias   │   │ Remove temp alias   │   │ v1 + v2 keys        │
+│ Update IAM policies │   │                     │   │                     │
+└─────────────────────┘   └─────────────────────┘   └─────────────────────┘
+                                                                │
+                                                                ▼
+Phase 5: Cleanup           Phase 4: Switch Signing  ┌─────────────────────┐
+┌─────────────────────┐   ┌─────────────────────┐   │ Signing: v1 key     │
+│ Remove v1 from JWKS │◄──│ Main alias → v2 key │   │ JWKS: v1 + v2 keys  │
+│ JWKS serves v2 only │   │ Signing uses v2     │   │                     │
+│ Delete v1 resources │   │                     │   └─────────────────────┘
+└─────────────────────┘   └─────────────────────┘
+```
+
+**Phase 1: Create New Key Infrastructure**
+- Create new versioned key: `ipv_reverification_request_signing_key_v2`
+- Create temporary secondary alias: `ipv_reverification_request_signing_key_secondary_alias`
+- Update IAM policies to grant access to the new key
+
+**Phase 2: Establish Versioned Aliases**
+- Create versioned alias for new key: `ipv_reverification_request_signing_key_v2_alias`
+- Create versioned alias for existing key: `ipv_reverification_request_signing_key_v1_alias`
+- Remove temporary secondary alias (no longer needed)
+
+**Phase 3: Enable Dual-Key Serving**
+- Configure old key serving: `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS = ipv_reverification_request_signing_key_v1_alias`
+- Configure new key serving: `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS = ipv_reverification_request_signing_key_v2_alias`
+- Deploy changes: JWKS now serves both v1 (old) and v2 (new) keys simultaneously
+
+**Phase 4: Switch Signing Operations**
+- Update main signing alias: `ipv_reverification_request_signing_key_alias` → points to v2 key
+- Deploy changes: New signatures use v2 key while JWKS continues serving both keys
+
+**Phase 5: Complete Rotation**
+- Remove old key from serving: Unset `IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS`
+- Deploy changes: JWKS serves only v2 key
+- Clean up: Delete v1 key and associated alias resources
 
 ## Consequences
 
-### Benefits
+### Benefits Achieved
 
-- **Zero downtime**: Both keys remain valid throughout rotation
-- **Works with JWKS caching**: Environment variables control key serving instead of alias switching
-- **Clear separation**: Main alias for signing, versioned aliases for JWKS serving
-- **Safe rollback**: Revert by updating environment variables to previous versions
+- **Zero service interruption**: Successfully completed v1 to v2 key rotation without downtime
+- **Continuous verification**: JWKS served both keys during transition, ensuring all signatures remained verifiable
+- **Clear key identification**: Explicit versioning (v1/v2) eliminated confusion during rotation
+- **Safe deployment**: Staged rollout across environments with rollback capability at each phase
+- **External service compatibility**: IPV maintained ability to verify signatures throughout the rotation period
 
-### Trade-offs
+### Trade-offs Accepted
 
-- **Temporary dual-key state**: JWKS serves two keys during rotation period
-- **Manual process**: Requires manual Terraform file updates for each rotation
-- **Key cleanup required**: Old versioned keys must be removed after rotation
-- **Increased complexity**: Multiple aliases instead of single alias approach
-
-### Implementation Requirements
-
-- Update JWKS lambda to use versioned alias environment variables
-- Implement versioned key creation pattern in Terraform
-- Inform IPV of the rotation
-- Document manual rotation process for each step
-- Establish cleanup procedures for old keys and aliases
-- Ensure proper Terraform dependency ordering
-
-This approach provides secure key rotation while working within JWKS caching constraints.
+- **Manual orchestration**: Required careful sequencing of Terraform deployments across environments
+- **Increased complexity**: Temporarily served multiple keys, adding operational complexity
+- **External coordination**: Required notification to IPV team for fallback key configuration updates
+- **Resource cleanup overhead**: Manual removal of deprecated key resources after rotation completion
