@@ -117,7 +117,6 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INT
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS_WITHOUT_AUDIT_ENCODED;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -1125,16 +1124,13 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldCallCorrectSmsOtpReceivedWhenMfaSmsCodeIsValid() {
-        // Arrange
         setupOtpCode(CODE, EMAIL.concat(DEFAULT_SMS_METHOD.getDestination()), MFA_SMS);
         setupIncorrectMfaCodeAttemptsCount(EMAIL, 0);
         when(mfaMethodsService.getMfaMethods(EMAIL))
                 .thenReturn(Result.success(List.of(DEFAULT_SMS_METHOD)));
 
-        // Act
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
 
-        // Assert
         assertThat(result, hasStatus(204));
         verify(userActionsManager)
                 .correctSmsOtpReceived(any(), argThat(pc -> pc.authSessionItem() != null));
