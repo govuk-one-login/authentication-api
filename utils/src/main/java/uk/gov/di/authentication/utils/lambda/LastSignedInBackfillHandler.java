@@ -7,6 +7,8 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
+import uk.gov.di.authentication.shared.helpers.LambdaPauseHelper;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
@@ -36,6 +38,8 @@ public class LastSignedInBackfillHandler
     private final long pauseBetweenInvocationsMs;
     private final String lambdaName;
     private final int maxInvocations;
+
+    private static final int MAX_UPDATE_ATTEMPTS = 4;
 
     private final AtomicLong invocationUpdatedCount = new AtomicLong(0);
     private final AtomicLong invocationSkippedCount = new AtomicLong(0);
@@ -285,15 +289,35 @@ public class LastSignedInBackfillHandler
                     continue;
                 }
 
-                try {
-                    client.updateItem(
-                            LastSignedInBackfillHelper.buildConditionalUpdateRequest(
-                                    userProfileTableName,
-                                    fields.get().email(),
-                                    fields.get().userLastActive()));
-                    updatedCount++;
-                } catch (ConditionalCheckFailedException e) {
-                    skippedCount++;
+                var updateRequest =
+                        LastSignedInBackfillHelper.buildConditionalUpdateRequest(
+                                userProfileTableName,
+                                fields.get().email(),
+                                fields.get().userLastActive());
+
+                for (int attempt = 1; attempt <= MAX_UPDATE_ATTEMPTS; attempt++) {
+                    try {
+                        client.updateItem(updateRequest);
+                        updatedCount++;
+                        break;
+                    } catch (ConditionalCheckFailedException e) {
+                        skippedCount++;
+                        break;
+                    } catch (TransactionConflictException e) {
+                        if (attempt == MAX_UPDATE_ATTEMPTS) {
+                            LOG.error(
+                                    "Failed to update item after {} attempts due to"
+                                            + " TransactionConflictException, marking as failed",
+                                    MAX_UPDATE_ATTEMPTS);
+                            failedCount++;
+                        } else {
+                            LOG.warn(
+                                    "TransactionConflictException attempt {}/{}," + " retrying",
+                                    attempt,
+                                    MAX_UPDATE_ATTEMPTS);
+                            LambdaPauseHelper.pause(attempt * 100L);
+                        }
+                    }
                 }
             }
 

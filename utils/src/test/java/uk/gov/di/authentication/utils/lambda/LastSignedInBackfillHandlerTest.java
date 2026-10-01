@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -410,6 +411,82 @@ class LastSignedInBackfillHandlerTest {
         assertNull(deserialised.skippedCount());
         assertNull(deserialised.failedCount());
         assertNull(deserialised.invocationCount());
+    }
+
+    @Test
+    void shouldRetryAndSucceedOnTransactionConflictException() {
+        mockScanWithItems(createTrackerItems(1));
+        when(client.updateItem(any(UpdateItemRequest.class)))
+                .thenThrow(
+                        TransactionConflictException.builder()
+                                .message("Transaction is ongoing")
+                                .build())
+                .thenReturn(UpdateItemResponse.builder().build());
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(1, response.updatedCount());
+        assertEquals(0, response.skippedCount());
+        assertEquals(0, response.failedCount());
+        verify(client, times(2)).updateItem(any(UpdateItemRequest.class));
+    }
+
+    @Test
+    void shouldRetryAndSkipOnTransactionConflictFollowedByConditionalCheckFailed() {
+        mockScanWithItems(createTrackerItems(1));
+        when(client.updateItem(any(UpdateItemRequest.class)))
+                .thenThrow(
+                        TransactionConflictException.builder()
+                                .message("Transaction is ongoing")
+                                .build())
+                .thenThrow(
+                        ConditionalCheckFailedException.builder()
+                                .message("already up to date")
+                                .build());
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(0, response.updatedCount());
+        assertEquals(1, response.skippedCount());
+        assertEquals(0, response.failedCount());
+        verify(client, times(2)).updateItem(any(UpdateItemRequest.class));
+    }
+
+    @Test
+    void shouldFailAndLogErrorAfterAllRetriesExhaustedOnTransactionConflict() {
+        mockScanWithItems(createTrackerItems(1));
+        when(client.updateItem(any(UpdateItemRequest.class)))
+                .thenThrow(
+                        TransactionConflictException.builder()
+                                .message("Transaction is ongoing")
+                                .build());
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(0, response.updatedCount());
+        assertEquals(0, response.skippedCount());
+        assertEquals(1, response.failedCount());
+        verify(client, times(4)).updateItem(any(UpdateItemRequest.class));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        LogEventMatcher.withLevelAndMessageContaining(
+                                Level.ERROR, "Failed to update", "after 4 attempts")));
     }
 
     private List<Map<String, AttributeValue>> createTrackerItems(int count) {
