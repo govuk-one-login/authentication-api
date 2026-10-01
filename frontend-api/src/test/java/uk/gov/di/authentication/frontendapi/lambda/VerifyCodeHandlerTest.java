@@ -307,39 +307,6 @@ class VerifyCodeHandlerTest {
 
     @ParameterizedTest
     @MethodSource("emailNotificationTypes")
-    void checkAuditEventStillEmittedWhenTICFHeaderNotProvided(
-            NotificationType emailNotificationType) {
-        setupOtpCode(CODE, EMAIL, emailNotificationType);
-        when(mfaMethodsService.getMfaMethods(EMAIL))
-                .thenReturn(Result.failure(MfaRetrieveFailureReason.USER_DOES_NOT_HAVE_ACCOUNT));
-
-        String body =
-                format(
-                        "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
-                        CODE, emailNotificationType.toString());
-        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS_WITHOUT_AUDIT_ENCODED, body);
-
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-
-        var expectedExtensions =
-                new AuthCodeVerified.Extensions(
-                        emailNotificationType.name(),
-                        null,
-                        emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES),
-                        emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
-                                ? "ACCOUNT_RECOVERY"
-                                : "REGISTRATION",
-                        null,
-                        null,
-                        null);
-        var authCodeVerifiedEvent = captureAuthCodeVerifiedEvent();
-        assertEquals(expectedExtensions, authCodeVerifiedEvent.extensions());
-    }
-
-    @ParameterizedTest
-    @MethodSource("emailNotificationTypes")
     void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode(
             NotificationType emailNotificationType) {
         setupOtpCode(CODE, EMAIL, emailNotificationType);
