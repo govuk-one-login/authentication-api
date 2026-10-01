@@ -630,9 +630,6 @@ class VerifyCodeHandlerTest {
         when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
-        when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-
         var requestBody =
                 verifyCodeBody(
                         CODE, MFA_SMS.toString(), SIGN_IN, BACKUP_SMS_METHOD.getMfaIdentifier());
@@ -1034,8 +1031,6 @@ class VerifyCodeHandlerTest {
             when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                             any(), any(), eq(REAUTHENTICATION)))
                     .thenReturn(Map.of(countType, MAX_RETRIES));
-            when(configurationService.getInternalSectorUri())
-                    .thenReturn("https://test.account.gov.uk");
             Subject subject = new Subject(TEST_SUBJECT_ID);
             mockedClientSubjectHelperClass
                     .when(
