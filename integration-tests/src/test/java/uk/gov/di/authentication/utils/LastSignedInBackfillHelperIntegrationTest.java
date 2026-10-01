@@ -214,7 +214,8 @@ class LastSignedInBackfillHelperIntegrationTest {
         LastSignedInBackfillResponse response =
                 createHandler()
                         .handleRequest(
-                                new LastSignedInBackfillRequest(null, null, null, null, null));
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
 
         assertEquals(3, response.processedCount());
         assertEquals(2, response.updatedCount());
@@ -242,7 +243,8 @@ class LastSignedInBackfillHelperIntegrationTest {
         LastSignedInBackfillResponse response =
                 createHandler()
                         .handleRequest(
-                                new LastSignedInBackfillRequest(null, null, null, null, null));
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
 
         assertEquals(3, response.processedCount());
         assertEquals(1, response.updatedCount());
@@ -262,13 +264,13 @@ class LastSignedInBackfillHelperIntegrationTest {
 
         LastSignedInBackfillResponse firstRun =
                 handler.handleRequest(
-                        new LastSignedInBackfillRequest(null, null, null, null, null));
+                        new LastSignedInBackfillRequest(null, null, null, null, null, null));
         assertEquals(1, firstRun.updatedCount());
         assertEquals(0, firstRun.skippedCount());
 
         LastSignedInBackfillResponse secondRun =
                 handler.handleRequest(
-                        new LastSignedInBackfillRequest(null, null, null, null, null));
+                        new LastSignedInBackfillRequest(null, null, null, null, null, null));
         assertEquals(0, secondRun.updatedCount());
         assertEquals(1, secondRun.skippedCount());
 

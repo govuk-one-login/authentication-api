@@ -39,8 +39,10 @@ public class LastSignedInBackfillHandler
 
     private final AtomicLong invocationUpdatedCount = new AtomicLong(0);
     private final AtomicLong invocationSkippedCount = new AtomicLong(0);
+    private final AtomicLong invocationFailedCount = new AtomicLong(0);
     private final AtomicLong runningUpdatedCount = new AtomicLong(0);
     private final AtomicLong runningSkippedCount = new AtomicLong(0);
+    private final AtomicLong runningFailedCount = new AtomicLong(0);
 
     public LastSignedInBackfillHandler(
             ConfigurationService configurationService,
@@ -133,8 +135,11 @@ public class LastSignedInBackfillHandler
                 request != null && request.updatedCount() != null ? request.updatedCount() : 0L);
         runningSkippedCount.set(
                 request != null && request.skippedCount() != null ? request.skippedCount() : 0L);
+        runningFailedCount.set(
+                request != null && request.failedCount() != null ? request.failedCount() : 0L);
         invocationUpdatedCount.set(0);
         invocationSkippedCount.set(0);
+        invocationFailedCount.set(0);
     }
 
     @Override
@@ -143,12 +148,14 @@ public class LastSignedInBackfillHandler
         LOG.warn(
                 "LAST_SIGNED_IN_BACKFILL_MAX_INVOCATIONS_EXCEEDED: invocationCount={} has"
                         + " reached or exceeded maxInvocations={}, halting self-invocation"
-                        + " chain. processedCount={}, updatedCount={}, skippedCount={}",
+                        + " chain. processedCount={}, updatedCount={}, skippedCount={},"
+                        + " failedCount={}",
                 invocationCount,
                 maxInvocations,
                 processedCount,
                 runningUpdatedCount.get(),
-                runningSkippedCount.get());
+                runningSkippedCount.get(),
+                runningFailedCount.get());
     }
 
     @Override
@@ -156,19 +163,24 @@ public class LastSignedInBackfillHandler
             long processedThisInvocation, long totalProcessed, int segmentsRemaining) {
         long updated = invocationUpdatedCount.get();
         long skipped = invocationSkippedCount.get();
+        long failed = invocationFailedCount.get();
         runningUpdatedCount.addAndGet(updated);
         runningSkippedCount.addAndGet(skipped);
+        runningFailedCount.addAndGet(failed);
 
         LOG.info(
                 "Invocation complete: processedThisInvocation={}, updatedThisInvocation={},"
-                        + " skippedThisInvocation={}, totalProcessed={}, totalUpdated={},"
-                        + " totalSkipped={}, segmentsRemaining={}",
+                        + " skippedThisInvocation={}, failedThisInvocation={}, totalProcessed={},"
+                        + " totalUpdated={}, totalSkipped={}, totalFailed={},"
+                        + " segmentsRemaining={}",
                 processedThisInvocation,
                 updated,
                 skipped,
+                failed,
                 totalProcessed,
                 runningUpdatedCount.get(),
                 runningSkippedCount.get(),
+                runningFailedCount.get(),
                 segmentsRemaining);
     }
 
@@ -182,13 +194,17 @@ public class LastSignedInBackfillHandler
                 processedCount,
                 runningUpdatedCount.get(),
                 runningSkippedCount.get(),
+                runningFailedCount.get(),
                 invocationCount);
     }
 
     @Override
     protected LastSignedInBackfillResponse buildResponse(long processedCount) {
         return new LastSignedInBackfillResponse(
-                processedCount, runningUpdatedCount.get(), runningSkippedCount.get());
+                processedCount,
+                runningUpdatedCount.get(),
+                runningSkippedCount.get(),
+                runningFailedCount.get());
     }
 
     @Override
@@ -199,7 +215,10 @@ public class LastSignedInBackfillHandler
                 request != null && request.updatedCount() != null ? request.updatedCount() : 0L;
         long skippedCount =
                 request != null && request.skippedCount() != null ? request.skippedCount() : 0L;
-        return new LastSignedInBackfillResponse(processedCount, updatedCount, skippedCount);
+        long failedCount =
+                request != null && request.failedCount() != null ? request.failedCount() : 0L;
+        return new LastSignedInBackfillResponse(
+                processedCount, updatedCount, skippedCount, failedCount);
     }
 
     @Override
@@ -212,6 +231,7 @@ public class LastSignedInBackfillHandler
                 scanSegment(segment, totalSegments, maxItemsPerSegment, exclusiveStartKey);
         invocationUpdatedCount.addAndGet(result.updatedCount());
         invocationSkippedCount.addAndGet(result.skippedCount());
+        invocationFailedCount.addAndGet(result.failedCount());
         return new SegmentResult(result.itemsScanned(), result.lastEvaluatedKey());
     }
 
@@ -224,6 +244,7 @@ public class LastSignedInBackfillHandler
         long itemsScanned = 0;
         long updatedCount = 0;
         long skippedCount = 0;
+        long failedCount = 0;
 
         do {
             if (itemsScanned >= maxItemsPerSegment) {
@@ -283,19 +304,23 @@ public class LastSignedInBackfillHandler
                 (lastKey != null && !lastKey.isEmpty()) ? lastKey : null;
 
         LOG.info(
-                "Segment {} complete: itemsScanned={}, updated={}, skipped={}, exhausted={}",
+                "Segment {} complete: itemsScanned={}, updated={}, skipped={}, failed={},"
+                        + " exhausted={}",
                 segment,
                 itemsScanned,
                 updatedCount,
                 skippedCount,
+                failedCount,
                 finalKey == null);
 
-        return new ScanSegmentResult(itemsScanned, updatedCount, skippedCount, finalKey);
+        return new ScanSegmentResult(
+                itemsScanned, updatedCount, skippedCount, failedCount, finalKey);
     }
 
     record ScanSegmentResult(
             long itemsScanned,
             long updatedCount,
             long skippedCount,
+            long failedCount,
             Map<String, AttributeValue> lastEvaluatedKey) {}
 }
