@@ -630,10 +630,9 @@ class VerifyCodeHandlerTest {
         when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
         authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
 
-        var requestBody =
-                verifyCodeBody(
+        var request =
+                verifyCodeRequest(
                         CODE, MFA_SMS.toString(), SIGN_IN, BACKUP_SMS_METHOD.getMfaIdentifier());
-        var request = apiRequestEventWithHeadersAndBody(VALID_HEADERS, requestBody);
 
         var result = handler.handleRequest(request, context);
 
@@ -1249,7 +1248,8 @@ class VerifyCodeHandlerTest {
         return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
     }
 
-    private APIGatewayProxyRequestEvent verifyCodeRequest(String code, String notificationType, JourneyType journeyType) {
+    private APIGatewayProxyRequestEvent verifyCodeRequest(
+            String code, String notificationType, JourneyType journeyType) {
         if (Objects.isNull(journeyType)) {
             return verifyCodeRequest(code, notificationType);
         } else {
@@ -1261,11 +1261,13 @@ class VerifyCodeHandlerTest {
         }
     }
 
-    private String verifyCodeBody(
+    private APIGatewayProxyRequestEvent verifyCodeRequest(
             String code, String notificationType, JourneyType journeyType, String mfaMethodId) {
-        return format(
-                "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\", \"mfaMethodId\":\"%s\" }",
-                code, notificationType, journeyType.getValue(), mfaMethodId);
+        var body =
+                format(
+                        "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\", \"mfaMethodId\":\"%s\" }",
+                        code, notificationType, journeyType.getValue(), mfaMethodId);
+        return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
     }
 
     private AuthCodeVerified captureAuthCodeVerifiedEvent() {
