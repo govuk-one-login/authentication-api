@@ -106,8 +106,6 @@ jobs:
     strategy:
       matrix:
         module:
-          - frontend-api
-          - ipv-api
           - utils
     permissions:
       id-token: write
