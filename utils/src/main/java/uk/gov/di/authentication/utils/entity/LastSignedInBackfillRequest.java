@@ -9,4 +9,5 @@ public record LastSignedInBackfillRequest(
         @Expose Long processedCount,
         @Expose Long updatedCount,
         @Expose Long skippedCount,
+        @Expose Long failedCount,
         @Expose Long invocationCount) {}

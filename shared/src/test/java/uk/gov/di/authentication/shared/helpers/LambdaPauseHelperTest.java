@@ -13,11 +13,29 @@ class LambdaPauseHelperTest {
     }
 
     @Test
+    void shouldNotThrowWhenPauseDurationIsZero() {
+        assertDoesNotThrow(() -> LambdaPauseHelper.pause(0));
+    }
+
+    @Test
     void shouldSleepForAtLeastSpecifiedDuration() {
         long pauseDuration = 250;
 
         long start = System.currentTimeMillis();
         LambdaPauseHelper.pauseBetweenInvocations(pauseDuration);
+        long elapsed = System.currentTimeMillis() - start;
+
+        assertTrue(
+                elapsed >= pauseDuration,
+                "Expected at least " + pauseDuration + "ms elapsed but was " + elapsed);
+    }
+
+    @Test
+    void pauseShouldSleepForAtLeastSpecifiedDuration() {
+        long pauseDuration = 250;
+
+        long start = System.currentTimeMillis();
+        LambdaPauseHelper.pause(pauseDuration);
         long elapsed = System.currentTimeMillis() - start;
 
         assertTrue(
@@ -34,6 +52,23 @@ class LambdaPauseHelperTest {
                         () -> {
                             Thread.currentThread().interrupt();
                             LambdaPauseHelper.pauseBetweenInvocations(10000);
+                            assertTrue(Thread.currentThread().isInterrupted());
+                        });
+        testThread.start();
+        testThread.join(5000);
+
+        assertTrue(!testThread.isAlive(), "Thread should have completed");
+    }
+
+    @Test
+    void pauseShouldSetInterruptFlagWhenInterrupted() throws InterruptedException {
+        LambdaPauseHelper.pause(0);
+
+        Thread testThread =
+                new Thread(
+                        () -> {
+                            Thread.currentThread().interrupt();
+                            LambdaPauseHelper.pause(10000);
                             assertTrue(Thread.currentThread().isInterrupted());
                         });
         testThread.start();

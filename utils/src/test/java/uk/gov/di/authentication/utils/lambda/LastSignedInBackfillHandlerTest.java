@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
+import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -100,7 +101,8 @@ class LastSignedInBackfillHandlerTest {
         var response =
                 createHandler()
                         .handleRequest(
-                                new LastSignedInBackfillRequest(null, null, null, null, null));
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
 
         assertEquals(itemCount, response.processedCount());
         assertEquals(itemCount, response.updatedCount());
@@ -120,7 +122,8 @@ class LastSignedInBackfillHandlerTest {
         var response =
                 createHandler()
                         .handleRequest(
-                                new LastSignedInBackfillRequest(null, null, null, null, null));
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
 
         assertEquals(1, response.processedCount());
         assertEquals(0, response.updatedCount());
@@ -140,7 +143,8 @@ class LastSignedInBackfillHandlerTest {
         var response =
                 createHandler()
                         .handleRequest(
-                                new LastSignedInBackfillRequest(null, null, null, null, null));
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
 
         assertEquals(1, response.processedCount());
         assertEquals(0, response.updatedCount());
@@ -162,7 +166,8 @@ class LastSignedInBackfillHandlerTest {
         var response =
                 createHandler()
                         .handleRequest(
-                                new LastSignedInBackfillRequest(null, null, null, null, null));
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
 
         assertEquals(0, response.updatedCount());
         assertEquals(1, response.skippedCount());
@@ -178,7 +183,7 @@ class LastSignedInBackfillHandlerTest {
         mockScanWithItems(items);
 
         createHandler()
-                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null));
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
 
         assertThat(
                 helperLogging.events(),
@@ -197,7 +202,7 @@ class LastSignedInBackfillHandlerTest {
         mockScanWithItems(items);
 
         createHandler()
-                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null));
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
 
         assertThat(
                 helperLogging.events(),
@@ -218,7 +223,7 @@ class LastSignedInBackfillHandlerTest {
         mockScanWithItems(items);
 
         createHandler()
-                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null));
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
 
         assertThat(
                 helperLogging.events(),
@@ -237,7 +242,7 @@ class LastSignedInBackfillHandlerTest {
                                 .build());
 
         createHandler()
-                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null));
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
 
         assertThat(
                 helperLogging.events(),
@@ -256,7 +261,8 @@ class LastSignedInBackfillHandlerTest {
         var response =
                 createHandler()
                         .handleRequest(
-                                new LastSignedInBackfillRequest(null, null, null, null, null));
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
 
         assertEquals(3, response.processedCount());
         assertEquals(0, response.updatedCount());
@@ -268,7 +274,7 @@ class LastSignedInBackfillHandlerTest {
         mockScanWithItems(createTrackerItems(1));
 
         createHandler()
-                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null));
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
 
         var captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
         verify(client).updateItem(captor.capture());
@@ -284,11 +290,12 @@ class LastSignedInBackfillHandlerTest {
         var response =
                 createHandler()
                         .handleRequest(
-                                new LastSignedInBackfillRequest(null, 500L, 200L, 100L, null));
+                                new LastSignedInBackfillRequest(null, 500L, 200L, 100L, 50L, null));
 
         assertEquals(505L, response.processedCount());
         assertEquals(205L, response.updatedCount());
         assertEquals(100L, response.skippedCount());
+        assertEquals(50L, response.failedCount());
     }
 
     @Test
@@ -296,7 +303,8 @@ class LastSignedInBackfillHandlerTest {
         when(configurationService.getLastSignedInBackfillMaxItemsPerSegment()).thenReturn(5);
         mockScanWithPagination(25, 5);
 
-        createHandler().handleRequest(new LastSignedInBackfillRequest(null, 100L, 50L, 10L, 3L));
+        createHandler()
+                .handleRequest(new LastSignedInBackfillRequest(null, 100L, 50L, 10L, 5L, 3L));
 
         var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
@@ -309,9 +317,11 @@ class LastSignedInBackfillHandlerTest {
         assertNotNull(continuation.segmentKeys());
         assertEquals(105L, continuation.processedCount());
         assertEquals(4L, continuation.invocationCount());
-        // updatedCount and skippedCount should be carried through
+        // updatedCount, skippedCount and failedCount should be carried through
         assertNotNull(continuation.updatedCount());
         assertNotNull(continuation.skippedCount());
+        assertNotNull(continuation.failedCount());
+        assertEquals(5L, continuation.failedCount());
     }
 
     @Test
@@ -320,7 +330,7 @@ class LastSignedInBackfillHandlerTest {
         mockScanWithPagination(25, 5);
 
         createHandler()
-                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null));
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
 
         var payloadCaptor = ArgumentCaptor.forClass(String.class);
         verify(lambdaInvokerService)
@@ -374,6 +384,7 @@ class LastSignedInBackfillHandlerTest {
                         100L,
                         50L,
                         20L,
+                        5L,
                         2L);
 
         String json = objectMapper.writeValueAsString(request);
@@ -382,6 +393,7 @@ class LastSignedInBackfillHandlerTest {
         assertEquals(request.processedCount(), deserialised.processedCount());
         assertEquals(request.updatedCount(), deserialised.updatedCount());
         assertEquals(request.skippedCount(), deserialised.skippedCount());
+        assertEquals(request.failedCount(), deserialised.failedCount());
         assertEquals(request.invocationCount(), deserialised.invocationCount());
         assertEquals("2031-06-01", deserialised.segmentKeys().get(0).get("dateForDeletion"));
         assertEquals(
@@ -397,7 +409,84 @@ class LastSignedInBackfillHandlerTest {
         assertNull(deserialised.processedCount());
         assertNull(deserialised.updatedCount());
         assertNull(deserialised.skippedCount());
+        assertNull(deserialised.failedCount());
         assertNull(deserialised.invocationCount());
+    }
+
+    @Test
+    void shouldRetryAndSucceedOnTransactionConflictException() {
+        mockScanWithItems(createTrackerItems(1));
+        when(client.updateItem(any(UpdateItemRequest.class)))
+                .thenThrow(
+                        TransactionConflictException.builder()
+                                .message("Transaction is ongoing")
+                                .build())
+                .thenReturn(UpdateItemResponse.builder().build());
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(1, response.updatedCount());
+        assertEquals(0, response.skippedCount());
+        assertEquals(0, response.failedCount());
+        verify(client, times(2)).updateItem(any(UpdateItemRequest.class));
+    }
+
+    @Test
+    void shouldRetryAndSkipOnTransactionConflictFollowedByConditionalCheckFailed() {
+        mockScanWithItems(createTrackerItems(1));
+        when(client.updateItem(any(UpdateItemRequest.class)))
+                .thenThrow(
+                        TransactionConflictException.builder()
+                                .message("Transaction is ongoing")
+                                .build())
+                .thenThrow(
+                        ConditionalCheckFailedException.builder()
+                                .message("already up to date")
+                                .build());
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(0, response.updatedCount());
+        assertEquals(1, response.skippedCount());
+        assertEquals(0, response.failedCount());
+        verify(client, times(2)).updateItem(any(UpdateItemRequest.class));
+    }
+
+    @Test
+    void shouldFailAndLogErrorAfterAllRetriesExhaustedOnTransactionConflict() {
+        mockScanWithItems(createTrackerItems(1));
+        when(client.updateItem(any(UpdateItemRequest.class)))
+                .thenThrow(
+                        TransactionConflictException.builder()
+                                .message("Transaction is ongoing")
+                                .build());
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(0, response.updatedCount());
+        assertEquals(0, response.skippedCount());
+        assertEquals(1, response.failedCount());
+        verify(client, times(4)).updateItem(any(UpdateItemRequest.class));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        LogEventMatcher.withLevelAndMessageContaining(
+                                Level.ERROR, "Failed to update", "after 4 attempts")));
     }
 
     private List<Map<String, AttributeValue>> createTrackerItems(int count) {
