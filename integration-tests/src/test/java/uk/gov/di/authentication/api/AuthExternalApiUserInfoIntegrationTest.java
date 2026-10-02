@@ -33,6 +33,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -74,9 +75,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     @Test
-    void
-            shouldCallUserInfoWithAccessTokenAndReturn200WithASingleRequestedClaimAndTwoUnconditionalClaimsButNotClaimsWhichAreNotInAccessToken()
-                    throws ParseException {
+    void shouldReturnOnlyRequestedClaimsPlusUnconditionalClaims() throws ParseException {
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
@@ -85,7 +84,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         accessTokenAsString,
                         List.of(OIDCScopeValue.EMAIL.getValue()),
                         isNewAccount);
-        withAuthSessionNewAccount();
+        var internalCommonSubjectId = internalCommonSubjectId(createdUser);
+        withAuthSession(internalCommonSubjectId);
 
         var response =
                 makeRequest(
@@ -103,13 +103,8 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         TEST_SUBJECT.getValue(),
                         RP_SECTOR_ID_HOST,
                         SdkBytes.fromByteBuffer(createdUser.getSalt()).asByteArray());
-        var internalPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        TEST_SUBJECT.getValue(),
-                        INTERNAL_SECTOR_ID_HOST,
-                        SdkBytes.fromByteBuffer(createdUser.getSalt()).asByteArray());
         var userInfoResponse = UserInfo.parse(response.getBody());
-        assertEquals(userInfoResponse.getSubject().getValue(), internalPairwiseId);
+        assertEquals(internalCommonSubjectId, userInfoResponse.getSubject().getValue());
         assertThat(userInfoResponse.getClaim("rp_pairwise_id"), equalTo(rpPairwiseId));
         assertThat(userInfoResponse.getClaim("new_account"), equalTo(isNewAccount));
         assertThat(
@@ -139,9 +134,10 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     void shouldUpdateAuthSessionWithAccountStateExisting() {
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
-        addTokenToDynamoAndCreateAssociatedUser(
-                accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), true);
-        withAuthSessionNewAccount();
+        var createdUser =
+                addTokenToDynamoAndCreateAssociatedUser(
+                        accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), true);
+        withAuthSession(internalCommonSubjectId(createdUser));
 
         var response =
                 makeRequest(
@@ -162,14 +158,15 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     void shouldReturnClaimsIfRequestedInTheToken() throws ParseException {
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
-        addTokenToDynamoAndCreateAssociatedUser(
-                accessTokenAsString,
-                List.of(
-                        OIDCScopeValue.EMAIL.getValue(),
-                        AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
-                        AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()),
-                true);
-        withAuthSessionNewAccount();
+        var createdUser =
+                addTokenToDynamoAndCreateAssociatedUser(
+                        accessTokenAsString,
+                        List.of(
+                                OIDCScopeValue.EMAIL.getValue(),
+                                AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
+                                AuthUserInfoClaims.UPLIFT_REQUIRED.getValue()),
+                        true);
+        withAuthSession(internalCommonSubjectId(createdUser));
 
         var response =
                 makeRequest(
@@ -209,7 +206,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn401ForAccessTokenThatDoesNotExistInDatabase() {
-        withAuthSessionNewAccount();
+        withAuthSession(null);
         var accessToken =
                 new BearerAccessToken("any-as-we-will-not-be-seeding-this-into-the-test-db");
 
@@ -236,12 +233,12 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn401ForAccessTokenThatIsAlreadyUsed() {
-        withAuthSessionNewAccount();
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
         addTokenToDynamoAndCreateAssociatedUser(
                 accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), isNewAccount);
+        withAuthSession(null);
 
         accessTokenStoreExtension.setAccessTokenStoreUsed(accessTokenAsString, true);
 
@@ -269,13 +266,13 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn401ForAccessTokenThatIsPastItsTtl() {
-        withAuthSessionNewAccount();
         String accessTokenAsString = UUID.randomUUID().toString();
         var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
         addTokenToDynamoAndCreateAssociatedUser(
                 accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), isNewAccount);
         accessTokenStoreExtension.setAccessTokenTtlToZero(accessTokenAsString);
+        withAuthSession(null);
 
         var response =
                 makeRequest(
@@ -298,6 +295,37 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                 equalTo(AuthSessionItem.AccountState.NEW));
     }
 
+    @Test
+    void shouldReturn401WhenSessionInternalCommonSubjectIdDoesNotMatchAccessTokenSubject() {
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
+        addTokenToDynamoAndCreateAssociatedUser(
+                accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), true);
+        var otherInternalCommonSubjectId = new Subject().getValue();
+        withAuthSession(otherInternalCommonSubjectId);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.ofEntries(
+                                Map.entry("Authorization", accessToken.toAuthorizationHeader()),
+                                Map.entry(SESSION_ID_HEADER, TEST_SESSION_ID)),
+                        Map.of());
+
+        assertThat(response, hasStatus(401));
+        assertThat(
+                response.getMultiValueHeaders().get("WWW-Authenticate"),
+                equalTo(
+                        new UserInfoErrorResponse(INVALID_TOKEN)
+                                .toHTTPResponse()
+                                .getHeaderMap()
+                                .get("WWW-Authenticate")));
+        assertThat(
+                authSessionExtension.getSession(TEST_SESSION_ID).get().getIsNewAccount(),
+                equalTo(AuthSessionItem.AccountState.NEW));
+        assertFalse(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
+    }
+
     private UserProfile addTokenToDynamoAndCreateAssociatedUser(
             String accessToken, List<String> claims, boolean isNewAccount) {
         accessTokenStoreExtension.addAccessTokenStore(
@@ -313,7 +341,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         return userStore.getUserProfileFromEmail(TEST_EMAIL_ADDRESS).get();
     }
 
-    private void withAuthSessionNewAccount() {
+    private void withAuthSession(String internalCommonSubjectId) {
         authSessionExtension.addSession(TEST_SESSION_ID);
         authSessionExtension.updateSession(
                 authSessionExtension
@@ -321,6 +349,14 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         .get()
                         .withAccountState(AuthSessionItem.AccountState.NEW)
                         .withVerifiedMfaMethodType(MFAMethodType.AUTH_APP)
+                        .withInternalCommonSubjectId(internalCommonSubjectId)
                         .withUpliftRequired(true));
+    }
+
+    private static String internalCommonSubjectId(UserProfile userProfile) {
+        return ClientSubjectHelper.calculatePairwiseIdentifier(
+                TEST_SUBJECT.getValue(),
+                INTERNAL_SECTOR_ID_HOST,
+                SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
     }
 }
