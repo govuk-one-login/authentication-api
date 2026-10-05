@@ -9,6 +9,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.utils.helpers.LastSignedInBackfillHelper.buildConditionalUpdateRequest;
 import static uk.gov.di.authentication.utils.helpers.LastSignedInBackfillHelper.extractValidFields;
@@ -106,10 +107,32 @@ class LastSignedInBackfillHelperTest {
         assertTrue(
                 LastSignedInBackfillHelper.TRACKER_PROJECTION.contains(
                         LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_USER_LAST_ACTIVE));
+        assertTrue(
+                LastSignedInBackfillHelper.TRACKER_PROJECTION.contains(
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID));
     }
 
     @Test
     void extractValidFieldsShouldReturnFieldsWhenBothPresent() {
+        var item =
+                Map.of(
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_EMAIL,
+                        AttributeValue.fromS("user@example.com"),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_USER_LAST_ACTIVE,
+                        AttributeValue.fromS("2026-01-01T00:00:00.000Z"),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID,
+                        AttributeValue.fromS("urn:fdc:gov.uk:2022:pub-123"));
+
+        var result = extractValidFields(item);
+
+        assertTrue(result.isPresent());
+        assertEquals("user@example.com", result.get().email());
+        assertEquals("2026-01-01T00:00:00.000Z", result.get().userLastActive());
+        assertEquals("urn:fdc:gov.uk:2022:pub-123", result.get().publicSubjectId());
+    }
+
+    @Test
+    void extractValidFieldsShouldReturnFieldsWithNullPublicSubjectIdWhenMissing() {
         var item =
                 Map.of(
                         LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_EMAIL,
@@ -122,6 +145,7 @@ class LastSignedInBackfillHelperTest {
         assertTrue(result.isPresent());
         assertEquals("user@example.com", result.get().email());
         assertEquals("2026-01-01T00:00:00.000Z", result.get().userLastActive());
+        assertNull(result.get().publicSubjectId());
     }
 
     @Test

@@ -15,15 +15,21 @@ public class LastSignedInBackfillHelper {
 
     public static final String TRACKER_ATTRIBUTE_EMAIL = "emailAddress";
     public static final String TRACKER_ATTRIBUTE_USER_LAST_ACTIVE = "userLastActive";
+    public static final String TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID = "publicSubjectId";
 
     public static final String TRACKER_PROJECTION =
-            TRACKER_ATTRIBUTE_EMAIL + "," + TRACKER_ATTRIBUTE_USER_LAST_ACTIVE;
+            TRACKER_ATTRIBUTE_EMAIL
+                    + ","
+                    + TRACKER_ATTRIBUTE_USER_LAST_ACTIVE
+                    + ","
+                    + TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID;
 
     private LastSignedInBackfillHelper() {}
 
     public static Optional<TrackerFields> extractValidFields(Map<String, AttributeValue> item) {
         AttributeValue emailAttr = item.get(TRACKER_ATTRIBUTE_EMAIL);
         AttributeValue userLastActiveAttr = item.get(TRACKER_ATTRIBUTE_USER_LAST_ACTIVE);
+        AttributeValue publicSubjectIdAttr = item.get(TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID);
 
         if (emailAttr == null
                 || emailAttr.s() == null
@@ -34,7 +40,13 @@ public class LastSignedInBackfillHelper {
             return Optional.empty();
         }
 
-        return Optional.of(new TrackerFields(emailAttr.s(), userLastActiveAttr.s()));
+        String publicSubjectId =
+                publicSubjectIdAttr != null && publicSubjectIdAttr.s() != null
+                        ? publicSubjectIdAttr.s()
+                        : null;
+
+        return Optional.of(
+                new TrackerFields(emailAttr.s(), userLastActiveAttr.s(), publicSubjectId));
     }
 
     public static void logInvalidTrackerFields(Map<String, AttributeValue> item) {
@@ -64,5 +76,5 @@ public class LastSignedInBackfillHelper {
                 .build();
     }
 
-    public record TrackerFields(String email, String userLastActive) {}
+    public record TrackerFields(String email, String userLastActive, String publicSubjectId) {}
 }
