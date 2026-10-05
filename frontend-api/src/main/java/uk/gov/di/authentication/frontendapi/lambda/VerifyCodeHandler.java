@@ -385,6 +385,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthSessionItem authSession,
             AuditContext auditContext,
             Optional<MFAMethod> maybeRequestedSmsMfaMethod) {
+        if (notificationType.equals(RESET_PASSWORD_WITH_CODE)) {
+            var permissionContext =
+                    PermissionContext.builder().withAuthSessionItem(authSession).build();
+            userActionsManager.incorrectEmailOtpEnteredForPasswordReset(permissionContext);
+        }
         if (journeyType == REAUTHENTICATION && notificationType == MFA_SMS) {
             authenticationAttemptsService.createOrIncrementCount(
                     subjectId,

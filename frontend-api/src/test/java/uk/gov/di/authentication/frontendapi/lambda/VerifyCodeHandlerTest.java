@@ -325,9 +325,11 @@ class VerifyCodeHandlerTest {
 
         if (isCodeCorrect) {
             verify(userActionsManager).correctEmailOtpEnteredForPasswordReset(any(), eq(EMAIL));
+            verify(userActionsManager, never()).incorrectEmailOtpEnteredForPasswordReset(any());
         } else {
             verify(userActionsManager, never())
                     .correctEmailOtpEnteredForPasswordReset(any(), anyString());
+            verify(userActionsManager).incorrectEmailOtpEnteredForPasswordReset(any());
         }
     }
 
