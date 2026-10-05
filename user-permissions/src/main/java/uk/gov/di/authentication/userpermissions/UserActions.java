@@ -178,4 +178,22 @@ public interface UserActions {
      */
     Result<TrackingError, Void> incorrectPasskeyReceived(
             JourneyType journeyType, PermissionContext permissionContext);
+
+    /**
+     * Records that a user entered a correct email code when attempting to reset their password.
+     *
+     * @param permissionContext The user's permission context
+     * @return A Result indicating success or failure of the tracking operation
+     */
+    Result<TrackingError, Void> correctEmailOtpEnteredForPasswordReset(
+            PermissionContext permissionContext, String email);
+
+    /**
+     * Records that a user entered an incorrect email code when attempting to reset their password.
+     *
+     * @param permissionContext The user's permission context
+     * @return A Result indicating success or failure of the tracking operation
+     */
+    Result<TrackingError, Void> incorrectEmailOtpEnteredForPasswordReset(
+            PermissionContext permissionContext);
 }

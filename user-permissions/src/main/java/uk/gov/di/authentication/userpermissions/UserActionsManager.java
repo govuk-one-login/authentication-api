@@ -313,6 +313,24 @@ public class UserActionsManager implements UserActions {
         return Result.success(null);
     }
 
+    @Override
+    public Result<TrackingError, Void> correctEmailOtpEnteredForPasswordReset(
+            PermissionContext permissionContext, String email) {
+        var updatedSession =
+                permissionContext.authSessionItem().withResetPasswordEmailCodeVerified(email);
+        getAuthSessionService().updateSession(updatedSession);
+        return Result.emptySuccess();
+    }
+
+    @Override
+    public Result<TrackingError, Void> incorrectEmailOtpEnteredForPasswordReset(
+            PermissionContext permissionContext) {
+        var updatedSession =
+                permissionContext.authSessionItem().withResetPasswordEmailCodeVerified(null);
+        getAuthSessionService().updateSession(updatedSession);
+        return Result.emptySuccess();
+    }
+
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {
         if (authenticationAttemptsService == null) {
             authenticationAttemptsService = new AuthenticationAttemptsService(configurationService);
