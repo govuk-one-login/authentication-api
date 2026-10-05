@@ -1375,6 +1375,38 @@ class PermissionDecisionManagerTest {
         }
     }
 
+    @Nested
+    class CanResetPassword {
+        @Test
+        void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
+            var session =
+                    new AuthSessionItem()
+                            .withEmailAddress(EMAIL)
+                            .withResetPasswordEmailCodeVerified(EMAIL);
+
+            assertTrue(permissionDecisionManager.canResetPassword(session));
+        }
+
+        private static Stream<Arguments> nonMatchingEmails() {
+            return Stream.of(
+                    Arguments.of("another.email@example.com", EMAIL),
+                    Arguments.of(EMAIL, null),
+                    Arguments.of(null, EMAIL));
+        }
+
+        @ParameterizedTest
+        @MethodSource("nonMatchingEmails")
+        void shouldReturnFalseIfEmailOtpCodeVerifiedForDoesNotMatchEmailOnSession(
+                String mainEmailOnSession, String resetPasswordEmailCodeVerified) {
+            var session =
+                    new AuthSessionItem()
+                            .withEmailAddress(mainEmailOnSession)
+                            .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
+
+            assertFalse(permissionDecisionManager.canResetPassword(session));
+        }
+    }
+
     private PermissionContext createUserContext(int passwordResetCount) {
         return createUserContext(passwordResetCount, EMAIL, Optional.of(PHONE_NUMBER));
     }

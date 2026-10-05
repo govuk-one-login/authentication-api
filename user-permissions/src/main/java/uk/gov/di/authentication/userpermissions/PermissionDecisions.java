@@ -134,4 +134,12 @@ public interface PermissionDecisions {
      * @return A Result containing either a Decision or a DecisionError
      */
     boolean canSetupPasskey(AuthSessionItem authSession);
+
+    /**
+     * Checks if the user can reset their password
+     *
+     * @param authSession The user's current session
+     * @return A result containing either a Decision or a Decision Error
+     */
+    boolean canResetPassword(AuthSessionItem authSession);
 }

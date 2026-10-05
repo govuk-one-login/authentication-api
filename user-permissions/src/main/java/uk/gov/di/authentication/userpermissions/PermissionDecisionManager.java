@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -452,6 +453,12 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     authSession.getHasVerifiedWithPassword());
             return false;
         }
+    }
+
+    @Override
+    public boolean canResetPassword(AuthSessionItem authSession) {
+        return Objects.equals(
+                authSession.getEmailAddress(), authSession.getResetPasswordEmailCodeVerified());
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {
