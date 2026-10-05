@@ -300,6 +300,14 @@ public class LastSignedInBackfillHandler
                     try {
                         client.updateItem(updateRequest);
                         updatedCount++;
+                        if (attempt > 1) {
+                            LOG.info(
+                                    "Update succeeded on retry attempt {}/{}."
+                                            + " publicSubjectId={}",
+                                    attempt,
+                                    MAX_UPDATE_ATTEMPTS,
+                                    fields.get().publicSubjectId());
+                        }
                         break;
                     } catch (ConditionalCheckFailedException e) {
                         skippedCount++;

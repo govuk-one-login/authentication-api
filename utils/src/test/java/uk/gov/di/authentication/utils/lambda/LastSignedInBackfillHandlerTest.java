@@ -109,6 +109,12 @@ class LastSignedInBackfillHandlerTest {
         assertEquals(itemCount, response.updatedCount());
         assertEquals(0, response.skippedCount());
         verify(client, times(itemCount)).updateItem(any(UpdateItemRequest.class));
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                LogEventMatcher.withLevelAndMessageContaining(
+                                        Level.INFO, "Update succeeded on retry attempt"))));
     }
 
     @Test
@@ -435,6 +441,11 @@ class LastSignedInBackfillHandlerTest {
         assertEquals(0, response.skippedCount());
         assertEquals(0, response.failedCount());
         verify(client, times(2)).updateItem(any(UpdateItemRequest.class));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        LogEventMatcher.withLevelAndMessageContaining(
+                                Level.INFO, "Update succeeded on retry attempt")));
     }
 
     @Test
