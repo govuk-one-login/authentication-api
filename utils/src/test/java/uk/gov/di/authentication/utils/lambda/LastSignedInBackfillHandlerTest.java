@@ -489,6 +489,29 @@ class LastSignedInBackfillHandlerTest {
                                 Level.ERROR, "Failed to update", "after 4 attempts")));
     }
 
+    @Test
+    void shouldSkipTrackerItemsWithBlankEmail() {
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        items.add(
+                Map.of(
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_EMAIL,
+                        AttributeValue.fromS(""),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_USER_LAST_ACTIVE,
+                        AttributeValue.fromS(TRACKER_TIMESTAMP)));
+        mockScanWithItems(items);
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(0, response.updatedCount());
+        assertEquals(1, response.skippedCount());
+        verify(client, never()).updateItem(any(UpdateItemRequest.class));
+    }
+
     private List<Map<String, AttributeValue>> createTrackerItems(int count) {
         List<Map<String, AttributeValue>> items = new ArrayList<>();
         for (int i = 1; i <= count; i++) {

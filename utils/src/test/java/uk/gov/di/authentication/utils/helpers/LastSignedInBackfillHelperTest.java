@@ -155,4 +155,16 @@ class LastSignedInBackfillHelperTest {
 
         assertFalse(extractValidFields(item).isPresent());
     }
+
+    @Test
+    void extractValidFieldsShouldReturnEmptyWhenEmailIsBlank() {
+        var item =
+                Map.of(
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_EMAIL,
+                        AttributeValue.fromS(""),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_USER_LAST_ACTIVE,
+                        AttributeValue.fromS("2026-01-01T00:00:00.000Z"));
+
+        assertFalse(extractValidFields(item).isPresent());
+    }
 }

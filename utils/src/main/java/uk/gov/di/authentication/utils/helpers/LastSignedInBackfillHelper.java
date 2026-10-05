@@ -27,6 +27,7 @@ public class LastSignedInBackfillHelper {
 
         if (emailAttr == null
                 || emailAttr.s() == null
+                || emailAttr.s().isBlank()
                 || userLastActiveAttr == null
                 || userLastActiveAttr.s() == null
                 || userLastActiveAttr.s().isBlank()) {
