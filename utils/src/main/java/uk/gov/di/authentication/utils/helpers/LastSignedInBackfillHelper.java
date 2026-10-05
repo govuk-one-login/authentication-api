@@ -13,6 +13,9 @@ public class LastSignedInBackfillHelper {
 
     private static final Logger LOG = LogManager.getLogger(LastSignedInBackfillHelper.class);
 
+    private static final String LOG_FIELD_ABSENT = "absent";
+    private static final String LOG_FIELD_PRESENT = "present";
+
     public static final String TRACKER_ATTRIBUTE_EMAIL = "emailAddress";
     public static final String TRACKER_ATTRIBUTE_USER_LAST_ACTIVE = "userLastActive";
     public static final String TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID = "publicSubjectId";
@@ -50,11 +53,19 @@ public class LastSignedInBackfillHelper {
     }
 
     public static void logInvalidTrackerFields(Map<String, AttributeValue> item) {
+        AttributeValue publicSubjectIdAttr = item.get(TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID);
+        String publicSubjectId =
+                publicSubjectIdAttr != null && publicSubjectIdAttr.s() != null
+                        ? publicSubjectIdAttr.s()
+                        : LOG_FIELD_ABSENT;
         LOG.warn(
                 "Skipping tracker item due to missing or blank required fields:"
-                        + " email={}, userLastActive={}",
-                item.containsKey(TRACKER_ATTRIBUTE_EMAIL) ? "present" : "absent",
-                item.containsKey(TRACKER_ATTRIBUTE_USER_LAST_ACTIVE) ? "present" : "absent");
+                        + " email={}, userLastActive={}, publicSubjectId={}",
+                item.containsKey(TRACKER_ATTRIBUTE_EMAIL) ? LOG_FIELD_PRESENT : LOG_FIELD_ABSENT,
+                item.containsKey(TRACKER_ATTRIBUTE_USER_LAST_ACTIVE)
+                        ? LOG_FIELD_PRESENT
+                        : LOG_FIELD_ABSENT,
+                publicSubjectId);
     }
 
     public static UpdateItemRequest buildConditionalUpdateRequest(
