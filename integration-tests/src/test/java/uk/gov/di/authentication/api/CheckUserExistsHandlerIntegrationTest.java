@@ -286,7 +286,8 @@ class CheckUserExistsHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         authSessionStore.updateSession(
                 session.withEmailAddress(TEST_EMAIL_1)
                         .withHasVerifiedWithMfa(true)
-                        .withHasVerifiedWithPassword(true));
+                        .withHasVerifiedWithPassword(true)
+                        .withResetPasswordEmailCodeVerified(TEST_EMAIL_1));
 
         var clientSessionId = IdGenerator.generate();
 
@@ -303,6 +304,7 @@ class CheckUserExistsHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         assertFalse(sessionAfterUpdate.getHasVerifiedWithPasskey());
         assertFalse(sessionAfterUpdate.getHasVerifiedWithMfa());
         assertFalse(sessionAfterUpdate.getHasVerifiedWithPassword());
+        assertNull(sessionAfterUpdate.getResetPasswordEmailCodeVerified());
     }
 
     @Nested

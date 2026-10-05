@@ -267,7 +267,8 @@ class AuthSessionServiceIntegrationTest {
                 initialSession
                         .withHasVerifiedWithMfa(true)
                         .withHasVerifiedWithPassword(true)
-                        .withHasVerifiedWithPasskey(true));
+                        .withHasVerifiedWithPasskey(true)
+                        .withResetPasswordEmailCodeVerified("test@exmaple.com"));
 
         // Set another variable on the session just before resetting the verification information to
         // make sure the session in general remains the same
@@ -282,6 +283,7 @@ class AuthSessionServiceIntegrationTest {
         assertFalse(result.getHasVerifiedWithMfa());
         assertFalse(result.getHasVerifiedWithPasskey());
         assertFalse(result.getHasVerifiedWithPassword());
+        assertNull(result.getResetPasswordEmailCodeVerified());
     }
 
     @Test

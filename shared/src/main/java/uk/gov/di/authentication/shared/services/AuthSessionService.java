@@ -236,7 +236,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
         var authSessionTableName = dynamoTable.tableName();
 
         var updateExpression =
-                "SET #hasVerifiedWithPassword = :false, #hasVerifiedWithMfa = :false, #hasVerifiedWithPasskey = :false";
+                "SET #hasVerifiedWithPassword = :false, #hasVerifiedWithMfa = :false, #hasVerifiedWithPasskey = :false REMOVE #resetPasswordEmailCodeVerified";
 
         var updateItemRequest =
                 UpdateItemRequest.builder()
@@ -255,6 +255,9 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                                         AuthSessionItem.ATTRIBUTE_HAS_VERIFIED_WITH_MFA,
                                         "#hasVerifiedWithPasskey",
                                         AuthSessionItem.ATTRIBUTE_HAS_VERIFIED_WITH_PASSKEY,
+                                        "#resetPasswordEmailCodeVerified",
+                                        AuthSessionItem
+                                                .ATTRIBUTE_RESET_PASSWORD_EMAIL_CODE_VERIFIED,
                                         "#SessionId",
                                         AuthSessionItem.ATTRIBUTE_SESSION_ID))
                         .expressionAttributeValues(Map.of(":false", AttributeValue.fromBool(false)))
