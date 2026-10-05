@@ -162,6 +162,12 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 request.isCommonPasswordResetJourney(),
                 request.isPartiallyCreatedAccountJourney());
 
+        if (!permissionDecisionManager.canResetPassword(userContext.getAuthSession())) {
+            LOG.warn("Not permitted to reset password");
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.PASSWORD_RESET_NOT_PERMITTED);
+        }
+
         Optional<ErrorResponse> passwordValidationError =
                 passwordValidator.validate(request.password());
 

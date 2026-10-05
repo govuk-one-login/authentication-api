@@ -69,8 +69,10 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
         return authSessionService.getSession(sessionId);
     }
 
-    public void addSession(String sessionId) {
+    public AuthSessionItem addSession(String sessionId) {
+        var session = authSessionService.generateNewAuthSession(sessionId);
         authSessionService.addSession(authSessionService.generateNewAuthSession(sessionId));
+        return session;
     }
 
     public void addEmailToSession(String sessionId, String email) {
