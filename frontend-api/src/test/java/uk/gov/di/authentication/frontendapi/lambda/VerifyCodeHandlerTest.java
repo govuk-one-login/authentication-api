@@ -307,6 +307,31 @@ class VerifyCodeHandlerTest {
     }
 
     @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldSetEmailOnPasswordResetVerifiedValueInSessionIfCodeIsCorrect(boolean isCodeCorrect) {
+        setupOtpCode(CODE, EMAIL, RESET_PASSWORD_WITH_CODE);
+        setupMfaMethodsForUser(EMAIL, List.of(DEFAULT_SMS_METHOD));
+
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_PASSWORD_RESET;
+        when(codeStorageService.isBlockedForEmail(EMAIL, codeBlockedKeyPrefix)).thenReturn(false);
+
+        var codeInRequest = isCodeCorrect ? CODE : INVALID_CODE;
+        var request = verifyCodeRequest(codeInRequest, RESET_PASSWORD_WITH_CODE.name());
+
+        var result = handler.handleRequest(request, context);
+
+        var expectedStatus = isCodeCorrect ? 204 : 400;
+        assertThat(result, hasStatus(expectedStatus));
+
+        if (isCodeCorrect) {
+            verify(userActionsManager).correctEmailOtpEnteredForPasswordReset(any(), eq(EMAIL));
+        } else {
+            verify(userActionsManager, never())
+                    .correctEmailOtpEnteredForPasswordReset(any(), anyString());
+        }
+    }
+
+    @ParameterizedTest
     @MethodSource("emailNotificationTypes")
     void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode(
             NotificationType emailNotificationType) {

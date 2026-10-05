@@ -37,6 +37,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_REMOVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
@@ -182,6 +183,25 @@ class VerifyCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                                                         == JourneyType.ACCOUNT_RECOVERY))
                                 .withAttribute(
                                         EXTENSIONS_JOURNEY_TYPE, expectedJourneyType.name())));
+    }
+
+    @Test
+    void shouldSaveVerifiedEmailCodeWhenResetPasswordEmailRequest() {
+        setUpTestWithSignUp(sessionId);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, RESET_PASSWORD_WITH_CODE);
+        VerifyCodeRequest codeRequest =
+                new VerifyCodeRequest(RESET_PASSWORD_WITH_CODE, code, null, null);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        var session = authSessionExtension.getSession(sessionId).get();
+        assertEquals(EMAIL_ADDRESS, session.getResetPasswordEmailCodeVerified());
     }
 
     @ParameterizedTest
