@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
@@ -299,6 +300,14 @@ public class LastSignedInBackfillHandler
                     try {
                         client.updateItem(updateRequest);
                         updatedCount++;
+                        if (attempt > 1) {
+                            LOG.info(
+                                    "Update succeeded on retry attempt {}/{}."
+                                            + " publicSubjectId={}",
+                                    attempt,
+                                    MAX_UPDATE_ATTEMPTS,
+                                    fields.get().publicSubjectId());
+                        }
                         break;
                     } catch (ConditionalCheckFailedException e) {
                         skippedCount++;
@@ -307,8 +316,10 @@ public class LastSignedInBackfillHandler
                         if (attempt == MAX_UPDATE_ATTEMPTS) {
                             LOG.error(
                                     "Failed to update item after {} attempts due to"
-                                            + " TransactionConflictException, marking as failed",
-                                    MAX_UPDATE_ATTEMPTS);
+                                            + " TransactionConflictException, marking as failed."
+                                            + " publicSubjectId={}",
+                                    MAX_UPDATE_ATTEMPTS,
+                                    fields.get().publicSubjectId());
                             failedCount++;
                         } else {
                             LOG.warn(
@@ -317,6 +328,15 @@ public class LastSignedInBackfillHandler
                                     MAX_UPDATE_ATTEMPTS);
                             LambdaPauseHelper.pause(attempt * 100L);
                         }
+                    } catch (DynamoDbException e) {
+                        LOG.error(
+                                "Unrecoverable DynamoDbException updating item, marking item as"
+                                        + " failed. publicSubjectId={}: {} - {}",
+                                fields.get().publicSubjectId(),
+                                e.getClass().getSimpleName(),
+                                e.getMessage());
+                        failedCount++;
+                        break;
                     }
                 }
             }

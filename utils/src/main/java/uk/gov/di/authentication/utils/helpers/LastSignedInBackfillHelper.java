@@ -13,35 +13,59 @@ public class LastSignedInBackfillHelper {
 
     private static final Logger LOG = LogManager.getLogger(LastSignedInBackfillHelper.class);
 
+    private static final String LOG_FIELD_ABSENT = "absent";
+    private static final String LOG_FIELD_PRESENT = "present";
+
     public static final String TRACKER_ATTRIBUTE_EMAIL = "emailAddress";
     public static final String TRACKER_ATTRIBUTE_USER_LAST_ACTIVE = "userLastActive";
+    public static final String TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID = "publicSubjectId";
 
     public static final String TRACKER_PROJECTION =
-            TRACKER_ATTRIBUTE_EMAIL + "," + TRACKER_ATTRIBUTE_USER_LAST_ACTIVE;
+            TRACKER_ATTRIBUTE_EMAIL
+                    + ","
+                    + TRACKER_ATTRIBUTE_USER_LAST_ACTIVE
+                    + ","
+                    + TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID;
 
     private LastSignedInBackfillHelper() {}
 
     public static Optional<TrackerFields> extractValidFields(Map<String, AttributeValue> item) {
         AttributeValue emailAttr = item.get(TRACKER_ATTRIBUTE_EMAIL);
         AttributeValue userLastActiveAttr = item.get(TRACKER_ATTRIBUTE_USER_LAST_ACTIVE);
+        AttributeValue publicSubjectIdAttr = item.get(TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID);
 
         if (emailAttr == null
                 || emailAttr.s() == null
+                || emailAttr.s().isBlank()
                 || userLastActiveAttr == null
                 || userLastActiveAttr.s() == null
                 || userLastActiveAttr.s().isBlank()) {
             return Optional.empty();
         }
 
-        return Optional.of(new TrackerFields(emailAttr.s(), userLastActiveAttr.s()));
+        String publicSubjectId =
+                publicSubjectIdAttr != null && publicSubjectIdAttr.s() != null
+                        ? publicSubjectIdAttr.s()
+                        : null;
+
+        return Optional.of(
+                new TrackerFields(emailAttr.s(), userLastActiveAttr.s(), publicSubjectId));
     }
 
     public static void logInvalidTrackerFields(Map<String, AttributeValue> item) {
+        AttributeValue publicSubjectIdAttr = item.get(TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID);
+        String publicSubjectId =
+                publicSubjectIdAttr != null && publicSubjectIdAttr.s() != null
+                        ? publicSubjectIdAttr.s()
+                        : LOG_FIELD_ABSENT;
         LOG.warn(
                 "Skipping tracker item due to missing or blank required fields:"
-                        + " email={}, userLastActive={}",
-                item.containsKey(TRACKER_ATTRIBUTE_EMAIL) ? "present" : "absent",
-                item.containsKey(TRACKER_ATTRIBUTE_USER_LAST_ACTIVE) ? "present" : "absent");
+                        + " email={}, userLastActive={}, publicSubjectId={}",
+                item.containsKey(TRACKER_ATTRIBUTE_EMAIL) ? LOG_FIELD_PRESENT : LOG_FIELD_ABSENT,
+                item.containsKey(TRACKER_ATTRIBUTE_USER_LAST_ACTIVE)
+                        ? LOG_FIELD_PRESENT
+                        : LOG_FIELD_ABSENT,
+                publicSubjectId);
     }
 
     public static UpdateItemRequest buildConditionalUpdateRequest(
@@ -63,5 +87,5 @@ public class LastSignedInBackfillHelper {
                 .build();
     }
 
-    public record TrackerFields(String email, String userLastActive) {}
+    public record TrackerFields(String email, String userLastActive, String publicSubjectId) {}
 }

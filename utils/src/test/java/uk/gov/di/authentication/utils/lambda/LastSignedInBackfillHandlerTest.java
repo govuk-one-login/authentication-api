@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
@@ -108,6 +109,12 @@ class LastSignedInBackfillHandlerTest {
         assertEquals(itemCount, response.updatedCount());
         assertEquals(0, response.skippedCount());
         verify(client, times(itemCount)).updateItem(any(UpdateItemRequest.class));
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                LogEventMatcher.withLevelAndMessageContaining(
+                                        Level.INFO, "Update succeeded on retry attempt"))));
     }
 
     @Test
@@ -434,6 +441,11 @@ class LastSignedInBackfillHandlerTest {
         assertEquals(0, response.skippedCount());
         assertEquals(0, response.failedCount());
         verify(client, times(2)).updateItem(any(UpdateItemRequest.class));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        LogEventMatcher.withLevelAndMessageContaining(
+                                Level.INFO, "Update succeeded on retry attempt")));
     }
 
     @Test
@@ -487,6 +499,122 @@ class LastSignedInBackfillHandlerTest {
                 hasItem(
                         LogEventMatcher.withLevelAndMessageContaining(
                                 Level.ERROR, "Failed to update", "after 4 attempts")));
+    }
+
+    @Test
+    void shouldMarkAsFailedAndLogErrorOnDynamoDbException() {
+        mockScanWithItems(createTrackerItems(1));
+        when(client.updateItem(any(UpdateItemRequest.class)))
+                .thenThrow(
+                        DynamoDbException.builder()
+                                .message(
+                                        "The AttributeValue for a key attribute cannot contain an"
+                                                + " empty string value.")
+                                .build());
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(0, response.updatedCount());
+        assertEquals(0, response.skippedCount());
+        assertEquals(1, response.failedCount());
+        verify(client, times(1)).updateItem(any(UpdateItemRequest.class));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        LogEventMatcher.withLevelAndMessageContaining(
+                                Level.ERROR,
+                                "Unrecoverable DynamoDbException",
+                                "publicSubjectId=")));
+    }
+
+    @Test
+    void shouldLogPublicSubjectIdOnDynamoDbException() {
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        items.add(
+                Map.of(
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_EMAIL,
+                        AttributeValue.fromS("user@example.com"),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_USER_LAST_ACTIVE,
+                        AttributeValue.fromS(TRACKER_TIMESTAMP),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_PUBLIC_SUBJECT_ID,
+                        AttributeValue.fromS("urn:fdc:gov.uk:2022:pub-456")));
+        mockScanWithItems(items);
+        when(client.updateItem(any(UpdateItemRequest.class)))
+                .thenThrow(DynamoDbException.builder().message("empty string value").build());
+
+        createHandler()
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        LogEventMatcher.withLevelAndMessageContaining(
+                                Level.ERROR,
+                                "Unrecoverable DynamoDbException",
+                                "urn:fdc:gov.uk:2022:pub-456")));
+    }
+
+    @Test
+    void shouldContinueProcessingAfterDynamoDbException() {
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        items.add(
+                Map.of(
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_EMAIL,
+                        AttributeValue.fromS("bad@example.com"),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_USER_LAST_ACTIVE,
+                        AttributeValue.fromS(TRACKER_TIMESTAMP)));
+        items.add(
+                Map.of(
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_EMAIL,
+                        AttributeValue.fromS("good@example.com"),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_USER_LAST_ACTIVE,
+                        AttributeValue.fromS(TRACKER_TIMESTAMP)));
+        mockScanWithItems(items);
+
+        var captor = ArgumentCaptor.forClass(UpdateItemRequest.class);
+        when(client.updateItem(captor.capture()))
+                .thenThrow(DynamoDbException.builder().message("empty string value").build())
+                .thenReturn(UpdateItemResponse.builder().build());
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(2, response.processedCount());
+        assertEquals(1, response.updatedCount());
+        assertEquals(0, response.skippedCount());
+        assertEquals(1, response.failedCount());
+        verify(client, times(2)).updateItem(any(UpdateItemRequest.class));
+    }
+
+    @Test
+    void shouldSkipTrackerItemsWithBlankEmail() {
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        items.add(
+                Map.of(
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_EMAIL,
+                        AttributeValue.fromS(""),
+                        LastSignedInBackfillHelper.TRACKER_ATTRIBUTE_USER_LAST_ACTIVE,
+                        AttributeValue.fromS(TRACKER_TIMESTAMP)));
+        mockScanWithItems(items);
+
+        var response =
+                createHandler()
+                        .handleRequest(
+                                new LastSignedInBackfillRequest(
+                                        null, null, null, null, null, null));
+
+        assertEquals(1, response.processedCount());
+        assertEquals(0, response.updatedCount());
+        assertEquals(1, response.skippedCount());
+        verify(client, never()).updateItem(any(UpdateItemRequest.class));
     }
 
     private List<Map<String, AttributeValue>> createTrackerItems(int count) {
