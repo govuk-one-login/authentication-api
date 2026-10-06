@@ -33,7 +33,7 @@ jobs:
       - name: Check OpenAPI specs
         shell: bash
         run: |
-          find ci/terraform -type f -name "*openapi*.yaml" -exec python scripts/validate_openapi_definition.py {} \;
+          find ci/openAPI -type f -name "*.yaml" -exec python3 scripts/validate_openapi_definition.py {} \;
   build:
     runs-on: ubuntu-24.04-arm
     needs:
