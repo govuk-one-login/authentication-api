@@ -198,6 +198,41 @@ Resources:
           DefaultValue: 5,
         ]
 
+  InactiveAccountDeletionGuardrailHitAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "The inactive account deletion guardrail has prevented at least one deletion in ${Env}. The circuit breaker should have tripped and halted further processing; a dev must review and clear the block before processing resumes. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink: "https://govukverify.atlassian.net/wiki/x/1QAJmwE"
+      AlarmName: !Sub
+        - ${Env}-inactive-account-deletion-guardrail-hit-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      MetricName: GuardrailPreventedInactiveAccountDeletion
+      Namespace: Authentication
+      Dimensions:
+        - Name: GuardrailType
+          Value: AuthUserActivityCheck
+        - Name: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Name: LogGroup
+          Value: !Ref InactiveAccountDeletionQueueProcessorFunction
+        - Name: ServiceName
+          Value: !Ref InactiveAccountDeletionQueueProcessorFunction
+        - Name: ServiceType
+          Value: AWS::Lambda::Function
+      Period: 60
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: ignore
+
   InactiveAccountDeletionQueueProcessorFunctionSubscriptionFilter:
     Condition: IsSplunkEnabled
     Type: AWS::Logs::SubscriptionFilter
