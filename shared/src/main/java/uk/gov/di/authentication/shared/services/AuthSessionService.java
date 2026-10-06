@@ -89,6 +89,7 @@ public class AuthSessionService extends BaseDynamoService<AuthSessionItem> {
                                 .get()
                                 .withSessionId(newSessionId)
                                 .withResetPasswordState(AuthSessionItem.ResetPasswordState.NONE)
+                                .withResetPasswordEmailCodeVerified(null)
                                 .withResetMfaState(AuthSessionItem.ResetMfaState.NONE)
                                 .withPreviousSessionId(previousSessionId)
                                 .withCreatedAt(Instant.now().toString())
