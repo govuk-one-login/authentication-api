@@ -58,7 +58,6 @@ public class CloudwatchMetricsService {
     public static final String DOMESTIC_SMS_DESTINATION = "DOMESTIC";
     public static final String UNKNOWN_VALUE = "unknown";
     public static final String AUTHENTICATION_NAMESPACE = "Authentication";
-    public static final String HOME_READ_ONLY_NAMESPACE = "Home-ReadOnly";
 
     private final ConfigurationService configurationService;
 
