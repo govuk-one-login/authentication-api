@@ -3,13 +3,13 @@ package uk.gov.di.authentication.external.lambda;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.UserInfoService;
@@ -17,13 +17,17 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.List;
@@ -44,6 +48,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_INTERNAL_SECTOR_URI;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_SALT;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_SUBJECT;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.generateUserProfile;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 
 class UserInfoHandlerTest {
@@ -52,8 +60,8 @@ class UserInfoHandlerTest {
     private AccessTokenStoreService accessTokenStoreService;
     private UserInfoHandler userInfoHandler;
     private AuthSessionService authSessionService;
+    private AuthenticationService authenticationService;
     private static final AccessTokenStore accessTokenStore = mock(AccessTokenStore.class);
-    private static final Subject TEST_SUBJECT = new Subject();
     private static final UserInfo TEST_SUBJECT_USER_INFO = new UserInfo(TEST_SUBJECT);
     private final AuditService auditService = mock(AuditService.class);
     private final String sessionId = "a-session-id";
@@ -65,43 +73,50 @@ class UserInfoHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        when(accessTokenStore.isUsed()).thenReturn(false);
-        long sixteenthAugust2099UnixTime = 4090554490L;
-        when(accessTokenStore.getTimeToExist()).thenReturn(sixteenthAugust2099UnixTime);
-
         configurationService = mock(ConfigurationService.class);
         userInfoService = mock(UserInfoService.class);
         accessTokenStoreService = mock(AccessTokenStoreService.class);
         authSessionService = mock(AuthSessionService.class);
-        when(accessTokenStoreService.getAccessTokenStore(any()))
-                .thenReturn(Optional.of(accessTokenStore));
+        authenticationService = mock(DynamoService.class);
+
         userInfoHandler =
                 new UserInfoHandler(
                         configurationService,
                         userInfoService,
                         accessTokenStoreService,
                         auditService,
-                        authSessionService);
-
+                        authSessionService,
+                        authenticationService);
+        long sixteenthAugust2099UnixTime = 4090554490L;
         TEST_SUBJECT_USER_INFO.setEmailAddress("test@test.com");
         TEST_SUBJECT_USER_INFO.setPhoneNumber("0123456789");
         TEST_SUBJECT_USER_INFO.setClaim("verified_mfa_method_type", testVerifiedMfaMethodType);
         TEST_SUBJECT_USER_INFO.setClaim(
                 "current_credential_strength", testCurrentCredentialStrength);
-        when(accessTokenStore.getSubjectID()).thenReturn("testSubjectId");
+        when(accessTokenStore.getSubjectID()).thenReturn(TEST_SUBJECT.getValue());
+        when(accessTokenStoreService.getAccessTokenStore(any()))
+                .thenReturn(Optional.of(accessTokenStore));
+        when(configurationService.getInternalSectorUri()).thenReturn(TEST_INTERNAL_SECTOR_URI);
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class)))
+                .thenReturn(SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
+        when(accessTokenStore.isUsed()).thenReturn(false);
+        when(accessTokenStore.getTimeToExist()).thenReturn(sixteenthAugust2099UnixTime);
     }
 
     @Test
     void shouldReturn200WithUserInfoForValidRequestAndSetTokenStoreUsed()
             throws ParseException, AccessTokenException {
-        withAuthSession();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
+        var userProfile = generateUserProfile().withMfaMethodsMigrated(false);
+        withAuthSession(userProfile);
         when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(eq(accessTokenStore), any()))
+        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
+                .thenReturn(userProfile);
+        when(userInfoService.populateUserInfo(eq(accessTokenStore), any(), eq(userProfile), any()))
                 .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
@@ -132,14 +147,16 @@ class UserInfoHandlerTest {
     @Test
     void shouldUpdateAuthSessionWithAccountStateExisting()
             throws ParseException, AccessTokenException {
-        withAuthSession();
+        var userProfile = generateUserProfile();
+        withAuthSession(userProfile);
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
         request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
         when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(any(), any()))
+        when(authenticationService.getUserProfileFromSubject(any())).thenReturn(userProfile);
+        when(userInfoService.populateUserInfo(any(), any(), any(), any()))
                 .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
@@ -173,7 +190,7 @@ class UserInfoHandlerTest {
 
     @Test
     void shouldReturnMissingTokenErrorWhenAuthHeaderNotFound() {
-        withAuthSession();
+        withAuthSession(generateUserProfile());
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
@@ -193,9 +210,13 @@ class UserInfoHandlerTest {
         String validTokenHeader = "Bearer valid-token";
         AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
         request.setHeaders(Map.of("Authorization", validTokenHeader));
+        var userProfile = generateUserProfile().withMfaMethodsMigrated(false);
         when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(accessTokenStore, authSession))
+        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
+                .thenReturn(userProfile);
+        when(userInfoService.populateUserInfo(
+                        eq(accessTokenStore), eq(authSession), eq(userProfile), any()))
                 .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
@@ -216,7 +237,9 @@ class UserInfoHandlerTest {
 
         when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
                 .thenReturn(validToken);
-        when(userInfoService.populateUserInfo(accessTokenStore, authSession))
+        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
+                .thenReturn(generateUserProfile().withMfaMethodsMigrated(false));
+        when(userInfoService.populateUserInfo(eq(accessTokenStore), eq(authSession), any(), any()))
                 .thenReturn(Result.success(TEST_SUBJECT_USER_INFO));
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
 
@@ -235,7 +258,7 @@ class UserInfoHandlerTest {
     @Test
     void shouldReturnInvalidTokenErrorWhenBearerTokenCannotBeParsed()
             throws ParseException, AccessTokenException {
-        withAuthSession();
+        withAuthSession(generateUserProfile());
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String invalidToken = "Bearer this-is-not-a-valid-token";
         request.setHeaders(Map.of("Authorization", invalidToken, SESSION_ID_HEADER, sessionId));
@@ -257,7 +280,7 @@ class UserInfoHandlerTest {
     @Test
     void shouldReturnInvalidTokenErrorWhenTokenNotFoundInDatabase()
             throws ParseException, AccessTokenException {
-        withAuthSession();
+        withAuthSession(generateUserProfile());
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String invalidToken = "Bearer this-is-not-a-valid-token";
         request.setHeaders(Map.of("Authorization", invalidToken, SESSION_ID_HEADER, sessionId));
@@ -280,7 +303,7 @@ class UserInfoHandlerTest {
     @Test
     void shouldReturnInvalidTokenErrorWhenAccessTokenHasAlreadyBeenUsed()
             throws ParseException, AccessTokenException {
-        withAuthSession();
+        withAuthSession(generateUserProfile());
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validToken = "Bearer valid-token";
         request.setHeaders(Map.of("Authorization", validToken, SESSION_ID_HEADER, sessionId));
@@ -307,7 +330,7 @@ class UserInfoHandlerTest {
     @Test
     void shouldReturnInvalidTokenErrorWhenAccessTokenIsTooOld()
             throws ParseException, AccessTokenException {
-        withAuthSession();
+        withAuthSession(generateUserProfile());
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String validToken = "Bearer valid-token";
         request.setHeaders(Map.of("Authorization", validToken, SESSION_ID_HEADER, sessionId));
@@ -328,13 +351,45 @@ class UserInfoHandlerTest {
         verify(accessTokenStoreService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
-    private void withAuthSession() {
+    @Test
+    void
+            shouldReturnInvalidTokenErrorWhenSessionInternalCommonSubjectIdDoesNotMatchAccessTokenSubject()
+                    throws ParseException, AccessTokenException {
+        withAuthSession(generateUserProfile().withSubjectID("other-subject"));
+        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        String validTokenHeader = "Bearer valid-token";
+        AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
+        request.setHeaders(Map.of("Authorization", validTokenHeader, SESSION_ID_HEADER, sessionId));
+        when(accessTokenStoreService.getAccessTokenFromAuthorizationHeader(any()))
+                .thenReturn(validToken);
+        when(authenticationService.getUserProfileFromSubject(any()))
+                .thenReturn(generateUserProfile());
+
+        APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
+
+        assertEquals(401, response.getStatusCode());
+        Map<String, List<String>> multiValueHeaders = response.getMultiValueHeaders();
+        assertNotNull(multiValueHeaders);
+        var authChallengeHeader = multiValueHeaders.get("WWW-Authenticate");
+        assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
+        assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
+
+        verify(userInfoService, never()).populateUserInfo(any(), any(), any(), any());
+        verify(accessTokenStoreService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
+    }
+
+    private void withAuthSession(UserProfile userProfile) {
+        var internalCommonSubjectId =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                userProfile, TEST_INTERNAL_SECTOR_URI, authenticationService)
+                        .getValue();
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(
                         Optional.of(
                                 new AuthSessionItem()
                                         .withSessionId(sessionId)
-                                        .withAccountState(AuthSessionItem.AccountState.NEW)));
+                                        .withAccountState(AuthSessionItem.AccountState.NEW)
+                                        .withInternalCommonSubjectId(internalCommonSubjectId)));
     }
 
     private void withNoAuthSession() {
