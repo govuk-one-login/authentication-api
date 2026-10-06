@@ -12,6 +12,7 @@ Metadata:
         - E1011
         - W2531
         - E2531
+        - W8001
 
 Description: >
   SAM template for deploying utility Lambda functions and supporting infrastructure
@@ -146,6 +147,15 @@ Conditions:
                   emailCheckResultsWriterProvisionedConcurrency,
                 ]
               - "0"
+
+  EnableEmailCheckWriter:
+    Fn::Or:
+      - Fn::Equals:
+          - !Ref Environment
+          - staging
+      - Fn::Equals:
+          - !Ref Environment
+          - dev
 
   InactiveAccountTrackerCrossAccountAccessEnabled:
     Fn::Or:
