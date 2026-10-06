@@ -78,7 +78,7 @@ class AuthoriseAccessTokenIntegrationTest
 
     @BeforeAll
     static void setupEnvironment() throws MalformedURLException {
-        environment.set("ACCESS_TOKEN_JWKS_URL", jwksExtension.getJwksUrl());
+        environment.set("ORCH_ACCESS_TOKEN_JWKS_URL", jwksExtension.getJwksUrl());
     }
 
     @BeforeEach

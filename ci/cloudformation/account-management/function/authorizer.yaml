@@ -40,11 +40,11 @@ Resources:
               !Ref Environment,
               testSigningKeyEnabled,
             ]
-          ACCESS_TOKEN_JWKS_URL:
+          ORCH_ACCESS_TOKEN_JWKS_URL:
             !FindInMap [
               EnvironmentConfiguration,
               !Ref Environment,
-              accessTokenJwksUrl,
+              orchAccessTokenJwksUrl,
             ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup

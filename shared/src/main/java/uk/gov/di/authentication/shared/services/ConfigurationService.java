@@ -533,9 +533,9 @@ public class ConfigurationService
         return System.getenv().getOrDefault("SYNTHETICS_USERS", "");
     }
 
-    public URL getAccessTokenJwksUrl() {
+    public URL getOrchAccessTokenJwksUrl() {
         try {
-            return new URL(System.getenv().getOrDefault("ACCESS_TOKEN_JWKS_URL", ""));
+            return new URL(System.getenv().getOrDefault("ORCH_ACCESS_TOKEN_JWKS_URL", ""));
         } catch (MalformedURLException e) {
             LOG.error("Invalid JWKS URL: {}", e.getMessage());
             throw new RuntimeException(e);
