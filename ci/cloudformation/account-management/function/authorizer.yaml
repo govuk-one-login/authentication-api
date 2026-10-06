@@ -46,6 +46,12 @@ Resources:
               !Ref Environment,
               orchAccessTokenJwksUrl,
             ]
+          AUTH_ACCESS_TOKEN_JWKS_URL:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              authAccessTokenJwksUrl,
+            ]
       LoggingConfig:
         LogGroup: !Ref AuthorizerFunctionLogGroup
       Policies:

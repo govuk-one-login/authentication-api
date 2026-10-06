@@ -312,6 +312,7 @@ Mappings:
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       orchAccessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
+      authAccessTokenJwksUrl: https://signin.authdev1.dev.account.gov.uk/.well-known/amc-jwks.json
       accountDataApiId: rjlo8fsb55
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/e5a9a634-e113-44c4-8bef-388fb71041a0
@@ -354,6 +355,7 @@ Mappings:
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       orchAccessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
+      authAccessTokenJwksUrl: https://signin.authdev2.dev.account.gov.uk/.well-known/amc-jwks.json
       accountDataApiId: ez2ro7vca7
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/73405f5d-b60a-4b17-881c-b0f3e26ef03d
@@ -396,6 +398,7 @@ Mappings:
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       orchAccessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
+      authAccessTokenJwksUrl: https://signin.authdev3.dev.account.gov.uk/.well-known/amc-jwks.json
       accountDataApiId: 5ctgxqnq37
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/20e15b84-6196-4b0a-8f27-632f4b858bd1
@@ -445,6 +448,7 @@ Mappings:
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       orchAccessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
+      authAccessTokenJwksUrl: https://signin.dev.account.gov.uk/.well-known/amc-jwks.json
       accountDataApiId: 0aqzty84lj
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/c0bc7d31-32f4-4f98-addd-170187956d8d
@@ -496,6 +500,7 @@ Mappings:
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       orchAccessTokenJwksUrl: https://oidc.build.account.gov.uk/.well-known/jwks.json
+      authAccessTokenJwksUrl: https://signin.build.account.gov.uk/.well-known/amc-jwks.json
       accountDataApiId: ac3znt5m23
       inactiveAccountDeletionClientId: inactive-account-deletion
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:058264536367:key/9a0c6ef7-ce45-42fe-b55e-48b09f9ff53e
@@ -546,6 +551,7 @@ Mappings:
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
       orchAccessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
+      authAccessTokenJwksUrl: https://signin.staging.account.gov.uk/.well-known/amc-jwks.json
       accountDataApiId: 7xgl7lexy4
       inactiveAccountDeletionClientId: inactive-account-deletion
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:539729775994:account-mgmt-backend-AccountDeletionQueue-78ywESZuToOZ
@@ -601,6 +607,7 @@ Mappings:
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: false
       orchAccessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
+      authAccessTokenJwksUrl: https://signin.integration.account.gov.uk/.well-known/amc-jwks.json
       accountDataApiId: hoidt6wujb
       inactiveAccountDeletionClientId: inactive-account-deletion
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:666500506359:account-mgmt-backend-AccountDeletionQueue-xmOv6h9q3FZR
@@ -656,6 +663,7 @@ Mappings:
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: false
       orchAccessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
+      authAccessTokenJwksUrl: https://signin.account.gov.uk/.well-known/amc-jwks.json
       accountDataApiId: 0218o1p9tj
       inactiveAccountDeletionClientId: inactive-account-deletion
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:026991849909:account-mgmt-backend-AccountDeletionQueue-aYZntrp3UhPl

@@ -542,6 +542,16 @@ public class ConfigurationService
         }
     }
 
+    public URL getAuthAccessTokenJwksUrl() {
+        try {
+            return new URL(System.getenv().getOrDefault("AUTH_ACCESS_TOKEN_JWKS_URL", ""));
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid JWKS URL: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+
     public String getTestTokenSigningKeyAlias() {
         return System.getenv("TEST_TOKEN_SIGNING_KEY_ALIAS");
     }
