@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
+import uk.gov.di.accountmanagement.entity.IADCircuitBreakerItem;
 import uk.gov.di.accountmanagement.lambda.InactiveAccountDeletionHandler;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -22,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.IADCircuitBreakerStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -52,6 +54,7 @@ class InactiveAccountDeletionHandlerIntegrationTest
     private static final String IAD_CLIENT_ID = "inactive-account-deletion-client";
     private static final String INTERNAL_SECTOR_URI = "https://identity.test.account.gov.uk";
     private static final String OLD_TIMESTAMP = "2019-01-01T10:00:00.000000";
+    private static final String CIRCUIT_BREAKER_TABLE_NAME = "local-iad-circuit-breaker";
 
     private WireMockServer accountDataApiWireMockServer;
     private String publicSubjectId;
@@ -62,6 +65,10 @@ class InactiveAccountDeletionHandlerIntegrationTest
     private static final KmsKeyExtension authToAccountDataSigningKey =
             new KmsKeyExtension("auth-to-account-data-signing-key", KeyUsageType.SIGN_VERIFY);
 
+    @RegisterExtension
+    private static final IADCircuitBreakerStoreExtension iadCircuitBreakerStore =
+            new IADCircuitBreakerStoreExtension();
+
     @BeforeAll
     static void setupEnvironment() {
         environment.set("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "https://example.com/ADAPIAudience");
@@ -69,6 +76,7 @@ class InactiveAccountDeletionHandlerIntegrationTest
         environment.set("INACTIVE_ACCOUNT_DELETION_CLIENT_ID", IAD_CLIENT_ID);
         environment.set("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", authToAccountDataSigningKey.getKeyId());
         environment.set("INTERNAl_SECTOR_URI", INTERNAL_SECTOR_URI);
+        environment.set("IAD_CIRCUIT_BREAKER_TABLE_NAME", CIRCUIT_BREAKER_TABLE_NAME);
     }
 
     @BeforeEach
@@ -220,6 +228,40 @@ class InactiveAccountDeletionHandlerIntegrationTest
                 1, deleteRequestedFor(urlPathMatching("/accounts/" + inactivePublicSubjectId)));
         accountDataApiWireMockServer.verify(
                 0, deleteRequestedFor(urlPathMatching("/accounts/" + activePublicSubjectId)));
+    }
+
+    @Test
+    void shouldAbortBatchWhenCircuitBreakerIsActive() {
+        makeAccountInactive(TEST_EMAIL);
+        tripCircuitBreaker();
+
+        accountDataApiWireMockServer.stubFor(
+                delete(urlPathMatching("/accounts/" + publicSubjectId))
+                        .willReturn(aResponse().withStatus(204)));
+
+        var event = createSQSEvent(publicSubjectId);
+
+        SQSBatchResponse response = handler.handleRequest(event, context);
+
+        assertThat(response.getBatchItemFailures(), hasSize(1));
+        assertEquals("msg-1", response.getBatchItemFailures().get(0).getItemIdentifier());
+        accountDataApiWireMockServer.verify(0, deleteRequestedFor(urlPathMatching("/accounts/.*")));
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    private void tripCircuitBreaker() {
+        var configService = ConfigurationService.getInstance();
+        var dynamoDbEnhancedClient = DynamoClientHelper.createDynamoEnhancedClient(configService);
+        var circuitBreakerTable =
+                dynamoDbEnhancedClient.table(
+                        CIRCUIT_BREAKER_TABLE_NAME,
+                        TableSchema.fromBean(IADCircuitBreakerItem.class));
+        var item = new IADCircuitBreakerItem();
+        item.setPk("IAD");
+        item.setDatetime(System.currentTimeMillis());
+        item.setEnabled(true);
+        item.setMetadataJson("{\"guardrailType\":\"IntegrationTest\"}");
+        circuitBreakerTable.putItem(item);
     }
 
     private void makeAccountInactive(String email) {

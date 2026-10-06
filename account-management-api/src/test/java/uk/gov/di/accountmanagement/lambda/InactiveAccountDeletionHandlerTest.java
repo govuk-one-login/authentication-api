@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
+import uk.gov.di.accountmanagement.services.IADCircuitBreakerService;
 import uk.gov.di.accountmanagement.services.InactiveAccountDeletionTokenService;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
@@ -75,6 +76,8 @@ class InactiveAccountDeletionHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final IADCircuitBreakerService iadCircuitBreakerService =
+            mock(IADCircuitBreakerService.class);
     private InactiveAccountDeletionHandler handler;
 
     @BeforeEach
@@ -87,7 +90,9 @@ class InactiveAccountDeletionHandlerTest {
                         structuredAuditService,
                         configurationService,
                         cloudwatchMetricsService,
+                        iadCircuitBreakerService,
                         FIXED_CLOCK);
+        when(iadCircuitBreakerService.isCircuitBreakerActive()).thenReturn(false);
         when(tokenService.createAccountDataApiAccessToken(any()))
                 .thenReturn(Result.success(new BearerAccessToken(TOKEN_VALUE)));
         when(dynamoService.getOptionalUserProfileFromPublicSubject(any()))
@@ -489,6 +494,122 @@ class InactiveAccountDeletionHandlerTest {
 
             assertThat(response.getBatchItemFailures(), hasSize(1));
             verifyNoInteractions(accountDeletionService);
+        }
+
+        @Test
+        void shouldTripCircuitBreakerWhenGuardrailHit() {
+            var recentProfile = inactiveUserProfile(PUBLIC_SUBJECT_ID, EMAIL);
+            recentProfile.setUpdated(RECENT_TIMESTAMP);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.of(recentProfile));
+
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verify(iadCircuitBreakerService)
+                    .tripCircuitBreaker("AuthUserActivityCheck", PUBLIC_SUBJECT_ID);
+        }
+
+        @Test
+        void shouldNotTripCircuitBreakerWhenAccountIsInactive() {
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verify(iadCircuitBreakerService, never()).tripCircuitBreaker(any(), any());
+        }
+
+        @Test
+        void shouldNotTripCircuitBreakerWhenUserProfileNotFound() {
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.empty());
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            handler.handleRequest(event, context);
+
+            verify(iadCircuitBreakerService, never()).tripCircuitBreaker(any(), any());
+        }
+
+        @Test
+        void shouldStillThrowRecentlyActiveAccountExceptionWhenCircuitBreakerWriteFails() {
+            var recentProfile = inactiveUserProfile(PUBLIC_SUBJECT_ID, EMAIL);
+            recentProfile.setUpdated(RECENT_TIMESTAMP);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.of(recentProfile));
+            doThrow(new RuntimeException("DynamoDB error"))
+                    .when(iadCircuitBreakerService)
+                    .tripCircuitBreaker(any(), any());
+
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            SQSBatchResponse response = handler.handleRequest(event, context);
+
+            assertThat(response.getBatchItemFailures(), hasSize(1));
+            verifyNoInteractions(accountDeletionService);
+        }
+    }
+
+    @Nested
+    class CircuitBreakerCheckTest {
+
+        @Test
+        void shouldReportMessageAsFailureWhenCircuitBreakerIsActive() {
+            when(iadCircuitBreakerService.isCircuitBreakerActive()).thenReturn(true);
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            SQSBatchResponse response = handler.handleRequest(event, context);
+
+            assertThat(response.getBatchItemFailures(), hasSize(1));
+            assertEquals("msg-1", response.getBatchItemFailures().get(0).getItemIdentifier());
+            verifyNoInteractions(accountDeletionService);
+            verifyNoInteractions(structuredAuditService);
+        }
+
+        @Test
+        void shouldProceedNormallyWhenCircuitBreakerIsNotActive() {
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            SQSBatchResponse response = handler.handleRequest(event, context);
+
+            assertThat(response.getBatchItemFailures(), is(empty()));
+            verify(accountDeletionService).deleteAccountViaDataApi(PUBLIC_SUBJECT_ID, TOKEN_VALUE);
+        }
+
+        @Test
+        void shouldProcessEarlyMessagesAndFailRemainingWhenCircuitBreakerTrippedMidBatch() {
+            when(iadCircuitBreakerService.isCircuitBreakerActive())
+                    .thenReturn(false)
+                    .thenReturn(false)
+                    .thenReturn(true);
+
+            when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-1"))
+                    .thenReturn(Optional.of(inactiveUserProfile("sub-1", "sub1@example.com")));
+            when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-2"))
+                    .thenReturn(Optional.of(inactiveUserProfile("sub-2", "sub2@example.com")));
+
+            var msg1 = createSQSMessage("msg-1", "{\"publicSubjectId\": \"sub-1\"}");
+            var msg2 = createSQSMessage("msg-2", "{\"publicSubjectId\": \"sub-2\"}");
+            var msg3 = createSQSMessage("msg-3", "{\"publicSubjectId\": \"sub-3\"}");
+            var msg4 = createSQSMessage("msg-4", "{\"publicSubjectId\": \"sub-4\"}");
+            var event = new SQSEvent();
+            event.setRecords(List.of(msg1, msg2, msg3, msg4));
+
+            SQSBatchResponse response = handler.handleRequest(event, context);
+
+            assertThat(response.getBatchItemFailures(), hasSize(2));
+            assertEquals("msg-3", response.getBatchItemFailures().get(0).getItemIdentifier());
+            assertEquals("msg-4", response.getBatchItemFailures().get(1).getItemIdentifier());
+            verify(accountDeletionService).deleteAccountViaDataApi(eq("sub-1"), any());
+            verify(accountDeletionService).deleteAccountViaDataApi(eq("sub-2"), any());
+            verify(accountDeletionService, never()).deleteAccountViaDataApi(eq("sub-3"), any());
+            verify(accountDeletionService, never()).deleteAccountViaDataApi(eq("sub-4"), any());
         }
     }
 

@@ -550,6 +550,8 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:539729775994:account-mgmt-backend-AccountDeletionQueue-78ywESZuToOZ
       inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:539729775994:key/12bd1a88-0ddd-4957-9335-c99febdc0cf1
+      iadCircuitBreakerTableArn: arn:aws:dynamodb:eu-west-2:539729775994:table/inactive_account_circuit_breaker
+      iadCircuitBreakerTableKmsKeyArn: arn:aws:kms:eu-west-2:539729775994:key/82945509-7d96-445f-a614-aba803a01d8c
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:851725205974:key/ecfc81ec-546e-478d-ae04-5ed5d1b375a9
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
@@ -603,6 +605,8 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:666500506359:account-mgmt-backend-AccountDeletionQueue-xmOv6h9q3FZR
       inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:666500506359:key/c7ad515e-5298-46f9-8964-0902eb89a156
+      iadCircuitBreakerTableArn: arn:aws:dynamodb:eu-west-2:666500506359:table/inactive_account_circuit_breaker
+      iadCircuitBreakerTableKmsKeyArn: arn:aws:kms:eu-west-2:666500506359:key/338450e1-6bb7-4391-9046-1fcda5563072
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125600642:key/f0e0c444-b70e-4d2f-9d5a-9f0bcf1d6540
       manualAccountDeletionClientId: manual-account-deletion
       accountDeletionDataApiEnabled: true
@@ -656,6 +660,8 @@ Mappings:
       inactiveAccountDeletionClientId: inactive-account-deletion
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:026991849909:account-mgmt-backend-AccountDeletionQueue-aYZntrp3UhPl
       inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:026991849909:key/3ee752ee-1ac2-4926-8d5b-a57861da60fc
+      iadCircuitBreakerTableArn: arn:aws:dynamodb:eu-west-2:026991849909:table/inactive_account_circuit_breaker
+      iadCircuitBreakerTableKmsKeyArn: arn:aws:kms:eu-west-2:026991849909:key/95f21e31-a7a6-4b8c-8bd9-109d4ca0305b
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125303002:key/29d156dd-c893-4221-8fe1-f24882e0e401
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion

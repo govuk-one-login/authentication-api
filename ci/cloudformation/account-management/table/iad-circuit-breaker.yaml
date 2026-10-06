@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+  # ============================================================================
+  # Stub IAD circuit breaker table + KMS key for dev/build environments
+  # ============================================================================
+
+  IADCircuitBreakerStubKmsKey:
+    Type: AWS::KMS::Key
+    Condition: InactiveAccountDeletionStubEnabled
+    Properties:
+      Description: !Sub
+        - KMS key for the IAD circuit breaker stub table (${Env})
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  IADCircuitBreakerStubTable:
+    Type: AWS::DynamoDB::Table
+    Condition: InactiveAccountDeletionStubEnabled
+    Properties:
+      TableName: !Sub
+        - ${Env}-stub-inactive-account-circuit-breaker
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: datetime
+          AttributeType: N
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: datetime
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt IADCircuitBreakerStubKmsKey.Arn
+      DeletionProtectionEnabled: false
+      Tags:
+        - Key: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Key: Service
+          Value: inactive-account-deletion
+        - Key: Source
+          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/table/iad-circuit-breaker.yaml
+
+  # ============================================================================
+  # IAM policies for the IAD circuit breaker table
+  # ============================================================================
+
+  IADCircuitBreakerStubAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountDeletionStubEnabled
+    Properties:
+      Description: "IAM policy for reading and writing to the IAD circuit breaker stub table"
+      Path: !Sub
+        - /${Env}/account-management/
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDynamoDbAccess
+            Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:PutItem
+            Resource:
+              - !GetAtt IADCircuitBreakerStubTable.Arn
+          - Sid: AllowKmsAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              - !GetAtt IADCircuitBreakerStubKmsKey.Arn
+
+  IADCircuitBreakerCrossAccountAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: InactiveAccountDeletionCrossAccountEnabled
+    Properties:
+      Description: "IAM policy for reading and writing to the IAD circuit breaker table in the home-team account"
+      Path: !Sub
+        - /${Env}/account-management/
+        - Env: !Ref Environment
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowDynamoDbAccess
+            Effect: Allow
+            Action:
+              - dynamodb:Query
+              - dynamodb:PutItem
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  iadCircuitBreakerTableArn,
+                ]
+          - Sid: AllowKmsAccess
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              - !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  iadCircuitBreakerTableKmsKeyArn,
+                ]
