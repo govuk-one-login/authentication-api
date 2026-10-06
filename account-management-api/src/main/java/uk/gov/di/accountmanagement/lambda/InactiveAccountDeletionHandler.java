@@ -39,7 +39,6 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.GUARDRAIL_PREVENTED_INACTIVE_ACCOUNT_DELETION;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
-import static uk.gov.di.authentication.shared.services.CloudwatchMetricsService.HOME_READ_ONLY_NAMESPACE;
 
 public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
@@ -237,8 +236,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                             GUARDRAIL_TYPE.getValue(),
                             GUARDRAIL_TYPE_VALUE,
                             ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment()),
-                    HOME_READ_ONLY_NAMESPACE);
+                            configurationService.getEnvironment()));
         } catch (Exception e) {
             LOG.error("Failed to emit guardrail hit metric", e);
         }

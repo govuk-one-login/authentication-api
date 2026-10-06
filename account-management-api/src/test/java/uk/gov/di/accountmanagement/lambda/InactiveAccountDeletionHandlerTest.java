@@ -37,6 +37,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -451,8 +452,7 @@ class InactiveAccountDeletionHandlerTest {
                                     GUARDRAIL_TYPE.getValue(),
                                     "AuthUserActivityCheck",
                                     ENVIRONMENT.getValue(),
-                                    TEST_ENVIRONMENT),
-                            CloudwatchMetricsService.HOME_READ_ONLY_NAMESPACE);
+                                    TEST_ENVIRONMENT));
         }
 
         @Test
@@ -485,7 +485,7 @@ class InactiveAccountDeletionHandlerTest {
                     .thenReturn(Optional.of(recentProfile));
             doThrow(new RuntimeException("CloudWatch error"))
                     .when(cloudwatchMetricsService)
-                    .incrementCounter(any(), any(Map.class), any());
+                    .incrementCounter(anyString(), any(Map.class));
 
             var event =
                     createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
