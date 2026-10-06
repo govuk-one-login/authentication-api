@@ -148,6 +148,7 @@ Resources:
       Name: !Sub
         - ${Env}-di-auth-internal-api-key
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      Description: "test"
       Value: !Sub
         - "{{resolve:secretsmanager:/${Env}/frontend-api-key}}"
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
