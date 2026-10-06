@@ -156,6 +156,9 @@ Conditions:
       - Fn::Equals:
           - !Ref Environment
           - dev
+      - Fn::Equals:
+          - !Ref Environment
+          - integration
 
   InactiveAccountTrackerCrossAccountAccessEnabled:
     Fn::Or:
