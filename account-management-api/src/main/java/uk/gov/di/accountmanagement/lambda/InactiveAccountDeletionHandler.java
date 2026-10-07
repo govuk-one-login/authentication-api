@@ -114,7 +114,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
 
         for (SQSMessage msg : event.getRecords()) {
             try {
-                if (iadCircuitBreakerService.isCircuitBreakerActive()) {
+                if (iadCircuitBreakerService.isCircuitBreakerTripped()) {
                     failRemainingMessages(event, msg, failures);
                     break;
                 }
@@ -262,7 +262,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
         var remainingCount = records.size() - startIndex;
 
         LOG.warn(
-                "IAD circuit breaker is active. Aborting processing. Reporting current and remaining {} messages as batch item failures.",
+                "IAD circuit breaker is tripped. Aborting processing. Reporting current and remaining {} messages as batch item failures.",
                 remainingCount);
 
         for (int i = startIndex; i < records.size(); i++) {

@@ -42,7 +42,7 @@ class IADCircuitBreakerServiceTest {
         var item = makeItem(true);
         mockQueryResult(List.of(item));
 
-        assertTrue(service.isCircuitBreakerActive());
+        assertTrue(service.isCircuitBreakerTripped());
     }
 
     @Test
@@ -50,14 +50,14 @@ class IADCircuitBreakerServiceTest {
         var item = makeItem(false);
         mockQueryResult(List.of(item));
 
-        assertFalse(service.isCircuitBreakerActive());
+        assertFalse(service.isCircuitBreakerTripped());
     }
 
     @Test
     void shouldReturnFalseWhenNoItemsExist() {
         mockQueryResult(List.of());
 
-        assertFalse(service.isCircuitBreakerActive());
+        assertFalse(service.isCircuitBreakerTripped());
     }
 
     @Test
@@ -65,7 +65,7 @@ class IADCircuitBreakerServiceTest {
         mockQueryResult(List.of());
         var captor = ArgumentCaptor.forClass(QueryEnhancedRequest.class);
 
-        service.isCircuitBreakerActive();
+        service.isCircuitBreakerTripped();
 
         verify(dynamoTable).query(captor.capture());
         var request = captor.getValue();
@@ -77,7 +77,7 @@ class IADCircuitBreakerServiceTest {
         mockQueryResult(List.of());
         var captor = ArgumentCaptor.forClass(QueryEnhancedRequest.class);
 
-        service.isCircuitBreakerActive();
+        service.isCircuitBreakerTripped();
 
         verify(dynamoTable).query(captor.capture());
         var request = captor.getValue();

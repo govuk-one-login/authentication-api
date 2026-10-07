@@ -50,7 +50,7 @@ public class IADCircuitBreakerService {
         this.serialisationService = serialisationService;
     }
 
-    public boolean isCircuitBreakerActive() {
+    public boolean isCircuitBreakerTripped() {
         LOG.info("Checking IAD circuit breaker status");
 
         var queryRequest =

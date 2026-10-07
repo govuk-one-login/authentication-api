@@ -231,7 +231,7 @@ class InactiveAccountDeletionHandlerIntegrationTest
     }
 
     @Test
-    void shouldAbortBatchWhenCircuitBreakerIsActive() {
+    void shouldAbortBatchWhenCircuitBreakerIsTripped() {
         makeAccountInactive(TEST_EMAIL);
         tripCircuitBreaker();
 
