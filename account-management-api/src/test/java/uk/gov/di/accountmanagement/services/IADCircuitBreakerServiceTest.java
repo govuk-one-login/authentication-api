@@ -38,19 +38,19 @@ class IADCircuitBreakerServiceTest {
             new IADCircuitBreakerService(dynamoTable, FIXED_CLOCK);
 
     @Test
-    void shouldReturnTrueWhenLatestItemHasEnabledTrue() {
+    void shouldReturnFalseWhenLatestItemHasEnabledTrue() {
         var item = makeItem(true);
         mockQueryResult(List.of(item));
 
-        assertTrue(service.isCircuitBreakerTripped());
+        assertFalse(service.isCircuitBreakerTripped());
     }
 
     @Test
-    void shouldReturnFalseWhenLatestItemHasEnabledFalse() {
+    void shouldReturnTrueWhenLatestItemHasEnabledFalse() {
         var item = makeItem(false);
         mockQueryResult(List.of(item));
 
-        assertFalse(service.isCircuitBreakerTripped());
+        assertTrue(service.isCircuitBreakerTripped());
     }
 
     @Test
@@ -86,7 +86,7 @@ class IADCircuitBreakerServiceTest {
     }
 
     @Test
-    void shouldPutItemWithEnabledTrueWhenTrippingCircuitBreaker() {
+    void shouldPutItemWithEnabledFalseWhenTrippingCircuitBreaker() {
         var captor = ArgumentCaptor.forClass(IADCircuitBreakerItem.class);
 
         service.tripCircuitBreaker("AuthUserActivityCheck", PUBLIC_SUBJECT_ID);
@@ -94,7 +94,7 @@ class IADCircuitBreakerServiceTest {
         verify(dynamoTable).putItem(captor.capture());
         var item = captor.getValue();
         assertEquals("IAD", item.getPk());
-        assertTrue(item.isEnabled());
+        assertFalse(item.isEnabled());
     }
 
     @Test
@@ -132,7 +132,7 @@ class IADCircuitBreakerServiceTest {
 
         verify(dynamoTable).putItem(captor.capture());
         var item = captor.getValue();
-        assertTrue(item.isEnabled());
+        assertFalse(item.isEnabled());
         assertEquals("IAD", item.getPk());
         assertNull(item.getMetadataJson());
     }
