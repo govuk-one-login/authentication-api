@@ -1,15 +1,3 @@
-resource "aws_lambda_event_source_mapping" "lambda_sqs_mapping" {
-  count                              = 1
-  event_source_arn                   = var.email_check_results_sqs_queue_arn
-  function_name                      = module.email_check_results_writer_lambda.endpoint_lambda_function.arn
-  batch_size                         = 1
-  maximum_batching_window_in_seconds = 0
-
-  depends_on = [
-    module.email_check_results_writer_lambda,
-    aws_iam_policy.email_check_queue_policy,
-  ]
-}
 
 module "email_check_results_writer_role" {
   source = "../modules/lambda-role"
