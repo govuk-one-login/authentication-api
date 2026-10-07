@@ -22,7 +22,6 @@ Resources:
                 ]
       Events:
         EmailCheckResultsQueueEvent:
-          Condition: EnableEmailCheckWriter
           Type: SQS
           Properties:
             Queue: !If
