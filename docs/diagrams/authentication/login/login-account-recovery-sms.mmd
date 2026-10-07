@@ -6,7 +6,8 @@ sequenceDiagram
     participant notification_queue as NotificationHandler.java Lambda   
     participant notify as Notify   
     orch_api ->> auth_frontend : OAuth 2.0 Authorization request 302 redirect to /authorize 
-    auth_frontend ->> auth_frontend : Decrypt and validate request and create session    auth_frontend ->> auth_internal_api : Request to /start (StartHandler.java)
+    auth_frontend ->> auth_frontend : Decrypt and validate request and create session
+    auth_frontend ->> auth_internal_api : Request to /start (StartHandler.java)
     auth_internal_api ->> auth_internal_api : Start helps calculate current state
     auth_internal_api ->> auth_frontend : StartResponse.java object returned
     auth_frontend ->> auth_frontend : State machine works out where to send user based on start response
