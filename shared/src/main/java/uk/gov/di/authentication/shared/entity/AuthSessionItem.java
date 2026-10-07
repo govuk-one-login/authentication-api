@@ -601,6 +601,8 @@ public class AuthSessionItem {
                 + timeToLive
                 + "', isNewAccount = '"
                 + isNewAccount
+                + "', isPartiallyCreatedAccount = '"
+                + isPartiallyCreatedAccount
                 + "', resetPasswordState = '"
                 + resetPasswordState
                 + "', resetMfaState = '"
