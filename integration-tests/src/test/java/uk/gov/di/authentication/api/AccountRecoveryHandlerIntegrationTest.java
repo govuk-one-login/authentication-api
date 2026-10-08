@@ -25,7 +25,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class AccountRecoveryHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     public static final String CLIENT_SESSION_ID = "some-client-session-id";

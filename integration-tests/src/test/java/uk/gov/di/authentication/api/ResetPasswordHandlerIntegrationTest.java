@@ -34,7 +34,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @RegisterExtension
     protected static final InternationalSmsSendCountExtension internationalSmsSendLimit =

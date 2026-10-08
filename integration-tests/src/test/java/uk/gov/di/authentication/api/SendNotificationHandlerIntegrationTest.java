@@ -37,7 +37,7 @@ import static uk.gov.di.authentication.testsupport.AuditTestConstants.EXTENSIONS
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_EMAIL_FIELD;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_PHONE;
 
-class SendNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class SendNotificationHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final int INTERNATIONAL_SMS_SEND_LIMIT = 3;
     private static final String TEST_REFERENCE = "test-reference";
     private String SESSION_ID;

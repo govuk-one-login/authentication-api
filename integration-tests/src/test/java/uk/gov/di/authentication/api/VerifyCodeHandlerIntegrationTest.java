@@ -70,7 +70,7 @@ import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_PASSWORD_ATTEMPT_COUNT;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.RP_PAIRWISE_ID;
 
-public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class VerifyCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String PHONE_NUMBER = "+447712345432";

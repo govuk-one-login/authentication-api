@@ -26,7 +26,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class SignUpHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String CLIENT_ID = "test-client-id";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";

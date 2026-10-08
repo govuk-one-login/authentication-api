@@ -19,7 +19,7 @@ import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDA
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class UpdateProfileHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String EMAIL_ADDRESS = "test@test.com";
 

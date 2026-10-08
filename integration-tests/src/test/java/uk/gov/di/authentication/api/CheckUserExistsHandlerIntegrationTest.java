@@ -59,7 +59,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
-class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class CheckUserExistsHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static WireMockServer wireMockServer;
 
