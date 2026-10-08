@@ -67,7 +67,7 @@ import static uk.gov.di.authentication.testsupport.AuditTestConstants.INTERNAL_S
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.NUMBER_OF_ATTEMPTS_USER_ALLOWED_TO_LOGIN;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.RP_PAIRWISE_ID;
 
-public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class LoginHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String CLIENT_ID = "test-client-id";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";

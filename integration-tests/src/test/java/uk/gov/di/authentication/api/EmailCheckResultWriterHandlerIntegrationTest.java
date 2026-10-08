@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 
-class EmailCheckResultWriterIntegrationTest extends HandlerIntegrationTest<SQSEvent, Void> {
+class EmailCheckResultWriterHandlerIntegrationTest extends HandlerIntegrationTest<SQSEvent, Void> {
     private static final long TEST_MSG_TIME_TO_EXIST = 4073717403L;
     private static final String TEST_MSG_REF_NUMBER = "123456-abc1234def5678";
     DynamoEmailCheckResultService dynamoEmailCheckResultService =

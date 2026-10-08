@@ -43,8 +43,9 @@ import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMe
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
-class AuthSigningKeyJWKSIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final Logger LOG = LogManager.getLogger(AuthSigningKeyJWKSIntegrationTest.class);
+class MfaResetJarJwkHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+    private static final Logger LOG =
+            LogManager.getLogger(MfaResetJarJwkHandlerIntegrationTest.class);
 
     @SystemStub private static final EnvironmentVariables environment = new EnvironmentVariables();
 

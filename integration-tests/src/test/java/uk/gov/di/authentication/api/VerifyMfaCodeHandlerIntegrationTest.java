@@ -72,7 +72,7 @@ import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_PASSWORD_ATTEMPT_COUNT;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.RP_PAIRWISE_ID;
 
-class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String USER_PASSWORD = "TestPassword123!";
     private static final String CLIENT_ID = "test-client-id";

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.api;
+package uk.gov.di.authentication.externalapi;
 
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -42,7 +42,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class UserInfoHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String RP_SECTOR_ID_HOST = "rp-test-uri.com";
     private static final String INTERNAL_SECTOR_ID_HOST = "test.account.gov.uk";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";

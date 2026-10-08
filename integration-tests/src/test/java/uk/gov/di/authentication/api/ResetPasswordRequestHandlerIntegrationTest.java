@@ -25,7 +25,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class ResetPasswordRequestHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String SECTOR_IDENTIFIER_HOST = "test.com";
 

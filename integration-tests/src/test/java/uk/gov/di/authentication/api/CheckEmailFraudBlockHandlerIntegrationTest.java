@@ -34,7 +34,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class CheckEmailFraudBlockIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class CheckEmailFraudBlockHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final Subject SUBJECT = new Subject();
 
