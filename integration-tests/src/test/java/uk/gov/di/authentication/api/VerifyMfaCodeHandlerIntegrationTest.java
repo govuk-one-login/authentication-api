@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -932,6 +933,37 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
                     equalTo(AUTH_APP_SECRET_BASE_32));
         }
+    }
+
+    @Test
+    void shouldLockOutAfterRepeatedIncorrectSmsCodesOnReauthJourney() {
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, PHONE_NUMBER);
+        userStore.setAccountVerified(EMAIL_ADDRESS);
+        var subjectId =
+                userStore.getUserProfileFromEmail(EMAIL_ADDRESS).orElseThrow().getSubjectID();
+        var maxRetries = ConfigurationService.getInstance().getCodeMaxRetries();
+
+        APIGatewayProxyResponseEvent lastResponse = null;
+        for (int i = 0; i < maxRetries; i++) {
+            var codeRequest =
+                    new VerifyMfaCodeRequest(
+                            MFAMethodType.SMS,
+                            "000000",
+                            JourneyType.REAUTHENTICATION,
+                            PHONE_NUMBER);
+            lastResponse =
+                    makeRequest(
+                            Optional.of(codeRequest),
+                            constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                            Map.of());
+        }
+
+        assertThat(
+                authenticationAttemptsStoreExtension.getAuthenticationAttempt(
+                        subjectId, JourneyType.REAUTHENTICATION, CountType.ENTER_MFA_CODE),
+                equalTo(maxRetries));
+        assertThat(lastResponse, hasStatus(400));
+        assertThat(lastResponse, hasJsonBody(ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS));
     }
 
     @ParameterizedTest

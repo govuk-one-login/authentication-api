@@ -387,11 +387,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         codeRequest.getJourneyType());
             }
 
-            if (isInvalidReauthAuthAppAttempt(errorResponse, codeRequest) && subjectId != null) {
+            if (isInvalidReauthMfaAttempt(errorResponse, codeRequest) && subjectId != null) {
                 authenticationAttemptsService.createOrIncrementCount(
                         subjectId,
                         NowHelper.nowPlus(
-                                        configurationService.getReauthEnterAuthAppCodeCountTTL(),
+                                        reauthEnterMfaCodeCountTTL(codeRequest.getMfaMethodType()),
                                         ChronoUnit.SECONDS)
                                 .toInstant()
                                 .getEpochSecond(),
@@ -659,10 +659,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
     }
 
-    private static boolean isInvalidReauthAuthAppAttempt(
+    private static boolean isInvalidReauthMfaAttempt(
             ErrorResponse errorResponse, VerifyMfaCodeRequest codeRequest) {
-        return errorResponse == ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED
-                && codeRequest.getJourneyType() == REAUTHENTICATION;
+        return codeRequest.getJourneyType() == REAUTHENTICATION
+                && (errorResponse == ErrorResponse.INVALID_AUTH_APP_CODE_ENTERED
+                        || errorResponse == ErrorResponse.INVALID_MFA_CODE_ENTERED);
+    }
+
+    private long reauthEnterMfaCodeCountTTL(MFAMethodType mfaMethodType) {
+        return mfaMethodType == MFAMethodType.SMS
+                ? configurationService.getReauthEnterSMSCodeCountTTL()
+                : configurationService.getReauthEnterAuthAppCodeCountTTL();
     }
 
     private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(
