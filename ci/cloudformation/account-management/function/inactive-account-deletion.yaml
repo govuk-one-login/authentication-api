@@ -75,7 +75,11 @@ Resources:
               - ${Env}-stub-inactive-account-circuit-breaker
               - Env:
                   !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-            - inactive_account_circuit_breaker
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                iadCircuitBreakerTableArn,
+              ]
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
       Policies:
