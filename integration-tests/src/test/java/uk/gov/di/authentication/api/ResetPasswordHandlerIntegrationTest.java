@@ -74,6 +74,29 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             """,
                     PASSWORD);
 
+    private static final String RESET_PASSWORD_REQUEST_WITH_IS_COMMON_PASSWORD_RESET_JOURNEY =
+            format(
+                    """
+                            {
+                            "password": %s,
+                            "allowMfaResetAfterPasswordReset": false,
+                            "isCommonPasswordResetJourney": true,
+                            "isPartiallyCreatedAccountJourney": false
+                            }
+                            """,
+                    PASSWORD);
+    private static final String RESET_PASSWORD_REQUEST_FOR_PARTIALLY_CREATED_ACCOUNT =
+            format(
+                    """
+                            {
+                            "password": %s,
+                            "allowMfaResetAfterPasswordReset": false,
+                            "isCommonPasswordResetJourney": false,
+                            "isPartiallyCreatedAccountJourney": true
+                            }
+                            """,
+                    PASSWORD);
+
     @BeforeEach
     public void setUp() {
         handler =
@@ -170,6 +193,35 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    private static Stream<String> requestsWithCommonPasswordOrPartiallyCreatedJourneys() {
+        return Stream.of(
+                RESET_PASSWORD_REQUEST_FOR_PARTIALLY_CREATED_ACCOUNT,
+                RESET_PASSWORD_REQUEST_WITH_IS_COMMON_PASSWORD_RESET_JOURNEY);
+    }
+
+    @ParameterizedTest
+    @MethodSource("requestsWithCommonPasswordOrPartiallyCreatedJourneys")
+    void shouldUpdatePasswordAndReturn204ForACommonPasswordOrPartiallyCreatedAccountJourney(
+            String request) {
+        var sessionId = IdGenerator.generate();
+        authSessionStore.addSession(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(Optional.of(request), constructFrontendHeaders(sessionId), Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
     }

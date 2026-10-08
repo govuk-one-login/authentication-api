@@ -8,4 +8,8 @@ public record ResetPasswordCompletionRequest(
         @SerializedName("password") @Expose @Required String password,
         @SerializedName("isForcedPasswordReset") @Expose @Required boolean isForcedPasswordReset,
         @SerializedName("allowMfaResetAfterPasswordReset") @Expose
-                boolean allowMfaResetAfterPasswordReset) {}
+                boolean allowMfaResetAfterPasswordReset,
+        @SerializedName("isCommonPasswordResetJourney") @Expose
+                boolean isCommonPasswordResetJourney,
+        @SerializedName("isPartiallyCreatedAccountJourney") @Expose
+                boolean isPartiallyCreatedAccountJourney) {}

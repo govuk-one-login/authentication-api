@@ -157,6 +157,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             UserContext userContext) {
         LOG.info("ResetPasswordHandler called");
 
+        LOG.info(
+                "Called with is common password reset journey {} and is partially created account journey {}",
+                request.isCommonPasswordResetJourney(),
+                request.isPartiallyCreatedAccountJourney());
+
         Optional<ErrorResponse> passwordValidationError =
                 passwordValidator.validate(request.password());
 
