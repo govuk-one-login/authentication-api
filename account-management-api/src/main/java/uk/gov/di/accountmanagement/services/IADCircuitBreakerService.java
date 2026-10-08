@@ -50,7 +50,7 @@ public class IADCircuitBreakerService {
         this.serialisationService = serialisationService;
     }
 
-    public boolean isCircuitBreakerActive() {
+    public boolean isCircuitBreakerTripped() {
         LOG.info("Checking IAD circuit breaker status");
 
         var queryRequest =
@@ -63,15 +63,15 @@ public class IADCircuitBreakerService {
                         .consistentRead(true)
                         .build();
 
-        var active =
+        var tripped =
                 dynamoTable.query(queryRequest).stream()
                         .flatMap(page -> page.items().stream())
                         .findFirst()
-                        .map(IADCircuitBreakerItem::isEnabled)
+                        .map(item -> !item.isEnabled())
                         .orElse(false);
 
-        LOG.info("IAD circuit breaker status: active={}", active);
-        return active;
+        LOG.info("IAD circuit breaker status: tripped={}", tripped);
+        return tripped;
     }
 
     public void tripCircuitBreaker(String guardrailType, String publicSubjectId) {
@@ -97,7 +97,9 @@ public class IADCircuitBreakerService {
         var item = new IADCircuitBreakerItem();
         item.setPk(PARTITION_KEY);
         item.setDatetime(now);
-        item.setEnabled(true);
+        // NOTE: enabled=false trips the breaker; enabled=true would mean healthy/continue
+        // processing.
+        item.setEnabled(false);
         item.setMetadataJson(metadataJson);
 
         dynamoTable.putItem(item);

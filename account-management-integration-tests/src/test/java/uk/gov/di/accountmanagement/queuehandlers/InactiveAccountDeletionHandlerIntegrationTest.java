@@ -231,7 +231,7 @@ class InactiveAccountDeletionHandlerIntegrationTest
     }
 
     @Test
-    void shouldAbortBatchWhenCircuitBreakerIsActive() {
+    void shouldAbortBatchWhenCircuitBreakerIsTripped() {
         makeAccountInactive(TEST_EMAIL);
         tripCircuitBreaker();
 
@@ -259,7 +259,9 @@ class InactiveAccountDeletionHandlerIntegrationTest
         var item = new IADCircuitBreakerItem();
         item.setPk("IAD");
         item.setDatetime(System.currentTimeMillis());
-        item.setEnabled(true);
+        // NOTE: enabled=false trips the breaker; enabled=true would mean healthy/continue
+        // processing.
+        item.setEnabled(false);
         item.setMetadataJson("{\"guardrailType\":\"IntegrationTest\"}");
         circuitBreakerTable.putItem(item);
     }

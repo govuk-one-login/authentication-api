@@ -93,7 +93,7 @@ class InactiveAccountDeletionHandlerTest {
                         cloudwatchMetricsService,
                         iadCircuitBreakerService,
                         FIXED_CLOCK);
-        when(iadCircuitBreakerService.isCircuitBreakerActive()).thenReturn(false);
+        when(iadCircuitBreakerService.isCircuitBreakerTripped()).thenReturn(false);
         when(tokenService.createAccountDataApiAccessToken(any()))
                 .thenReturn(Result.success(new BearerAccessToken(TOKEN_VALUE)));
         when(dynamoService.getOptionalUserProfileFromPublicSubject(any()))
@@ -558,8 +558,8 @@ class InactiveAccountDeletionHandlerTest {
     class CircuitBreakerCheckTest {
 
         @Test
-        void shouldReportMessageAsFailureWhenCircuitBreakerIsActive() {
-            when(iadCircuitBreakerService.isCircuitBreakerActive()).thenReturn(true);
+        void shouldReportMessageAsFailureWhenCircuitBreakerIsTripped() {
+            when(iadCircuitBreakerService.isCircuitBreakerTripped()).thenReturn(true);
             var event =
                     createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
 
@@ -572,7 +572,7 @@ class InactiveAccountDeletionHandlerTest {
         }
 
         @Test
-        void shouldProceedNormallyWhenCircuitBreakerIsNotActive() {
+        void shouldProceedNormallyWhenCircuitBreakerIsNotTripped() {
             var event =
                     createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
 
@@ -584,7 +584,7 @@ class InactiveAccountDeletionHandlerTest {
 
         @Test
         void shouldProcessEarlyMessagesAndFailRemainingWhenCircuitBreakerTrippedMidBatch() {
-            when(iadCircuitBreakerService.isCircuitBreakerActive())
+            when(iadCircuitBreakerService.isCircuitBreakerTripped())
                     .thenReturn(false)
                     .thenReturn(false)
                     .thenReturn(true);
