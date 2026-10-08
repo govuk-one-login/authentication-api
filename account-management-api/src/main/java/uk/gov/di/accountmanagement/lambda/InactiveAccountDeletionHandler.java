@@ -114,13 +114,17 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
 
         for (SQSMessage msg : event.getRecords()) {
             try {
+                LOG.info("Picked up SQS message with ID: {}", msg.getMessageId());
                 if (iadCircuitBreakerService.isCircuitBreakerTripped()) {
                     failRemainingMessages(event, msg, failures);
                     break;
                 }
                 processAccountDeletion(msg);
             } catch (RecentlyActiveAccountException e) {
-                LOG.warn(e.getMessage());
+                LOG.warn(
+                        "Adding SQS message with ID: {} to failures due to recent account activity. {}",
+                        msg.getMessageId(),
+                        e.getMessage());
                 failures.add(new SQSBatchResponse.BatchItemFailure(msg.getMessageId()));
             } catch (Exception e) {
                 LOG.error(
@@ -266,6 +270,9 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                 remainingCount);
 
         for (int i = startIndex; i < records.size(); i++) {
+            LOG.warn(
+                    "Adding SQS message with ID: {} to failures due to the circuit breaker being tripped.",
+                    records.get(i).getMessageId());
             failures.add(new SQSBatchResponse.BatchItemFailure(records.get(i).getMessageId()));
         }
     }

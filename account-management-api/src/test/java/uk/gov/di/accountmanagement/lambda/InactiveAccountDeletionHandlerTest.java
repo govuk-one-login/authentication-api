@@ -5,9 +5,11 @@ import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
+import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
@@ -23,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -33,6 +36,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,6 +54,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.GUARDRAIL_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.GUARDRAIL_PREVENTED_INACTIVE_ACCOUNT_DELETION;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withLevelAndMessageContaining;
 
 class InactiveAccountDeletionHandlerTest {
 
@@ -65,6 +70,10 @@ class InactiveAccountDeletionHandlerTest {
 
     private static final String OLD_TIMESTAMP = "2019-01-01T10:00:00.000000";
     private static final String RECENT_TIMESTAMP = "2025-06-15T10:00:00.000000";
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(InactiveAccountDeletionHandler.class);
 
     private final Context context = mock(Context.class);
     private final InactiveAccountDeletionTokenService tokenService =
@@ -117,6 +126,54 @@ class InactiveAccountDeletionHandlerTest {
         assertThat(response.getBatchItemFailures(), is(empty()));
         verify(tokenService).createAccountDataApiAccessToken(PUBLIC_SUBJECT_ID);
         verify(accountDeletionService).deleteAccountViaDataApi(PUBLIC_SUBJECT_ID, TOKEN_VALUE);
+    }
+
+    @Test
+    void shouldLogInfoWhenSQSMessageIsPickedUp() {
+        var event = createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+        handler.handleRequest(event, context);
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withLevelAndMessageContaining(
+                                Level.INFO, "Picked up SQS message with ID: msg-1")));
+    }
+
+    @Test
+    void shouldLogWarnWhenAddingToFailuresDueToRecentlyActiveAccount() {
+        var recentProfile = inactiveUserProfile(PUBLIC_SUBJECT_ID, EMAIL);
+        recentProfile.setUpdated(RECENT_TIMESTAMP);
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                .thenReturn(Optional.of(recentProfile));
+        var event = createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+        handler.handleRequest(event, context);
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withLevelAndMessageContaining(
+                                Level.WARN,
+                                "Adding SQS message with ID: msg-1 to failures due to recent account activity")));
+    }
+
+    @Test
+    void shouldLogErrorWhenProcessingFails() {
+        doThrow(new RuntimeException("Data API returned error status 500"))
+                .when(accountDeletionService)
+                .deleteAccountViaDataApi(any(), any());
+        var event = createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+        handler.handleRequest(event, context);
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withLevelAndMessageContaining(
+                                Level.ERROR,
+                                "Failed to process inactive account deletion message with id: msg-1")));
     }
 
     @Test
@@ -569,6 +626,30 @@ class InactiveAccountDeletionHandlerTest {
             assertEquals("msg-1", response.getBatchItemFailures().get(0).getItemIdentifier());
             verifyNoInteractions(accountDeletionService);
             verifyNoInteractions(structuredAuditService);
+        }
+
+        @Test
+        void shouldLogWarnForEachMessageFailedDueToCircuitBreaker() {
+            when(iadCircuitBreakerService.isCircuitBreakerTripped()).thenReturn(true);
+            var msg1 = createSQSMessage("msg-1", "{\"publicSubjectId\": \"sub-1\"}");
+            var msg2 = createSQSMessage("msg-2", "{\"publicSubjectId\": \"sub-2\"}");
+            var event = new SQSEvent();
+            event.setRecords(List.of(msg1, msg2));
+
+            handler.handleRequest(event, context);
+
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withLevelAndMessageContaining(
+                                    Level.WARN,
+                                    "Adding SQS message with ID: msg-1 to failures due to the circuit breaker being tripped.")));
+            assertThat(
+                    logging.events(),
+                    hasItem(
+                            withLevelAndMessageContaining(
+                                    Level.WARN,
+                                    "Adding SQS message with ID: msg-2 to failures due to the circuit breaker being tripped.")));
         }
 
         @Test
