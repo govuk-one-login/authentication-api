@@ -433,7 +433,7 @@ Mappings:
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "No"
+      EnforceLambdaDeploymentOrder: "Yes"
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       EvcsApiVpcEndpointId: ""

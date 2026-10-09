@@ -133,11 +133,7 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Tags:
         EnforceLambdaDeploymentOrder:
-          !If [
-            EnforceLambdaDeploymentOrder,
-            !Ref VerifyCodeFunctionAliasactive,
-            "",
-          ]
+          !If [EnforceLambdaDeploymentOrder, !Ref StartFunctionAliasactive, ""]
 
   VerifyMfaCodeFunctionAliasPermission:
     Type: AWS::Lambda::Permission
