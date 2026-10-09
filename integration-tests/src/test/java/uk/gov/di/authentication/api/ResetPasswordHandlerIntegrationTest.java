@@ -205,23 +205,45 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
     }
 
-    private static Stream<String> requestsWithCommonPasswordOrPartiallyCreatedJourneys() {
-        return Stream.of(
-                RESET_PASSWORD_REQUEST_FOR_PARTIALLY_CREATED_ACCOUNT,
-                RESET_PASSWORD_REQUEST_WITH_IS_COMMON_PASSWORD_RESET_JOURNEY);
-    }
-
-    @ParameterizedTest
-    @MethodSource("requestsWithCommonPasswordOrPartiallyCreatedJourneys")
-    void shouldUpdatePasswordAndReturn204ForACommonPasswordOrPartiallyCreatedAccountJourney(
-            String request) {
+    @Test
+    void shouldUpdatePasswordACommonPasswordRequestWithoutEmailCodeVerified() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS).withResetPasswordEmailCodeVerified(null));
 
         var response =
-                makeRequest(Optional.of(request), constructFrontendHeaders(sessionId), Map.of());
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST_WITH_IS_COMMON_PASSWORD_RESET_JOURNEY),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    @Test
+    void shouldUpdatePasswordAndReturn204ForAPartiallyCreatedAccountJourney() {
+        var sessionId = IdGenerator.generate();
+        var session = authSessionStore.addSession(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+
+        var response =
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST_FOR_PARTIALLY_CREATED_ACCOUNT),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
 
         assertThat(response, hasStatus(204));
 
@@ -273,11 +295,11 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var body =
                 format(
                         """
-                            {
-                            "password": "%s",
-                            "isForcedPasswordReset": false
-                            }
-                            """,
+                                {
+                                "password": "%s",
+                                "isForcedPasswordReset": false
+                                }
+                                """,
                         CommonPasswordsExtension.TEST_COMMON_PASSWORD);
 
         var response =

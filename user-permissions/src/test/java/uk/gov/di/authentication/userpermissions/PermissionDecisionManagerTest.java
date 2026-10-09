@@ -1384,7 +1384,7 @@ class PermissionDecisionManagerTest {
                             .withEmailAddress(EMAIL)
                             .withResetPasswordEmailCodeVerified(EMAIL);
 
-            assertTrue(permissionDecisionManager.canResetPassword(session));
+            assertTrue(permissionDecisionManager.canResetPassword(session, false));
         }
 
         private static Stream<Arguments> nonMatchingEmails() {
@@ -1403,7 +1403,24 @@ class PermissionDecisionManagerTest {
                             .withEmailAddress(mainEmailOnSession)
                             .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
 
-            assertFalse(permissionDecisionManager.canResetPassword(session));
+            assertFalse(permissionDecisionManager.canResetPassword(session, false));
+        }
+
+        @Nested
+        class CommonPasswordJourneys {
+            private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = true;
+
+            @Test
+            void shouldReturnTrue() {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(null);
+
+                assertTrue(
+                        permissionDecisionManager.canResetPassword(
+                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+            }
         }
     }
 

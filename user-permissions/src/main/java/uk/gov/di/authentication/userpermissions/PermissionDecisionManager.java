@@ -456,7 +456,13 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
-    public boolean canResetPassword(AuthSessionItem authSession) {
+    public boolean canResetPassword(
+            AuthSessionItem authSession, boolean isCommonPasswordResetJourney) {
+        if (isCommonPasswordResetJourney) {
+            LOG.info("Applying can reset password rules for common password reset journey");
+            return true;
+        }
+        LOG.info("Applying can reset password rules for non common password reset journey");
         return Objects.equals(
                 authSession.getEmailAddress(), authSession.getResetPasswordEmailCodeVerified());
     }
