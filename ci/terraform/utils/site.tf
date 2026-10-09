@@ -33,10 +33,3 @@ provider "aws" {
     }
   }
 }
-
-locals {
-  deploy_bulk_email_users_count               = 1
-  bulk_user_email_audience_loader_lambda_name = "${var.environment}-bulk-user-email-audience-loader-lambda"
-}
-
-data "aws_caller_identity" "current" {}
