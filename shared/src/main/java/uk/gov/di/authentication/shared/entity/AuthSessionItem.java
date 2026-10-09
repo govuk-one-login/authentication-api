@@ -50,6 +50,8 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_IS_PARTIALLY_CREATED_ACCOUNT = "IsPartiallyCreatedAccount";
     public static final String ATTRIBUTE_PREVIOUS_SESSION_ID = "PreviousSessionId";
     public static final String ATTRIBUTE_CREATED_AT = "CreatedAt";
+    public static final String ATTRIBUTE_RESET_PASSWORD_EMAIL_CODE_VERIFIED =
+            "ResetPasswordEmailCodeVerified";
 
     public enum AccountState {
         NEW,
@@ -99,6 +101,7 @@ public class AuthSessionItem {
     private boolean isPartiallyCreatedAccount;
     private String previousSessionId;
     private String createdAt;
+    private String resetPasswordEmailCodeVerified;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -585,6 +588,21 @@ public class AuthSessionItem {
 
     public AuthSessionItem withCreatedAt(String createdAt) {
         this.createdAt = createdAt;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RESET_PASSWORD_EMAIL_CODE_VERIFIED)
+    public String getResetPasswordEmailCodeVerified() {
+        return resetPasswordEmailCodeVerified;
+    }
+
+    public void setResetPasswordEmailCodeVerified(String resetPasswordEmailCodeVerified) {
+        this.resetPasswordEmailCodeVerified = resetPasswordEmailCodeVerified;
+    }
+
+    public AuthSessionItem withResetPasswordEmailCodeVerified(
+            String resetPasswordEmailCodeVerified) {
+        this.resetPasswordEmailCodeVerified = resetPasswordEmailCodeVerified;
         return this;
     }
 

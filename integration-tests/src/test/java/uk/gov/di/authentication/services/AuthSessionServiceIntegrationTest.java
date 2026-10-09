@@ -75,6 +75,32 @@ class AuthSessionServiceIntegrationTest {
     }
 
     @Test
+    void shouldRemoveAnyPerJourneyStateWhenReusingAPreviousSession() {
+        var existingSessionItem =
+                new AuthSessionItem()
+                        .withSessionId(PREVIOUS_SESSION_ID)
+                        .withCreatedAt(Instant.now().toString())
+                        .withEmailAddress(TEST_EMAIL)
+                        .withResetMfaState(AuthSessionItem.ResetMfaState.ATTEMPTED)
+                        .withResetPasswordState(AuthSessionItem.ResetPasswordState.ATTEMPTED)
+                        .withResetPasswordEmailCodeVerified(TEST_EMAIL)
+                        .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
+        authSessionService.addSession(existingSessionItem);
+
+        var newSession =
+                authSessionService.getUpdatedPreviousSessionOrCreateNew(
+                        Optional.of(PREVIOUS_SESSION_ID), SESSION_ID);
+        var previousSessionItem = authSessionExtension.getSession(PREVIOUS_SESSION_ID);
+        assertTrue(previousSessionItem.isEmpty());
+
+        assertThat(newSession.getSessionId(), is(SESSION_ID));
+        assertThat(newSession.getEmailAddress(), is(TEST_EMAIL));
+        assertThat(newSession.getResetPasswordState(), is(AuthSessionItem.ResetPasswordState.NONE));
+        assertThat(newSession.getResetMfaState(), is(AuthSessionItem.ResetMfaState.NONE));
+        assertNull(newSession.getResetPasswordEmailCodeVerified());
+    }
+
+    @Test
     void shouldReturnExistingSessionWhenItMatchesTheSessionIdAndPreviousSessionId() {
         var emailAddressWhichWouldntExistOnGeneratedSession = "test@example.com";
         var existingSessionItem =
@@ -267,7 +293,8 @@ class AuthSessionServiceIntegrationTest {
                 initialSession
                         .withHasVerifiedWithMfa(true)
                         .withHasVerifiedWithPassword(true)
-                        .withHasVerifiedWithPasskey(true));
+                        .withHasVerifiedWithPasskey(true)
+                        .withResetPasswordEmailCodeVerified("test@exmaple.com"));
 
         // Set another variable on the session just before resetting the verification information to
         // make sure the session in general remains the same
@@ -282,6 +309,7 @@ class AuthSessionServiceIntegrationTest {
         assertFalse(result.getHasVerifiedWithMfa());
         assertFalse(result.getHasVerifiedWithPasskey());
         assertFalse(result.getHasVerifiedWithPassword());
+        assertNull(result.getResetPasswordEmailCodeVerified());
     }
 
     @Test

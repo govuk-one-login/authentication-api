@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -594,6 +595,56 @@ class UserActionsManagerTest {
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
             assertFalse(capturedSession.getHasVerifiedWithPasskey());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class CorrectEmailOtpEnteredForPasswordReset {
+        @Test
+        void shouldSetResetPasswordEmailCodeVerifiedToEmail() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result =
+                    userActionsManager.correctEmailOtpEnteredForPasswordReset(
+                            permissionContext, EMAIL);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertEquals(EMAIL, capturedSession.getResetPasswordEmailCodeVerified());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
+    class IncorrectEmailOtpEnteredForPasswordReset {
+        @Test
+        void shouldSetResetPasswordEmailCodeVerifiedToNull() {
+            // Arrange
+            var verifiedSession =
+                    new AuthSessionItem()
+                            .withSessionId(SESSION_ID)
+                            .withEmailAddress(EMAIL)
+                            .withResetPasswordEmailCodeVerified(EMAIL);
+            var contextWithVerifiedSession =
+                    PermissionContext.builder()
+                            .withEmailAddress(EMAIL)
+                            .withAuthSessionItem(verifiedSession)
+                            .build();
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result =
+                    userActionsManager.incorrectEmailOtpEnteredForPasswordReset(
+                            contextWithVerifiedSession);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertNull(capturedSession.getResetPasswordEmailCodeVerified());
             assertTrue(result.isSuccess());
         }
     }

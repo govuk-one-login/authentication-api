@@ -58,6 +58,11 @@ public class RedisExtension
         return code;
     }
 
+    public void saveEmailCode(
+            String email, String code, long codeExpiryTime, NotificationType notificationType) {
+        codeStorageService.saveOtpCode(email, code, codeExpiryTime, notificationType);
+    }
+
     public String generateAndSavePhoneNumberCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
         codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
