@@ -1,13 +1,21 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.AuthCodeStore;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
+
+    private static final Logger LOG = LogManager.getLogger(DynamoAuthCodeService.class);
 
     private final long timeToExist;
 
@@ -52,17 +60,32 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
         put(authCodeStore);
     }
 
-    public void updateHasBeenUsed(String authCode, boolean hasBeenUsed) {
-        var authCodeStore =
-                get(authCode)
-                        .orElse(new AuthCodeStore())
-                        .withAuthCode(authCode)
-                        .withHasBeenUsed(hasBeenUsed)
-                        .withTimeToExist(
-                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond());
+    public boolean markAuthCodeAsUsedIfUnused(String authCode) {
+        var updateItemRequest =
+                UpdateItemRequest.builder()
+                        .tableName(dynamoTable.tableName())
+                        .key(
+                                Map.of(
+                                        AuthCodeStore.ATTRIBUTE_AUTH_CODE,
+                                        AttributeValue.fromS(authCode)))
+                        .updateExpression("SET #hasBeenUsed = :true")
+                        .conditionExpression("#hasBeenUsed = :false")
+                        .expressionAttributeNames(
+                                Map.of("#hasBeenUsed", AuthCodeStore.ATTRIBUTE_HAS_BEEN_USED))
+                        .expressionAttributeValues(
+                                Map.of(
+                                        ":true",
+                                        AttributeValue.fromBool(true),
+                                        ":false",
+                                        AttributeValue.fromBool(false)))
+                        .build();
 
-        update(authCodeStore);
+        try {
+            update(updateItemRequest);
+            return true;
+        } catch (ConditionalCheckFailedException e) {
+            LOG.warn("Auth code not marked as used as it was already used or does not exist");
+            return false;
+        }
     }
 }

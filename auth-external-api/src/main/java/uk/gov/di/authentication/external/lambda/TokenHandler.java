@@ -182,6 +182,16 @@ public class TokenHandler
                         tokenErrorResponse.getStatusCode(), tokenErrorResponse.getBody());
             }
 
+            boolean authCodeMarkedAsUsed =
+                    authorisationCodeService.markAuthCodeAsUsedIfUnused(
+                            authCodeStore.getAuthCode());
+            if (!authCodeMarkedAsUsed) {
+                var tokenErrorResponse =
+                        tokenUtilityService.generateTokenErrorResponse(OAuth2Error.INVALID_REQUEST);
+                return generateApiGatewayProxyResponse(
+                        tokenErrorResponse.getStatusCode(), tokenErrorResponse.getBody());
+            }
+
             LOG.info(
                     "Auth code has been found and validated. Generating bearer token and sending response");
             AccessTokenResponse tokenResponse =
@@ -194,8 +204,6 @@ public class TokenHandler
                     authCodeStore.getIsNewAccount(),
                     authCodeStore.getSectorIdentifier(),
                     authCodeStore.getPasswordResetTime());
-
-            authorisationCodeService.updateHasBeenUsed(authCodeStore.getAuthCode(), true);
 
             String subjectID = authCodeStore.getSubjectID();
             UserProfile userProfile = authenticationService.getUserProfileFromSubject(subjectID);
