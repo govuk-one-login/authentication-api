@@ -87,17 +87,6 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             }
                             """,
                     PASSWORD);
-    private static final String RESET_PASSWORD_REQUEST_FOR_PARTIALLY_CREATED_ACCOUNT =
-            format(
-                    """
-                            {
-                            "password": %s,
-                            "allowMfaResetAfterPasswordReset": false,
-                            "isCommonPasswordResetJourney": false,
-                            "isPartiallyCreatedAccountJourney": true
-                            }
-                            """,
-                    PASSWORD);
 
     @BeforeEach
     public void setUp() {
@@ -216,32 +205,6 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var response =
                 makeRequest(
                         Optional.of(RESET_PASSWORD_REQUEST_WITH_IS_COMMON_PASSWORD_RESET_JOURNEY),
-                        constructFrontendHeaders(sessionId),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-
-        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
-
-        assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
-        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
-
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
-    }
-
-    @Test
-    void shouldUpdatePasswordAndReturn204ForAPartiallyCreatedAccountJourney() {
-        var sessionId = IdGenerator.generate();
-        var session = authSessionStore.addSession(sessionId);
-        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        authSessionStore.updateSession(
-                session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
-
-        var response =
-                makeRequest(
-                        Optional.of(RESET_PASSWORD_REQUEST_FOR_PARTIALLY_CREATED_ACCOUNT),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 

@@ -10,6 +10,4 @@ public record ResetPasswordCompletionRequest(
         @SerializedName("allowMfaResetAfterPasswordReset") @Expose
                 boolean allowMfaResetAfterPasswordReset,
         @SerializedName("isCommonPasswordResetJourney") @Expose
-                boolean isCommonPasswordResetJourney,
-        @SerializedName("isPartiallyCreatedAccountJourney") @Expose
-                boolean isPartiallyCreatedAccountJourney) {}
+                boolean isCommonPasswordResetJourney) {}
