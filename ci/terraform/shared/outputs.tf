@@ -153,14 +153,6 @@ output "cloudwatch_encryption_key_arn" {
   value = aws_kms_key.cloudwatch_log_encryption.arn
 }
 
-output "sms_bucket_name_arn" {
-  value = aws_s3_bucket.smoketest_sms_bucket.arn
-}
-
-output "sms_bucket_name" {
-  value = aws_s3_bucket.smoketest_sms_bucket.bucket
-}
-
 output "lambda_env_vars_encryption_kms_key_arn" {
   value = aws_kms_key.lambda_env_vars_encryption_key.arn
 }
