@@ -25,8 +25,15 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
     }
 
     public Optional<AuthCodeStore> getAuthCodeStore(String authCode) {
-        return get(authCode)
-                .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
+        var authCodeStore = get(authCode);
+        if (authCodeStore.isEmpty()) {
+            return Optional.empty();
+        }
+        long now = NowHelper.now().toInstant().getEpochSecond();
+        if (authCodeStore.get().getTimeToExist() <= now) {
+            return Optional.empty();
+        }
+        return authCodeStore;
     }
 
     public void deleteAuthCode(String authCode) {
@@ -42,20 +49,18 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
             boolean isNewAccount,
             Long passwordResetTime,
             String journeyId) {
-        var authCodeStore =
-                new AuthCodeStore()
-                        .withSubjectID(subjectID)
-                        .withAuthCode(authCode)
-                        .withClaims(claims)
-                        .withHasBeenUsed(hasBeenUsed)
-                        .withSectorIdentifier(sectorIdentifier)
-                        .withIsNewAccount(isNewAccount)
-                        .withTimeToExist(
-                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                        .toInstant()
-                                        .getEpochSecond())
-                        .withPasswordResetTime(passwordResetTime)
-                        .withJourneyID(journeyId);
+        var authCodeStore = new AuthCodeStore();
+        authCodeStore.setSubjectID(subjectID);
+        authCodeStore.setAuthCode(authCode);
+        authCodeStore.setClaims(claims);
+        authCodeStore.setHasBeenUsed(hasBeenUsed);
+        authCodeStore.setSectorIdentifier(sectorIdentifier);
+        authCodeStore.setIsNewAccount(isNewAccount);
+        long expiry =
+                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).toInstant().getEpochSecond();
+        authCodeStore.setTimeToExist(expiry);
+        authCodeStore.setPasswordResetTime(passwordResetTime);
+        authCodeStore.setJourneyID(journeyId);
 
         put(authCodeStore);
     }
