@@ -1391,7 +1391,8 @@ class PermissionDecisionManagerTest {
             return Stream.of(
                     Arguments.of("another.email@example.com", EMAIL),
                     Arguments.of(EMAIL, null),
-                    Arguments.of(null, EMAIL));
+                    Arguments.of(null, EMAIL),
+                    Arguments.of(null, null));
         }
 
         @ParameterizedTest
@@ -1411,13 +1412,38 @@ class PermissionDecisionManagerTest {
             private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = true;
 
             @Test
-            void shouldReturnTrue() {
+            void shouldReturnTrueWhenEmailCodeNull() {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(EMAIL)
                                 .withResetPasswordEmailCodeVerified(null);
 
                 assertTrue(
+                        permissionDecisionManager.canResetPassword(
+                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+            }
+
+            @Test
+            void shouldReturnTrueWhenEmailCodeMatches() {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(EMAIL);
+
+                assertTrue(
+                        permissionDecisionManager.canResetPassword(
+                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+            }
+
+            @Test
+            void shouldReturnTrueWhenEmailCodeDoesNotMatch() {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(
+                                        "a.different.email@example.com");
+
+                assertFalse(
                         permissionDecisionManager.canResetPassword(
                                 session, IS_COMMON_PASSWORD_RESET_JOURNEY));
             }
