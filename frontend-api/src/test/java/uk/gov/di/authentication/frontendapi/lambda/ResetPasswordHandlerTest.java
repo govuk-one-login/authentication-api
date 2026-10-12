@@ -153,6 +153,8 @@ class ResetPasswordHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
+        when(permissionDecisionManager.canResetPassword(any(AuthSessionItem.class), anyBoolean()))
+                .thenReturn(true);
         usingValidSession();
         handler =
                 new ResetPasswordHandler(
@@ -629,6 +631,30 @@ class ResetPasswordHandlerTest {
 
     @Nested
     class ClientErrorTests {
+        @Test
+        void shouldReturn400IfUserNotPermittedToResetPassword() {
+            when(permissionDecisionManager.canResetPassword(
+                            any(AuthSessionItem.class), anyBoolean()))
+                    .thenReturn(false);
+            var body =
+                    """
+                    {
+                        "password": "%s",
+                        "isForcedPasswordReset": true,
+                        "allowMfaResetAfterPasswordReset": true
+                    }
+                    """
+                            .formatted(NEW_PASSWORD);
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+            APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.PASSWORD_RESET_NOT_PERMITTED));
+            verifyNoInteractions(auditService);
+            verifyNoInteractions(accountModifiersService);
+        }
+
         @Test
         void shouldReturn400ForRequestIsMissingPassword() {
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

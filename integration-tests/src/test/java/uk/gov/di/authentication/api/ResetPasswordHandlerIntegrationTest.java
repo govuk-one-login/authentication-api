@@ -30,8 +30,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -108,9 +110,11 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldUpdatePasswordAndReturn204() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         var response =
                 makeRequest(
@@ -133,12 +137,14 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void
             shouldUpdatePasswordSendSMSAndWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumber() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         var response =
                 makeRequest(
@@ -170,12 +176,14 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void
             shouldUpdatePasswordSendSMSAndNotWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumberButRequestAllowsMfaReset() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         var response =
                 makeRequest(
@@ -197,23 +205,19 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
     }
 
-    private static Stream<String> requestsWithCommonPasswordOrPartiallyCreatedJourneys() {
-        return Stream.of(
-                RESET_PASSWORD_REQUEST_FOR_PARTIALLY_CREATED_ACCOUNT,
-                RESET_PASSWORD_REQUEST_WITH_IS_COMMON_PASSWORD_RESET_JOURNEY);
-    }
-
-    @ParameterizedTest
-    @MethodSource("requestsWithCommonPasswordOrPartiallyCreatedJourneys")
-    void shouldUpdatePasswordAndReturn204ForACommonPasswordOrPartiallyCreatedAccountJourney(
-            String request) {
+    @Test
+    void shouldUpdatePasswordACommonPasswordRequestWithoutEmailCodeVerified() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS).withResetPasswordEmailCodeVerified(null));
 
         var response =
-                makeRequest(Optional.of(request), constructFrontendHeaders(sessionId), Map.of());
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST_WITH_IS_COMMON_PASSWORD_RESET_JOURNEY),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
 
         assertThat(response, hasStatus(204));
 
@@ -227,20 +231,75 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
+    void shouldUpdatePasswordAndReturn204ForAPartiallyCreatedAccountJourney() {
+        var sessionId = IdGenerator.generate();
+        var session = authSessionStore.addSession(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+
+        var response =
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST_FOR_PARTIALLY_CREATED_ACCOUNT),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    @Test
+    void shouldReturn400IfPasswordResetNotPermitted() {
+        var sessionId = IdGenerator.generate();
+        var session = authSessionStore.addSession(sessionId);
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, "+441234567890");
+        var passwordResetEmailCodeVerifiedOnSession = "a.different.email@example.com";
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(
+                                passwordResetEmailCodeVerifiedOnSession));
+
+        var response =
+                makeRequest(
+                        Optional.of(RESET_PASSWORD_REQUEST_WITH_ALLOW_MFA_RESET),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.PASSWORD_RESET_NOT_PERMITTED));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+        assertThat(requests, hasSize(0));
+
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
     void shouldReturn400ForRequestWithCommonPassword() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         var body =
                 format(
                         """
-                            {
-                            "password": "%s",
-                            "isForcedPasswordReset": false
-                            }
-                            """,
+                                {
+                                "password": "%s",
+                                "isForcedPasswordReset": false
+                                }
+                                """,
                         CommonPasswordsExtension.TEST_COMMON_PASSWORD);
 
         var response =
@@ -253,9 +312,11 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldSendForcedResetJourneyAuditEventWhenForcedPasswordResetIsTrue() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         var response =
                 makeRequest(
@@ -285,12 +346,14 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldUpdatePasswordAndWriteToAccountModifiersTableWithIfUserHasVerifiedPhoneNumber(
             boolean phoneNumberVerified) {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         userStore.setPhoneNumberAndVerificationStatus(
                 EMAIL_ADDRESS, phoneNumber, phoneNumberVerified, phoneNumberVerified);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
 
         var response =
@@ -336,12 +399,14 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void shouldUpdatePasswordAndWriteToAccountRecoveryTableWithIfUserHasVerifiedAuthApp(
             boolean authAppVerified) {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addMfaMethod(
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, authAppVerified, true, "credential");
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         var response =
                 makeRequest(
@@ -374,11 +439,13 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldSendSmsToInternationalNumberWhenNotLockedOut() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         var response =
                 makeRequest(
@@ -409,10 +476,12 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     @Test
     void shouldNotSendSmsToInternationalNumberWhenLockedOut() {
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         for (int i = 0; i < 10; i++) {
             internationalSmsSendLimit.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER, TEST_REFERENCE);
@@ -449,11 +518,13 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         },
                         redisConnectionService);
         var sessionId = IdGenerator.generate();
-        authSessionStore.addSession(sessionId);
+        var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
+        userStore.addSalt(EMAIL_ADDRESS);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
-        authSessionStore.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        authSessionStore.updateSession(
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
 
         var response =
                 makeRequest(

@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -452,6 +453,33 @@ public class PermissionDecisionManager implements PermissionDecisions {
                     authSession.getHasVerifiedWithPassword());
             return false;
         }
+    }
+
+    @Override
+    public boolean canResetPassword(
+            AuthSessionItem authSession, boolean isCommonPasswordResetJourney) {
+        var sessionHasResetPasswordEmailCodeVerified =
+                Objects.nonNull(authSession.getResetPasswordEmailCodeVerified());
+        var emailsMatch =
+                Objects.equals(
+                        authSession.getEmailAddress(),
+                        authSession.getResetPasswordEmailCodeVerified());
+        LOG.info(
+                "Checking if session with has email code verified {} and emails match {} can reset password",
+                sessionHasResetPasswordEmailCodeVerified,
+                emailsMatch);
+
+        if (isCommonPasswordResetJourney) {
+            LOG.info("Applying can reset password rules for common password reset journey");
+            if (sessionHasResetPasswordEmailCodeVerified && !emailsMatch) {
+                LOG.warn("Common password journey had non matching email address");
+                return false;
+            }
+            return true;
+        }
+
+        LOG.info("Applying can reset password rules for non common password reset journey");
+        return sessionHasResetPasswordEmailCodeVerified && emailsMatch;
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {
