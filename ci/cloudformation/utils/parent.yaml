@@ -339,6 +339,7 @@ Mappings:
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "No"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
@@ -387,6 +388,7 @@ Mappings:
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
@@ -435,6 +437,7 @@ Mappings:
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
@@ -485,6 +488,7 @@ Mappings:
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
@@ -535,6 +539,7 @@ Mappings:
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "false"
+      dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       IsSplunkEnabled: "Yes"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
