@@ -1436,7 +1436,7 @@ class PermissionDecisionManagerTest {
             }
 
             @Test
-            void shouldReturnTrueWhenEmailCodeDoesNotMatch() {
+            void shouldReturnFalseWhenEmailCodeDoesNotMatch() {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(EMAIL)
