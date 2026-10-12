@@ -9,9 +9,6 @@ env:
   ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
   ARTIFACT_LOOKUP_TABLE: arn:aws:dynamodb:eu-west-2:114407264696:table/di-auth-production-artifact-lookup
 
-  JAVA_VERSION: 17
-  JAVA_DISTRIBUTION: corretto
-
 on:
   push:
     branches:
@@ -82,52 +79,6 @@ jobs:
           } >> "$GITHUB_OUTPUT"
         shell: bash
 
-  build-cache:
-    name: Set up build cache
-    runs-on: ubuntu-24.04-arm
-    outputs:
-      java_version: ${{ env.JAVA_VERSION }}
-      java_distribution: ${{ env.JAVA_DISTRIBUTION }}
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - name: Set up JDK 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
-        with:
-          java-version: ${{ env.JAVA_VERSION}}
-          distribution: ${{ env.JAVA_DISTRIBUTION}}
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v4
-        with:
-          gradle-version: wrapper
-          cache-read-only: false
-      - name: Download dependencies for caching
-        run: ./gradlew --no-daemon --console=plain assemble
-
-  build:
-    name: Build modules
-    needs:
-      - set-up
-      - build-cache
-    strategy:
-      matrix:
-        module:
-          - utils
-    permissions:
-      id-token: write
-      contents: read
-    uses: ./.github/workflows/call_build-single-api-module.yml
-    with:
-      module_name: ${{ matrix.module }}
-      aws_region: ${{ needs.set-up.outputs.aws_region }}
-      aws_role: ${{ needs.set-up.outputs.deployer_role }}
-      source_bucket: ${{ needs.set-up.outputs.source_bucket }}
-      destination_bucket: ${{ needs.set-up.outputs.destination_bucket }}
-      signing_profile: ${{ needs.set-up.outputs.signing_profile }}
-      lookup_table: ${{ needs.set-up.outputs.artifact_lookup_table }}
-      java_version: ${{ needs.build-cache.outputs.java_version }}
-      java_distribution: ${{ needs.build-cache.outputs.java_distribution }}
-
   create-promotion-artifact-shared:
     name: Create Shared Promotion Artifact
     needs: set-up
@@ -135,24 +86,6 @@ jobs:
       id-token: write
       contents: read
     uses: ./.github/workflows/call_create-shared-promotion-artifact.yml
-
-  create-promotion-artifacts-simple-modules:
-    name: Create Promotion Artifact
-    needs:
-      - set-up
-      - build
-    strategy:
-      matrix:
-        include:
-          - module_name: utils
-            terraform_directory_name: utils
-    permissions:
-      id-token: write
-      contents: read
-    uses: ./.github/workflows/call_create-simple-module-promotion-artifact.yml
-    with:
-      module_name: ${{ matrix.module_name }}
-      terraform_directory_name: ${{ matrix.terraform_directory_name }}
 
   create-promotion-artifact-account-management:
     name: Create Account Management Promotion artifact
@@ -182,7 +115,6 @@ jobs:
       - pr-data
       - set-up
       - create-promotion-artifact-shared
-      - create-promotion-artifacts-simple-modules
       - create-promotion-artifact-account-management
       - create-promotion-artifact-oidc
     permissions:
