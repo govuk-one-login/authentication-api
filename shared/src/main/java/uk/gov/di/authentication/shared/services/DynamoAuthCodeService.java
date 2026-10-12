@@ -61,31 +61,29 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
     }
 
     public boolean markAuthCodeAsUsedIfUnused(String authCode) {
-        var updateItemRequest =
-                UpdateItemRequest.builder()
-                        .tableName(dynamoTable.tableName())
-                        .key(
-                                Map.of(
-                                        AuthCodeStore.ATTRIBUTE_AUTH_CODE,
-                                        AttributeValue.fromS(authCode)))
-                        .updateExpression("SET #hasBeenUsed = :true")
-                        .conditionExpression("#hasBeenUsed = :false")
-                        .expressionAttributeNames(
-                                Map.of("#hasBeenUsed", AuthCodeStore.ATTRIBUTE_HAS_BEEN_USED))
-                        .expressionAttributeValues(
-                                Map.of(
-                                        ":true",
-                                        AttributeValue.fromBool(true),
-                                        ":false",
-                                        AttributeValue.fromBool(false)))
-                        .build();
-
         try {
-            update(updateItemRequest);
+            update(buildMarkAsUsedRequest(authCode));
             return true;
         } catch (ConditionalCheckFailedException e) {
             LOG.warn("Auth code not marked as used as it was already used or does not exist");
             return false;
         }
+    }
+
+    private UpdateItemRequest buildMarkAsUsedRequest(String authCode) {
+        return UpdateItemRequest.builder()
+                .tableName(dynamoTable.tableName())
+                .key(Map.of(AuthCodeStore.ATTRIBUTE_AUTH_CODE, AttributeValue.fromS(authCode)))
+                .updateExpression("SET #hasBeenUsed = :true")
+                .conditionExpression("#hasBeenUsed = :false")
+                .expressionAttributeNames(
+                        Map.of("#hasBeenUsed", AuthCodeStore.ATTRIBUTE_HAS_BEEN_USED))
+                .expressionAttributeValues(
+                        Map.of(
+                                ":true",
+                                AttributeValue.fromBool(true),
+                                ":false",
+                                AttributeValue.fromBool(false)))
+                .build();
     }
 }
