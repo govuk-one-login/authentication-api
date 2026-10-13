@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -211,7 +212,11 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var session = authSessionStore.addSession(sessionId);
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.updateSession(
-                session.withEmailAddress(EMAIL_ADDRESS).withResetPasswordEmailCodeVerified(null));
+                session.withEmailAddress(EMAIL_ADDRESS)
+                        .withResetPasswordEmailCodeVerified(null)
+                        .withHasVerifiedWithMfa(true)
+                        .withHasVerifiedWithPassword(true)
+                        .withRequestedCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
 
         var response =
                 makeRequest(

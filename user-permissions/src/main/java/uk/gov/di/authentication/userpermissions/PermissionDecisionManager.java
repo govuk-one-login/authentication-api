@@ -475,6 +475,17 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 LOG.warn("Common password journey had non matching email address");
                 return false;
             }
+            if (!authSession.getHasVerifiedWithPassword()) {
+                LOG.warn("Common password journey has not verified with existing password");
+                return false;
+            }
+            if (!Objects.equals(
+                            CredentialTrustLevel.LOW_LEVEL,
+                            authSession.getRequestedCredentialStrength())
+                    && !authSession.getHasVerifiedWithMfa()) {
+                LOG.warn("Common password journey has not verified with mfa");
+                return false;
+            }
             return true;
         }
 

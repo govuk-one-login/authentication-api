@@ -1411,12 +1411,49 @@ class PermissionDecisionManagerTest {
         class CommonPasswordJourneys {
             private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = true;
 
+            private static Stream<Arguments>
+                    hasVerifiedWithAndCredentialTrustLevelCombinationsToExpectedResult() {
+                // hasVerifiedWithPassword, hasVerifiedWithMfa, requestedCredentialTrustLevel,
+                // expectedResult
+                return Stream.of(
+                        Arguments.of(true, true, CredentialTrustLevel.LOW_LEVEL, true),
+                        Arguments.of(true, false, CredentialTrustLevel.LOW_LEVEL, true),
+                        Arguments.of(true, true, CredentialTrustLevel.MEDIUM_LEVEL, true),
+                        Arguments.of(false, false, CredentialTrustLevel.LOW_LEVEL, false),
+                        Arguments.of(false, true, CredentialTrustLevel.LOW_LEVEL, false),
+                        Arguments.of(true, false, CredentialTrustLevel.MEDIUM_LEVEL, false),
+                        Arguments.of(false, false, CredentialTrustLevel.MEDIUM_LEVEL, false));
+            }
+
+            @ParameterizedTest
+            @MethodSource("hasVerifiedWithAndCredentialTrustLevelCombinationsToExpectedResult")
+            void shouldReturnRelevantResultWhenHasVerifiedWithRelevantMethodsForClient(
+                    boolean hasVerifiedWithPassword,
+                    boolean hasVerifiedWithMfa,
+                    CredentialTrustLevel requestedTrustLevel,
+                    boolean expectedResult) {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(null)
+                                .withHasVerifiedWithPassword(hasVerifiedWithPassword)
+                                .withHasVerifiedWithMfa(hasVerifiedWithMfa)
+                                .withRequestedCredentialStrength(requestedTrustLevel);
+
+                assertEquals(
+                        expectedResult,
+                        permissionDecisionManager.canResetPassword(
+                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+            }
+
             @Test
             void shouldReturnTrueWhenEmailCodeNull() {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(EMAIL)
-                                .withResetPasswordEmailCodeVerified(null);
+                                .withResetPasswordEmailCodeVerified(null)
+                                .withHasVerifiedWithPassword(true)
+                                .withHasVerifiedWithMfa(true);
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
@@ -1428,7 +1465,9 @@ class PermissionDecisionManagerTest {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(EMAIL)
-                                .withResetPasswordEmailCodeVerified(EMAIL);
+                                .withResetPasswordEmailCodeVerified(EMAIL)
+                                .withHasVerifiedWithMfa(true)
+                                .withHasVerifiedWithPassword(true);
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
@@ -1436,12 +1475,13 @@ class PermissionDecisionManagerTest {
             }
 
             @Test
-            void shouldReturnTrueWhenEmailCodeDoesNotMatch() {
+            void shouldReturnFalseWhenEmailCodeDoesNotMatch() {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(EMAIL)
-                                .withResetPasswordEmailCodeVerified(
-                                        "a.different.email@example.com");
+                                .withResetPasswordEmailCodeVerified("a.different.email@example.com")
+                                .withHasVerifiedWithPassword(true)
+                                .withHasVerifiedWithMfa(true);
 
                 assertFalse(
                         permissionDecisionManager.canResetPassword(
