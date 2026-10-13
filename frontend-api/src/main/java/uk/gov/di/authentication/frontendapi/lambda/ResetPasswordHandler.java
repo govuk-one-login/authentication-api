@@ -158,8 +158,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         LOG.info("ResetPasswordHandler called");
 
         LOG.info(
-                "Called with is common password reset journey {}",
-                request.isCommonPasswordResetJourney());
+                "Called with is common password reset journey {} and forced password reset {}",
+                request.isCommonPasswordResetJourney(),
+                request.isForcedPasswordReset());
 
         if (!permissionDecisionManager.canResetPassword(
                 userContext.getAuthSession(), request.isCommonPasswordResetJourney())) {
