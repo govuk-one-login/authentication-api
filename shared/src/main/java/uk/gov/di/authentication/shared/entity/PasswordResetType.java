@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.entity;
+package uk.gov.di.authentication.shared.entity;
 
 public enum PasswordResetType {
     FORCED_WEAK_PASSWORD,

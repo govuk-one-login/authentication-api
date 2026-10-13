@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -154,7 +155,7 @@ class ResetPasswordHandlerTest {
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
         when(permissionDecisionManager.canResetPassword(
-                        any(AuthSessionItem.class), anyBoolean(), anyBoolean(), anyBoolean()))
+                        any(AuthSessionItem.class), any(PasswordResetType.class), anyBoolean()))
                 .thenReturn(true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
@@ -191,7 +192,10 @@ class ResetPasswordHandlerTest {
 
             assertThat(result, hasStatus(204));
             verify(permissionDecisionManager)
-                    .canResetPassword(any(AuthSessionItem.class), eq(false), eq(false), eq(true));
+                    .canResetPassword(
+                            any(AuthSessionItem.class),
+                            eq(PasswordResetType.USER_FORGOTTEN_PASSWORD),
+                            eq(true));
         }
 
         @Test
@@ -206,7 +210,50 @@ class ResetPasswordHandlerTest {
 
             assertThat(result, hasStatus(204));
             verify(permissionDecisionManager)
-                    .canResetPassword(any(AuthSessionItem.class), eq(false), eq(false), eq(false));
+                    .canResetPassword(
+                            any(AuthSessionItem.class),
+                            eq(PasswordResetType.USER_FORGOTTEN_PASSWORD),
+                            eq(false));
+        }
+
+        private static Stream<Arguments> requestFlagsToExpectedPasswordResetType() {
+            // isForcedPasswordReset, isCommonPasswordResetJourney, expectedPasswordResetType
+            return Stream.of(
+                    Arguments.of(false, false, PasswordResetType.USER_FORGOTTEN_PASSWORD),
+                    Arguments.of(true, false, PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET),
+                    Arguments.of(false, true, PasswordResetType.FORCED_WEAK_PASSWORD),
+                    // common takes precedence over forced when both flags are set
+                    Arguments.of(true, true, PasswordResetType.FORCED_WEAK_PASSWORD));
+        }
+
+        @ParameterizedTest
+        @MethodSource("requestFlagsToExpectedPasswordResetType")
+        void shouldResolvePasswordResetTypeFromRequestFlags(
+                boolean isForcedPasswordReset,
+                boolean isCommonPasswordResetJourney,
+                PasswordResetType expectedPasswordResetType) {
+            var body =
+                    """
+                    {
+                        "password": "%s",
+                        "isForcedPasswordReset": %b,
+                        "isCommonPasswordResetJourney": %b
+                    }
+                    """
+                            .formatted(
+                                    NEW_PASSWORD,
+                                    isForcedPasswordReset,
+                                    isCommonPasswordResetJourney);
+            var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(204));
+            verify(permissionDecisionManager)
+                    .canResetPassword(
+                            any(AuthSessionItem.class),
+                            eq(expectedPasswordResetType),
+                            anyBoolean());
         }
 
         @Test
@@ -669,7 +716,7 @@ class ResetPasswordHandlerTest {
         @Test
         void shouldReturn400IfUserNotPermittedToResetPassword() {
             when(permissionDecisionManager.canResetPassword(
-                            any(AuthSessionItem.class), anyBoolean(), anyBoolean(), anyBoolean()))
+                            any(AuthSessionItem.class), any(PasswordResetType.class), anyBoolean()))
                     .thenReturn(false);
             var body =
                     """

@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -171,11 +172,10 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 !getUserMFADetail(userCredentials, userProfile).mfaMethodVerified();
         LOG.info("Derived isPartiallyCreatedAccount {}", isPartiallyCreatedAccount);
 
+        var passwordResetType = resolvePasswordResetType(request);
+
         if (!permissionDecisionManager.canResetPassword(
-                userContext.getAuthSession(),
-                request.isCommonPasswordResetJourney(),
-                request.isForcedPasswordReset(),
-                isPartiallyCreatedAccount)) {
+                userContext.getAuthSession(), passwordResetType, isPartiallyCreatedAccount)) {
             LOG.warn("Not permitted to reset password");
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.PASSWORD_RESET_NOT_PERMITTED);
@@ -277,6 +277,16 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
         LOG.info("Generating successful response");
         return generateEmptySuccessApiGatewayResponse();
+    }
+
+    private PasswordResetType resolvePasswordResetType(ResetPasswordCompletionRequest request) {
+        if (request.isCommonPasswordResetJourney()) {
+            return PasswordResetType.FORCED_WEAK_PASSWORD;
+        }
+        if (request.isForcedPasswordReset()) {
+            return PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET;
+        }
+        return PasswordResetType.USER_FORGOTTEN_PASSWORD;
     }
 
     private String serialiseRequest(NotifyRequest request) {

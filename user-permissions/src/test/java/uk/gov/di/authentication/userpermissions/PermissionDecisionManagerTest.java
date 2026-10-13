@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -1386,8 +1387,8 @@ class PermissionDecisionManagerTest {
 
         @Nested
         class NormalPasswordResetJourneys {
-            private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = false;
-            private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = false;
+            private static final PasswordResetType PASSWORD_RESET_TYPE =
+                    PasswordResetType.USER_FORGOTTEN_PASSWORD;
             private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
 
             @Test
@@ -1400,10 +1401,7 @@ class PermissionDecisionManagerTest {
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                IS_PARTIALLY_CREATED_ACCOUNT));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             private static List<Arguments> nonMatchingEmails() {
@@ -1422,10 +1420,7 @@ class PermissionDecisionManagerTest {
 
                 assertFalse(
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                IS_PARTIALLY_CREATED_ACCOUNT));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             private static Stream<Arguments>
@@ -1452,17 +1447,14 @@ class PermissionDecisionManagerTest {
                 assertEquals(
                         expectedResult,
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                isPartiallyCreatedAccount));
+                                session, PASSWORD_RESET_TYPE, isPartiallyCreatedAccount));
             }
         }
 
         @Nested
         class ForcedPasswordResetJourneys {
-            private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = false;
-            private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = true;
+            private static final PasswordResetType PASSWORD_RESET_TYPE =
+                    PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET;
             private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
 
             @Test
@@ -1474,10 +1466,7 @@ class PermissionDecisionManagerTest {
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                IS_PARTIALLY_CREATED_ACCOUNT));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             private static List<Arguments> nonMatchingEmails() {
@@ -1495,17 +1484,14 @@ class PermissionDecisionManagerTest {
 
                 assertFalse(
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                IS_PARTIALLY_CREATED_ACCOUNT));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
         }
 
         @Nested
         class CommonPasswordJourneys {
-            private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = true;
-            private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = true;
+            private static final PasswordResetType PASSWORD_RESET_TYPE =
+                    PasswordResetType.FORCED_WEAK_PASSWORD;
             private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
 
             private static Stream<Arguments>
@@ -1540,10 +1526,7 @@ class PermissionDecisionManagerTest {
                 assertEquals(
                         expectedResult,
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                IS_PARTIALLY_CREATED_ACCOUNT));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1557,10 +1540,7 @@ class PermissionDecisionManagerTest {
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                IS_PARTIALLY_CREATED_ACCOUNT));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1574,10 +1554,7 @@ class PermissionDecisionManagerTest {
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                IS_PARTIALLY_CREATED_ACCOUNT));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1591,10 +1568,7 @@ class PermissionDecisionManagerTest {
 
                 assertFalse(
                         permissionDecisionManager.canResetPassword(
-                                session,
-                                IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY,
-                                IS_PARTIALLY_CREATED_ACCOUNT));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
         }
     }
