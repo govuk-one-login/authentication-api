@@ -64,6 +64,8 @@ Resources:
       EventSourceArn: !GetAtt InactiveAccountDeletionStubQueue.Arn
       FunctionName: !Ref InactiveAccountDeletionQueueProcessorFunction
       BatchSize: 1
+      ScalingConfig:
+        MaximumConcurrency: 15
       FunctionResponseTypes:
         - ReportBatchItemFailures
 
@@ -108,6 +110,8 @@ Resources:
         ]
       FunctionName: !Ref InactiveAccountDeletionQueueProcessorFunction
       BatchSize: 1
+      ScalingConfig:
+        MaximumConcurrency: 15
       FunctionResponseTypes:
         - ReportBatchItemFailures
 
