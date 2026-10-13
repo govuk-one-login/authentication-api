@@ -167,6 +167,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.warn("Not permitted to reset password");
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.PASSWORD_RESET_NOT_PERMITTED);
+        } else {
+            LOG.info("Permitted to reset password");
         }
 
         Optional<ErrorResponse> passwordValidationError =
