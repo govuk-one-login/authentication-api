@@ -7,7 +7,7 @@ Resources:
         - ${Env}-inactive-account-deletion-queue-processor-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      ReservedConcurrentExecutions: 2
+      ReservedConcurrentExecutions: 20
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.InactiveAccountDeletionHandler::handleRequest
       Environment:
