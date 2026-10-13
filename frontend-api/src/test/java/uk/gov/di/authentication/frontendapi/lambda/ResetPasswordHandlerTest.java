@@ -153,7 +153,8 @@ class ResetPasswordHandlerTest {
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
-        when(permissionDecisionManager.canResetPassword(any(AuthSessionItem.class), anyBoolean()))
+        when(permissionDecisionManager.canResetPassword(
+                        any(AuthSessionItem.class), anyBoolean(), anyBoolean()))
                 .thenReturn(true);
         usingValidSession();
         handler =
@@ -634,7 +635,7 @@ class ResetPasswordHandlerTest {
         @Test
         void shouldReturn400IfUserNotPermittedToResetPassword() {
             when(permissionDecisionManager.canResetPassword(
-                            any(AuthSessionItem.class), anyBoolean()))
+                            any(AuthSessionItem.class), anyBoolean(), anyBoolean()))
                     .thenReturn(false);
             var body =
                     """

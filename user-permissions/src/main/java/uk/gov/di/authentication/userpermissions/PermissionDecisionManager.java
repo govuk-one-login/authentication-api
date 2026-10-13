@@ -457,7 +457,9 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public boolean canResetPassword(
-            AuthSessionItem authSession, boolean isCommonPasswordResetJourney) {
+            AuthSessionItem authSession,
+            boolean isCommonPasswordResetJourney,
+            boolean isForcedPasswordResetJourney) {
         var sessionHasResetPasswordEmailCodeVerified =
                 Objects.nonNull(authSession.getResetPasswordEmailCodeVerified());
         var emailsMatch =

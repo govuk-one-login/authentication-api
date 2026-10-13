@@ -140,7 +140,12 @@ public interface PermissionDecisions {
      *
      * @param authSession The user's current session
      * @param isCommonPasswordResetJourney Whether the request is resetting a common password
+     * @param isForcedPasswordResetJourney Whether the request is an account interventions password
+     *     reset
      * @return A result containing either a Decision or a Decision Error
      */
-    boolean canResetPassword(AuthSessionItem authSession, boolean isCommonPasswordResetJourney);
+    boolean canResetPassword(
+            AuthSessionItem authSession,
+            boolean isCommonPasswordResetJourney,
+            boolean isForcedPasswordResetJourney);
 }

@@ -1377,39 +1377,97 @@ class PermissionDecisionManagerTest {
 
     @Nested
     class CanResetPassword {
-        @Test
-        void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
-            var session =
-                    new AuthSessionItem()
-                            .withEmailAddress(EMAIL)
-                            .withResetPasswordEmailCodeVerified(EMAIL);
+        private static final List<Arguments> nonMatchingEmailArguments =
+                List.of(
+                        Arguments.of("another.email@example.com", EMAIL),
+                        Arguments.of(EMAIL, null),
+                        Arguments.of(null, EMAIL),
+                        Arguments.of(null, null));
 
-            assertTrue(permissionDecisionManager.canResetPassword(session, false));
+        @Nested
+        class NormalPasswordResetJourneys {
+            private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = false;
+            private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = false;
+
+            @Test
+            void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(EMAIL);
+
+                assertTrue(
+                        permissionDecisionManager.canResetPassword(
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+            }
+
+            private static List<Arguments> nonMatchingEmails() {
+                return nonMatchingEmailArguments;
+            }
+
+            @ParameterizedTest
+            @MethodSource("nonMatchingEmails")
+            void shouldReturnFalseIfEmailOtpCodeVerifiedForDoesNotMatchEmailOnSession(
+                    String mainEmailOnSession, String resetPasswordEmailCodeVerified) {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(mainEmailOnSession)
+                                .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
+
+                assertFalse(
+                        permissionDecisionManager.canResetPassword(
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+            }
         }
 
-        private static Stream<Arguments> nonMatchingEmails() {
-            return Stream.of(
-                    Arguments.of("another.email@example.com", EMAIL),
-                    Arguments.of(EMAIL, null),
-                    Arguments.of(null, EMAIL),
-                    Arguments.of(null, null));
-        }
+        @Nested
+        class ForcedPasswordResetJourneys {
+            private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = false;
+            private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = true;
 
-        @ParameterizedTest
-        @MethodSource("nonMatchingEmails")
-        void shouldReturnFalseIfEmailOtpCodeVerifiedForDoesNotMatchEmailOnSession(
-                String mainEmailOnSession, String resetPasswordEmailCodeVerified) {
-            var session =
-                    new AuthSessionItem()
-                            .withEmailAddress(mainEmailOnSession)
-                            .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
+            @Test
+            void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(EMAIL);
 
-            assertFalse(permissionDecisionManager.canResetPassword(session, false));
+                assertTrue(
+                        permissionDecisionManager.canResetPassword(
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+            }
+
+            private static List<Arguments> nonMatchingEmails() {
+                return nonMatchingEmailArguments;
+            }
+
+            @ParameterizedTest
+            @MethodSource("nonMatchingEmails")
+            void shouldReturnFalseIfEmailOtpCodeVerifiedForDoesNotMatchEmailOnSession(
+                    String mainEmailOnSession, String resetPasswordEmailCodeVerified) {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(mainEmailOnSession)
+                                .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
+
+                assertFalse(
+                        permissionDecisionManager.canResetPassword(
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+            }
         }
 
         @Nested
         class CommonPasswordJourneys {
             private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = true;
+            private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = true;
 
             private static Stream<Arguments>
                     hasVerifiedWithAndCredentialTrustLevelCombinationsToExpectedResult() {
@@ -1443,7 +1501,9 @@ class PermissionDecisionManagerTest {
                 assertEquals(
                         expectedResult,
                         permissionDecisionManager.canResetPassword(
-                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
             }
 
             @Test
@@ -1457,7 +1517,9 @@ class PermissionDecisionManagerTest {
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
-                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
             }
 
             @Test
@@ -1471,7 +1533,9 @@ class PermissionDecisionManagerTest {
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
-                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
             }
 
             @Test
@@ -1485,7 +1549,9 @@ class PermissionDecisionManagerTest {
 
                 assertFalse(
                         permissionDecisionManager.canResetPassword(
-                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
             }
         }
     }
