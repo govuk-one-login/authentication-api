@@ -41,24 +41,23 @@ public class DynamoPasskeyService extends BaseDynamoService<Passkey> {
 
     public Result<PasskeysUpdateFailureReason, Passkey> updatePasskey(
             String publicSubjectId, String passkeyId, String lastUsed, long signCount) {
-        return getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId)
-                .map(
-                        passkey -> {
-                            passkey.withLastUsed(lastUsed).withPasskeySignCount(signCount);
-                            update(passkey);
-                            return Result.<PasskeysUpdateFailureReason, Passkey>success(passkey);
-                        })
-                .orElseGet(() -> Result.failure(PasskeysUpdateFailureReason.PASSKEY_NOT_FOUND));
+        var existingPasskey = getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId);
+        if (existingPasskey.isEmpty()) {
+            return Result.failure(PasskeysUpdateFailureReason.PASSKEY_NOT_FOUND);
+        }
+        var passkey = existingPasskey.get();
+        passkey.withLastUsed(lastUsed).withPasskeySignCount(signCount);
+        update(passkey);
+        return Result.success(passkey);
     }
 
     public Result<PasskeysDeleteFailureReason, Void> deletePasskey(
             String publicSubjectId, String passkeyId) {
-        return getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId)
-                .map(
-                        passkey -> {
-                            delete(passkey);
-                            return Result.<PasskeysDeleteFailureReason, Void>success(null);
-                        })
-                .orElseGet(() -> Result.failure(PasskeysDeleteFailureReason.PASSKEY_NOT_FOUND));
+        var existingPasskey = getPasskeyForUserWithPasskeyId(publicSubjectId, passkeyId);
+        if (existingPasskey.isEmpty()) {
+            return Result.failure(PasskeysDeleteFailureReason.PASSKEY_NOT_FOUND);
+        }
+        delete(existingPasskey.get());
+        return Result.success(null);
     }
 }
