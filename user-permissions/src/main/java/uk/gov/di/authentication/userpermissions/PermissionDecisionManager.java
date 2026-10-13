@@ -490,7 +490,11 @@ public class PermissionDecisionManager implements PermissionDecisions {
         }
 
         LOG.info("Applying can reset password rules for non common password reset journey");
-        return sessionHasResetPasswordEmailCodeVerified && emailsMatch;
+        if (!(sessionHasResetPasswordEmailCodeVerified && emailsMatch)) {
+            LOG.warn("No email code verified for password reset");
+            return false;
+        }
+        return true;
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {
