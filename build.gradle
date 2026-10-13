@@ -348,6 +348,10 @@ reporting {
     }
 }
 
+tasks.named('testCodeCoverageReport') {
+    executionData.from(fileTree("integration-tests/build/jacoco").include("*.exec"))
+}
+
 dependencies {
     jacocoAggregation subprojects
 

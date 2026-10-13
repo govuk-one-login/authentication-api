@@ -250,6 +250,7 @@ jobs:
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
           ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.api.*" :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          mv integration-tests/build/jacoco/test.exec integration-tests/build/jacoco/test-api.exec
       - name: Cache API Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -335,6 +336,7 @@ jobs:
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
           ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.services.*" --tests "uk.gov.di.authentication.shared.services.*" :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          mv integration-tests/build/jacoco/test.exec integration-tests/build/jacoco/test-services.exec
       - name: Cache Services Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
@@ -420,6 +422,7 @@ jobs:
         if: needs.check-changed-files.outputs.java_changed == 'true'
         run: |
           ./gradlew :integration-tests:test --tests "uk.gov.di.authentication.utils.*" --tests "uk.gov.di.authentication.queuehandlers.*" --tests "uk.gov.di.authentication.contract.*" :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
+          mv integration-tests/build/jacoco/test.exec integration-tests/build/jacoco/test-utils.exec
       - name: Cache Utils Test Reports
         if: needs.check-changed-files.outputs.java_changed == 'true'
         uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
