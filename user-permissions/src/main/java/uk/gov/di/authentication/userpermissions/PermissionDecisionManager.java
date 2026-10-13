@@ -491,12 +491,31 @@ public class PermissionDecisionManager implements PermissionDecisions {
             return true;
         }
 
-        LOG.info("Applying can reset password rules for non common password reset journey");
         if (!(sessionHasResetPasswordEmailCodeVerified && emailsMatch)) {
+            LOG.info("Applying can reset password rules for non common password reset journey");
             LOG.warn("No email code verified for password reset");
             return false;
         }
-        return true;
+
+        if (isForcedPasswordResetJourney) {
+            LOG.info("Applying can reset password rules for forced password reset journey");
+            return true;
+        }
+
+        LOG.info(
+                "Applying rules for normal password reset journey with is partially created account {}",
+                authSession.getIsPartiallyCreatedAccount());
+
+        if (authSession.getIsPartiallyCreatedAccount()) {
+            LOG.info("Applying can reset password rules for partially created account");
+            return true;
+        } else {
+            var hasVerifiedWithMfa = authSession.getHasVerifiedWithMfa();
+            if (!hasVerifiedWithMfa) {
+                LOG.warn("Normal password reset journey has not verified with mfa");
+            }
+            return hasVerifiedWithMfa;
+        }
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {

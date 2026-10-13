@@ -104,7 +104,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         var response =
                 makeRequest(
@@ -134,7 +135,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         var response =
                 makeRequest(
@@ -173,7 +175,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         var response =
                 makeRequest(
@@ -258,7 +261,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         var body =
                 format(
@@ -284,7 +288,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         var response =
                 makeRequest(
@@ -321,7 +326,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 EMAIL_ADDRESS, phoneNumber, phoneNumberVerified, phoneNumberVerified);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
         byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
 
         var response =
@@ -374,7 +380,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, authAppVerified, true, "credential");
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         var response =
                 makeRequest(
@@ -413,7 +420,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         var response =
                 makeRequest(
@@ -449,7 +457,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         for (int i = 0; i < 10; i++) {
             internationalSmsSendLimit.recordSmsSent(INTERNATIONAL_MOBILE_NUMBER, TEST_REFERENCE);
@@ -492,7 +501,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, INTERNATIONAL_MOBILE_NUMBER);
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
-                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS));
+                        .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
+                        .withHasVerifiedWithMfa(true));
 
         var response =
                 makeRequest(

@@ -1394,7 +1394,8 @@ class PermissionDecisionManagerTest {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(EMAIL)
-                                .withResetPasswordEmailCodeVerified(EMAIL);
+                                .withResetPasswordEmailCodeVerified(EMAIL)
+                                .withHasVerifiedWithMfa(true);
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
@@ -1414,9 +1415,40 @@ class PermissionDecisionManagerTest {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(mainEmailOnSession)
-                                .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
+                                .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified)
+                                .withHasVerifiedWithMfa(true);
 
                 assertFalse(
+                        permissionDecisionManager.canResetPassword(
+                                session,
+                                IS_COMMON_PASSWORD_RESET_JOURNEY,
+                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+            }
+
+            private static Stream<Arguments>
+                    verifiedWithMfaPartiallyCreatedAccountsAndExpectedResults() {
+                return Stream.of(
+                        // hasVerifiedWithMfa, isPartiallyCreatedAccount, expectedResult
+                        Arguments.of(true, false, true),
+                        Arguments.of(false, true, true),
+                        Arguments.of(false, false, false));
+            }
+
+            @ParameterizedTest
+            @MethodSource("verifiedWithMfaPartiallyCreatedAccountsAndExpectedResults")
+            void shouldTakeIntoAccountWhetherAUserHasVerifiedWithMfa(
+                    boolean hasVerifiedWithMfa,
+                    boolean isPartiallyCreatedAccount,
+                    boolean expectedResult) {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(EMAIL)
+                                .withHasVerifiedWithMfa(hasVerifiedWithMfa)
+                                .withIsPartiallyCreatedAccount(isPartiallyCreatedAccount);
+
+                assertEquals(
+                        expectedResult,
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
