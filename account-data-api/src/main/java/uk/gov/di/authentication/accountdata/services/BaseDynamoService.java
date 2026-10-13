@@ -73,15 +73,13 @@ public class BaseDynamoService<T> {
     }
 
     public boolean putIfUnique(T item, String key) {
+        var keyDoesNotExist =
+                Expression.builder()
+                        .expression("attribute_not_exists(#key)")
+                        .putExpressionName("#key", key)
+                        .build();
         try {
-            dynamoTable.putItem(
-                    builder ->
-                            builder.item(item)
-                                    .conditionExpression(
-                                            Expression.builder()
-                                                    .expression("attribute_not_exists(#key)")
-                                                    .putExpressionName("#key", key)
-                                                    .build()));
+            dynamoTable.putItem(builder -> builder.item(item).conditionExpression(keyDoesNotExist));
             return true;
         } catch (ConditionalCheckFailedException e) {
             return false;
@@ -95,9 +93,9 @@ public class BaseDynamoService<T> {
     }
 
     public Optional<T> get(String partition, String sortKey) {
-        return Optional.ofNullable(
-                dynamoTable.getItem(
-                        Key.builder().partitionValue(partition).sortValue(sortKey).build()));
+        var key = Key.builder().partitionValue(partition).sortValue(sortKey).build();
+        var item = dynamoTable.getItem(key);
+        return Optional.ofNullable(item);
     }
 
     public Optional<T> get(GetItemEnhancedRequest getItemEnhancedRequest) {
@@ -105,18 +103,15 @@ public class BaseDynamoService<T> {
     }
 
     public List<T> getAllByPrefix(String partition, String sortKeyPrefix) {
-        QueryConditional queryConditional =
-                QueryConditional.sortBeginsWith(
-                        Key.builder().partitionValue(partition).sortValue(sortKeyPrefix).build());
-        return dynamoTable
-                .query(
-                        QueryEnhancedRequest.builder()
-                                .consistentRead(true)
-                                .queryConditional(queryConditional)
-                                .build())
-                .items()
-                .stream()
-                .toList();
+        var prefixKey = Key.builder().partitionValue(partition).sortValue(sortKeyPrefix).build();
+        var queryConditional = QueryConditional.sortBeginsWith(prefixKey);
+        var request =
+                QueryEnhancedRequest.builder()
+                        .consistentRead(true)
+                        .queryConditional(queryConditional)
+                        .build();
+        var results = dynamoTable.query(request);
+        return results.items().stream().toList();
     }
 
     public void delete(T item) {
