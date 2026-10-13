@@ -1388,6 +1388,7 @@ class PermissionDecisionManagerTest {
         class NormalPasswordResetJourneys {
             private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = false;
             private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = false;
+            private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
 
             @Test
             void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
@@ -1401,7 +1402,8 @@ class PermissionDecisionManagerTest {
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             private static List<Arguments> nonMatchingEmails() {
@@ -1422,7 +1424,8 @@ class PermissionDecisionManagerTest {
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             private static Stream<Arguments>
@@ -1444,15 +1447,15 @@ class PermissionDecisionManagerTest {
                         new AuthSessionItem()
                                 .withEmailAddress(EMAIL)
                                 .withResetPasswordEmailCodeVerified(EMAIL)
-                                .withHasVerifiedWithMfa(hasVerifiedWithMfa)
-                                .withIsPartiallyCreatedAccount(isPartiallyCreatedAccount);
+                                .withHasVerifiedWithMfa(hasVerifiedWithMfa);
 
                 assertEquals(
                         expectedResult,
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                isPartiallyCreatedAccount));
             }
         }
 
@@ -1460,6 +1463,7 @@ class PermissionDecisionManagerTest {
         class ForcedPasswordResetJourneys {
             private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = false;
             private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = true;
+            private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
 
             @Test
             void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
@@ -1472,7 +1476,8 @@ class PermissionDecisionManagerTest {
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             private static List<Arguments> nonMatchingEmails() {
@@ -1492,7 +1497,8 @@ class PermissionDecisionManagerTest {
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                IS_PARTIALLY_CREATED_ACCOUNT));
             }
         }
 
@@ -1500,6 +1506,7 @@ class PermissionDecisionManagerTest {
         class CommonPasswordJourneys {
             private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = true;
             private static final boolean IS_FORCED_PASSWORD_RESET_JOURNEY = true;
+            private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
 
             private static Stream<Arguments>
                     hasVerifiedWithAndCredentialTrustLevelCombinationsToExpectedResult() {
@@ -1535,7 +1542,8 @@ class PermissionDecisionManagerTest {
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1551,7 +1559,8 @@ class PermissionDecisionManagerTest {
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1567,7 +1576,8 @@ class PermissionDecisionManagerTest {
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1583,7 +1593,8 @@ class PermissionDecisionManagerTest {
                         permissionDecisionManager.canResetPassword(
                                 session,
                                 IS_COMMON_PASSWORD_RESET_JOURNEY,
-                                IS_FORCED_PASSWORD_RESET_JOURNEY));
+                                IS_FORCED_PASSWORD_RESET_JOURNEY,
+                                IS_PARTIALLY_CREATED_ACCOUNT));
             }
         }
     }

@@ -459,7 +459,8 @@ public class PermissionDecisionManager implements PermissionDecisions {
     public boolean canResetPassword(
             AuthSessionItem authSession,
             boolean isCommonPasswordResetJourney,
-            boolean isForcedPasswordResetJourney) {
+            boolean isForcedPasswordResetJourney,
+            boolean isPartiallyCreatedAccount) {
         var sessionHasResetPasswordEmailCodeVerified =
                 Objects.nonNull(authSession.getResetPasswordEmailCodeVerified());
         var emailsMatch =
@@ -482,23 +483,27 @@ public class PermissionDecisionManager implements PermissionDecisions {
         }
 
         return canResetPasswordInVoluntaryPasswordResetJourney(
-                authSession, sessionHasResetPasswordEmailCodeVerified, emailsMatch);
+                authSession,
+                sessionHasResetPasswordEmailCodeVerified,
+                emailsMatch,
+                isPartiallyCreatedAccount);
     }
 
     private boolean canResetPasswordInVoluntaryPasswordResetJourney(
             AuthSessionItem authSession,
             boolean sessionHasResetPasswordEmailCodeVerified,
-            boolean emailsMatch) {
+            boolean emailsMatch,
+            boolean isPartiallyCreatedAccount) {
         LOG.info(
                 "Applying can reset password rules for voluntary password reset journey with isPartiallyCreatedAccount {}",
-                authSession.getIsPartiallyCreatedAccount());
+                isPartiallyCreatedAccount);
 
         if (!(sessionHasResetPasswordEmailCodeVerified && emailsMatch)) {
             LOG.warn("No email code verified for password reset");
             return false;
         }
 
-        if (authSession.getIsPartiallyCreatedAccount()) {
+        if (isPartiallyCreatedAccount) {
             LOG.info("Applying can reset password rules for partially created account");
             return true;
         } else {

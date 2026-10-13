@@ -50,6 +50,7 @@ import java.util.Optional;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
@@ -162,10 +163,19 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 request.isCommonPasswordResetJourney(),
                 request.isForcedPasswordReset());
 
+        var email = userContext.getAuthSession().getEmailAddress();
+        var userCredentials = authenticationService.getUserCredentialsFromEmail(email);
+        var userProfile = authenticationService.getUserProfileByEmail(email);
+
+        var isPartiallyCreatedAccount =
+                !getUserMFADetail(userCredentials, userProfile).mfaMethodVerified();
+        LOG.info("Derived isPartiallyCreatedAccount {}", isPartiallyCreatedAccount);
+
         if (!permissionDecisionManager.canResetPassword(
                 userContext.getAuthSession(),
                 request.isCommonPasswordResetJourney(),
-                request.isForcedPasswordReset())) {
+                request.isForcedPasswordReset(),
+                isPartiallyCreatedAccount)) {
             LOG.warn("Not permitted to reset password");
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.PASSWORD_RESET_NOT_PERMITTED);
@@ -180,9 +190,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.info("Error message: {}", passwordValidationError.get().getMessage());
             return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
         }
-        var userCredentials =
-                authenticationService.getUserCredentialsFromEmail(
-                        userContext.getAuthSession().getEmailAddress());
 
         if (Objects.nonNull(userCredentials.getPassword())) {
             if (verifyPassword(userCredentials.getPassword(), request.password())) {
@@ -192,9 +199,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.info("Resetting password for migrated user");
         }
         authenticationService.updatePassword(userCredentials.getEmail(), request.password());
-        var userProfile =
-                authenticationService.getUserProfileByEmail(
-                        userContext.getAuthSession().getEmailAddress());
 
         authSessionService.updateSession(
                 userContext

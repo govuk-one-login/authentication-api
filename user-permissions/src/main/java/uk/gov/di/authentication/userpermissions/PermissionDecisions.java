@@ -142,10 +142,13 @@ public interface PermissionDecisions {
      * @param isCommonPasswordResetJourney Whether the request is resetting a common password
      * @param isForcedPasswordResetJourney Whether the request is an account interventions password
      *     reset
+     * @param isPartiallyCreatedAccount Whether the account is partially created (has a password but
+     *     no verified MFA method), derived from the user's credentials and profile at reset time
      * @return A result containing either a Decision or a Decision Error
      */
     boolean canResetPassword(
             AuthSessionItem authSession,
             boolean isCommonPasswordResetJourney,
-            boolean isForcedPasswordResetJourney);
+            boolean isForcedPasswordResetJourney,
+            boolean isPartiallyCreatedAccount);
 }

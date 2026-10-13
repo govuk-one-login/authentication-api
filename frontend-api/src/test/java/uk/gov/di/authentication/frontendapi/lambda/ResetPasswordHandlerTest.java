@@ -154,8 +154,12 @@ class ResetPasswordHandlerTest {
         when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
                 .thenReturn(Result.success(new Decision.Permitted(0)));
         when(permissionDecisionManager.canResetPassword(
-                        any(AuthSessionItem.class), anyBoolean(), anyBoolean()))
+                        any(AuthSessionItem.class), anyBoolean(), anyBoolean(), anyBoolean()))
                 .thenReturn(true);
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(generateUserCredentials());
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
         usingValidSession();
         handler =
                 new ResetPasswordHandler(
@@ -175,6 +179,36 @@ class ResetPasswordHandlerTest {
 
     @Nested
     class SuccessfulPasswordReset {
+        @Test
+        void shouldDeriveIsPartiallyCreatedAccountTrueWhenUserHasNoVerifiedMfa() {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentialsWithNoMfaMethods());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+
+            var result =
+                    handler.handleRequest(generateRequest(NEW_PASSWORD, VALID_HEADERS), context);
+
+            assertThat(result, hasStatus(204));
+            verify(permissionDecisionManager)
+                    .canResetPassword(any(AuthSessionItem.class), eq(false), eq(false), eq(true));
+        }
+
+        @Test
+        void shouldDeriveIsPartiallyCreatedAccountFalseWhenUserHasVerifiedMfa() {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                    .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
+            when(authenticationService.getUserProfileByEmail(EMAIL))
+                    .thenReturn(generateUserProfile(false));
+
+            var result =
+                    handler.handleRequest(generateRequest(NEW_PASSWORD, VALID_HEADERS), context);
+
+            assertThat(result, hasStatus(204));
+            verify(permissionDecisionManager)
+                    .canResetPassword(any(AuthSessionItem.class), eq(false), eq(false), eq(false));
+        }
+
         @Test
         void shouldReturn204ButNotPlaceMessageOnQueueForTestClient() {
             when(configurationService.isTestClientsEnabled()).thenReturn(true);
@@ -635,7 +669,7 @@ class ResetPasswordHandlerTest {
         @Test
         void shouldReturn400IfUserNotPermittedToResetPassword() {
             when(permissionDecisionManager.canResetPassword(
-                            any(AuthSessionItem.class), anyBoolean(), anyBoolean()))
+                            any(AuthSessionItem.class), anyBoolean(), anyBoolean(), anyBoolean()))
                     .thenReturn(false);
             var body =
                     """
