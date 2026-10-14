@@ -165,8 +165,19 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 request.isForcedPasswordReset());
 
         var email = userContext.getAuthSession().getEmailAddress();
-        var userCredentials = authenticationService.getUserCredentialsFromEmail(email);
-        var userProfile = authenticationService.getUserProfileByEmail(email);
+
+        var userProfileMaybe = authenticationService.getUserProfileByEmailMaybe(email);
+        var userCredentialsMaybe =
+                Optional.ofNullable(authenticationService.getUserCredentialsFromEmail(email));
+
+        if (userProfileMaybe.isEmpty() || userCredentialsMaybe.isEmpty()) {
+            LOG.warn("No user profile or user credentials found for session email");
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+        }
+
+        var userProfile = userProfileMaybe.get();
+        var userCredentials = userCredentialsMaybe.get();
 
         var isPartiallyCreatedAccount =
                 !getUserMFADetail(userCredentials, userProfile).mfaMethodVerified();

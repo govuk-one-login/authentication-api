@@ -159,8 +159,8 @@ class ResetPasswordHandlerTest {
                 .thenReturn(true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
-        when(authenticationService.getUserProfileByEmail(EMAIL))
-                .thenReturn(generateUserProfile(false));
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(generateUserProfile(false)));
         usingValidSession();
         handler =
                 new ResetPasswordHandler(
@@ -184,8 +184,8 @@ class ResetPasswordHandlerTest {
         void shouldDeriveIsPartiallyCreatedAccountTrueWhenUserHasNoVerifiedMfa() {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentialsWithNoMfaMethods());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
 
             var result =
                     handler.handleRequest(generateRequest(NEW_PASSWORD, VALID_HEADERS), context);
@@ -202,8 +202,8 @@ class ResetPasswordHandlerTest {
         void shouldDeriveIsPartiallyCreatedAccountFalseWhenUserHasVerifiedMfa() {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
 
             var result =
                     handler.handleRequest(generateRequest(NEW_PASSWORD, VALID_HEADERS), context);
@@ -262,8 +262,8 @@ class ResetPasswordHandlerTest {
             when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);
@@ -283,8 +283,8 @@ class ResetPasswordHandlerTest {
             when(testUserHelper.isTestJourney(any(UserContext.class))).thenReturn(true);
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS_WITHOUT_AUDIT_ENCODED);
 
             var result = handler.handleRequest(event, context);
@@ -302,8 +302,8 @@ class ResetPasswordHandlerTest {
         void
                 shouldReturn204ForSuccessfulRequestAndDontSendConfirmationToSMSWhenPhoneNumberNotVerified()
                         throws Json.JsonException {
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
@@ -329,8 +329,8 @@ class ResetPasswordHandlerTest {
         void shouldNotSendSmsWhenUserIsIndefinitelyLockedOut() throws Json.JsonException {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(true));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(true)));
             when(permissionDecisionManager.canSendSmsOtpNotification(any(), any()))
                     .thenReturn(
                             Result.success(
@@ -364,8 +364,8 @@ class ResetPasswordHandlerTest {
         void shouldSendSmsWhenUserIsPermitted() throws Json.JsonException {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(true));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(true)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);
@@ -393,8 +393,8 @@ class ResetPasswordHandlerTest {
                 shouldReturn204ForSuccessfulPasswordResetSendConfirmationToSMSAndUpdateModifiersTableWithBlock() {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(true));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(true)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);
@@ -443,8 +443,8 @@ class ResetPasswordHandlerTest {
                 throws Json.JsonException {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(true));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(true)));
             var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, requestBody);
 
             var result = handler.handleRequest(event, context);
@@ -481,8 +481,8 @@ class ResetPasswordHandlerTest {
                 throws Json.JsonException {
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateMigratedUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);
@@ -504,8 +504,8 @@ class ResetPasswordHandlerTest {
         void shouldCallUserActionsManagerPasswordResetOnSuccessfulRequest()
                 throws Json.JsonException {
             // Arrange
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
@@ -539,8 +539,8 @@ class ResetPasswordHandlerTest {
         void
                 shouldUpdateAccountModifiersWithBlockWhenPasswordResetSuccessfullyAndVerifiedAuthAppIsPresent()
                         throws Json.JsonException {
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
 
@@ -566,8 +566,8 @@ class ResetPasswordHandlerTest {
 
         @Test
         void shouldRecordPasswordResetSuccessInSession() {
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
 
@@ -590,8 +590,8 @@ class ResetPasswordHandlerTest {
             when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             var event = generateForcedPasswordResetRequest();
 
             var result = handler.handleRequest(event, context);
@@ -607,8 +607,8 @@ class ResetPasswordHandlerTest {
             when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentialsWithNoMfaMethods());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);
@@ -627,8 +627,8 @@ class ResetPasswordHandlerTest {
             when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentialsWithUnverifiedAuthApp());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);
@@ -647,8 +647,8 @@ class ResetPasswordHandlerTest {
             when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentials());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(true));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(true)));
             var body =
                     """
                     {
@@ -678,8 +678,8 @@ class ResetPasswordHandlerTest {
             when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentialsWithMultipleMfaMethods());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(true));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(true)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);
@@ -696,8 +696,8 @@ class ResetPasswordHandlerTest {
             when(passwordValidator.validate(NEW_PASSWORD)).thenReturn(Optional.empty());
             when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                     .thenReturn(generateUserCredentialsWithMultipleUnverifiedMfaMethods());
-            when(authenticationService.getUserProfileByEmail(EMAIL))
-                    .thenReturn(generateUserProfile(false));
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.of(generateUserProfile(false)));
             var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
 
             var result = handler.handleRequest(event, context);
@@ -713,6 +713,39 @@ class ResetPasswordHandlerTest {
 
     @Nested
     class ClientErrorTests {
+        @Test
+        void shouldReturn400WhenUserProfileDoesNotExist() {
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.empty());
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE));
+            verify(authenticationService, never()).updatePassword(anyString(), anyString());
+            verify(permissionDecisionManager, never())
+                    .canResetPassword(
+                            any(AuthSessionItem.class), any(PasswordResetType.class), anyBoolean());
+            verifyNoInteractions(accountModifiersService);
+        }
+
+        @Test
+        void shouldReturn400WhenUserCredentialsDoNotExist() {
+            when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(null);
+            var event = generateRequest(NEW_PASSWORD, VALID_HEADERS);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE));
+            verify(authenticationService, never()).updatePassword(anyString(), anyString());
+            verify(permissionDecisionManager, never())
+                    .canResetPassword(
+                            any(AuthSessionItem.class), any(PasswordResetType.class), anyBoolean());
+            verifyNoInteractions(accountModifiersService);
+        }
+
         @Test
         void shouldReturn400IfUserNotPermittedToResetPassword() {
             when(permissionDecisionManager.canResetPassword(
