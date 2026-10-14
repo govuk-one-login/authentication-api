@@ -289,7 +289,8 @@ class ResetPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         authSessionStore.updateSession(
                 session.withEmailAddress(EMAIL_ADDRESS)
                         .withResetPasswordEmailCodeVerified(EMAIL_ADDRESS)
-                        .withHasVerifiedWithMfa(true));
+                        .withHasVerifiedWithMfa(true)
+                        .withHasVerifiedWithPassword(true));
 
         var response =
                 makeRequest(

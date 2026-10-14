@@ -476,7 +476,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
             case FORCED_WEAK_PASSWORD -> canResetPasswordInCommonPasswordJourney(
                     authSession, sessionHasResetPasswordEmailCodeVerified, emailsMatch);
             case FORCED_INTERVENTION_PASSWORD_RESET -> canResetPasswordInForcedPasswordResetJourney(
-                    sessionHasResetPasswordEmailCodeVerified, emailsMatch);
+                    authSession, sessionHasResetPasswordEmailCodeVerified, emailsMatch);
             case USER_FORGOTTEN_PASSWORD -> canResetPasswordInVoluntaryPasswordResetJourney(
                     authSession,
                     sessionHasResetPasswordEmailCodeVerified,
@@ -512,12 +512,33 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     private boolean canResetPasswordInForcedPasswordResetJourney(
-            boolean sessionHasResetPasswordEmailCodeVerified, boolean emailsMatch) {
+            AuthSessionItem authSession,
+            boolean sessionHasResetPasswordEmailCodeVerified,
+            boolean emailsMatch) {
         LOG.info("Applying can reset password rules for forced password reset journey");
 
         if (!(sessionHasResetPasswordEmailCodeVerified && emailsMatch)) {
             LOG.warn("No email code verified for password reset");
             return false;
+        }
+
+        if (authSession.getHasVerifiedWithPasskey()) {
+            return true;
+        }
+
+        if (!authSession.getHasVerifiedWithPassword()) {
+            LOG.warn(
+                    "Password reset for account intervention journey not allowed: password not verified");
+            return false;
+        }
+
+        if (!Objects.equals(
+                authSession.getRequestedCredentialStrength(), CredentialTrustLevel.LOW_LEVEL)) {
+            if (!authSession.getHasVerifiedWithMfa()) {
+                LOG.info(
+                        "Password reset for account intervention journey not allowed: mfa not verified");
+                return false;
+            }
         }
 
         return true;
