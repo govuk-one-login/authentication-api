@@ -52,6 +52,8 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_CREATED_AT = "CreatedAt";
     public static final String ATTRIBUTE_RESET_PASSWORD_EMAIL_CODE_VERIFIED =
             "ResetPasswordEmailCodeVerified";
+    public static final String ATTRIBUTE_RECORDED_EMAIL_FOR_IDENTITY_VERIFICATION =
+            "RecordedEmailForIdentityVerification";
 
     public enum AccountState {
         NEW,
@@ -102,6 +104,7 @@ public class AuthSessionItem {
     private String previousSessionId;
     private String createdAt;
     private String resetPasswordEmailCodeVerified;
+    private String recordedEmailForIdentityVerification;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -603,6 +606,22 @@ public class AuthSessionItem {
     public AuthSessionItem withResetPasswordEmailCodeVerified(
             String resetPasswordEmailCodeVerified) {
         this.resetPasswordEmailCodeVerified = resetPasswordEmailCodeVerified;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RECORDED_EMAIL_FOR_IDENTITY_VERIFICATION)
+    public String getRecordedEmailForIdentityVerification() {
+        return recordedEmailForIdentityVerification;
+    }
+
+    public void setRecordedEmailForIdentityVerification(
+            String recordedEmailForIdentityVerification) {
+        this.recordedEmailForIdentityVerification = recordedEmailForIdentityVerification;
+    }
+
+    public AuthSessionItem withRecordedEmailForIdentityVerification(
+            String recordedEmailForIdentityVerification) {
+        this.recordedEmailForIdentityVerification = recordedEmailForIdentityVerification;
         return this;
     }
 
