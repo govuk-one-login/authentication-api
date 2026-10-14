@@ -1462,7 +1462,8 @@ class PermissionDecisionManagerTest {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(EMAIL)
-                                .withResetPasswordEmailCodeVerified(EMAIL);
+                                .withResetPasswordEmailCodeVerified(EMAIL)
+                                .withHasVerifiedWithPasskey(true);
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
@@ -1480,9 +1481,49 @@ class PermissionDecisionManagerTest {
                 var session =
                         new AuthSessionItem()
                                 .withEmailAddress(mainEmailOnSession)
-                                .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
+                                .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified)
+                                .withHasVerifiedWithPasskey(true);
 
                 assertFalse(
+                        permissionDecisionManager.canResetPassword(
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
+            }
+
+            private static Stream<Arguments> accountInterventionsVerifiedWithScenarios() {
+                return Stream.of(
+                        // requested trust level, hasVerifiedWithPassword, hasVerifiedWithMfa,
+                        // hasVerifiedWithPasskey, expected result
+                        Arguments.of(CredentialTrustLevel.LOW_LEVEL, true, false, false, true),
+                        Arguments.of(CredentialTrustLevel.LOW_LEVEL, false, false, true, true),
+                        Arguments.of(CredentialTrustLevel.LOW_LEVEL, false, false, false, false),
+                        Arguments.of(CredentialTrustLevel.LOW_LEVEL, false, true, false, false),
+                        Arguments.of(CredentialTrustLevel.MEDIUM_LEVEL, true, true, false, true),
+                        Arguments.of(CredentialTrustLevel.MEDIUM_LEVEL, false, false, true, true),
+                        Arguments.of(CredentialTrustLevel.MEDIUM_LEVEL, true, false, false, false),
+                        Arguments.of(null, true, true, false, true),
+                        Arguments.of(null, false, false, true, true),
+                        Arguments.of(null, true, false, false, false));
+            }
+
+            @ParameterizedTest
+            @MethodSource("accountInterventionsVerifiedWithScenarios")
+            void shouldReturnAppropriateResultDependingOnVerificationInformationAlreadyEntered(
+                    CredentialTrustLevel requestedCredentialTrustLevel,
+                    boolean hasVerifiedWithPassword,
+                    boolean hasVerifiedWithMfa,
+                    boolean hasVerifiedWithPasskey,
+                    boolean expectedResult) {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(EMAIL)
+                                .withHasVerifiedWithPassword(hasVerifiedWithPassword)
+                                .withHasVerifiedWithMfa(hasVerifiedWithMfa)
+                                .withHasVerifiedWithPasskey(hasVerifiedWithPasskey)
+                                .withRequestedCredentialStrength(requestedCredentialTrustLevel);
+
+                assertEquals(
+                        expectedResult,
                         permissionDecisionManager.canResetPassword(
                                 session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
