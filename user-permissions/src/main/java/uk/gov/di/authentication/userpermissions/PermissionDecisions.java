@@ -2,6 +2,7 @@ package uk.gov.di.authentication.userpermissions;
 
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.userpermissions.entity.Decision;
 import uk.gov.di.authentication.userpermissions.entity.DecisionError;
@@ -139,8 +140,13 @@ public interface PermissionDecisions {
      * Checks if the user can reset their password
      *
      * @param authSession The user's current session
-     * @param isCommonPasswordResetJourney Whether the request is resetting a common password
+     * @param passwordResetType The type of password reset journey being completed
+     * @param isPartiallyCreatedAccount Whether the account is partially created (has a password but
+     *     no verified MFA method), derived from the user's credentials and profile at reset time
      * @return A result containing either a Decision or a Decision Error
      */
-    boolean canResetPassword(AuthSessionItem authSession, boolean isCommonPasswordResetJourney);
+    boolean canResetPassword(
+            AuthSessionItem authSession,
+            PasswordResetType passwordResetType,
+            boolean isPartiallyCreatedAccount);
 }

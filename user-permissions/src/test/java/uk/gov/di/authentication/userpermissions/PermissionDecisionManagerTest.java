@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -1377,39 +1378,121 @@ class PermissionDecisionManagerTest {
 
     @Nested
     class CanResetPassword {
-        @Test
-        void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
-            var session =
-                    new AuthSessionItem()
-                            .withEmailAddress(EMAIL)
-                            .withResetPasswordEmailCodeVerified(EMAIL);
+        private static final List<Arguments> nonMatchingEmailArguments =
+                List.of(
+                        Arguments.of("another.email@example.com", EMAIL),
+                        Arguments.of(EMAIL, null),
+                        Arguments.of(null, EMAIL),
+                        Arguments.of(null, null));
 
-            assertTrue(permissionDecisionManager.canResetPassword(session, false));
+        @Nested
+        class NormalPasswordResetJourneys {
+            private static final PasswordResetType PASSWORD_RESET_TYPE =
+                    PasswordResetType.USER_FORGOTTEN_PASSWORD;
+            private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
+
+            @Test
+            void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(EMAIL)
+                                .withHasVerifiedWithMfa(true);
+
+                assertTrue(
+                        permissionDecisionManager.canResetPassword(
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
+            }
+
+            private static List<Arguments> nonMatchingEmails() {
+                return nonMatchingEmailArguments;
+            }
+
+            @ParameterizedTest
+            @MethodSource("nonMatchingEmails")
+            void shouldReturnFalseIfEmailOtpCodeVerifiedForDoesNotMatchEmailOnSession(
+                    String mainEmailOnSession, String resetPasswordEmailCodeVerified) {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(mainEmailOnSession)
+                                .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified)
+                                .withHasVerifiedWithMfa(true);
+
+                assertFalse(
+                        permissionDecisionManager.canResetPassword(
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
+            }
+
+            private static Stream<Arguments>
+                    verifiedWithMfaPartiallyCreatedAccountsAndExpectedResults() {
+                return Stream.of(
+                        // hasVerifiedWithMfa, isPartiallyCreatedAccount, expectedResult
+                        Arguments.of(true, false, true),
+                        Arguments.of(false, true, true),
+                        Arguments.of(false, false, false));
+            }
+
+            @ParameterizedTest
+            @MethodSource("verifiedWithMfaPartiallyCreatedAccountsAndExpectedResults")
+            void shouldTakeIntoAccountWhetherAUserHasVerifiedWithMfa(
+                    boolean hasVerifiedWithMfa,
+                    boolean isPartiallyCreatedAccount,
+                    boolean expectedResult) {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(EMAIL)
+                                .withHasVerifiedWithMfa(hasVerifiedWithMfa);
+
+                assertEquals(
+                        expectedResult,
+                        permissionDecisionManager.canResetPassword(
+                                session, PASSWORD_RESET_TYPE, isPartiallyCreatedAccount));
+            }
         }
 
-        private static Stream<Arguments> nonMatchingEmails() {
-            return Stream.of(
-                    Arguments.of("another.email@example.com", EMAIL),
-                    Arguments.of(EMAIL, null),
-                    Arguments.of(null, EMAIL),
-                    Arguments.of(null, null));
-        }
+        @Nested
+        class ForcedPasswordResetJourneys {
+            private static final PasswordResetType PASSWORD_RESET_TYPE =
+                    PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET;
+            private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
 
-        @ParameterizedTest
-        @MethodSource("nonMatchingEmails")
-        void shouldReturnFalseIfEmailOtpCodeVerifiedForDoesNotMatchEmailOnSession(
-                String mainEmailOnSession, String resetPasswordEmailCodeVerified) {
-            var session =
-                    new AuthSessionItem()
-                            .withEmailAddress(mainEmailOnSession)
-                            .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
+            @Test
+            void shouldReturnTrueIfEmailOtpCodeVerifiedForMatchesEmailOnSession() {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(EMAIL)
+                                .withResetPasswordEmailCodeVerified(EMAIL);
 
-            assertFalse(permissionDecisionManager.canResetPassword(session, false));
+                assertTrue(
+                        permissionDecisionManager.canResetPassword(
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
+            }
+
+            private static List<Arguments> nonMatchingEmails() {
+                return nonMatchingEmailArguments;
+            }
+
+            @ParameterizedTest
+            @MethodSource("nonMatchingEmails")
+            void shouldReturnFalseIfEmailOtpCodeVerifiedForDoesNotMatchEmailOnSession(
+                    String mainEmailOnSession, String resetPasswordEmailCodeVerified) {
+                var session =
+                        new AuthSessionItem()
+                                .withEmailAddress(mainEmailOnSession)
+                                .withResetPasswordEmailCodeVerified(resetPasswordEmailCodeVerified);
+
+                assertFalse(
+                        permissionDecisionManager.canResetPassword(
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
+            }
         }
 
         @Nested
         class CommonPasswordJourneys {
-            private static final boolean IS_COMMON_PASSWORD_RESET_JOURNEY = true;
+            private static final PasswordResetType PASSWORD_RESET_TYPE =
+                    PasswordResetType.FORCED_WEAK_PASSWORD;
+            private static final boolean IS_PARTIALLY_CREATED_ACCOUNT = false;
 
             private static Stream<Arguments>
                     hasVerifiedWithAndCredentialTrustLevelCombinationsToExpectedResult() {
@@ -1443,7 +1526,7 @@ class PermissionDecisionManagerTest {
                 assertEquals(
                         expectedResult,
                         permissionDecisionManager.canResetPassword(
-                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1457,7 +1540,7 @@ class PermissionDecisionManagerTest {
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
-                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1471,7 +1554,7 @@ class PermissionDecisionManagerTest {
 
                 assertTrue(
                         permissionDecisionManager.canResetPassword(
-                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
 
             @Test
@@ -1485,7 +1568,7 @@ class PermissionDecisionManagerTest {
 
                 assertFalse(
                         permissionDecisionManager.canResetPassword(
-                                session, IS_COMMON_PASSWORD_RESET_JOURNEY));
+                                session, PASSWORD_RESET_TYPE, IS_PARTIALLY_CREATED_ACCOUNT));
             }
         }
     }

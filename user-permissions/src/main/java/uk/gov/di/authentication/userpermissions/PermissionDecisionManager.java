@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.exceptions.CodeRequestTypeNotFoundException;
@@ -457,7 +458,9 @@ public class PermissionDecisionManager implements PermissionDecisions {
 
     @Override
     public boolean canResetPassword(
-            AuthSessionItem authSession, boolean isCommonPasswordResetJourney) {
+            AuthSessionItem authSession,
+            PasswordResetType passwordResetType,
+            boolean isPartiallyCreatedAccount) {
         var sessionHasResetPasswordEmailCodeVerified =
                 Objects.nonNull(authSession.getResetPasswordEmailCodeVerified());
         var emailsMatch =
@@ -469,28 +472,78 @@ public class PermissionDecisionManager implements PermissionDecisions {
                 sessionHasResetPasswordEmailCodeVerified,
                 emailsMatch);
 
-        if (isCommonPasswordResetJourney) {
-            LOG.info("Applying can reset password rules for common password reset journey");
-            if (sessionHasResetPasswordEmailCodeVerified && !emailsMatch) {
-                LOG.warn("Common password journey had non matching email address");
-                return false;
-            }
-            if (!authSession.getHasVerifiedWithPassword()) {
-                LOG.warn("Common password journey has not verified with existing password");
-                return false;
-            }
-            if (!Objects.equals(
-                            CredentialTrustLevel.LOW_LEVEL,
-                            authSession.getRequestedCredentialStrength())
-                    && !authSession.getHasVerifiedWithMfa()) {
-                LOG.warn("Common password journey has not verified with mfa");
-                return false;
-            }
-            return true;
+        return switch (passwordResetType) {
+            case FORCED_WEAK_PASSWORD -> canResetPasswordInCommonPasswordJourney(
+                    authSession, sessionHasResetPasswordEmailCodeVerified, emailsMatch);
+            case FORCED_INTERVENTION_PASSWORD_RESET -> canResetPasswordInForcedPasswordResetJourney(
+                    sessionHasResetPasswordEmailCodeVerified, emailsMatch);
+            case USER_FORGOTTEN_PASSWORD -> canResetPasswordInVoluntaryPasswordResetJourney(
+                    authSession,
+                    sessionHasResetPasswordEmailCodeVerified,
+                    emailsMatch,
+                    isPartiallyCreatedAccount);
+        };
+    }
+
+    private boolean canResetPasswordInVoluntaryPasswordResetJourney(
+            AuthSessionItem authSession,
+            boolean sessionHasResetPasswordEmailCodeVerified,
+            boolean emailsMatch,
+            boolean isPartiallyCreatedAccount) {
+        LOG.info(
+                "Applying can reset password rules for voluntary password reset journey with isPartiallyCreatedAccount {}",
+                isPartiallyCreatedAccount);
+
+        if (!(sessionHasResetPasswordEmailCodeVerified && emailsMatch)) {
+            LOG.warn("No email code verified for password reset");
+            return false;
         }
 
-        LOG.info("Applying can reset password rules for non common password reset journey");
-        return sessionHasResetPasswordEmailCodeVerified && emailsMatch;
+        if (isPartiallyCreatedAccount) {
+            LOG.info("Applying can reset password rules for partially created account");
+            return true;
+        } else {
+            var hasVerifiedWithMfa = authSession.getHasVerifiedWithMfa();
+            if (!hasVerifiedWithMfa) {
+                LOG.warn("Normal password reset journey has not verified with mfa");
+            }
+            return hasVerifiedWithMfa;
+        }
+    }
+
+    private boolean canResetPasswordInForcedPasswordResetJourney(
+            boolean sessionHasResetPasswordEmailCodeVerified, boolean emailsMatch) {
+        LOG.info("Applying can reset password rules for forced password reset journey");
+
+        if (!(sessionHasResetPasswordEmailCodeVerified && emailsMatch)) {
+            LOG.warn("No email code verified for password reset");
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean canResetPasswordInCommonPasswordJourney(
+            AuthSessionItem authSession,
+            boolean sessionHasResetPasswordEmailCodeVerified,
+            boolean emailsMatch) {
+        LOG.info("Applying can reset password rules for common password reset journey");
+        if (sessionHasResetPasswordEmailCodeVerified && !emailsMatch) {
+            LOG.warn("Common password journey had non matching email address");
+            return false;
+        }
+        if (!authSession.getHasVerifiedWithPassword()) {
+            LOG.warn("Common password journey has not verified with existing password");
+            return false;
+        }
+        if (!Objects.equals(
+                        CredentialTrustLevel.LOW_LEVEL,
+                        authSession.getRequestedCredentialStrength())
+                && !authSession.getHasVerifiedWithMfa()) {
+            LOG.warn("Common password journey has not verified with mfa");
+            return false;
+        }
+        return true;
     }
 
     private AuthenticationAttemptsService getAuthenticationAttemptsService() {

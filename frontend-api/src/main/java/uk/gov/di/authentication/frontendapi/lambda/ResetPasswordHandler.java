@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -50,6 +51,7 @@ import java.util.Optional;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_ACCOUNT_RECOVERY_BLOCK_ADDED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_PASSWORD_RESET_INTERVENTION_COMPLETE;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
@@ -158,14 +160,38 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         LOG.info("ResetPasswordHandler called");
 
         LOG.info(
-                "Called with is common password reset journey {}",
-                request.isCommonPasswordResetJourney());
+                "Called with is common password reset journey {} and forced password reset {}",
+                request.isCommonPasswordResetJourney(),
+                request.isForcedPasswordReset());
+
+        var email = userContext.getAuthSession().getEmailAddress();
+
+        var userProfileMaybe = authenticationService.getUserProfileByEmailMaybe(email);
+        var userCredentialsMaybe =
+                Optional.ofNullable(authenticationService.getUserCredentialsFromEmail(email));
+
+        if (userProfileMaybe.isEmpty() || userCredentialsMaybe.isEmpty()) {
+            LOG.warn("No user profile or user credentials found for session email");
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
+        }
+
+        var userProfile = userProfileMaybe.get();
+        var userCredentials = userCredentialsMaybe.get();
+
+        var isPartiallyCreatedAccount =
+                !getUserMFADetail(userCredentials, userProfile).mfaMethodVerified();
+        LOG.info("Derived isPartiallyCreatedAccount {}", isPartiallyCreatedAccount);
+
+        var passwordResetType = resolvePasswordResetType(request);
 
         if (!permissionDecisionManager.canResetPassword(
-                userContext.getAuthSession(), request.isCommonPasswordResetJourney())) {
+                userContext.getAuthSession(), passwordResetType, isPartiallyCreatedAccount)) {
             LOG.warn("Not permitted to reset password");
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.PASSWORD_RESET_NOT_PERMITTED);
+        } else {
+            LOG.info("Permitted to reset password");
         }
 
         Optional<ErrorResponse> passwordValidationError =
@@ -175,9 +201,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.info("Error message: {}", passwordValidationError.get().getMessage());
             return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
         }
-        var userCredentials =
-                authenticationService.getUserCredentialsFromEmail(
-                        userContext.getAuthSession().getEmailAddress());
 
         if (Objects.nonNull(userCredentials.getPassword())) {
             if (verifyPassword(userCredentials.getPassword(), request.password())) {
@@ -187,9 +210,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.info("Resetting password for migrated user");
         }
         authenticationService.updatePassword(userCredentials.getEmail(), request.password());
-        var userProfile =
-                authenticationService.getUserProfileByEmail(
-                        userContext.getAuthSession().getEmailAddress());
 
         authSessionService.updateSession(
                 userContext
@@ -268,6 +288,16 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
         LOG.info("Generating successful response");
         return generateEmptySuccessApiGatewayResponse();
+    }
+
+    private PasswordResetType resolvePasswordResetType(ResetPasswordCompletionRequest request) {
+        if (request.isCommonPasswordResetJourney()) {
+            return PasswordResetType.FORCED_WEAK_PASSWORD;
+        }
+        if (request.isForcedPasswordReset()) {
+            return PasswordResetType.FORCED_INTERVENTION_PASSWORD_RESET;
+        }
+        return PasswordResetType.USER_FORGOTTEN_PASSWORD;
     }
 
     private String serialiseRequest(NotifyRequest request) {
