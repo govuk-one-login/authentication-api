@@ -323,6 +323,15 @@ public class UserActionsManager implements UserActions {
     }
 
     @Override
+    public Result<TrackingError, Void> recordedEmailForIdentityVerification(
+            PermissionContext permissionContext, String email) {
+        var updatedSession =
+                permissionContext.authSessionItem().withRecordedEmailForIdentityVerification(email);
+        getAuthSessionService().updateSession(updatedSession);
+        return Result.emptySuccess();
+    }
+
+    @Override
     public Result<TrackingError, Void> incorrectEmailOtpEnteredForPasswordReset(
             PermissionContext permissionContext) {
         var updatedSession =

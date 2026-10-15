@@ -620,6 +620,26 @@ class UserActionsManagerTest {
     }
 
     @Nested
+    class EmailUsedForIdentityVerification {
+        @Test
+        void shouldSetEmailUsedForIdentityVerification() {
+            // Arrange
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result =
+                    userActionsManager.recordedEmailForIdentityVerification(
+                            permissionContext, EMAIL);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertEquals(EMAIL, capturedSession.getRecordedEmailForIdentityVerification());
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Nested
     class IncorrectEmailOtpEnteredForPasswordReset {
         @Test
         void shouldSetResetPasswordEmailCodeVerifiedToNull() {
