@@ -242,6 +242,12 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getInactiveAccountDeletionMinDurationPerMessageMsShouldDefault() {
+        assertEquals(
+                3000, configurationService.getInactiveAccountDeletionMinDurationPerMessageMs());
+    }
+
+    @Test
     void getInactiveAccountExportMaxInvocationsShouldDefault() {
         assertEquals(0, configurationService.getInactiveAccountExportMaxInvocations());
     }
