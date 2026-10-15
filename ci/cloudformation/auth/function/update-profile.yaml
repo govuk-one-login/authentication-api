@@ -65,7 +65,7 @@ Resources:
         EnforceLambdaDeploymentOrder:
           !If [
             EnforceLambdaDeploymentOrder,
-            !Ref ResetPasswordFunctionAliasactive,
+            !Ref MfaResetJarJwkFunctionAliasactive,
             "",
           ]
 
