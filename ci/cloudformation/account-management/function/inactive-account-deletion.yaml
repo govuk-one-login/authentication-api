@@ -80,6 +80,13 @@ Resources:
                 !Ref Environment,
                 iadCircuitBreakerTableArn,
               ]
+          INACTIVE_ACCOUNT_DELETION_MIN_DURATION_PER_MESSAGE_MS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountDeletionMinDurationPerMessageMs,
+              DefaultValue: 3000,
+            ]
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
       Policies:
