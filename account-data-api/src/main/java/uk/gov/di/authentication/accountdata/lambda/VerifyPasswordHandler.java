@@ -10,11 +10,14 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.password.VerifyPasswordRequest;
 import uk.gov.di.authentication.accountdata.entity.password.VerifyPasswordResponse;
 import uk.gov.di.authentication.accountdata.entity.password.failurereasons.VerifyPasswordFailureReason;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import static uk.gov.di.authentication.accountdata.helpers.ScopeAuthorizerHelper.isScopeAuthorized;
+import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -49,6 +52,8 @@ public class VerifyPasswordHandler
                                             400, ErrorResponse.INVALID_REQUEST_BODY);
                                     case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.MISSING_SUBJECT_ID);
+                                    case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
+                                            403, ErrorResponse.UNAUTHORIZED_REQUEST);
                                     case FAILED_TO_SERIALIZE_RESPONSE -> generateApiGatewayProxyErrorResponse(
                                             500, ErrorResponse.INTERNAL_SERVER_ERROR);
                                 },
@@ -69,6 +74,14 @@ public class VerifyPasswordHandler
         if (publicSubjectId == null || publicSubjectId.isEmpty()) {
             LOG.error("Request does not include public subject id");
             return Result.failure(VerifyPasswordFailureReason.MISSING_SUBJECT_ID);
+        }
+
+        if (!isSubjectIdAuthorized(publicSubjectId, input.getRequestContext())) {
+            return Result.failure(VerifyPasswordFailureReason.UNAUTHORIZED_REQUEST);
+        }
+
+        if (!isScopeAuthorized(AccountDataScope.ACCOUNT_DELETE, input.getRequestContext())) {
+            return Result.failure(VerifyPasswordFailureReason.UNAUTHORIZED_REQUEST);
         }
 
         return Result.success(new VerifyPasswordContext(publicSubjectId, verifyPasswordRequest));
