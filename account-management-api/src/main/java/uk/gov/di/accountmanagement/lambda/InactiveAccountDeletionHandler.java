@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.InactiveAccountFailsafeCheckHelper;
+import uk.gov.di.authentication.shared.helpers.LambdaPauseHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
@@ -112,6 +113,9 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
 
         LOG.info("Processing inactive account deletion batch, size: {}", event.getRecords().size());
 
+        int processedCount = 0;
+        long processedWorkNanos = 0L;
+
         for (SQSMessage msg : event.getRecords()) {
             try {
                 LOG.info("Picked up SQS message with ID: {}", msg.getMessageId());
@@ -119,7 +123,13 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                     failRemainingMessages(event, msg, failures);
                     break;
                 }
-                processAccountDeletion(msg);
+                long startNanos = System.nanoTime();
+                try {
+                    processAccountDeletion(msg);
+                } finally {
+                    processedCount++;
+                    processedWorkNanos += System.nanoTime() - startNanos;
+                }
             } catch (RecentlyActiveAccountException e) {
                 LOG.warn(
                         "Adding SQS message with ID: {} to failures due to recent account activity. {}",
@@ -135,11 +145,35 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
             }
         }
 
+        applyMinDurationThrottle(processedCount, processedWorkNanos);
+
         LOG.info(
                 "Completed batch processing. Failures: {}/{}",
                 failures.size(),
                 event.getRecords().size());
         return new SQSBatchResponse(failures);
+    }
+
+    private void applyMinDurationThrottle(int processedCount, long processedWorkNanos) {
+        long minDurationMs =
+                configurationService.getInactiveAccountDeletionMinDurationPerMessageMs();
+        long targetMs = (long) processedCount * minDurationMs;
+        long elapsedMs = processedWorkNanos / 1_000_000;
+        long sleepMs = calculatePauseMs(processedCount, processedWorkNanos, minDurationMs);
+        LOG.info(
+                "Applying min-duration throttle. Processed messages: {}, min duration per message: {} ms, target: {} ms, elapsed: {} ms, sleeping: {} ms",
+                processedCount,
+                minDurationMs,
+                targetMs,
+                elapsedMs,
+                sleepMs);
+        LambdaPauseHelper.pauseBetweenInvocations(sleepMs);
+    }
+
+    static long calculatePauseMs(int processedCount, long processedWorkNanos, long minDurationMs) {
+        long targetMs = (long) processedCount * minDurationMs;
+        long elapsedMs = processedWorkNanos / 1_000_000;
+        return Math.max(0, targetMs - elapsedMs);
     }
 
     private void processAccountDeletion(SQSMessage msg) throws JsonException {

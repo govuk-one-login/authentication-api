@@ -314,6 +314,7 @@ Mappings:
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: rjlo8fsb55
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/e5a9a634-e113-44c4-8bef-388fb71041a0
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
@@ -356,6 +357,7 @@ Mappings:
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: ez2ro7vca7
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/73405f5d-b60a-4b17-881c-b0f3e26ef03d
       manualAccountDeletionClientId: manual-account-deletion
       accountDeletionDataApiEnabled: true
@@ -398,6 +400,7 @@ Mappings:
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 5ctgxqnq37
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/20e15b84-6196-4b0a-8f27-632f4b858bd1
       manualAccountDeletionClientId: manual-account-deletion
       accountDeletionDataApiEnabled: true
@@ -447,6 +450,7 @@ Mappings:
       accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 0aqzty84lj
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/c0bc7d31-32f4-4f98-addd-170187956d8d
       manualAccountDeletionClientId: manual-account-deletion
       accountDeletionDataApiEnabled: true
@@ -498,6 +502,7 @@ Mappings:
       accessTokenJwksUrl: https://oidc.build.account.gov.uk/.well-known/jwks.json
       accountDataApiId: ac3znt5m23
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:058264536367:key/9a0c6ef7-ce45-42fe-b55e-48b09f9ff53e
       manualAccountDeletionClientId: manual-account-deletion
       accountDeletionDataApiEnabled: false
@@ -548,6 +553,7 @@ Mappings:
       accessTokenJwksUrl: https://oidc.staging.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 7xgl7lexy4
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionMinDurationPerMessageMs: 3000
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:539729775994:account-mgmt-backend-AccountDeletionQueue-78ywESZuToOZ
       inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:539729775994:key/12bd1a88-0ddd-4957-9335-c99febdc0cf1
       iadCircuitBreakerTableArn: arn:aws:dynamodb:eu-west-2:539729775994:table/inactive_account_circuit_breaker
@@ -603,6 +609,7 @@ Mappings:
       accessTokenJwksUrl: https://oidc.integration.account.gov.uk/.well-known/jwks.json
       accountDataApiId: hoidt6wujb
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionMinDurationPerMessageMs: 3000
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:666500506359:account-mgmt-backend-AccountDeletionQueue-xmOv6h9q3FZR
       inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:666500506359:key/c7ad515e-5298-46f9-8964-0902eb89a156
       iadCircuitBreakerTableArn: arn:aws:dynamodb:eu-west-2:666500506359:table/inactive_account_circuit_breaker
@@ -658,6 +665,7 @@ Mappings:
       accessTokenJwksUrl: https://oidc.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 0218o1p9tj
       inactiveAccountDeletionClientId: inactive-account-deletion
+      inactiveAccountDeletionMinDurationPerMessageMs: 3000
       inactiveAccountDeletionQueueArn: arn:aws:sqs:eu-west-2:026991849909:account-mgmt-backend-AccountDeletionQueue-aYZntrp3UhPl
       inactiveAccountDeletionQueueKmsKeyArn: arn:aws:kms:eu-west-2:026991849909:key/3ee752ee-1ac2-4926-8d5b-a57861da60fc
       iadCircuitBreakerTableArn: arn:aws:dynamodb:eu-west-2:026991849909:table/inactive_account_circuit_breaker

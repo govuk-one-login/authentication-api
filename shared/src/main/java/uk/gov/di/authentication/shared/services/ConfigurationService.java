@@ -261,6 +261,13 @@ public class ConfigurationService
         return System.getenv().getOrDefault("INACTIVE_ACCOUNT_EXPORT_TABLE_NAME", "");
     }
 
+    public long getInactiveAccountDeletionMinDurationPerMessageMs() {
+        return Long.parseLong(
+                System.getenv()
+                        .getOrDefault(
+                                "INACTIVE_ACCOUNT_DELETION_MIN_DURATION_PER_MESSAGE_MS", "3000"));
+    }
+
     public String getIADCircuitBreakerTableName() {
         return System.getenv("IAD_CIRCUIT_BREAKER_TABLE_NAME");
     }

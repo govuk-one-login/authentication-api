@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.IADCircuitBreakerService;
@@ -22,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.LambdaPauseHelper;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -40,6 +43,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -691,6 +695,153 @@ class InactiveAccountDeletionHandlerTest {
             verify(accountDeletionService).deleteAccountViaDataApi(eq("sub-2"), any());
             verify(accountDeletionService, never()).deleteAccountViaDataApi(eq("sub-3"), any());
             verify(accountDeletionService, never()).deleteAccountViaDataApi(eq("sub-4"), any());
+        }
+    }
+
+    @Nested
+    class MinDurationThrottleTest {
+
+        private static final long LARGE_MIN_DURATION_MS = 10_000L;
+        private static final long WORK_ALLOWANCE_MS = 5_000L;
+
+        @Test
+        void calculatePauseMsReturnsZeroWhenNoMessagesProcessed() {
+            assertEquals(0, InactiveAccountDeletionHandler.calculatePauseMs(0, 0L, 3000L));
+        }
+
+        @Test
+        void calculatePauseMsReturnsFullTargetWhenNoWorkElapsed() {
+            assertEquals(9000, InactiveAccountDeletionHandler.calculatePauseMs(3, 0L, 3000L));
+        }
+
+        @Test
+        void calculatePauseMsSubtractsElapsedWorkFromTarget() {
+            // 3 messages * 3000ms = 9000ms target, minus 1000ms (1_000_000_000ns) elapsed.
+            assertEquals(
+                    8000,
+                    InactiveAccountDeletionHandler.calculatePauseMs(3, 1_000_000_000L, 3000L));
+        }
+
+        @Test
+        void calculatePauseMsNeverReturnsNegativeWhenWorkExceedsTarget() {
+            // 2 messages * 3000ms = 6000ms target, minus 10000ms (10_000_000_000ns) elapsed.
+            assertEquals(
+                    0, InactiveAccountDeletionHandler.calculatePauseMs(2, 10_000_000_000L, 3000L));
+        }
+
+        @Test
+        void shouldNotPauseWhenMinDurationIsZero() {
+            when(configurationService.getInactiveAccountDeletionMinDurationPerMessageMs())
+                    .thenReturn(0L);
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            try (MockedStatic<LambdaPauseHelper> pauseHelper =
+                    Mockito.mockStatic(LambdaPauseHelper.class)) {
+                handler.handleRequest(event, context);
+
+                pauseHelper.verify(() -> LambdaPauseHelper.pauseBetweenInvocations(0L));
+            }
+        }
+
+        @Test
+        void shouldCountEverySuccessfulSkippedAndFailedMessageTowardsBudget() {
+            when(configurationService.getInactiveAccountDeletionMinDurationPerMessageMs())
+                    .thenReturn(LARGE_MIN_DURATION_MS);
+
+            // msg-1: successful deletion
+            var successMessage = createSQSMessage("msg-1", "{\"publicSubjectId\": \"sub-1\"}");
+            when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-1"))
+                    .thenReturn(Optional.of(inactiveUserProfile("sub-1", "sub1@example.com")));
+
+            // msg-2: empty-profile skip (early exit, no deletion)
+            var skipMessage = createSQSMessage("msg-2", "{\"publicSubjectId\": \"sub-2\"}");
+            when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-2"))
+                    .thenReturn(Optional.empty());
+
+            // msg-3: deletion throws
+            var failMessage = createSQSMessage("msg-3", "{\"publicSubjectId\": \"sub-3\"}");
+            when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-3"))
+                    .thenReturn(Optional.of(inactiveUserProfile("sub-3", "sub3@example.com")));
+            doThrow(new RuntimeException("5xx"))
+                    .when(accountDeletionService)
+                    .deleteAccountViaDataApi(eq("sub-3"), any());
+
+            var event = new SQSEvent();
+            event.setRecords(List.of(successMessage, skipMessage, failMessage));
+
+            try (MockedStatic<LambdaPauseHelper> pauseHelper =
+                    Mockito.mockStatic(LambdaPauseHelper.class)) {
+                handler.handleRequest(event, context);
+
+                var sleepCaptor = ArgumentCaptor.forClass(Long.class);
+                pauseHelper.verify(
+                        () -> LambdaPauseHelper.pauseBetweenInvocations(sleepCaptor.capture()));
+                long sleepMs = sleepCaptor.getValue();
+
+                assertTrue(
+                        sleepMs > (3 * LARGE_MIN_DURATION_MS) - WORK_ALLOWANCE_MS,
+                        "Expected all 3 messages counted, but sleep was " + sleepMs);
+                assertTrue(
+                        sleepMs <= 3 * LARGE_MIN_DURATION_MS,
+                        "Sleep must not exceed target, but was " + sleepMs);
+            }
+        }
+
+        @Test
+        void shouldNotCountCircuitBreakerAbortedMessagesTowardsBudget() {
+            when(configurationService.getInactiveAccountDeletionMinDurationPerMessageMs())
+                    .thenReturn(LARGE_MIN_DURATION_MS);
+            // CB not tripped for first two messages, then tripped before the third.
+            when(iadCircuitBreakerService.isCircuitBreakerTripped())
+                    .thenReturn(false)
+                    .thenReturn(false)
+                    .thenReturn(true);
+            when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-1"))
+                    .thenReturn(Optional.of(inactiveUserProfile("sub-1", "sub1@example.com")));
+            when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-2"))
+                    .thenReturn(Optional.of(inactiveUserProfile("sub-2", "sub2@example.com")));
+
+            var msg1 = createSQSMessage("msg-1", "{\"publicSubjectId\": \"sub-1\"}");
+            var msg2 = createSQSMessage("msg-2", "{\"publicSubjectId\": \"sub-2\"}");
+            var msg3 = createSQSMessage("msg-3", "{\"publicSubjectId\": \"sub-3\"}");
+            var msg4 = createSQSMessage("msg-4", "{\"publicSubjectId\": \"sub-4\"}");
+            var event = new SQSEvent();
+            event.setRecords(List.of(msg1, msg2, msg3, msg4));
+
+            try (MockedStatic<LambdaPauseHelper> pauseHelper =
+                    Mockito.mockStatic(LambdaPauseHelper.class)) {
+                handler.handleRequest(event, context);
+
+                var sleepCaptor = ArgumentCaptor.forClass(Long.class);
+                pauseHelper.verify(
+                        () -> LambdaPauseHelper.pauseBetweenInvocations(sleepCaptor.capture()));
+                long sleepMs = sleepCaptor.getValue();
+                // Only msg-1 and msg-2 entered processAccountDeletion: target = 2 * 10000ms.
+                assertTrue(
+                        sleepMs > (2 * LARGE_MIN_DURATION_MS) - WORK_ALLOWANCE_MS,
+                        "Expected 2 messages counted, but sleep was " + sleepMs);
+                assertTrue(
+                        sleepMs <= 2 * LARGE_MIN_DURATION_MS,
+                        "Sleep must not exceed 2-message target, but was " + sleepMs);
+            }
+        }
+
+        @Test
+        void shouldNotPauseWhenCircuitBreakerTrippedForWholeBatch() {
+            when(configurationService.getInactiveAccountDeletionMinDurationPerMessageMs())
+                    .thenReturn(LARGE_MIN_DURATION_MS);
+            when(iadCircuitBreakerService.isCircuitBreakerTripped()).thenReturn(true);
+            var event =
+                    createSQSEventWithBody("{\"publicSubjectId\": \"" + PUBLIC_SUBJECT_ID + "\"}");
+
+            try (MockedStatic<LambdaPauseHelper> pauseHelper =
+                    Mockito.mockStatic(LambdaPauseHelper.class)) {
+                handler.handleRequest(event, context);
+
+                // No messages entered processAccountDeletion, so target is 0.
+                pauseHelper.verify(() -> LambdaPauseHelper.pauseBetweenInvocations(0L));
+            }
         }
     }
 
