@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.accountdata.entity.password.failurereasons;
 
 public enum VerifyPasswordFailureReason {
+    INVALID_REQUEST_BODY("invalid_request_body"),
+    MISSING_SUBJECT_ID("missing_subject_id"),
     FAILED_TO_SERIALIZE_RESPONSE("failed_to_serialize_response");
 
     private final String value;
