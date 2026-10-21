@@ -5,7 +5,7 @@ public record PasskeyDetail(
         Long passkeyCounter,
         Boolean passkeyCredentialBackedUp,
         String passkeyCredentialDeviceType,
-        boolean passkeyUserVerified,
+        Boolean passkeyUserVerified,
         String passkeyVerificationFailureReason,
         String passkeyAaguid) {
 
