@@ -6,7 +6,9 @@ public record PasskeyDetail(
         Boolean passkeyCredentialBackedUp,
         String passkeyCredentialDeviceType,
         boolean passkeyUserVerified,
-        String passkeyVerificationFailureReason) {
+        String passkeyVerificationFailureReason,
+        String passkeyAaguid) {
+
     public static PasskeyDetail verificationFailed(
             String userVerification,
             Long passkeyCounter,
@@ -20,12 +22,14 @@ public record PasskeyDetail(
                 passkeyCredentialBackedUp,
                 passkeyCredentialDeviceType,
                 userVerified,
-                verificationFailureReason);
+                verificationFailureReason,
+                null);
     }
 
     public static PasskeyDetail verificationCouldNotProceed(String verificationFailureReason) {
         var userVerified = false;
-        return new PasskeyDetail(null, null, null, null, userVerified, verificationFailureReason);
+        return new PasskeyDetail(
+                null, null, null, null, userVerified, verificationFailureReason, null);
     }
 
     public static PasskeyDetail verificationSuccessful(
@@ -40,6 +44,7 @@ public record PasskeyDetail(
                 passkeyCredentialBackedUp,
                 passkeyCredentialDeviceType,
                 userVerified,
+                null,
                 null);
     }
 }
