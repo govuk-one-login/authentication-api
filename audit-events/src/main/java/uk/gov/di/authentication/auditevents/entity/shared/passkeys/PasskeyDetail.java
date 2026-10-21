@@ -26,10 +26,17 @@ public record PasskeyDetail(
                 null);
     }
 
-    public static PasskeyDetail verificationCouldNotProceed(String verificationFailureReason) {
-        var userVerified = false;
+    public static PasskeyDetail verificationCouldNotProceed(
+            String passkeyVerificationFailureReason) {
+        var passkeyUserVerified = false;
         return new PasskeyDetail(
-                null, null, null, null, userVerified, verificationFailureReason, null);
+                null,
+                null,
+                null,
+                null,
+                passkeyUserVerified,
+                passkeyVerificationFailureReason,
+                null);
     }
 
     public static PasskeyDetail verificationSuccessful(
