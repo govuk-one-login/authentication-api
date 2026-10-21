@@ -3,8 +3,8 @@ package uk.gov.di.authentication.auditevents.entity;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformation;
-import uk.gov.di.authentication.auditevents.entity.shared.PasskeyInformation;
 import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithPasskeyCount;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.RestrictedPasskeySection;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -33,8 +33,8 @@ public record AuthPasskeyDeleteSuccessful(
         var restricted =
                 new Restricted(
                         EncodedDeviceInformation.from(auditContext),
-                        new PasskeyInformation(
-                                deletedCredentialId, deletedAaguid, deletedCredentialDeviceType));
+                        new RestrictedPasskeySection(
+                               null, deletedCredentialId));
         var extensions = new Extensions(JourneyType.ACCOUNT_MANAGEMENT.getValue());
         return new AuthPasskeyDeleteSuccessful(
                 "AUTH_PASSKEY_DELETE_SUCCESSFUL",
@@ -48,7 +48,7 @@ public record AuthPasskeyDeleteSuccessful(
     }
 
     public record Restricted(
-            EncodedDeviceInformation deviceInformation, PasskeyInformation passkey) {}
+            EncodedDeviceInformation deviceInformation, RestrictedPasskeySection passkey) {}
 
     public record Extensions(@SerializedName("journey-type") String journeyType) {}
 }

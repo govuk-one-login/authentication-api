@@ -61,9 +61,7 @@ class AuthPasskeyDeleteSuccessfulTest {
                       "encoded": "encoded-device-info"
                     },
                     "passkey": {
-                      "passkey_credential_id": "credential-id",
-                      "passkey_aaguid": "test-aaguid",
-                      "passkey_credential_device_type": "multi-device"
+                      "passkey_credential_id": "credential-id"
                     }
                   },
                   "extensions": {

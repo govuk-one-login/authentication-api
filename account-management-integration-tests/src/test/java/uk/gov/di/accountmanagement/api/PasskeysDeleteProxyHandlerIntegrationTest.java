@@ -145,9 +145,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         format(
                                 """
                         {
-                          "passkey_credential_id": "%s",
-                          "passkey_aaguid": "some-aaguid",
-                          "passkey_credential_device_type": "multi-device"
+                          "passkey_credential_id": "%s"
                         }
                         """,
                                 PASSKEY_ID));
