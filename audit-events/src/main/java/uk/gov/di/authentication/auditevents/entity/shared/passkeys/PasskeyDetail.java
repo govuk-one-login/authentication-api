@@ -40,17 +40,17 @@ public record PasskeyDetail(
     }
 
     public static PasskeyDetail verificationSuccessful(
-            String userVerification,
+            String passkeyRequestUserVerification,
             long passkeyCounter,
             boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType) {
-        var userVerified = true;
+        var passkeyUserVerified = true;
         return new PasskeyDetail(
-                new PasskeyAuthenticationRequest(userVerification),
+                new PasskeyAuthenticationRequest(passkeyRequestUserVerification),
                 passkeyCounter,
                 passkeyCredentialBackedUp,
                 passkeyCredentialDeviceType,
-                userVerified,
+                passkeyUserVerified,
                 null,
                 null);
     }
