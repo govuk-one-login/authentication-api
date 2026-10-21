@@ -30,7 +30,7 @@ public record AuthPasskeyDeleteSuccessful(
             Clock clock) {
         Instant now = clock.instant();
         var user = UserWithPasskeyCount.from(auditContext, passkeyCount);
-        var restrictedSection =
+        var restricted =
                 new Restricted(
                         EncodedDeviceInformation.from(auditContext),
                         new PasskeyInformation(
@@ -43,7 +43,7 @@ public record AuthPasskeyDeleteSuccessful(
                 auditContext.clientId(),
                 ComponentId.HOME.getValue(),
                 user,
-                restrictedSection,
+                restricted,
                 extensions);
     }
 
