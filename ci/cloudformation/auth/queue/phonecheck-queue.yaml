@@ -198,7 +198,7 @@ Resources:
       AlarmName: !Sub
         - ${Env}-pending-phone-check-old-message-alarm
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      AlarmDescription: !Sub "A message over 10 minutes old exists which indicates they may not be processed quickly enough or are stuck (pending-phone-check-old-message-alarm in account ${AWS::AccountId}). Runbook: https://govukverify.atlassian.net/wiki/x/OChukQE"
+      AlarmDescription: !Sub "A message over 30 minutes old exists which indicates they may not be processed quickly enough or are stuck (pending-phone-check-old-message-alarm in account ${AWS::AccountId}). Runbook: https://govukverify.atlassian.net/wiki/x/OChukQE"
       Namespace: AWS/SQS
       Dimensions:
         - Name: QueueName
@@ -206,9 +206,9 @@ Resources:
       MetricName: ApproximateAgeOfOldestMessage
       ComparisonOperator: GreaterThanThreshold
       Statistic: Maximum
-      Period: 60
-      EvaluationPeriods: 1
-      Threshold: 600
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 1800
       AlarmActions: !If
         - UseAlarmActions
         - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
