@@ -149,6 +149,15 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         }
                         """,
                                 PASSKEY_ID));
+        assertThatJson(rawEvents.get(0))
+                .node("extensions.passkey")
+                .isEqualTo(
+                        """
+                    {
+                      "passkey_aaguid": "some-aaguid",
+                      "passkey_credential_device_type": "multi-device"
+                    }
+                    """);
     }
 
     @Test

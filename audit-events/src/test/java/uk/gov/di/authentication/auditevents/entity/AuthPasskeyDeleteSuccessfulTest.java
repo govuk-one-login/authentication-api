@@ -65,7 +65,11 @@ class AuthPasskeyDeleteSuccessfulTest {
                     }
                   },
                   "extensions": {
-                    "journey-type": "ACCOUNT_MANAGEMENT"
+                    "journey-type": "ACCOUNT_MANAGEMENT",
+                    "passkey": {
+                      "passkey_aaguid": "test-aaguid",
+                      "passkey_credential_device_type": "multi-device"
+                    }
                   }
                 }
                 """;
