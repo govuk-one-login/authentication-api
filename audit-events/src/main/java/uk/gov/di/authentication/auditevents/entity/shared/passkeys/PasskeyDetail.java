@@ -10,19 +10,19 @@ public record PasskeyDetail(
         String passkeyAaguid) {
 
     public static PasskeyDetail verificationFailed(
-            String userVerification,
+            String passkeyRequestUserVerification,
             Long passkeyCounter,
             Boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType,
-            String verificationFailureReason) {
-        var userVerified = false;
+            String passkeyVerificationFailureReason) {
+        var passkeyUserVerified = false;
         return new PasskeyDetail(
-                new PasskeyAuthenticationRequest(userVerification),
+                new PasskeyAuthenticationRequest(passkeyRequestUserVerification),
                 passkeyCounter,
                 passkeyCredentialBackedUp,
                 passkeyCredentialDeviceType,
-                userVerified,
-                verificationFailureReason,
+                passkeyUserVerified,
+                passkeyVerificationFailureReason,
                 null);
     }
 
