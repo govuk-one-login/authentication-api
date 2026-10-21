@@ -75,4 +75,21 @@ class PasskeyDetailTest {
         assertNull(passkeyDetail.passkeyVerificationFailureReason());
         assertNull(passkeyDetail.passkeyAaguid());
     }
+
+    @Test
+    void createDeleteSuccessful() {
+        String passkeyCredentialDeviceType = "testCredentialDeviceType";
+        String passkeyAaguid = "testAaguid";
+
+        var passkeyDetail =
+                PasskeyDetail.deleteSuccessful(passkeyCredentialDeviceType, passkeyAaguid);
+
+        assertNull(passkeyDetail.passkeyAuthenticationRequest());
+        assertNull(passkeyDetail.passkeyCounter());
+        assertNull(passkeyDetail.passkeyCredentialBackedUp());
+        assertEquals(passkeyCredentialDeviceType, passkeyDetail.passkeyCredentialDeviceType());
+        assertNull(passkeyDetail.passkeyUserVerified());
+        assertNull(passkeyDetail.passkeyVerificationFailureReason());
+        assertEquals(passkeyAaguid, passkeyDetail.passkeyAaguid());
+    }
 }

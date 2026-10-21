@@ -54,4 +54,10 @@ public record PasskeyDetail(
                 null,
                 null);
     }
+
+    public static PasskeyDetail deleteSuccessful(
+            String passkeyCredentialDeviceType, String passkeyAaguid) {
+        return new PasskeyDetail(
+                null, null, null, passkeyCredentialDeviceType, null, null, passkeyAaguid);
+    }
 }
