@@ -4,8 +4,13 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.accountdata.entity.password.VerifyPasswordResponse;
+import uk.gov.di.authentication.accountdata.entity.password.failurereasons.VerifyPasswordFailureReason;
 import uk.gov.di.authentication.accountdata.services.ConfigurationService;
 import uk.gov.di.authentication.accountdata.services.PasswordService;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -14,9 +19,12 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.accountdata.helpers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.ANOTHER_PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PASSWORD;
 import static uk.gov.di.authentication.accountdata.helpers.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.accountdata.helpers.RequestHelper.contextWithSourceIp;
 
@@ -32,6 +40,27 @@ public class VerifyPasswordHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new VerifyPasswordHandler(configurationService, passwordService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldReturn200WhenVerifyPasswordSuccessful(boolean passwordVerified)
+            throws Json.JsonException {
+        var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+        var requestBody = new HashMap<>();
+        requestBody.put("password", PASSWORD);
+        var authorizerParams =
+                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+        when(passwordService.verifyPassword(PUBLIC_SUBJECT_ID, PASSWORD))
+                .thenReturn(Result.success(passwordVerified));
+        var verifyPasswordRequest =
+                verifyPasswordRequest(
+                        pathParams, authorizerParams, objectMapper.writeValueAsString(requestBody));
+
+        var result = handler.handleRequest(verifyPasswordRequest, context);
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasJsonBody(new VerifyPasswordResponse(passwordVerified)));
     }
 
     @Test
@@ -99,6 +128,24 @@ public class VerifyPasswordHandlerTest {
         var result = handler.handleRequest(verifyPasswordRequest, context);
 
         assertThat(result, hasStatus(403));
+    }
+
+    @Test
+    void shouldReturn404WhenUserNotFoundDuringPasswordVerification() throws Json.JsonException {
+        var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+        var requestBody = new HashMap<>();
+        requestBody.put("password", PASSWORD);
+        var authorizerParams =
+                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+        when(passwordService.verifyPassword(PUBLIC_SUBJECT_ID, PASSWORD))
+                .thenReturn(Result.failure(VerifyPasswordFailureReason.USER_NOT_FOUND));
+        var verifyPasswordRequest =
+                verifyPasswordRequest(
+                        pathParams, authorizerParams, objectMapper.writeValueAsString(requestBody));
+
+        var result = handler.handleRequest(verifyPasswordRequest, context);
+
+        assertThat(result, hasStatus(404));
     }
 
     private APIGatewayProxyRequestEvent verifyPasswordRequest(

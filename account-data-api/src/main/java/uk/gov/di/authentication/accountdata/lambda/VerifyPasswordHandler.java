@@ -10,6 +10,8 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.accountdata.entity.password.VerifyPasswordRequest;
 import uk.gov.di.authentication.accountdata.entity.password.VerifyPasswordResponse;
 import uk.gov.di.authentication.accountdata.entity.password.failurereasons.VerifyPasswordFailureReason;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
+import uk.gov.di.authentication.accountdata.services.PasswordService;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Result;
@@ -27,8 +29,19 @@ public class VerifyPasswordHandler
 
     private static final Logger LOG = LogManager.getLogger(VerifyPasswordHandler.class);
     private final Json objectMapper = SerializationService.getInstance();
+    private final ConfigurationService configurationService;
+    private final PasswordService passwordService;
 
-    public VerifyPasswordHandler() {}
+    public VerifyPasswordHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        this.passwordService = new PasswordService(configurationService);
+    }
+
+    public VerifyPasswordHandler(
+            ConfigurationService configurationService, PasswordService passwordService) {
+        this.configurationService = configurationService;
+        this.passwordService = passwordService;
+    }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
@@ -44,7 +57,12 @@ public class VerifyPasswordHandler
         LOG.info("VerifyPasswordHandler called");
 
         return validateRequest(input)
-                .flatMap(request -> generateApiResponse(false))
+                .flatMap(
+                        verifyPasswordContext ->
+                                passwordService.verifyPassword(
+                                        verifyPasswordContext.publicSubjectId,
+                                        verifyPasswordContext.verifyPasswordRequest.password()))
+                .flatMap(this::generateApiResponse)
                 .fold(
                         failure ->
                                 switch (failure) {
@@ -54,6 +72,8 @@ public class VerifyPasswordHandler
                                             400, ErrorResponse.MISSING_SUBJECT_ID);
                                     case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
                                             403, ErrorResponse.UNAUTHORIZED_REQUEST);
+                                    case USER_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
+                                            404, ErrorResponse.USER_NOT_FOUND);
                                     case FAILED_TO_SERIALIZE_RESPONSE -> generateApiGatewayProxyErrorResponse(
                                             500, ErrorResponse.INTERNAL_SERVER_ERROR);
                                 },

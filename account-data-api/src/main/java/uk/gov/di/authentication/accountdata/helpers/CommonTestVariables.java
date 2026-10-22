@@ -22,4 +22,5 @@ public class CommonTestVariables {
     public static final String CREDENTIAL = "credential";
     public static final String IP_ADDRESS = "192.0.2.0/24";
     public static final String EMAIL = "joe.bloggs@test.com";
+    public static final String PASSWORD = "password123";
 }
