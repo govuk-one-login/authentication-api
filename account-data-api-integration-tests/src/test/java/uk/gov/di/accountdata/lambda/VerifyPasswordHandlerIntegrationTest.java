@@ -58,7 +58,7 @@ class VerifyPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         new HashMap<String, String>(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", publicSubjectId),
-                        Map.of("principalId", publicSubjectId, "scope", "account-delete"));
+                        Map.of("principalId", publicSubjectId, "scope", "verify-password"));
 
         assertEquals(200, response.getStatusCode());
         assertThat(response, hasJsonBody(new VerifyPasswordResponse(true)));
@@ -81,7 +81,11 @@ class VerifyPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         new HashMap<String, String>(),
                         Collections.emptyMap(),
                         Map.of("publicSubjectId", otherUserPublicSubjectId),
-                        Map.of("principalId", otherUserPublicSubjectId, "scope", "account-delete"));
+                        Map.of(
+                                "principalId",
+                                otherUserPublicSubjectId,
+                                "scope",
+                                "verify-password"));
 
         assertEquals(404, response.getStatusCode());
     }
@@ -108,7 +112,7 @@ class VerifyPasswordHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 "principalId",
                                 publicSubjectIdInAuthorizerParams,
                                 "scope",
-                                "account-delete"));
+                                "verify-password"));
 
         assertEquals(403, response.getStatusCode());
     }

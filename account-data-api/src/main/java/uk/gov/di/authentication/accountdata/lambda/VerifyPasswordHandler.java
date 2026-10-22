@@ -100,7 +100,7 @@ public class VerifyPasswordHandler
             return Result.failure(VerifyPasswordFailureReason.UNAUTHORIZED_REQUEST);
         }
 
-        if (!isScopeAuthorized(AccountDataScope.ACCOUNT_DELETE, input.getRequestContext())) {
+        if (!isScopeAuthorized(AccountDataScope.VERIFY_PASSWORD, input.getRequestContext())) {
             return Result.failure(VerifyPasswordFailureReason.UNAUTHORIZED_REQUEST);
         }
 

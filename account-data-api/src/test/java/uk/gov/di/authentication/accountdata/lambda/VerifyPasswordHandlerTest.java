@@ -50,7 +50,8 @@ public class VerifyPasswordHandlerTest {
         var requestBody = new HashMap<>();
         requestBody.put("password", PASSWORD);
         var authorizerParams =
-                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+                Map.<String, Object>of(
+                        "principalId", PUBLIC_SUBJECT_ID, "scope", "verify-password");
         when(passwordService.verifyPassword(PUBLIC_SUBJECT_ID, PASSWORD))
                 .thenReturn(Result.success(passwordVerified));
         var verifyPasswordRequest =
@@ -69,7 +70,8 @@ public class VerifyPasswordHandlerTest {
         var invalidRequestBody = new HashMap<>();
         invalidRequestBody.put("invalidProperty", "invalid");
         var authorizerParams =
-                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+                Map.<String, Object>of(
+                        "principalId", PUBLIC_SUBJECT_ID, "scope", "verify-password");
         var verifyPasswordRequest =
                 verifyPasswordRequest(
                         pathParams,
@@ -87,7 +89,8 @@ public class VerifyPasswordHandlerTest {
         var requestBody = new HashMap<>();
         requestBody.put("password", "some-password");
         var authorizerParams =
-                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+                Map.<String, Object>of(
+                        "principalId", PUBLIC_SUBJECT_ID, "scope", "verify-password");
         var verifyPasswordRequest =
                 verifyPasswordRequest(
                         pathParams, authorizerParams, objectMapper.writeValueAsString(requestBody));
@@ -104,7 +107,8 @@ public class VerifyPasswordHandlerTest {
         var requestBody = new HashMap<>();
         requestBody.put("password", "some-password");
         var authorizerParams =
-                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+                Map.<String, Object>of(
+                        "principalId", PUBLIC_SUBJECT_ID, "scope", "verify-password");
         var verifyPasswordRequest =
                 verifyPasswordRequest(
                         pathParams, authorizerParams, objectMapper.writeValueAsString(requestBody));
@@ -115,12 +119,12 @@ public class VerifyPasswordHandlerTest {
     }
 
     @Test
-    void shouldReturn403WhenScopeIsNotAccountDelete() throws Json.JsonException {
-        var pathParams = Map.of("publicSubjectId", ANOTHER_PUBLIC_SUBJECT_ID);
+    void shouldReturn403WhenScopeIsNotVerifyPassword() throws Json.JsonException {
+        var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
         var requestBody = new HashMap<>();
         requestBody.put("password", "some-password");
         var authorizerParams =
-                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "invalid-scope");
         var verifyPasswordRequest =
                 verifyPasswordRequest(
                         pathParams, authorizerParams, objectMapper.writeValueAsString(requestBody));
@@ -136,7 +140,8 @@ public class VerifyPasswordHandlerTest {
         var requestBody = new HashMap<>();
         requestBody.put("password", PASSWORD);
         var authorizerParams =
-                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+                Map.<String, Object>of(
+                        "principalId", PUBLIC_SUBJECT_ID, "scope", "verify-password");
         when(passwordService.verifyPassword(PUBLIC_SUBJECT_ID, PASSWORD))
                 .thenReturn(Result.failure(VerifyPasswordFailureReason.USER_NOT_FOUND));
         var verifyPasswordRequest =
