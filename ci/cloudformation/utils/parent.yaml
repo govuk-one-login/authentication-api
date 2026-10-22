@@ -557,9 +557,9 @@ Mappings:
       inactiveAccountExportTrackerWriteEnabled: "false"
       lastSignedInBackfillParallelism: "5"
       lastSignedInBackfillTotalSegments: "125"
-      lastSignedInBackfillMaxItemsPerSegment: "2000"
+      lastSignedInBackfillMaxItemsPerSegment: "1500"
       lastSignedInBackfillPauseBetweenInvocationsMs: "60000"
-      lastSignedInBackfillMaxInvocations: "0"
+      lastSignedInBackfillMaxInvocations: "5"
 
   ProdNotifyTemplateMap:
     Templates:
