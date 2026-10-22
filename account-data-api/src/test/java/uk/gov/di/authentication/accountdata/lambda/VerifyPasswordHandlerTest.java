@@ -3,8 +3,9 @@ package uk.gov.di.authentication.accountdata.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
+import uk.gov.di.authentication.accountdata.services.PasswordService;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -23,92 +24,81 @@ public class VerifyPasswordHandlerTest {
 
     private final Context context = mock(Context.class);
     private final Json objectMapper = SerializationService.getInstance();
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final PasswordService passwordService = mock(PasswordService.class);
 
     private VerifyPasswordHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new VerifyPasswordHandler();
+        handler = new VerifyPasswordHandler(configurationService, passwordService);
     }
 
-    @Nested
-    class Failure {
+    @Test
+    void shouldReturn400WhenInvalidRequestBody() throws Json.JsonException {
+        var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
+        var invalidRequestBody = new HashMap<>();
+        invalidRequestBody.put("invalidProperty", "invalid");
+        var authorizerParams =
+                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+        var verifyPasswordRequest =
+                verifyPasswordRequest(
+                        pathParams,
+                        authorizerParams,
+                        objectMapper.writeValueAsString(invalidRequestBody));
 
-        @Test
-        void shouldReturn400WhenInvalidRequestBody() throws Json.JsonException {
-            var pathParams = Map.of("publicSubjectId", PUBLIC_SUBJECT_ID);
-            var invalidRequestBody = new HashMap<>();
-            invalidRequestBody.put("invalidProperty", "invalid");
-            var authorizerParams =
-                    Map.<String, Object>of(
-                            "principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
-            var verifyPasswordRequest =
-                    verifyPasswordRequest(
-                            pathParams,
-                            authorizerParams,
-                            objectMapper.writeValueAsString(invalidRequestBody));
+        var result = handler.handleRequest(verifyPasswordRequest, context);
 
-            var result = handler.handleRequest(verifyPasswordRequest, context);
+        assertThat(result, hasStatus(400));
+    }
 
-            assertThat(result, hasStatus(400));
-        }
+    @Test
+    void shouldReturn400WhenPublicSubjectIdMissing() throws Json.JsonException {
+        var pathParams = Map.of("", "");
+        var requestBody = new HashMap<>();
+        requestBody.put("password", "some-password");
+        var authorizerParams =
+                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+        var verifyPasswordRequest =
+                verifyPasswordRequest(
+                        pathParams, authorizerParams, objectMapper.writeValueAsString(requestBody));
 
-        @Test
-        void shouldReturn400WhenPublicSubjectIdMissing() throws Json.JsonException {
-            var pathParams = Map.of("", "");
-            var requestBody = new HashMap<>();
-            requestBody.put("password", "some-password");
-            var authorizerParams =
-                    Map.<String, Object>of(
-                            "principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
-            var verifyPasswordRequest =
-                    verifyPasswordRequest(
-                            pathParams,
-                            authorizerParams,
-                            objectMapper.writeValueAsString(requestBody));
+        var result = handler.handleRequest(verifyPasswordRequest, context);
 
-            var result = handler.handleRequest(verifyPasswordRequest, context);
+        assertThat(result, hasStatus(400));
+    }
 
-            assertThat(result, hasStatus(400));
-        }
+    @Test
+    void shouldReturn403WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams()
+            throws Json.JsonException {
+        var pathParams = Map.of("publicSubjectId", ANOTHER_PUBLIC_SUBJECT_ID);
+        var requestBody = new HashMap<>();
+        requestBody.put("password", "some-password");
+        var authorizerParams =
+                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+        var verifyPasswordRequest =
+                verifyPasswordRequest(
+                        pathParams, authorizerParams, objectMapper.writeValueAsString(requestBody));
 
-        @Test
-        void shouldReturn403WhenPublicSubjectIdDoesNotMatchTheOneInAuthorizerParams() throws Json.JsonException {
-            var pathParams = Map.of("publicSubjectId", ANOTHER_PUBLIC_SUBJECT_ID);
-            var requestBody = new HashMap<>();
-            requestBody.put("password", "some-password");
-            var authorizerParams =
-                    Map.<String, Object>of(
-                            "principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
-            var verifyPasswordRequest =
-                    verifyPasswordRequest(
-                            pathParams,
-                            authorizerParams,
-                            objectMapper.writeValueAsString(requestBody));
+        var result = handler.handleRequest(verifyPasswordRequest, context);
 
-            var result = handler.handleRequest(verifyPasswordRequest, context);
+        assertThat(result, hasStatus(403));
+    }
 
-            assertThat(result, hasStatus(403));
-        }
+    @Test
+    void shouldReturn403WhenScopeIsNotAccountDelete() throws Json.JsonException {
+        var pathParams = Map.of("publicSubjectId", ANOTHER_PUBLIC_SUBJECT_ID);
+        var requestBody = new HashMap<>();
+        requestBody.put("password", "some-password");
+        var authorizerParams =
+                Map.<String, Object>of("principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
+        var verifyPasswordRequest =
+                verifyPasswordRequest(
+                        pathParams, authorizerParams, objectMapper.writeValueAsString(requestBody));
 
-        @Test
-        void shouldReturn403WhenScopeIsNotAccountDelete() throws Json.JsonException {
-            var pathParams = Map.of("publicSubjectId", ANOTHER_PUBLIC_SUBJECT_ID);
-            var requestBody = new HashMap<>();
-            requestBody.put("password", "some-password");
-            var authorizerParams =
-                    Map.<String, Object>of(
-                            "principalId", PUBLIC_SUBJECT_ID, "scope", "account-delete");
-            var verifyPasswordRequest =
-                    verifyPasswordRequest(
-                            pathParams,
-                            authorizerParams,
-                            objectMapper.writeValueAsString(requestBody));
+        var result = handler.handleRequest(verifyPasswordRequest, context);
 
-            var result = handler.handleRequest(verifyPasswordRequest, context);
-
-            assertThat(result, hasStatus(403));
-        }
+        assertThat(result, hasStatus(403));
     }
 
     private APIGatewayProxyRequestEvent verifyPasswordRequest(
