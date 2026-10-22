@@ -5,41 +5,59 @@ public record PasskeyDetail(
         Long passkeyCounter,
         Boolean passkeyCredentialBackedUp,
         String passkeyCredentialDeviceType,
-        boolean passkeyUserVerified,
-        String passkeyVerificationFailureReason) {
+        Boolean passkeyUserVerified,
+        String passkeyVerificationFailureReason,
+        String passkeyAaguid) {
+
     public static PasskeyDetail verificationFailed(
-            String userVerification,
+            String passkeyRequestUserVerification,
             Long passkeyCounter,
             Boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType,
-            String verificationFailureReason) {
-        var userVerified = false;
+            String passkeyVerificationFailureReason) {
+        var passkeyUserVerified = false;
         return new PasskeyDetail(
-                new PasskeyAuthenticationRequest(userVerification),
+                new PasskeyAuthenticationRequest(passkeyRequestUserVerification),
                 passkeyCounter,
                 passkeyCredentialBackedUp,
                 passkeyCredentialDeviceType,
-                userVerified,
-                verificationFailureReason);
+                passkeyUserVerified,
+                passkeyVerificationFailureReason,
+                null);
     }
 
-    public static PasskeyDetail verificationCouldNotProceed(String verificationFailureReason) {
-        var userVerified = false;
-        return new PasskeyDetail(null, null, null, null, userVerified, verificationFailureReason);
+    public static PasskeyDetail verificationCouldNotProceed(
+            String passkeyVerificationFailureReason) {
+        var passkeyUserVerified = false;
+        return new PasskeyDetail(
+                null,
+                null,
+                null,
+                null,
+                passkeyUserVerified,
+                passkeyVerificationFailureReason,
+                null);
     }
 
     public static PasskeyDetail verificationSuccessful(
-            String userVerification,
+            String passkeyRequestUserVerification,
             long passkeyCounter,
             boolean passkeyCredentialBackedUp,
             String passkeyCredentialDeviceType) {
-        var userVerified = true;
+        var passkeyUserVerified = true;
         return new PasskeyDetail(
-                new PasskeyAuthenticationRequest(userVerification),
+                new PasskeyAuthenticationRequest(passkeyRequestUserVerification),
                 passkeyCounter,
                 passkeyCredentialBackedUp,
                 passkeyCredentialDeviceType,
-                userVerified,
+                passkeyUserVerified,
+                null,
                 null);
+    }
+
+    public static PasskeyDetail deleteSuccessful(
+            String passkeyCredentialDeviceType, String passkeyAaguid) {
+        return new PasskeyDetail(
+                null, null, null, passkeyCredentialDeviceType, null, null, passkeyAaguid);
     }
 }
