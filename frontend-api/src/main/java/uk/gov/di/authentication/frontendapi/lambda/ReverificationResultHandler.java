@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.IpvReverificationFailureCode;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulReverificationResponseException;
@@ -172,26 +173,31 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
             var reverificationResultJson = reverificationResult.getBodyAsJSONObject();
 
-            var validMetadata =
-                    extractValidMetadata(
+            var responseMetadata =
+                    extractResponseMetadata(
                             reverificationResultJson,
                             userContext.getAuthSession().getInternalCommonSubjectId());
 
-            metadataPairs.addAll(validMetadata.metadataPairs());
+            metadataPairs.addAll(responseMetadata.metadataPairs());
 
             auditService.submitAuditEvent(
                     AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED,
                     baseAuditContext,
                     metadataPairs.toArray(AuditService.MetadataPair[]::new));
 
-            if (!validMetadata.valid()) {
-                LOG.warn(validMetadata.errorMessage());
+            if (!responseMetadata.valid()) {
+                LOG.warn(responseMetadata.errorMessage());
                 var logFriendlyResponse = reverificationResultJson.toJSONString();
                 LOG.warn(
                         "Invalid re-verification result response from IPV: {}",
                         logFriendlyResponse);
                 return generateApiGatewayProxyErrorResponse(400, REVERIFICATION_RESULT_GET_ERROR);
             }
+
+            recordEmailIfSuccessfulReverification(
+                    userContext.getAuthSession().getSessionId(),
+                    existingSessionEmail,
+                    responseMetadata);
 
             return generateApiGatewayProxyResponse(200, reverificationResult.getBody());
         } catch (UnsuccessfulReverificationResponseException | ParseException e) {
@@ -200,16 +206,17 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         }
     }
 
-    private ValidationResult extractValidMetadata(JSONObject json, String sub) {
+    private ReverificationResponse extractResponseMetadata(JSONObject json, String sub) {
         List<AuditService.MetadataPair> metadataPairs = new ArrayList<>();
 
         if (!json.containsKey("sub") || !(json.get("sub") instanceof String subOfResponse)) {
-            return ValidationResult.failure(
+            return ReverificationResponse.invalid(
                     "Missing sub cannot verify response is for current user.", metadataPairs);
         }
 
         if (!sub.equalsIgnoreCase(subOfResponse)) {
-            return ValidationResult.failure("sub does not match current user.", metadataPairs);
+            return ReverificationResponse.invalid(
+                    "sub does not match current user.", metadataPairs);
         }
 
         if (!json.containsKey(IPV_REVERIFICATION_SUCCESS)
@@ -217,7 +224,8 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             metadataPairs.add(
                     AuditService.MetadataPair.pair(
                             IPV_REVERIFICATION_SUCCESS, "missing or corrupt"));
-            return ValidationResult.failure("Invalid or missing 'success' field.", metadataPairs);
+            return ReverificationResponse.invalid(
+                    "Invalid or missing 'success' field.", metadataPairs);
         }
 
         boolean success = (boolean) json.get(IPV_REVERIFICATION_SUCCESS);
@@ -231,7 +239,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                     AuditService.MetadataPair.pair(
                             IPV_REVERIFICATION_FAILURE_CODE,
                             json.get(IPV_REVERIFICATION_FAILURE_CODE)));
-            return ValidationResult.failure(
+            return ReverificationResponse.invalid(
                     "'failure_code' or 'failure_reason' must not be present when successful.",
                     metadataPairs);
         }
@@ -242,7 +250,8 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                             || !(json.get(IPV_REVERIFICATION_FAILURE_CODE) instanceof String);
 
             if (failureDetailsMissing) {
-                return ValidationResult.failure("Invalid or missing 'failure_code'", metadataPairs);
+                return ReverificationResponse.invalid(
+                        "Invalid or missing 'failure_code'", metadataPairs);
             }
 
             String failValue = (String) json.get(IPV_REVERIFICATION_FAILURE_CODE);
@@ -250,30 +259,67 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             if (!IpvReverificationFailureCode.isValid(failValue)) {
                 metadataPairs.add(
                         AuditService.MetadataPair.pair(IPV_REVERIFICATION_FAILURE_CODE, failValue));
-                return ValidationResult.failure(
+                return ReverificationResponse.invalid(
                         "Invalid or missing 'failure_reason'", metadataPairs);
             }
             LOG.info("Received reverification failure code due to {}", failValue);
             cloudwatchMetricService.incrementMfaResetIpvResponseCount(failValue);
             metadataPairs.add(
                     AuditService.MetadataPair.pair(IPV_REVERIFICATION_FAILURE_CODE, failValue));
+            return ReverificationResponse.failure(failValue, metadataPairs);
         } else {
             LOG.info("Received reverification success code");
             cloudwatchMetricService.incrementMfaResetIpvResponseCount(IPV_REVERIFICATION_SUCCESS);
         }
-        return ValidationResult.success(metadataPairs);
+        return ReverificationResponse.success(metadataPairs);
+    }
+
+    private void recordEmailIfSuccessfulReverification(
+            String sessionId, String email, ReverificationResponse reverificationResponse) {
+        LOG.info(
+                "recordEmailIfSuccessfulReverification: valid={}, outcome={}, isSuccessful={}, sessionId={}",
+                reverificationResponse.valid(),
+                reverificationResponse.outcome(),
+                reverificationResponse.isSuccessfulReverification(),
+                sessionId);
+        if (!reverificationResponse.isSuccessfulReverification()) {
+            LOG.info(
+                    "reverification unsuccessful, not updating email for identity verification to session");
+            return;
+        }
+        LOG.info("Updating recorded email for identity verification to session");
+        authSessionService.updateSessionAttribute(
+                sessionId,
+                AuthSessionItem.ATTRIBUTE_RECORDED_EMAIL_FOR_IDENTITY_VERIFICATION,
+                email);
     }
 }
 
-record ValidationResult(
-        boolean valid, String errorMessage, List<AuditService.MetadataPair> metadataPairs) {
+record ReverificationOutcome(boolean success, String failureCode) {}
 
-    public static ValidationResult success(List<AuditService.MetadataPair> metadataPairs) {
-        return new ValidationResult(true, null, metadataPairs);
+record ReverificationResponse(
+        boolean valid,
+        String errorMessage,
+        ReverificationOutcome outcome,
+        List<AuditService.MetadataPair> metadataPairs) {
+
+    public static ReverificationResponse invalid(
+            String errorMessage, List<AuditService.MetadataPair> metadataPairs) {
+        return new ReverificationResponse(false, errorMessage, null, metadataPairs);
     }
 
-    public static ValidationResult failure(
-            String errorMessage, List<AuditService.MetadataPair> metadataPairs) {
-        return new ValidationResult(false, errorMessage, metadataPairs);
+    public static ReverificationResponse success(List<AuditService.MetadataPair> metadataPairs) {
+        return new ReverificationResponse(
+                true, null, new ReverificationOutcome(true, null), metadataPairs);
+    }
+
+    public static ReverificationResponse failure(
+            String failureCode, List<AuditService.MetadataPair> metadataPairs) {
+        return new ReverificationResponse(
+                true, null, new ReverificationOutcome(false, failureCode), metadataPairs);
+    }
+
+    public boolean isSuccessfulReverification() {
+        return valid && outcome != null && outcome.success();
     }
 }
