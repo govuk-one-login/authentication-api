@@ -7,7 +7,7 @@ Resources:
         - ${Env}-inactive-account-deletion-queue-processor-lambda
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
-      ReservedConcurrentExecutions: 2
+      ReservedConcurrentExecutions: 20
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.InactiveAccountDeletionHandler::handleRequest
       Environment:
@@ -16,6 +16,14 @@ Resources:
             - "${env}"
             - env:
                 !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
           INACTIVE_ACCOUNT_DELETION_CLIENT_ID:
             !FindInMap [
               EnvironmentConfiguration,
@@ -53,10 +61,39 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               frontendBaseUrl,
             ]
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          IAD_CIRCUIT_BREAKER_TABLE_NAME: !If
+            - InactiveAccountDeletionStubEnabled
+            - !Sub
+              - ${Env}-stub-inactive-account-circuit-breaker
+              - Env:
+                  !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - !FindInMap [
+                EnvironmentConfiguration,
+                !Ref Environment,
+                iadCircuitBreakerTableArn,
+              ]
+          INACTIVE_ACCOUNT_DELETION_MIN_DURATION_PER_MESSAGE_MS:
+            !FindInMap [
+              EnvironmentConfiguration,
+              !Ref Environment,
+              inactiveAccountDeletionMinDurationPerMessageMs,
+              DefaultValue: 3000,
+            ]
       LoggingConfig:
         LogGroup: !Ref InactiveAccountDeletionQueueProcessorFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref UserProfileTableKmsPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - Version: 2012-10-17
           Statement:
             - Sid: AllowKmsSignForAccountDataToken
@@ -77,7 +114,11 @@ Resources:
         - !If
           - InactiveAccountDeletionStubEnabled
           - !Ref InactiveAccountDeletionStubQueueProcessorSQSPolicy
-          - !Ref AWS::NoValue
+          - !Ref InactiveAccountDeletionCrossAccountQueueProcessorSQSPolicy
+        - !If
+          - InactiveAccountDeletionStubEnabled
+          - !Ref IADCircuitBreakerStubAccessPolicy
+          - !Ref IADCircuitBreakerCrossAccountAccessPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
@@ -167,6 +208,41 @@ Resources:
           lambdaLogAlarmThreshold,
           DefaultValue: 5,
         ]
+
+  InactiveAccountDeletionGuardrailHitAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
+      AlarmDescription: !Sub
+        - "The inactive account deletion guardrail has prevented at least one deletion in ${Env}. The circuit breaker should have tripped and halted further processing; a dev must review and clear the block before processing resumes. ${RunbookLink}"
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          RunbookLink: "https://govukverify.atlassian.net/wiki/x/1QAJmwE"
+      AlarmName: !Sub
+        - ${Env}-inactive-account-deletion-guardrail-hit-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      MetricName: GuardrailPreventedInactiveAccountDeletion
+      Namespace: Authentication
+      Dimensions:
+        - Name: GuardrailType
+          Value: AuthUserActivityCheck
+        - Name: Environment
+          Value: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+        - Name: LogGroup
+          Value: !Ref InactiveAccountDeletionQueueProcessorFunction
+        - Name: ServiceName
+          Value: !Ref InactiveAccountDeletionQueueProcessorFunction
+        - Name: ServiceType
+          Value: AWS::Lambda::Function
+      Period: 60
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: ignore
 
   InactiveAccountDeletionQueueProcessorFunctionSubscriptionFilter:
     Condition: IsSplunkEnabled

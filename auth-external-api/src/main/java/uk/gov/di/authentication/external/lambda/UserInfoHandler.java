@@ -18,17 +18,20 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenConstructorService;
 import uk.gov.di.authentication.shared.services.AccessTokenStoreService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent.AUTH_USERINFO_SENT_TO_ORCHESTRATION;
@@ -49,18 +52,21 @@ public class UserInfoHandler
     private final AccessTokenStoreService accessTokenStoreService;
     private final AuditService auditService;
     private final AuthSessionService authSessionService;
+    private final AuthenticationService authenticationService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenStoreService accessTokenStoreService,
             AuditService auditService,
-            AuthSessionService authSessionService) {
+            AuthSessionService authSessionService,
+            AuthenticationService authenticationService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenStoreService = accessTokenStoreService;
         this.auditService = auditService;
         this.authSessionService = authSessionService;
+        this.authenticationService = authenticationService;
     }
 
     public UserInfoHandler() {
@@ -69,9 +75,10 @@ public class UserInfoHandler
 
     public UserInfoHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
+        this.authenticationService = new DynamoService(configurationService);
         this.userInfoService =
                 new UserInfoService(
-                        new DynamoService(configurationService),
+                        authenticationService,
                         new MFAMethodsService(configurationService),
                         new AccessTokenConstructorService(configurationService),
                         configurationService);
@@ -167,7 +174,33 @@ public class UserInfoHandler
         }
         logNewAccountValues(accessTokenStore, authSession);
 
-        var result = userInfoService.populateUserInfo(accessTokenStore, authSession);
+        var userProfile =
+                authenticationService.getUserProfileFromSubject(accessTokenStore.getSubjectID());
+        var internalPairwiseIdFromAccessToken =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                        userProfile,
+                        configurationService.getInternalSectorUri(),
+                        authenticationService);
+
+        if (!Objects.equals(
+                internalPairwiseIdFromAccessToken.getValue(),
+                authSession.getInternalCommonSubjectId())) {
+            LOG.warn(
+                    "InternalPairwiseId calculated from access token doesn't match the one found in the auth session");
+            return generateApiGatewayProxyResponse(
+                    401,
+                    "",
+                    new UserInfoErrorResponse(BearerTokenError.INVALID_TOKEN)
+                            .toHTTPResponse()
+                            .getHeaderMap());
+        }
+
+        var result =
+                userInfoService.populateUserInfo(
+                        accessTokenStore,
+                        authSession,
+                        userProfile,
+                        internalPairwiseIdFromAccessToken);
         if (result.isFailure()) {
             LOG.error(
                     "Failed to populate user info due to ADAPI Access Token Signing Failure: {}",

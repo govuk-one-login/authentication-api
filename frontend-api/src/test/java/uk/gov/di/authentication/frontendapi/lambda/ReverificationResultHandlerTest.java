@@ -50,8 +50,10 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_SUCCESSFUL_TOKEN_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_VERIFICATION_INFO_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.EMAIL_ADDRESS_MISMATCH;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.IPV_STATE_MISMATCH;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.REVERIFICATION_RESULT_GET_ERROR;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.SESSION_EMAIL_NOT_SET;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.UNSUCCESSFUL_IPV_TOKEN_RESPONSE;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
@@ -120,7 +122,8 @@ class ReverificationResultHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withInternalCommonSubjectId(SUB)
-                    .withClientId(CLIENT_ID);
+                    .withClientId(CLIENT_ID)
+                    .withEmailAddress(EMAIL);
 
     private static final String AUTHENTICATION_STATE = "abcdefg";
     private static final IDReverificationState ID_REVERIFICATION_STATE =
@@ -468,6 +471,46 @@ class ReverificationResultHandlerTest {
 
             assertThat(result, hasStatus(400));
             assertThat(result, hasJsonBody(IPV_STATE_MISMATCH));
+        }
+    }
+
+    @Nested
+    class EmailCheckErrors {
+
+        @BeforeEach
+        void setUp() {
+            when(idReverificationStateService.get(anyString()))
+                    .thenReturn(Optional.of(ID_REVERIFICATION_STATE));
+        }
+
+        @Test
+        void shouldHandleSessionMissingEmail() {
+            authSession.withEmailAddress(null);
+
+            var result =
+                    handler.handleRequest(
+                            apiRequestEventWithEmail("1234", AUTHENTICATION_STATE, EMAIL), context);
+
+            assertThat(result, hasStatus(500));
+            assertThat(result, hasJsonBody(SESSION_EMAIL_NOT_SET));
+
+            verify(reverificationResultService, never()).getToken(any());
+        }
+
+        @Test
+        void shouldHandleSessionEmailMismatch() {
+            authSession.withEmailAddress("front-end-session-email@test.com");
+
+            var result =
+                    handler.handleRequest(
+                            apiRequestEventWithEmail(
+                                    "1234", AUTHENTICATION_STATE, "backend-session-email@test.com"),
+                            context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(EMAIL_ADDRESS_MISMATCH));
+
+            verify(reverificationResultService, never()).getToken(any());
         }
     }
 

@@ -29,7 +29,13 @@ class AuthPasskeyDeleteSuccessfulTest {
         var fixedClock = Clock.fixed(fixedInstant, ZoneOffset.UTC);
 
         var event =
-                AuthPasskeyDeleteSuccessful.create(auditContext, 2, "credential-id", fixedClock);
+                AuthPasskeyDeleteSuccessful.create(
+                        auditContext,
+                        2,
+                        "credential-id",
+                        "test-aaguid",
+                        "multi-device",
+                        fixedClock);
 
         var actualEvent = event.serialize();
 
@@ -59,7 +65,11 @@ class AuthPasskeyDeleteSuccessfulTest {
                     }
                   },
                   "extensions": {
-                    "journey-type": "ACCOUNT_MANAGEMENT"
+                    "journey-type": "ACCOUNT_MANAGEMENT",
+                    "passkey": {
+                      "passkey_aaguid": "test-aaguid",
+                      "passkey_credential_device_type": "multi-device"
+                    }
                   }
                 }
                 """;

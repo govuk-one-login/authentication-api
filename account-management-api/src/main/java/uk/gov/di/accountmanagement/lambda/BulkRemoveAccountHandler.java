@@ -12,7 +12,6 @@ import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
 import uk.gov.di.accountmanagement.exceptions.BulkRemoveAccountException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AccountDeletionTokenService;
-import uk.gov.di.accountmanagement.services.AwsSnsClient;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
@@ -60,11 +59,6 @@ public class BulkRemoveAccountHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        var legacyAccountDeletionSnsClient =
-                new AwsSnsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getLegacyAccountDeletionTopicArn(),
-                        configurationService.getSnsEndpointUri());
         var structuredAuditService = new StructuredAuditService(configurationService);
         var dynamoDeleteService = new DynamoDeleteService(configurationService);
         var accountDataApiService = new AccountDataApiService(configurationService);
@@ -80,7 +74,6 @@ public class BulkRemoveAccountHandler
         this.manualAccountDeletionService =
                 new ManualAccountDeletionService(
                         accountDeletionService,
-                        legacyAccountDeletionSnsClient,
                         configurationService,
                         accountDeletionTokenService,
                         configurationService.getBulkAccountDeletionClientId());

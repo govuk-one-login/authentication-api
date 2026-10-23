@@ -25,18 +25,13 @@ on:
       - "test-services-api/**"
       - "utils/**"
       - "ipv-api/**"
-      - "oidc-api/**"
-      - "sis-api/**"
       - "orchestration-*/**"
-      - "doc-checking-app-api/**"
       - "delivery-receipts-api/**"
-      - "client-registry-api/**"
       - "auth-external-api/**"
-      - "oidc-api-integration-tests/**"
       - "ipv-api-integration-tests/**"
-      - "identity-shared/**"
       - "http/**"
       - "tools/**"
+      - "ci/terraform/**"
 
 env:
   AWS_REGION: eu-west-2
@@ -60,7 +55,7 @@ jobs:
         uses: aws-actions/setup-sam@89ddb14d60e682855e3fea4be85b3c56485de310 # v2
         with:
           use-installer: true
-          version: 1.159.1
+          version: 1.165.0
 
       - name: Set up AWS creds
         uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0

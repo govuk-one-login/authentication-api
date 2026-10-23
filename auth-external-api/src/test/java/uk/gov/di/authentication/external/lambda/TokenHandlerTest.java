@@ -55,6 +55,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class TokenHandlerTest {
@@ -109,6 +110,16 @@ class TokenHandlerTest {
                     .withSubjectID("any")
                     .withHasBeenUsed(true)
                     .withTimeToExist(UNIX_TIME_16_08_2099);
+    private static final String CONCURRENTLY_USED_AUTH_CODE = "concurrently-used-auth-code";
+    private static final AuthCodeStore CONCURRENTLY_USED_AUTH_CODE_STORE =
+            new AuthCodeStore()
+                    .withAuthCode(CONCURRENTLY_USED_AUTH_CODE)
+                    .withIsNewAccount(true)
+                    .withSectorIdentifier("any")
+                    .withClaims(List.of("any"))
+                    .withSubjectID("any")
+                    .withHasBeenUsed(false)
+                    .withTimeToExist(UNIX_TIME_16_08_2099);
     private static final String EXPIRED_AUTH_CODE = "expired-auth-code";
     private static final AuthCodeStore EXPIRED_AUTH_CODE_STORE =
             new AuthCodeStore()
@@ -129,6 +140,11 @@ class TokenHandlerTest {
                 .thenReturn(Optional.of(EXPIRED_AUTH_CODE_STORE));
         when(authCodeService.getAuthCodeStore(USED_AUTH_CODE))
                 .thenReturn(Optional.of(USED_AUTH_CODE_STORE));
+        when(authCodeService.getAuthCodeStore(CONCURRENTLY_USED_AUTH_CODE))
+                .thenReturn(Optional.of(CONCURRENTLY_USED_AUTH_CODE_STORE));
+        when(authCodeService.markAuthCodeAsUsedIfUnused(VALID_AUTH_CODE)).thenReturn(true);
+        when(authCodeService.markAuthCodeAsUsedIfUnused(CONCURRENTLY_USED_AUTH_CODE))
+                .thenReturn(false);
 
         when(tokenUtilityService.generateNewBearerTokenAndTokenResponse())
                 .thenReturn(SUCCESS_TOKEN_RESPONSE);
@@ -266,6 +282,22 @@ class TokenHandlerTest {
     }
 
     @Test
+    void shouldReturn400AndNotStoreAccessTokenWhenAuthCodeIsUsedByAConcurrentRequest()
+            throws JOSEException {
+        var bodyMap = new HashMap<String, List<String>>();
+        bodyMap.put("code", List.of(CONCURRENTLY_USED_AUTH_CODE));
+        bodyMap.putAll(privateKeyJWTParams());
+        APIGatewayProxyRequestEvent request =
+                new APIGatewayProxyRequestEvent().withBody(URLUtils.serializeParameters(bodyMap));
+
+        APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
+
+        assertEquals(400, response.getStatusCode());
+        assertTrue(response.getBody().contains(OAuth2Error.INVALID_REQUEST.getCode()));
+        verifyNoInteractions(accessTokenStoreService);
+    }
+
+    @Test
     void shouldReturn400WithErrorMessageWhenAuthCodeHasExpired() throws JOSEException {
         var bodyMap = new HashMap<String, List<String>>();
         bodyMap.put("code", List.of(EXPIRED_AUTH_CODE));
@@ -308,7 +340,7 @@ class TokenHandlerTest {
                         VALID_AUTH_CODE_STORE.getIsNewAccount(),
                         VALID_AUTH_CODE_STORE.getSectorIdentifier(),
                         VALID_AUTH_CODE_STORE.getPasswordResetTime());
-        verify(authCodeService).updateHasBeenUsed(VALID_AUTH_CODE, true);
+        verify(authCodeService).markAuthCodeAsUsedIfUnused(VALID_AUTH_CODE);
 
         var argCaptor = org.mockito.ArgumentCaptor.forClass(StructuredAuditEvent.class);
         verify(structuredAuditService).submitAuditEvent(argCaptor.capture());

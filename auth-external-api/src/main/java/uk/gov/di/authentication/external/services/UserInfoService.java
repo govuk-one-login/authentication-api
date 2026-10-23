@@ -47,21 +47,19 @@ public class UserInfoService {
     }
 
     public Result<JwtFailureReason, UserInfo> populateUserInfo(
-            AccessTokenStore accessTokenInfo, AuthSessionItem authSession) {
+            AccessTokenStore accessTokenInfo,
+            AuthSessionItem authSession,
+            UserProfile userProfile,
+            Subject internalPairwiseId) {
         LOG.info("Populating Authentication UserInfo");
-        String internalSubjectId = accessTokenInfo.getSubjectID();
-        var userProfile = authenticationService.getUserProfileFromSubject(internalSubjectId);
-
-        Subject internalPairwiseId =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                        userProfile,
-                        configurationService.getInternalSectorUri(),
-                        authenticationService);
-
         var userInfo = new UserInfo(internalPairwiseId);
         var result =
                 addClaimsFromToken(
-                        accessTokenInfo, internalSubjectId, userProfile, authSession, userInfo);
+                        accessTokenInfo,
+                        accessTokenInfo.getSubjectID(),
+                        userProfile,
+                        authSession,
+                        userInfo);
         if (result.isFailure()) {
             return Result.failure(result.getFailure());
         }

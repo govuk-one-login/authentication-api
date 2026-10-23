@@ -272,6 +272,8 @@ Mappings:
       supportPasskeys: true
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.authdev1.dev.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -331,6 +333,8 @@ Mappings:
       supportPasskeys: true
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.authdev2.dev.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -374,7 +378,7 @@ Mappings:
       forcedMFAResetAfterMFACheckEnabled: true
       AuthExpAccountId: 590183679200
       OrchAccountID: 816047645251
-      OrchApiBaseUrl: https://oidc.authdev3.dev.account.gov.uk
+      OrchApiBaseUrl: https://oidc.dev.account.gov.uk # Note authdev3 is directly integrated with orch dev
       OrchSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/54458128-e8d6-4f3f-bb3f-2737f2717bbf
       OrchClientSessionTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/2652846f-2767-4d53-a33c-5d1bd5d3f350
       OrchIdentityCredentialsTableEncryptionkey: arn:aws:kms:eu-west-2:816047645251:key/6c12b394-e3b7-4ca6-a137-2d3a9da8ad9f
@@ -394,6 +398,8 @@ Mappings:
       amcCreatePasskeyRedirectUri: https://signin.authdev3.dev.account.gov.uk/create-passkey-callback
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.authdev3.dev.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -427,7 +433,7 @@ Mappings:
       customDocAppClaimEnabled: true
       docAppDomain: https://dcmaw-cri.dev.stubs.account.gov.uk
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "Yes"
+      EnforceLambdaDeploymentOrder: "No"
       IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       EvcsApiVpcEndpointId: ""
@@ -462,6 +468,8 @@ Mappings:
       supportPasskeys: true
       bulkEmailSendingEnabled: "true"
       amcJwksUrl: https://amcstub.signin.dev.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -495,7 +503,7 @@ Mappings:
       internationalSmsSendingEnabled: true
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "Yes"
+      EnforceLambdaDeploymentOrder: "No"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 0
@@ -535,6 +543,8 @@ Mappings:
       amcCreatePasskeyRedirectUri: https://signin.build.account.gov.uk/create-passkey-callback
       bulkEmailSendingEnabled: "false"
       amcJwksUrl: https://amcstub.signin.build.account.gov.uk/.well-known/amc-jwks.json
+      amcJwksReadTimeout: "6000"
+      amcJwksConnectionTimeout: "6000"
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
@@ -566,9 +576,9 @@ Mappings:
       frontendBaseUrl: https://signin.staging.account.gov.uk
       internalApiNewInternationalSmsEnabled: false
       internationalSmsSendingEnabled: true
-      cloudwatchLogRetentionInDays: 7
+      cloudwatchLogRetentionInDays: 30
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      EnforceLambdaDeploymentOrder: "Yes"
+      EnforceLambdaDeploymentOrder: "No"
       IPVApiEnabled: true
       IsSplunkEnabled: "Yes"
       lambdaMinConcurrency: 3
@@ -633,7 +643,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       emailAcctCreationOtpCodeTtlDuration: 3600
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/be1b5ce0-3e55-4705-8437-8b68301ebcb1
-      EnforceLambdaDeploymentOrder: "Yes"
+      EnforceLambdaDeploymentOrder: "No"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/44a77768-8782-4d8c-8a18-3e2f7d160800
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/5c3be595-77cd-444f-a69e-8d9a1e56a75d
       frontendApiFMSTagValue: "authfrontendint"
@@ -700,7 +710,7 @@ Mappings:
       authSessionTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/a6becfd6-a3bb-4bfd-ba2f-2bdf35d36e40
       bulkEmailTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/6e0df2dd-520e-4df0-823a-7e5e4d89b0a0
       clientRegistryTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/afefa38f-5797-4722-9969-c7ad5ec6d6fe
-      cloudwatchLogRetentionInDays: 30
+      cloudwatchLogRetentionInDays: 180
       commonPasswordsTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/679eab90-3e6b-4409-b60f-03687fc52118
       customDocAppClaimEnabled: true
       dataStoreAccountId: 172348255554
@@ -708,7 +718,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
       emailAcctCreationOtpCodeTtlDuration: 3600
       emailCheckResultTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/aca649a0-488b-4696-b94a-49156254afd2
-      EnforceLambdaDeploymentOrder: "Yes"
+      EnforceLambdaDeploymentOrder: "No"
       eventsTopicEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/417be117-d2cd-45f1-8b07-f30ba68bfaef
       experianPhoneCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/4ea38950-d586-4f00-a19f-47b2ad13dc79
       frontendApiFMSTagValue: "authfrontendprod"

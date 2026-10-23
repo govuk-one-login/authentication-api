@@ -12,6 +12,8 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.DefaultResourceRetriever;
+import com.nimbusds.jose.util.ResourceRetriever;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -50,6 +52,9 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 
+import static com.nimbusds.jose.jwk.source.JWKSourceBuilder.DEFAULT_HTTP_CONNECT_TIMEOUT;
+import static com.nimbusds.jose.jwk.source.JWKSourceBuilder.DEFAULT_HTTP_READ_TIMEOUT;
+import static com.nimbusds.jose.jwk.source.JWKSourceBuilder.DEFAULT_HTTP_SIZE_LIMIT;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_AMC_SCOPE;
@@ -81,7 +86,9 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         super(AMCAuthorizeRequest.class, configurationService);
         try {
             this.jwkSource =
-                    JWKSourceBuilder.create(configurationService.getAmcJwksUrl())
+                    JWKSourceBuilder.create(
+                                    configurationService.getAmcJwksUrl(),
+                                    getJwksResourceRetriever(configurationService))
                             .retrying(true)
                             .refreshAheadCache(false)
                             .cache(true)
@@ -100,6 +107,18 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
+    }
+
+    private static ResourceRetriever getJwksResourceRetriever(
+            ConfigurationService configurationService) {
+        var connectionTimeout =
+                configurationService
+                        .getAmcJwksConnectionTimeout()
+                        .orElse(DEFAULT_HTTP_CONNECT_TIMEOUT);
+        var readTimeout =
+                configurationService.getAmcJwksReadTimeout().orElse(DEFAULT_HTTP_READ_TIMEOUT);
+        return new DefaultResourceRetriever(
+                connectionTimeout, readTimeout, DEFAULT_HTTP_SIZE_LIMIT);
     }
 
     public AMCAuthorizeHandler(

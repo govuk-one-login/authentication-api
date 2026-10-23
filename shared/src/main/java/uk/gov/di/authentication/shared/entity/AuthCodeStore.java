@@ -10,10 +10,10 @@ import java.util.List;
 public class AuthCodeStore {
 
     private static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
-    private static final String ATTRIBUTE_AUTH_CODE = "AuthCode";
+    public static final String ATTRIBUTE_AUTH_CODE = "AuthCode";
     private static final String ATTRIBUTE_CLAIMS = "Claims";
     private static final String ATTRIBUTE_TIME_TO_EXIST = "TimeToExist";
-    private static final String ATTRIBUTE_HAS_BEEN_USED = "HasBeenUsed";
+    public static final String ATTRIBUTE_HAS_BEEN_USED = "HasBeenUsed";
     private static final String ATTRIBUTE_SECTOR_IDENTIFIER = "SectorIdentifier";
     private static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
     private static final String ATTRIBUTE_PASSWORD_RESET_TIME = "PasswordResetTime";

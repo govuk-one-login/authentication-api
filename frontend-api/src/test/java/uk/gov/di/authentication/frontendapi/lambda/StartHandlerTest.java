@@ -7,9 +7,11 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
@@ -35,6 +37,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.URI;
@@ -45,6 +48,8 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -72,6 +77,7 @@ import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.ENCODED_DEVICE_DETAILS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.VALID_HEADERS;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -118,6 +124,9 @@ class StartHandlerTest {
                     DI_PERSISTENT_SESSION_ID,
                     ENCODED_DEVICE_DETAILS);
 
+    @RegisterExtension
+    private final CaptureLoggingExtension logging = new CaptureLoggingExtension(StartHandler.class);
+
     @BeforeEach
     void beforeEach() {
         when(configurationService.getEnvironment()).thenReturn("test");
@@ -157,6 +166,8 @@ class StartHandlerTest {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
+        when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
+                .thenReturn(true);
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -284,6 +295,8 @@ class StartHandlerTest {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
         useValidSession();
+        when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
+                .thenReturn(true);
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -304,6 +317,67 @@ class StartHandlerTest {
                         anyBoolean());
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void overridesAuthenticatedToFalseWhenOrchAndAuthDisagree(boolean canIssueAuthCode)
+            throws Json.JsonException {
+        withUserProfilePresent();
+        var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
+        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        var authSession =
+                useValidSession()
+                        .withHasVerifiedWithPassword(true)
+                        .withHasVerifiedWithMfa(true)
+                        .withHasVerifiedWithPasskey(true);
+
+        when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
+                .thenReturn(canIssueAuthCode);
+
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(true));
+
+        handler.handleRequest(event, context);
+
+        verify(startService)
+                .buildUserStartInfo(
+                        any(),
+                        any(),
+                        any(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        anyBoolean(),
+                        eq(canIssueAuthCode),
+                        anyBoolean(),
+                        anyBoolean());
+
+        var expectedLogIfCannotIssueAuthCode = "Auth code protection did not pass";
+        if (canIssueAuthCode) {
+            assertThat(
+                    logging.events(),
+                    not(hasItem(withMessageContaining(expectedLogIfCannotIssueAuthCode))));
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(
+                            eq(CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue()), any());
+            verify(authSessionService, never()).updateSession(any());
+            assertTrue(authSession.getHasVerifiedWithPassword());
+            assertTrue(authSession.getHasVerifiedWithMfa());
+            assertTrue(authSession.getHasVerifiedWithPasskey());
+        } else {
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining(expectedLogIfCannotIssueAuthCode)));
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue(),
+                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+            verify(authSessionService).updateSession(authSession);
+            assertFalse(authSession.getHasVerifiedWithPassword());
+            assertFalse(authSession.getHasVerifiedWithMfa());
+            assertFalse(authSession.getHasVerifiedWithPasskey());
+        }
+    }
+
     @Test
     void shouldReturn200WithAuthenticatedTrueWhenReauthenticateHeaderNotSetToTrue()
             throws Json.JsonException {
@@ -313,6 +387,8 @@ class StartHandlerTest {
         var userStartInfo =
                 new UserStartInfo(false, false, isAuthenticated, null, null, null, false, false);
         usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
+                .thenReturn(true);
 
         var event =
                 apiRequestEventWithHeadersAndBody(
@@ -425,13 +501,15 @@ class StartHandlerTest {
         return makeRequestBody(null, null, null, authenticated);
     }
 
-    private void useValidSession() {
+    private AuthSessionItem useValidSession() {
+        var authSession =
+                new AuthSessionItem()
+                        .withSessionId(SESSION_ID)
+                        .withClientId(CLIENT_ID)
+                        .withInternalCommonSubjectId(TEST_SUBJECT_ID);
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
-                .thenReturn(
-                        new AuthSessionItem()
-                                .withSessionId(SESSION_ID)
-                                .withClientId(CLIENT_ID)
-                                .withInternalCommonSubjectId(TEST_SUBJECT_ID));
+                .thenReturn(authSession);
+        return authSession;
     }
 
     private ClientStartInfo getClientStartInfo() {

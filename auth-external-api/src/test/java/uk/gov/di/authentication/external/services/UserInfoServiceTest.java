@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.external.services;
 
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +42,16 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.ACHIEVED_CREDENTIAL_STRENGTH;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_EMAIL;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_INTERNAL_PAIRWISE_ID;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_INTERNAL_SECTOR_URI;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_LEGACY_SUBJECT_ID;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_PHONE;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_PHONE_VERIFIED;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_PUBLIC_SUBJECT_ID;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_SALT;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.TEST_SUBJECT;
+import static uk.gov.di.authentication.external.helpers.CommonTestVariables.generateUserProfile;
 
 public class UserInfoServiceTest {
     private UserInfoService userInfoService;
@@ -50,27 +59,19 @@ public class UserInfoServiceTest {
     private AuthenticationService authenticationService;
     private AccessTokenConstructorService accessTokenConstructorService;
     private MFAMethodsService mfaMethodsService;
-    public static final ByteBuffer TEST_SALT = ByteBuffer.allocate(10);
-    private static final Subject TEST_SUBJECT = new Subject();
     private static final String TEST_RP_SECTOR_HOST = "test-rp-sector-uri";
     private static final String TEST_RP_PAIRWISE_ID =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT.getValue(),
                     TEST_RP_SECTOR_HOST,
                     SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
-    private static final String TEST_INTERNAL_SECTOR_URI = "https://test-internal-sector-uri";
     private static final String TEST_INTERNAL_SECTOR_HOST = "test-internal-sector-uri";
     private static final String TEST_INTERNAL_COMMON_SUBJECT_ID =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT.getValue(),
-                    TEST_INTERNAL_SECTOR_HOST,
+                    TEST_INTERNAL_SECTOR_URI,
                     SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
-    private static final String TEST_LEGACY_SUBJECT_ID = "test-legacy-subject-id";
-    private static final String TEST_PUBLIC_SUBJECT_ID = "test-public-subject-id";
-    private static final String TEST_EMAIL = "test-email";
     private static final boolean TEST_EMAIL_VERIFIED = true;
-    private static final String TEST_PHONE = "test-phone";
-    private static final boolean TEST_PHONE_VERIFIED = true;
     private static final MFAMethodType TEST_VERIFIED_MFA_METHOD_TYPE = MFAMethodType.EMAIL;
     private static final CredentialTrustLevel TEST_CURRENT_CREDENTIAL_STRENGTH =
             CredentialTrustLevel.MEDIUM_LEVEL;
@@ -156,10 +157,14 @@ public class UserInfoServiceTest {
 
         UserInfo actual =
                 userInfoService
-                        .populateUserInfo(mockAccessTokenStore, generateAuthSessionItem())
+                        .populateUserInfo(
+                                mockAccessTokenStore,
+                                generateAuthSessionItem(),
+                                generateUserProfile(),
+                                TEST_INTERNAL_PAIRWISE_ID)
                         .getSuccess();
 
-        assertEquals(TEST_INTERNAL_COMMON_SUBJECT_ID, actual.getSubject().getValue());
+        assertEquals(TEST_INTERNAL_PAIRWISE_ID, actual.getSubject());
         assertEquals(TEST_RP_PAIRWISE_ID, actual.getClaim("rp_pairwise_id"));
         assertEquals(TEST_IS_NEW_ACCOUNT, actual.getClaim("new_account"));
 
@@ -244,8 +249,6 @@ public class UserInfoServiceTest {
 
     @Test
     void shouldReturnMigratedPhoneNumberWhenPhoneIsMigrated() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
         when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
                 .thenReturn(
                         Result.success(
@@ -258,7 +261,9 @@ public class UserInfoServiceTest {
                         .populateUserInfo(
                                 getMockAccessTokenStore(
                                         List.of("phone_number", "phone_number_verified")),
-                                generateAuthSessionItem())
+                                generateAuthSessionItem(),
+                                generateUserProfile().withMfaMethodsMigrated(true),
+                                TEST_INTERNAL_PAIRWISE_ID)
                         .getSuccess();
 
         assertEquals(TEST_PHONE, actual.getPhoneNumber());
@@ -267,8 +272,6 @@ public class UserInfoServiceTest {
 
     @Test
     void shouldReturnNullForMigratedPhoneNumberWhenSMSIsNotDefaultMFAMethod() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
         when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
                 .thenReturn(
                         Result.success(
@@ -281,7 +284,9 @@ public class UserInfoServiceTest {
                         .populateUserInfo(
                                 getMockAccessTokenStore(
                                         List.of("phone_number", "phone_number_verified")),
-                                generateAuthSessionItem())
+                                generateAuthSessionItem(),
+                                generateUserProfile().withMfaMethodsMigrated(true),
+                                TEST_INTERNAL_PAIRWISE_ID)
                         .getSuccess();
 
         assertNull(actual.getPhoneNumber());
@@ -290,8 +295,6 @@ public class UserInfoServiceTest {
 
     @Test
     void shouldReturnNullForPhoneNumberWhenMFARetrievalFails() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
         when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
                 .thenReturn(
                         Result.failure(
@@ -303,7 +306,9 @@ public class UserInfoServiceTest {
                         .populateUserInfo(
                                 getMockAccessTokenStore(
                                         List.of("phone_number", "phone_number_verified")),
-                                generateAuthSessionItem())
+                                generateAuthSessionItem(),
+                                generateUserProfile().withMfaMethodsMigrated(true),
+                                TEST_INTERNAL_PAIRWISE_ID)
                         .getSuccess();
 
         assertNull(actual.getPhoneNumber());
@@ -312,8 +317,6 @@ public class UserInfoServiceTest {
 
     @Test
     void shouldNotSetAccountDataApiAccessTokenClaimWhenTokenCreationFails() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(false));
         when(authenticationService.getUserCredentialsFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(generateUserCredentials());
         when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
@@ -341,7 +344,9 @@ public class UserInfoServiceTest {
         var result =
                 userInfoService.populateUserInfo(
                         getMockAccessTokenStore(List.of("account_data_api_access_token")),
-                        generateAuthSessionItem());
+                        generateAuthSessionItem(),
+                        generateUserProfile().withMfaMethodsMigrated(false),
+                        TEST_INTERNAL_PAIRWISE_ID);
 
         assertTrue(result.isFailure());
         assertEquals(JwtFailureReason.SIGNING_ERROR, result.getFailure());
@@ -349,8 +354,6 @@ public class UserInfoServiceTest {
 
     @Test
     void shouldReturnNullForPhoneNumberWhenNoMFAMethodsFound() {
-        when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
-                .thenReturn(generateUserProfile().withMfaMethodsMigrated(true));
         when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
                 .thenReturn(Result.success(List.of()));
 
@@ -359,23 +362,13 @@ public class UserInfoServiceTest {
                         .populateUserInfo(
                                 getMockAccessTokenStore(
                                         List.of("phone_number", "phone_number_verified")),
-                                generateAuthSessionItem())
+                                generateAuthSessionItem(),
+                                generateUserProfile().withMfaMethodsMigrated(true),
+                                TEST_INTERNAL_PAIRWISE_ID)
                         .getSuccess();
 
         assertNull(actual.getPhoneNumber());
         assertFalse(actual.getPhoneNumberVerified());
-    }
-
-    private static UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withLegacySubjectID(TEST_LEGACY_SUBJECT_ID)
-                .withPublicSubjectID(TEST_PUBLIC_SUBJECT_ID)
-                .withSubjectID(TEST_SUBJECT.getValue())
-                .withEmail(TEST_EMAIL)
-                .withEmailVerified(TEST_EMAIL_VERIFIED)
-                .withPhoneNumber(TEST_PHONE)
-                .withPhoneNumberVerified(TEST_PHONE_VERIFIED)
-                .withSalt(TEST_SALT);
     }
 
     private static UserCredentials generateUserCredentials() {

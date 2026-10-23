@@ -125,6 +125,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
 
         authSessionStore.addSession(sessionId);
         authSessionStore.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
+        authSessionStore.addEmailToSession(sessionId, USER_EMAIL);
 
         String subjectId = "test-subject-id";
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
@@ -158,7 +159,7 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
                                 new ReverificationResultRequest(
                                         "code",
                                         IDReverificationStateExtension.AUTHENTICATION_STATE_FIELD,
-                                        "email")),
+                                        USER_EMAIL)),
                         constructFrontendHeaders(sessionId, sessionId),
                         Map.of());
 

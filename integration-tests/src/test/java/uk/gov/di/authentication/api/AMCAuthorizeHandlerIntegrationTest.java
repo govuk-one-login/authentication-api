@@ -10,6 +10,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -121,6 +122,12 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         txmaAuditQueue.clear();
     }
 
+    @AfterEach
+    void clearPerTestEnvVars() {
+        environment.set("AMC_JWKS_CONNECTION_TIMEOUT", null);
+        environment.set("AMC_JWKS_READ_TIMEOUT", null);
+    }
+
     @AfterAll
     static void afterAll() {
         if (wireMockServer != null) {
@@ -210,6 +217,74 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertFalse(amcCookie.isEmpty());
         RSADecrypter decrypter = new RSADecrypter(rsaKey.toPrivateKey());
         assertDoesNotThrow(() -> encryptedJWT.decrypt(decrypter));
+    }
+
+    private static Stream<Arguments> jwksDelaysAndConfiguredTimeoutsToExpectedSuccess() {
+        var longConfiguredConnectionTimeout = Optional.of(3500);
+        var longConfiguredReadTimeout = Optional.of(3500);
+        var noConfiguredTimeout = Optional.empty();
+        var longDelay = 4000;
+        var mediumDelay = 1000;
+        var shortDelay = 200;
+        return Stream.of(
+                Arguments.of(
+                        mediumDelay,
+                        longConfiguredConnectionTimeout,
+                        longConfiguredReadTimeout,
+                        true),
+                Arguments.of(mediumDelay, noConfiguredTimeout, noConfiguredTimeout, false),
+                Arguments.of(shortDelay, noConfiguredTimeout, noConfiguredTimeout, true),
+                Arguments.of(
+                        longDelay,
+                        longConfiguredConnectionTimeout,
+                        longConfiguredReadTimeout,
+                        false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("jwksDelaysAndConfiguredTimeoutsToExpectedSuccess")
+    void shouldHandleDelaysInJwksResponseAccordingToConfig(
+            int jwksDelay,
+            Optional<Integer> connectionTimeout,
+            Optional<Integer> readTimeout,
+            boolean expectedRequestSuccess)
+            throws Exception {
+        connectionTimeout.ifPresent(
+                timeout -> environment.set("AMC_JWKS_CONNECTION_TIMEOUT", timeout.toString()));
+        readTimeout.ifPresent(
+                timeout -> environment.set("AMC_JWKS_READ_TIMEOUT", timeout.toString()));
+
+        wireMockServer.stubFor(
+                get(urlPathMatching("/.well-known/jwks.json"))
+                        .willReturn(
+                                aResponse()
+                                        .withHeader("Content-Type", "application/json")
+                                        .withFixedDelay(jwksDelay)
+                                        .withBody(
+                                                new JWKSet(List.of(rsaKey))
+                                                        .toPublicJWKSet()
+                                                        .toString())));
+
+        handler = new AMCAuthorizeHandler();
+
+        var requestBody =
+                """
+                {
+                    "journeyType": "%s"
+                    }
+                """
+                        .formatted(AMCJourneyType.PASSKEY_CREATE);
+        var response =
+                makeRequest(
+                        Optional.of(requestBody),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        if (expectedRequestSuccess) {
+            assertThat(response, hasStatus(200));
+        } else {
+            assertThat(response, hasStatus(500));
+        }
     }
 
     private static Stream<Arguments> journeyTypesToAmcScopesInAuditEvent() {

@@ -1350,6 +1350,35 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @Test
+    void shouldIncrementReauthAttemptsCountWhenSmsCodeIncorrect() throws Json.JsonException {
+        long ttl = 3600L;
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(phoneNumberCodeProcessor));
+        when(phoneNumberCodeProcessor.validateCode())
+                .thenReturn(Optional.of(ErrorResponse.INVALID_MFA_CODE_ENTERED));
+        when(configurationService.getReauthEnterSMSCodeCountTTL()).thenReturn(ttl);
+        MockedStatic<NowHelper> mockedNowHelperClass = mockStatic(NowHelper.class);
+        mockedNowHelperClass
+                .when(() -> NowHelper.nowPlus(ttl, ChronoUnit.SECONDS))
+                .thenReturn(Date.from(Instant.parse("2024-01-01T00:00:00.00Z")));
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        CODE,
+                        REAUTHENTICATION,
+                        DEFAULT_SMS_METHOD.getDestination());
+        var result = makeCallWithCode(codeRequest);
+
+        assertThat(result, hasJsonBody(ErrorResponse.INVALID_MFA_CODE_ENTERED));
+        verify(authenticationAttemptsService, times(1))
+                .createOrIncrementCount(
+                        TEST_SUBJECT_ID, 1704067200L, REAUTHENTICATION, ENTER_MFA_CODE);
+
+        mockedNowHelperClass.close();
+    }
+
+    @Test
     void
             shouldDeleteAuthAppAuthenticationAttemptsCountAndStoreCountsInSessionIfCorrectCodeEnteredForReauthJourney()
                     throws Json.JsonException {

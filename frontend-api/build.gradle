@@ -7,8 +7,6 @@ plugins {
 group = "uk.gov.di.authentication.frontendapi"
 version = "unspecified"
 
-File terraformDir = new File(project.rootDir, "ci/terraform/oidc")
-
 dependencies {
 
     implementation project(path: ':shared')
@@ -62,7 +60,7 @@ test {
 
 var pactDir = layout.buildDirectory.dir("pacts").get().asFile.path
 
-task pactConsumerTests (type: Test, group: "verification") {
+task pactConsumerTests(type: Test, group: "verification") {
     useJUnitPlatform()
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
@@ -89,9 +87,6 @@ pact {
 pactPublish.dependsOn pactConsumerTests
 
 task buildZip(type: Zip) {
-    if (isDevDeployBuild) {
-        destinationDirectory = new File(terraformDir, "artifacts")
-    }
     from compileJava
     from processResources
     into("lib") {

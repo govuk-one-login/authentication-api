@@ -9,16 +9,23 @@ public class LambdaPauseHelper {
 
     private LambdaPauseHelper() {}
 
-    public static void pauseBetweenInvocations(long pauseDurationMs) {
+    public static void pause(long millis) {
+        if (millis <= 0) {
+            return;
+        }
+
         try {
-            if (pauseDurationMs > 0) {
-                LOG.info("Pausing between Lambda invocations for: {} ms", pauseDurationMs);
-                Thread.sleep(pauseDurationMs);
-                LOG.info("Pause between Lambda invocations complete.");
-            }
+            Thread.sleep(millis);
         } catch (InterruptedException e) {
-            LOG.warn("Pause between Lambda invocations interrupted.");
             Thread.currentThread().interrupt();
+        }
+    }
+
+    public static void pauseBetweenInvocations(long pauseDurationMs) {
+        if (pauseDurationMs > 0) {
+            LOG.info("Pausing between Lambda invocations for: {} ms", pauseDurationMs);
+            pause(pauseDurationMs);
+            LOG.info("Pause between Lambda invocations complete.");
         }
     }
 }

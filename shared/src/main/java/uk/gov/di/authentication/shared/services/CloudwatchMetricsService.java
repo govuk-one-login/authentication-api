@@ -57,6 +57,7 @@ public class CloudwatchMetricsService {
     public static final String INTERNATIONAL_SMS_DESTINATION = "INTERNATIONAL";
     public static final String DOMESTIC_SMS_DESTINATION = "DOMESTIC";
     public static final String UNKNOWN_VALUE = "unknown";
+    public static final String AUTHENTICATION_NAMESPACE = "Authentication";
 
     private final ConfigurationService configurationService;
 
@@ -73,14 +74,30 @@ public class CloudwatchMetricsService {
                 "Metrics::EMF", () -> emitMetric(name, value, dimensions, new MetricsLogger()));
     }
 
+    public void putEmbeddedValue(
+            String name, double value, Map<String, String> dimensions, String namespace) {
+        segmentedFunctionCall(
+                "Metrics::EMF",
+                () -> emitMetric(name, value, dimensions, new MetricsLogger(), namespace));
+    }
+
     protected void emitMetric(
             String name, double value, Map<String, String> dimensions, MetricsLogger metrics) {
+        emitMetric(name, value, dimensions, metrics, AUTHENTICATION_NAMESPACE);
+    }
+
+    protected void emitMetric(
+            String name,
+            double value,
+            Map<String, String> dimensions,
+            MetricsLogger metrics,
+            String namespace) {
         try {
             var dimensionsSet = new DimensionSet();
 
             dimensions.forEach(dimensionsSet::addDimension);
 
-            metrics.setNamespace("Authentication");
+            metrics.setNamespace(namespace);
             metrics.putDimensions(dimensionsSet);
             metrics.putMetric(name, value, Unit.NONE);
             metrics.flush();
@@ -95,6 +112,10 @@ public class CloudwatchMetricsService {
 
     public void incrementCounter(CloudwatchMetrics name, Map<String, String> dimensions) {
         putEmbeddedValue(name.getValue(), 1, dimensions);
+    }
+
+    public void incrementCounter(String name, Map<String, String> dimensions, String namespace) {
+        putEmbeddedValue(name, 1, dimensions, namespace);
     }
 
     public void incrementMfaMethodCounter(

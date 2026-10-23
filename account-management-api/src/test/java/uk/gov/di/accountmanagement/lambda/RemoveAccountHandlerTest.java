@@ -91,12 +91,11 @@ class RemoveAccountHandlerTest {
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
                 .removeAccount(
-                        Optional.of(event),
+                        event,
                         userProfile,
                         TXMA_ENCODED_HEADER_VALUE,
                         AccountDeletionReason.USER_INITIATED,
-                        true,
-                        Optional.empty());
+                        true);
     }
 
     @Test
@@ -117,12 +116,12 @@ class RemoveAccountHandlerTest {
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
                 .removeAccount(
-                        Optional.of(event),
+                        event,
                         userProfile,
                         TXMA_ENCODED_HEADER_VALUE,
                         AccountDeletionReason.USER_INITIATED,
                         true,
-                        Optional.of("some-access-token"));
+                        "some-access-token");
     }
 
     @Test
@@ -141,12 +140,11 @@ class RemoveAccountHandlerTest {
         assertThat(result, hasStatus(204));
         verify(accountDeletionService)
                 .removeAccount(
-                        Optional.of(event),
+                        event,
                         userProfile,
                         StructuredAuditService.UNKNOWN,
                         AccountDeletionReason.USER_INITIATED,
-                        true,
-                        Optional.empty());
+                        true);
     }
 
     @Test

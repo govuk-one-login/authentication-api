@@ -48,6 +48,12 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_HAS_VERIFIED_WITH_MFA = "HasVerifiedWithMfa";
     public static final String ATTRIBUTE_HAS_VERIFIED_WITH_PASSKEY = "HasVerifiedWithPasskey";
     public static final String ATTRIBUTE_IS_PARTIALLY_CREATED_ACCOUNT = "IsPartiallyCreatedAccount";
+    public static final String ATTRIBUTE_PREVIOUS_SESSION_ID = "PreviousSessionId";
+    public static final String ATTRIBUTE_CREATED_AT = "CreatedAt";
+    public static final String ATTRIBUTE_RESET_PASSWORD_EMAIL_CODE_VERIFIED =
+            "ResetPasswordEmailCodeVerified";
+    public static final String ATTRIBUTE_RECORDED_EMAIL_FOR_IDENTITY_VERIFICATION =
+            "RecordedEmailForIdentityVerification";
 
     public enum AccountState {
         NEW,
@@ -95,6 +101,10 @@ public class AuthSessionItem {
     private boolean hasVerifiedWithMfa;
     private boolean hasVerifiedWithPasskey;
     private boolean isPartiallyCreatedAccount;
+    private String previousSessionId;
+    private String createdAt;
+    private String resetPasswordEmailCodeVerified;
+    private String recordedEmailForIdentityVerification;
 
     public AuthSessionItem() {
         this.codeRequestCountMap = new HashMap<>();
@@ -556,6 +566,65 @@ public class AuthSessionItem {
         return this;
     }
 
+    @DynamoDbAttribute(ATTRIBUTE_PREVIOUS_SESSION_ID)
+    public String getPreviousSessionId() {
+        return previousSessionId;
+    }
+
+    public void setPreviousSessionId(String previousSessionId) {
+        this.previousSessionId = previousSessionId;
+    }
+
+    public AuthSessionItem withPreviousSessionId(String previousSessionId) {
+        this.previousSessionId = previousSessionId;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_CREATED_AT)
+    public String getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public AuthSessionItem withCreatedAt(String createdAt) {
+        this.createdAt = createdAt;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RESET_PASSWORD_EMAIL_CODE_VERIFIED)
+    public String getResetPasswordEmailCodeVerified() {
+        return resetPasswordEmailCodeVerified;
+    }
+
+    public void setResetPasswordEmailCodeVerified(String resetPasswordEmailCodeVerified) {
+        this.resetPasswordEmailCodeVerified = resetPasswordEmailCodeVerified;
+    }
+
+    public AuthSessionItem withResetPasswordEmailCodeVerified(
+            String resetPasswordEmailCodeVerified) {
+        this.resetPasswordEmailCodeVerified = resetPasswordEmailCodeVerified;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_RECORDED_EMAIL_FOR_IDENTITY_VERIFICATION)
+    public String getRecordedEmailForIdentityVerification() {
+        return recordedEmailForIdentityVerification;
+    }
+
+    public void setRecordedEmailForIdentityVerification(
+            String recordedEmailForIdentityVerification) {
+        this.recordedEmailForIdentityVerification = recordedEmailForIdentityVerification;
+    }
+
+    public AuthSessionItem withRecordedEmailForIdentityVerification(
+            String recordedEmailForIdentityVerification) {
+        this.recordedEmailForIdentityVerification = recordedEmailForIdentityVerification;
+        return this;
+    }
+
     /**
      * Return a string representation of the instance that is safe to record in logs (e.g. does not
      * contain PII)
@@ -569,12 +638,16 @@ public class AuthSessionItem {
                 + timeToLive
                 + "', isNewAccount = '"
                 + isNewAccount
+                + "', isPartiallyCreatedAccount = '"
+                + isPartiallyCreatedAccount
                 + "', resetPasswordState = '"
                 + resetPasswordState
                 + "', resetMfaState = '"
                 + resetMfaState
                 + "', upliftRequired = '"
                 + upliftRequired
+                + "', previousSessionId = '"
+                + previousSessionId
                 + "', hasVerifiedWithPassword = '"
                 + hasVerifiedWithPassword
                 + "', hasVerifiedWithMfa = '"

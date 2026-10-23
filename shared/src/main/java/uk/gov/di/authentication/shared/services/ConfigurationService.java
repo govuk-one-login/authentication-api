@@ -261,6 +261,17 @@ public class ConfigurationService
         return System.getenv().getOrDefault("INACTIVE_ACCOUNT_EXPORT_TABLE_NAME", "");
     }
 
+    public long getInactiveAccountDeletionMinDurationPerMessageMs() {
+        return Long.parseLong(
+                System.getenv()
+                        .getOrDefault(
+                                "INACTIVE_ACCOUNT_DELETION_MIN_DURATION_PER_MESSAGE_MS", "3000"));
+    }
+
+    public String getIADCircuitBreakerTableName() {
+        return System.getenv("IAD_CIRCUIT_BREAKER_TABLE_NAME");
+    }
+
     public int getInactiveAccountExportBatchWriteMaxRetries() {
         return Integer.parseInt(
                 System.getenv()
@@ -276,6 +287,47 @@ public class ConfigurationService
         return System.getenv()
                 .getOrDefault("INACTIVE_ACCOUNT_EXPORT_TRACKER_WRITE_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
+    }
+
+    public String getLastSignedInBackfillLambdaName() {
+        return System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_LAMBDA_NAME", "");
+    }
+
+    public int getLastSignedInBackfillParallelism() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_PARALLELISM", "200"));
+    }
+
+    public int getLastSignedInBackfillTotalSegments() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_TOTAL_SEGMENTS", "200"));
+    }
+
+    public int getLastSignedInBackfillMaxRetries() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_MAX_RETRIES", "3"));
+    }
+
+    public int getLastSignedInBackfillMaxItemsPerSegment() {
+        return Integer.parseInt(
+                System.getenv()
+                        .getOrDefault("LAST_SIGNED_IN_BACKFILL_MAX_ITEMS_PER_SEGMENT", "7500"));
+    }
+
+    public long getLastSignedInBackfillPauseBetweenInvocationsMs() {
+        return Long.parseLong(
+                System.getenv()
+                        .getOrDefault(
+                                "LAST_SIGNED_IN_BACKFILL_PAUSE_BETWEEN_INVOCATIONS_MS", "60000"));
+    }
+
+    public int getLastSignedInBackfillMaxInvocations() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_MAX_INVOCATIONS", "0"));
+    }
+
+    public String getLastSignedInBackfillTrackerTableName() {
+        return System.getenv().getOrDefault("LAST_SIGNED_IN_BACKFILL_TRACKER_TABLE_NAME", "");
     }
 
     public String getTicfCRILambdaIdentifier() {
@@ -604,10 +656,6 @@ public class ConfigurationService
         return System.getenv("IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS");
     }
 
-    public String getLegacyAccountDeletionTopicArn() {
-        return System.getenv("LEGACY_ACCOUNT_DELETION_TOPIC_ARN");
-    }
-
     private URI getURIOrDefault(String envVar, String defaultUri) {
         return getOptionalURI(envVar).orElseGet(() -> URI.create(defaultUri));
     }
@@ -814,6 +862,28 @@ public class ConfigurationService
         } catch (MalformedURLException e) {
             LOG.error("Invalid AMC JWKS URL: {}", e.getMessage());
             throw new MalformedURLException(e.getMessage());
+        }
+    }
+
+    public Optional<Integer> getAmcJwksConnectionTimeout() {
+        try {
+            return Optional.ofNullable(System.getenv("AMC_JWKS_CONNECTION_TIMEOUT"))
+                    .filter(s -> !s.isBlank())
+                    .map(Integer::parseInt);
+        } catch (NumberFormatException e) {
+            LOG.warn("malformatted amc jwks connection timeout");
+            return Optional.empty();
+        }
+    }
+
+    public Optional<Integer> getAmcJwksReadTimeout() {
+        try {
+            return Optional.ofNullable(System.getenv("AMC_JWKS_READ_TIMEOUT"))
+                    .filter(s -> !s.isBlank())
+                    .map(Integer::parseInt);
+        } catch (NumberFormatException e) {
+            LOG.warn("malformatted amc jwks read timeout");
+            return Optional.empty();
         }
     }
 

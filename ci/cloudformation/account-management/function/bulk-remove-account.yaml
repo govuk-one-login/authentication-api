@@ -75,15 +75,6 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               accountDeletionDataApiEnabled,
             ]
-          LEGACY_ACCOUNT_DELETION_TOPIC_ARN: !If
-            - IsHigherEnv
-            - !FindInMap [
-                EnvironmentConfiguration,
-                !Ref Environment,
-                legacyAccountDeletionTopicArn,
-                DefaultValue: "",
-              ]
-            - !Ref MockAccountDeletionTopic
       LoggingConfig:
         LogGroup: !Ref BulkRemoveAccountFunctionLogGroup
       Policies:
@@ -112,7 +103,6 @@ Resources:
         - !Ref DynamoAccountModifiersDeleteAccessPolicy
         - !Ref DynamoAuthenticatorTableReadDeleteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
-        - !Ref LegacyAccountDeletionTopicPolicy
         - !Ref ClientRegistryTableKmsPolicy
         - !Ref EmailCheckResultsTableKmsPolicy
         - !Ref UserProfileTableKmsPolicy
@@ -283,68 +273,6 @@ Resources:
       DestinationArn: !Ref LoggingSubscriptionEndpointArn
       FilterPattern: ""
       LogGroupName: !Ref BulkRemoveAccountFunctionLogGroup
-
-  MockAccountDeletionTopic:
-    Condition: IsNotProduction
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub
-        - ${Env}-mock-account-deletion-topic
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      KmsMasterKeyId: !GetAtt MainKmsKey.Arn
-      Tags:
-        - Key: Name
-          Value: !Sub "${AWS::StackName}-MockAccountDeletionTopic"
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Source
-          Value: govuk-one-login/authentication-api/ci/cloudformation/account-management/function/bulk-remove-account.yaml
-
-  LegacyAccountDeletionTopicPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      ManagedPolicyName: !Sub
-        - ${Env}-legacy-account-deletion-topic-policy
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Sid: AllowAccessToSNS
-            Effect: Allow
-            Action:
-              - sns:Publish
-            Resource:
-              - !If
-                - IsHigherEnv
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    legacyAccountDeletionTopicArn,
-                    DefaultValue: "",
-                  ]
-                - !Ref MockAccountDeletionTopic
-          - Sid: AllowDecryption
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-              - kms:GenerateDataKey
-            Resource:
-              - !GetAtt MainKmsKey.Arn
-          - !If
-            - IsHigherEnv
-            - Sid: AllowDecryptionHomeSnsTopicKmsKey
-              Effect: Allow
-              Action:
-                - kms:Decrypt
-                - kms:GenerateDataKey
-              Resource:
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    legacyAccountDeletionTopicKmsKeyArn,
-                    DefaultValue: "",
-                  ]
-            - !Ref AWS::NoValue
 
   BulkRemoveAccountInvokePolicy:
     Type: AWS::IAM::ManagedPolicy

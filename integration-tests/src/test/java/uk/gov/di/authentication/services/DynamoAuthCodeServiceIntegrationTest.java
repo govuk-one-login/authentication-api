@@ -44,14 +44,36 @@ class DynamoAuthCodeServiceIntegrationTest {
     }
 
     @Test
-    void shouldUpdateHasBeenUsed() {
+    void shouldMarkAuthCodeAsUsed() {
         setUpDynamo();
+        var originalAuthCode = dynamoAuthCodeService.getAuthCodeStore(AUTH_CODE).orElseThrow();
 
-        dynamoAuthCodeService.updateHasBeenUsed(AUTH_CODE, true);
+        var marked = dynamoAuthCodeService.markAuthCodeAsUsedIfUnused(AUTH_CODE);
         var updatedAuthCode =
                 dynamoAuthCodeService.getAuthCodeStore(AUTH_CODE).orElseGet(AuthCodeStore::new);
 
+        assertThat(marked, equalTo(true));
         assertThat(updatedAuthCode.isHasBeenUsed(), equalTo(true));
+        assertThat(updatedAuthCode.getTimeToExist(), equalTo(originalAuthCode.getTimeToExist()));
+        assertThat(updatedAuthCode.getSubjectID(), equalTo(SUBJECT_ID));
+        assertThat(updatedAuthCode.getJourneyID(), equalTo(TEST_JOURNEY_ID));
+    }
+
+    @Test
+    void shouldNotMarkAuthCodeAsUsedWhenAlreadyUsed() {
+        setUpDynamo();
+
+        dynamoAuthCodeService.markAuthCodeAsUsedIfUnused(AUTH_CODE);
+
+        assertThat(dynamoAuthCodeService.markAuthCodeAsUsedIfUnused(AUTH_CODE), equalTo(false));
+    }
+
+    @Test
+    void shouldNotCreateAuthCodeWhenMarkingUnknownCodeAsUsed() {
+        assertThat(
+                dynamoAuthCodeService.markAuthCodeAsUsedIfUnused("unknown-code"), equalTo(false));
+        assertThat(
+                dynamoAuthCodeService.getAuthCodeStore("unknown-code").isPresent(), equalTo(false));
     }
 
     @Test

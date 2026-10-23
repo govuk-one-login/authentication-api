@@ -12,16 +12,6 @@ Resources:
       Environment:
         Variables:
           IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_ALIAS: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:${IpvReverificationRequestSigningKeyAlias}"
-          IPV_REVERIFICATION_REQUESTS_SIGNING_KEY_DEPRECATED_ALIAS: !Sub
-            - arn:aws:kms:${AWS::Region}:${DataStoreAccountId}:alias/${env}-ipv_reverification_request_signing_key
-            - DataStoreAccountId:
-                !FindInMap [
-                  EnvironmentConfiguration,
-                  !Ref Environment,
-                  dataStoreAccountId,
-                ]
-              env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       LoggingConfig:
         LogGroup: !Ref MfaResetJarJwkFunctionLogGroup
       Policies:
@@ -101,7 +91,10 @@ Resources:
     Properties:
       AlarmActions: !If
         - UseAlarmActions
-        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - - !If
+            - IsProduction
+            - "{{resolve:ssm:/deploy/production/auth_notifications_channel_topic_arn}}"
+            - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
         - []
       AlarmDescription: !Sub
         - "${AlarmThreshold} or more number of errors have occurred in the ${Env}-mfa-reset-jar-jwk-lambda function. ${RunbookLink}"

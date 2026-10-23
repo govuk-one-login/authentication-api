@@ -3,24 +3,16 @@ package uk.gov.di.accountmanagement.services;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.DeletedAccountIdentifiers;
-import uk.gov.di.accountmanagement.entity.LegacyAccountDeletionMessage;
 import uk.gov.di.authentication.shared.entity.JwtFailureReason;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
-
-import java.net.URI;
-import java.util.Optional;
 
 public class ManualAccountDeletionService {
     private final AccountDeletionService accountDeletionService;
-    private final AwsSnsClient legacyAccountDeletionSnsClient;
     private final ConfigurationService configurationService;
     private final AccountDeletionTokenService accountDeletionTokenService;
     private final String clientId;
@@ -28,24 +20,16 @@ public class ManualAccountDeletionService {
 
     public ManualAccountDeletionService(
             AccountDeletionService accountDeletionService,
-            AwsSnsClient legacyAccountDeletionSnsClient,
             ConfigurationService configurationService) {
-        this(
-                accountDeletionService,
-                legacyAccountDeletionSnsClient,
-                configurationService,
-                null,
-                null);
+        this(accountDeletionService, configurationService, null, null);
     }
 
     public ManualAccountDeletionService(
             AccountDeletionService accountDeletionService,
-            AwsSnsClient legacyAccountDeletionSnsClient,
             ConfigurationService configurationService,
             AccountDeletionTokenService accountDeletionTokenService,
             String clientId) {
         this.accountDeletionService = accountDeletionService;
-        this.legacyAccountDeletionSnsClient = legacyAccountDeletionSnsClient;
         this.configurationService = configurationService;
         this.accountDeletionTokenService = accountDeletionTokenService;
         this.clientId = clientId;
@@ -64,19 +48,33 @@ public class ManualAccountDeletionService {
                         userProfile.getPublicSubjectID(),
                         userProfile.getLegacySubjectID(),
                         userProfile.getSubjectID());
-        var legacyAccountDeletionMessage =
-                new LegacyAccountDeletionMessage(
-                        userProfile.getPublicSubjectID(),
-                        userProfile.getLegacySubjectID(),
-                        getCommonSubjectId(userProfile));
+
         try {
-            accountDeletionService.removeAccount(
-                    Optional.empty(),
-                    userProfile,
-                    AuditService.UNKNOWN,
-                    accountDeletionReason,
-                    sendNotification,
-                    getAccountDataApiToken(userProfile));
+            if (accountDeletionTokenService == null
+                    || !configurationService.isAccountDeletionDataApiEnabled()) {
+                accountDeletionService.removeAccount(
+                        userProfile, AuditService.UNKNOWN, accountDeletionReason, sendNotification);
+
+            } else {
+                Result<JwtFailureReason, BearerAccessToken> adapiTokenResult =
+                        accountDeletionTokenService.createAccountDataApiAccessToken(
+                                userProfile.getPublicSubjectID(), clientId);
+
+                if (adapiTokenResult.isFailure()) {
+                    throw new RuntimeException(
+                            "Failed to mint account-delete token for publicSubjectId: "
+                                    + userProfile.getPublicSubjectID()
+                                    + ". Reason: "
+                                    + adapiTokenResult.getFailure());
+                }
+
+                accountDeletionService.removeAccount(
+                        userProfile,
+                        AuditService.UNKNOWN,
+                        accountDeletionReason,
+                        sendNotification,
+                        adapiTokenResult.getSuccess().getValue());
+            }
         } catch (RuntimeException e) {
             LOG.error(
                     "Error while deleting account: {}. Identifiers: {}",
@@ -84,35 +82,7 @@ public class ManualAccountDeletionService {
                     accountIdentifiers);
             throw e;
         }
-        var deletedAccountPayload =
-                SerializationService.getInstance().writeValueAsString(legacyAccountDeletionMessage);
-        legacyAccountDeletionSnsClient.publish(deletedAccountPayload);
+
         return accountIdentifiers;
-    }
-
-    private Optional<String> getAccountDataApiToken(UserProfile userProfile) {
-        if (accountDeletionTokenService == null
-                || !configurationService.isAccountDeletionDataApiEnabled()) {
-            return Optional.empty();
-        }
-        Result<JwtFailureReason, BearerAccessToken> tokenResult =
-                accountDeletionTokenService.createAccountDataApiAccessToken(
-                        userProfile.getPublicSubjectID(), clientId);
-        return tokenResult.fold(
-                failure -> {
-                    throw new RuntimeException(
-                            "Failed to mint account-delete token for publicSubjectId: "
-                                    + userProfile.getPublicSubjectID()
-                                    + ". Reason: "
-                                    + failure);
-                },
-                token -> Optional.of(token.getValue()));
-    }
-
-    private String getCommonSubjectId(UserProfile userProfile) {
-        var internalSectorUri = URI.create(configurationService.getInternalSectorUri());
-        var salt = SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray();
-        return ClientSubjectHelper.calculatePairwiseIdentifier(
-                userProfile.getSubjectID(), internalSectorUri, salt);
     }
 }

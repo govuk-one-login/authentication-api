@@ -7,10 +7,6 @@ am_api_fms_tag_value = "accountmanagementstaging"
 internal_sector_uri   = "https://identity.staging.account.gov.uk"
 access_token_jwks_url = "https://oidc.staging.account.gov.uk/.well-known/jwks.json"
 
-# SNS
-legacy_account_deletion_topic_arn     = "arn:aws:sns:eu-west-2:539729775994:UserAccountDeletion"
-legacy_account_deletion_topic_key_arn = "arn:aws:kms:eu-west-2:539729775994:key/d33e9077-8d66-4f63-99a1-f90e29b4aabe"
-
 # App-specific
 openapi_spec_filename = "openapi_v2.yaml"
 

@@ -34,11 +34,11 @@ public record AuthPasskeyVerificationFailed(
         var eventName = "AUTH_PASSKEY_VERIFICATION_FAILED";
         Instant now = clock.instant();
         var user = UserWithoutPhone.fromAuditContext(auditContext);
-        var extensions = new Extensions(journeyType.getValue(), passkeyVerificationFailed);
         var restricted =
                 new Restricted(
                         EncodedDeviceInformation.from(auditContext),
                         new RestrictedPasskeySection(passkeyAllowCredentials, passkeyCredentialId));
+        var extensions = new Extensions(journeyType.getValue(), passkeyVerificationFailed);
         return new AuthPasskeyVerificationFailed(
                 eventName,
                 now.getEpochSecond(),
@@ -50,9 +50,9 @@ public record AuthPasskeyVerificationFailed(
                 extensions);
     }
 
-    public record Extensions(
-            @SerializedName("journey-type") String journeyType, PasskeyDetail passkey) {}
-
     public record Restricted(
             EncodedDeviceInformation deviceInformation, RestrictedPasskeySection passkey) {}
+
+    public record Extensions(
+            @SerializedName("journey-type") String journeyType, PasskeyDetail passkey) {}
 }

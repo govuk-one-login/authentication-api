@@ -1,7 +1,10 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -10,6 +13,10 @@ import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.exceptions.MissingEnvVariableException;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
+import uk.org.webcompere.systemstubs.jupiter.SystemStub;
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -18,6 +25,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -27,10 +37,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withLevelAndMessageContaining;
 
+@ExtendWith(SystemStubsExtension.class)
 class ConfigurationServiceTest {
     private static ConfigurationService configurationService;
     private final SystemService systemService = mock(SystemService.class);
+
+    @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(ConfigurationService.class);
 
     @BeforeAll
     static void beforeAll() {
@@ -224,6 +242,12 @@ class ConfigurationServiceTest {
     }
 
     @Test
+    void getInactiveAccountDeletionMinDurationPerMessageMsShouldDefault() {
+        assertEquals(
+                3000, configurationService.getInactiveAccountDeletionMinDurationPerMessageMs());
+    }
+
+    @Test
     void getInactiveAccountExportMaxInvocationsShouldDefault() {
         assertEquals(0, configurationService.getInactiveAccountExportMaxInvocations());
     }
@@ -231,6 +255,47 @@ class ConfigurationServiceTest {
     @Test
     void isInactiveAccountExportTrackerWriteEnabledShouldDefaultToFalse() {
         assertFalse(configurationService.isInactiveAccountExportTrackerWriteEnabled());
+    }
+
+    @Test
+    void getLastSignedInBackfillLambdaNameShouldDefault() {
+        assertEquals("", configurationService.getLastSignedInBackfillLambdaName());
+    }
+
+    @Test
+    void getLastSignedInBackfillParallelismShouldDefault() {
+        assertEquals(200, configurationService.getLastSignedInBackfillParallelism());
+    }
+
+    @Test
+    void getLastSignedInBackfillTotalSegmentsShouldDefault() {
+        assertEquals(200, configurationService.getLastSignedInBackfillTotalSegments());
+    }
+
+    @Test
+    void getLastSignedInBackfillMaxRetriesShouldDefault() {
+        assertEquals(3, configurationService.getLastSignedInBackfillMaxRetries());
+    }
+
+    @Test
+    void getLastSignedInBackfillMaxItemsPerSegmentShouldDefault() {
+        assertEquals(7500, configurationService.getLastSignedInBackfillMaxItemsPerSegment());
+    }
+
+    @Test
+    void getLastSignedInBackfillPauseBetweenInvocationsMsShouldDefault() {
+        assertEquals(
+                60000, configurationService.getLastSignedInBackfillPauseBetweenInvocationsMs());
+    }
+
+    @Test
+    void getLastSignedInBackfillMaxInvocationsShouldDefault() {
+        assertEquals(0, configurationService.getLastSignedInBackfillMaxInvocations());
+    }
+
+    @Test
+    void getLastSignedInBackfillTrackerTableNameShouldDefault() {
+        assertEquals("", configurationService.getLastSignedInBackfillTrackerTableName());
     }
 
     @Test
@@ -553,11 +618,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void getLegacyAccountDeletionTopicArnShouldNotDefault() {
-        assertNull(configurationService.getLegacyAccountDeletionTopicArn());
-    }
-
-    @Test
     void getStorageTokenClaimNameShouldDefault() {
         assertEquals(
                 "https://vocab.account.gov.uk/v1/storageAccessToken",
@@ -689,6 +749,108 @@ class ConfigurationServiceTest {
         assertEquals(
                 oneWeekDurationMinutes,
                 configurationService.getPasskeyPromptSuppressionInMinutes());
+    }
+
+    @Test
+    void getAmcJwksConnectionTimeoutShouldBeEmptyWhenEnvVarUnset() {
+        environment.remove("AMC_JWKS_CONNECTION_TIMEOUT");
+        assertTrue(configurationService.getAmcJwksConnectionTimeout().isEmpty());
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withLevelAndMessageContaining(
+                                        Level.WARN, "malformatted amc jwks connection timeout"))));
+    }
+
+    @Test
+    void getAmcJwksConnectionTimeoutShouldBeEmptyWhenEnvVarBlank() {
+        environment.set("AMC_JWKS_CONNECTION_TIMEOUT", "");
+        assertTrue(configurationService.getAmcJwksConnectionTimeout().isEmpty());
+
+        environment.set("AMC_JWKS_CONNECTION_TIMEOUT", "   ");
+        assertTrue(configurationService.getAmcJwksConnectionTimeout().isEmpty());
+
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withLevelAndMessageContaining(
+                                        Level.WARN, "malformatted amc jwks connection timeout"))));
+    }
+
+    @Test
+    void getAmcJwksConnectionTimeoutShouldReturnValueWhenSet() {
+        environment.set("AMC_JWKS_CONNECTION_TIMEOUT", "6000");
+        assertEquals(Optional.of(6000), configurationService.getAmcJwksConnectionTimeout());
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withLevelAndMessageContaining(
+                                        Level.WARN, "malformatted amc jwks connection timeout"))));
+    }
+
+    @Test
+    void getAmcJwksConnectionTimeoutShouldBeEmptyAndWarnWhenEnvVarMalformed() {
+        environment.set("AMC_JWKS_CONNECTION_TIMEOUT", "not-a-number");
+        assertTrue(configurationService.getAmcJwksConnectionTimeout().isEmpty());
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withLevelAndMessageContaining(
+                                Level.WARN, "malformatted amc jwks connection timeout")));
+    }
+
+    @Test
+    void getAmcJwksReadTimeoutShouldBeEmptyWhenEnvVarUnset() {
+        environment.remove("AMC_JWKS_READ_TIMEOUT");
+        assertTrue(configurationService.getAmcJwksReadTimeout().isEmpty());
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withLevelAndMessageContaining(
+                                        Level.WARN, "malformatted amc jwks read timeout"))));
+    }
+
+    @Test
+    void getAmcJwksReadTimeoutShouldBeEmptyWhenEnvVarBlank() {
+        environment.set("AMC_JWKS_READ_TIMEOUT", "");
+        assertTrue(configurationService.getAmcJwksReadTimeout().isEmpty());
+
+        environment.set("AMC_JWKS_READ_TIMEOUT", "   ");
+        assertTrue(configurationService.getAmcJwksReadTimeout().isEmpty());
+
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withLevelAndMessageContaining(
+                                        Level.WARN, "malformatted amc jwks read timeout"))));
+    }
+
+    @Test
+    void getAmcJwksReadTimeoutShouldReturnValueWhenSet() {
+        environment.set("AMC_JWKS_READ_TIMEOUT", "6000");
+        assertEquals(Optional.of(6000), configurationService.getAmcJwksReadTimeout());
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                withLevelAndMessageContaining(
+                                        Level.WARN, "malformatted amc jwks read timeout"))));
+    }
+
+    @Test
+    void getAmcJwksReadTimeoutShouldBeEmptyAndWarnWhenEnvVarMalformed() {
+        environment.set("AMC_JWKS_READ_TIMEOUT", "not-a-number");
+        assertTrue(configurationService.getAmcJwksReadTimeout().isEmpty());
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withLevelAndMessageContaining(
+                                Level.WARN, "malformatted amc jwks read timeout")));
     }
 
     private GetParameterRequest parameterRequest(String name) {

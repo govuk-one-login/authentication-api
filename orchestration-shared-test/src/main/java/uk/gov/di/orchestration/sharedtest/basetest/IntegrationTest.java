@@ -12,7 +12,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SystemService;
 import uk.gov.di.orchestration.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.ClientStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.ParameterStoreExtension;
@@ -92,10 +91,6 @@ public class IntegrationTest {
             new TokenSigningExtension("ipv-token-auth-key");
 
     @RegisterExtension
-    protected static final TokenSigningExtension sisPrivateKeyJwtSigner =
-            new TokenSigningExtension("sis-token-auth-key");
-
-    @RegisterExtension
     protected static final TokenSigningExtension docAppPrivateKeyJwtSigner =
             new TokenSigningExtension("doc-app-token-auth-key");
 
@@ -152,10 +147,6 @@ public class IntegrationTest {
 
     @RegisterExtension
     protected static final IdentityStoreExtension identityStore = new IdentityStoreExtension(180);
-
-    @RegisterExtension
-    protected static final DocumentAppCredentialStoreExtension documentAppCredentialStore =
-            new DocumentAppCredentialStoreExtension(180);
 
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();
@@ -232,11 +223,6 @@ public class IntegrationTest {
         @Override
         public String getIPVTokenSigningKeyAlias() {
             return ipvPrivateKeyJwtSigner.getKeyAlias();
-        }
-
-        @Override
-        public String getSISTokenSigningKeyAlias() {
-            return sisPrivateKeyJwtSigner.getKeyAlias();
         }
 
         @Override

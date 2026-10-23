@@ -12,8 +12,8 @@ buildscript {
                 because 'CVE-2025-48924 is fixed in org.apache.commons:commons-lang3:3.18.0 and higher'
             }
 
-            add('classpath', 'org.bouncycastle:bcprov-jdk18on:[1.84,)') {
-                because 'CVE-2026-5598 is fixed in org.bouncycastle:bcprov-jdk18on 1.84 and higher'
+            add('classpath', 'org.bouncycastle:bcprov-jdk18on:[1.85,)') {
+                because 'CVE-2026-8763 is fixed in org.bouncycastle:bcprov-jdk18on 1.85 and higher'
             }
 
             add('classpath', 'com.fasterxml.jackson.core:jackson-databind:[2.21.4,)') {
@@ -115,6 +115,11 @@ ext {
             'com.google.protobuf:protobuf-java',
             '[3.25.5,)',
             'CVE-2024-7254 is fixed in 3.25.5 and above'
+        ],
+        [
+            'org.bouncycastle:bcprov-jdk18on',
+            '[1.85,)',
+            'CVE-2026-8763 is fixed in org.bouncycastle:bcprov-jdk18on 1.85 and higher'
         ],
         [
             'io.opentelemetry:opentelemetry-api',
@@ -282,10 +287,21 @@ spotless {
         importOrder "", "javax", "java", "\\#"
     }
 
-    groovyGradle {
-        target "**/*.gradle"
-        greclipse().configFile("tools/spotless-gradle.properties")
+    // Temporarily disabled - P2 repo for greclipse is down
+    // groovyGradle {
+    //     target "**/*.gradle"
+    //     greclipse().configFile("tools/spotless-gradle.properties")
+    // }
+}
+
+if (!System.getenv('CI') && !System.getenv('GITHUB_ACTIONS') && !System.getenv('CODEBUILD_BUILD_ID')) {
+    tasks.register('ensureDockerRunning', Exec) {
+        group = 'docker'
+        description = 'Checks if Docker daemon is running and attempts to start Docker Desktop if not (macOS only)'
+        commandLine 'bash', "${rootDir}/scripts/ensure-docker-running.sh"
     }
+
+    tasks.named('composeUp') { dependsOn 'ensureDockerRunning' }
 }
 
 dockerCompose {
@@ -333,6 +349,10 @@ reporting {
     }
 }
 
+tasks.named('testCodeCoverageReport') {
+    executionData.from(fileTree("integration-tests/build/jacoco").include("*.exec"))
+}
+
 dependencies {
     jacocoAggregation subprojects
 
@@ -369,7 +389,9 @@ tasks.register('searchForDependency') {
         allprojects {project ->
             project.configurations.each { config ->
                 if (config.canBeResolved) {
-                    config.incoming.artifactView { it.lenient(true) }.artifacts.each { artifact ->
+                    config.incoming.artifactView {
+                        it.lenient(true)
+                    }.artifacts.each { artifact ->
                         def id = artifact.variant.owner
                         if (id instanceof ModuleComponentIdentifier) {
                             if (id.group == targetGroup && id.module == targetName) {
@@ -393,12 +415,16 @@ tasks.register('searchForDependency') {
 }
 
 static int compareVersions(String v1, String v2) {
-    def parts1 = v1.tokenize('.-').collect { it.isInteger() ? it.toInteger() : 0 }
-    def parts2 = v2.tokenize('.-').collect { it.isInteger() ? it.toInteger() : 0 }
+    def parts1 = v1.tokenize('.-').collect {
+        it.isInteger() ? it.toInteger() : 0
+    }
+    def parts2 = v2.tokenize('.-').collect {
+        it.isInteger() ? it.toInteger() : 0
+    }
     def maxLen = Math.max(parts1.size(), parts2.size())
-    for (int i = 0; i < maxLen; i++) {
-        def p1 = i < parts1.size() ? parts1[i] : 0
-        def p2 = i < parts2.size() ? parts2[i] : 0
+    for (int i = 0; i <maxLen; i++) {
+        def p1 = i <parts1.size() ? parts1[i] : 0
+        def p2 = i <parts2.size() ? parts2[i] : 0
         if (p1 != p2) return p1 <=> p2
     }
     return 0

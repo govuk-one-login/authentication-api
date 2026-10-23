@@ -56,7 +56,7 @@ Resources:
               inactiveAccountExportPauseBetweenInvocationsMs,
             ]
           INACTIVE_ACCOUNT_EXPORT_TABLE_NAME: !If
-            - InactiveAccountTrackerCrossAccountWriteEnabled
+            - InactiveAccountTrackerCrossAccountAccessEnabled
             - !Sub
               - "arn:aws:dynamodb:${AWS::Region}:${AccountId}:table/${TableName}"
               - AccountId:
@@ -108,7 +108,7 @@ Resources:
         - !Ref CloudWatchLogsKmsAccessPolicy
         - !Ref InactiveAccountDataExportSelfInvokePolicy
         - !If
-          - InactiveAccountTrackerCrossAccountWriteEnabled
+          - InactiveAccountTrackerCrossAccountAccessEnabled
           - !Ref InactiveAccountTrackerCrossAccountWritePolicy
           - !Ref AWS::NoValue
         - !If
