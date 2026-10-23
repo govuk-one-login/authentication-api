@@ -138,7 +138,11 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdC
       Tags:
         EnforceLambdaDeploymentOrder:
-          !If [EnforceLambdaDeploymentOrder, !Ref SignUpFunctionAliasactive, ""]
+          !If [
+            EnforceLambdaDeploymentOrder,
+            !Ref NotifyCallbackFunctionAliasactive,
+            "",
+          ]
 
   LoginFunctionAliasPermission:
     Type: AWS::Lambda::Permission

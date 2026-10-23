@@ -34,8 +34,6 @@ Resources:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdC
-      Tags:
-        EnforceLambdaDeploymentOrder: ""
 
   ADJWKSFunctionPolicy:
     Type: AWS::IAM::ManagedPolicy

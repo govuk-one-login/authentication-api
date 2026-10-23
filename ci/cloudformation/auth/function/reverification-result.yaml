@@ -85,7 +85,7 @@ Resources:
         EnforceLambdaDeploymentOrder:
           !If [
             EnforceLambdaDeploymentOrder,
-            !Ref IDReverificationStateFunctionAliasactive,
+            !Ref CheckReAuthUserFunctionAliasactive,
             "",
           ]
 

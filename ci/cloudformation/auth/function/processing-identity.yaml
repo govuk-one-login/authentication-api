@@ -140,7 +140,7 @@ Resources:
         EnforceLambdaDeploymentOrder:
           !If [
             EnforceLambdaDeploymentOrder,
-            !Ref TicfCriFunctionAliasactive,
+            !Ref AccountRecoveryFunctionAliasactive,
             "",
           ]
 
