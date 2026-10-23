@@ -25,7 +25,6 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
@@ -39,7 +38,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown;
 
 public abstract class BaseFrontendHandler<T>
@@ -127,20 +125,15 @@ public abstract class BaseFrontendHandler<T>
 
         String txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
 
-        var sessionId =
-                getOptionalHeaderValueFromHeaders(
-                        input.getHeaders(),
-                        SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
         LOG.info("Retrieving session");
         Optional<AuthSessionItem> authSession =
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
 
-        if (sessionId.isEmpty() || authSession.isEmpty()) {
+        if (authSession.isEmpty()) {
             LOG.warn("Auth session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         } else {
-            attachSessionIdToLogs(sessionId.get());
+            attachSessionIdToLogs(authSession.get().getSessionId());
             LOG.info("Session retrieved");
         }
 
