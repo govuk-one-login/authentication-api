@@ -1,0 +1,55 @@
+name: "Stack resource report"
+
+# Reports CloudFormation resource usage per stack against the 500-resource limit.
+# Runs on push to main to track the merged-template resource count over time in the
+# job summary. PR gating is handled by the "SP - Pre-merge checks" workflow
+# (pre-merge-checks-sp.yml), which runs the same report per stack.
+# Warns in the 450-499 band; fails only if a stack is estimated at/over 500.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "ci/cloudformation/**"
+      - "scripts/report_stack_resources.sh"
+      - ".github/workflows/stack-resource-report.yml"
+  workflow_dispatch:
+
+env:
+  RAIN_VERSION: v1.23.0
+  RAIN_ARCH: linux-amd64
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        stack:
+          - { dir: "ci/cloudformation/auth", name: "auth" }
+          - { dir: "ci/cloudformation/account-management", name: "account-management" }
+          - { dir: "ci/cloudformation/account-data", name: "account-data" }
+          - { dir: "ci/cloudformation/utils", name: "utils" }
+          - { dir: "ci/cloudformation/stubs", name: "stubs" }
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install Rain
+        uses: ./.github/actions/install-rain
+        with:
+          version: ${{ env.RAIN_VERSION }}
+          arch: ${{ env.RAIN_ARCH }}
+          sha256: "2fdfe059566acf15ad23e014a7856e88f6af61710854208a93526eec80f4078f"
+
+      - name: Report ${{ matrix.stack.name }} stack resources
+        env:
+          HARD_LIMIT: "500"
+          WARN_THRESHOLD: "450"
+          FAIL_ON_WARN: "false"
+        run: |
+          ./scripts/report_stack_resources.sh "${{ matrix.stack.dir }}" "${{ matrix.stack.name }}"

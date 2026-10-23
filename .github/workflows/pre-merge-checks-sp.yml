@@ -55,6 +55,14 @@ jobs:
         run: |
           sam validate --lint -t auth-template.yaml
 
+      - name: Report auth stack resources
+        env:
+          MERGED_TEMPLATE: auth-template.yaml
+          HARD_LIMIT: "500"
+          WARN_THRESHOLD: "450"
+          FAIL_ON_WARN: "false"
+        run: ./scripts/report_stack_resources.sh ci/cloudformation/auth auth
+
       - name: Generate stubs template
         run: "./scripts/merge-templates.sh"
         env:
@@ -64,6 +72,14 @@ jobs:
       - name: SAM Validate
         run: |
           sam validate --lint -t stubs-template.yaml
+
+      - name: Report stubs stack resources
+        env:
+          MERGED_TEMPLATE: stubs-template.yaml
+          HARD_LIMIT: "500"
+          WARN_THRESHOLD: "450"
+          FAIL_ON_WARN: "false"
+        run: ./scripts/report_stack_resources.sh ci/cloudformation/stubs stubs
 
       - name: Generate am template
         run: "./scripts/merge-templates.sh"
@@ -75,6 +91,14 @@ jobs:
         run: |
           sam validate --lint -t am-template.yaml
 
+      - name: Report account-management stack resources
+        env:
+          MERGED_TEMPLATE: am-template.yaml
+          HARD_LIMIT: "500"
+          WARN_THRESHOLD: "450"
+          FAIL_ON_WARN: "false"
+        run: ./scripts/report_stack_resources.sh ci/cloudformation/account-management account-management
+
       - name: Generate ad template
         run: "./scripts/merge-templates.sh"
         env:
@@ -84,3 +108,11 @@ jobs:
       - name: SAM Validate
         run: |
           sam validate --lint -t ad-template.yaml
+
+      - name: Report account-data stack resources
+        env:
+          MERGED_TEMPLATE: ad-template.yaml
+          HARD_LIMIT: "500"
+          WARN_THRESHOLD: "450"
+          FAIL_ON_WARN: "false"
+        run: ./scripts/report_stack_resources.sh ci/cloudformation/account-data account-data
