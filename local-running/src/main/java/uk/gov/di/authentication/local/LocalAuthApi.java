@@ -3,6 +3,7 @@ package uk.gov.di.authentication.local;
 import io.javalin.Javalin;
 import uk.gov.di.authentication.accountdata.lambda.PasskeysRetrieveHandler;
 import uk.gov.di.authentication.accountdata.lambda.PasskeysUpdateHandler;
+import uk.gov.di.authentication.accountdata.lambda.VerifyPasswordHandler;
 import uk.gov.di.authentication.external.lambda.TokenHandler;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
 import uk.gov.di.authentication.frontendapi.lambda.AMCAuthorizeHandler;
@@ -109,6 +110,9 @@ public class LocalAuthApi {
                             config.routes.patch(
                                     "/accounts/{publicSubjectId}/authenticators/passkeys/{passkeyId}",
                                     handlerFor(new PasskeysUpdateHandler()));
+                            config.routes.post(
+                                    "/accounts/{publicSubjectId}/authenticators/password/verify",
+                                    handlerFor(new VerifyPasswordHandler()));
                         });
 
         // Start app

@@ -326,7 +326,7 @@ paths:
               examples:
                 user_not_found:
                   value:
-                    code: 4041
+                    code: 1056
                     message: "User not found or no match"
         "500":
           description: Internal server error
