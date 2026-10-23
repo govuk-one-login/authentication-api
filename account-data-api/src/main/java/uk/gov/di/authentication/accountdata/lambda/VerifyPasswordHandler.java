@@ -32,6 +32,10 @@ public class VerifyPasswordHandler
     private final ConfigurationService configurationService;
     private final PasswordService passwordService;
 
+    public VerifyPasswordHandler() {
+        this(new ConfigurationService());
+    }
+
     public VerifyPasswordHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.passwordService = new PasswordService(configurationService);
