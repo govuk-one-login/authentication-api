@@ -175,6 +175,17 @@
           "path": "$.jobs.scan-orch"
         },
         {
+          "phase": "pre-merge",
+          "provider": "GitHub",
+          "checks": [
+            {
+              "name": "vulnerability detection"
+            }
+          ],
+          "file": ".github/workflows/dependency-review-on-pr.yml",
+          "path": "$.job.dependency-review"
+        },
+        {
           "phase": "pre-upload",
           "provider": "GitHub",
           "checks": [
