@@ -559,7 +559,7 @@ Mappings:
       lastSignedInBackfillTotalSegments: "125"
       lastSignedInBackfillMaxItemsPerSegment: "1500"
       lastSignedInBackfillPauseBetweenInvocationsMs: "60000"
-      lastSignedInBackfillMaxInvocations: "85"
+      lastSignedInBackfillMaxInvocations: "100"
 
   ProdNotifyTemplateMap:
     Templates:
