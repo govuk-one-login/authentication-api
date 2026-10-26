@@ -7,10 +7,19 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.authentication.accountdata.entity.VerifyPasswordResponse;
+import uk.gov.di.authentication.accountdata.entity.password.VerifyPasswordRequest;
+import uk.gov.di.authentication.accountdata.entity.password.VerifyPasswordResponse;
+import uk.gov.di.authentication.accountdata.entity.password.failurereasons.VerifyPasswordFailureReason;
+import uk.gov.di.authentication.accountdata.services.ConfigurationService;
+import uk.gov.di.authentication.accountdata.services.PasswordService;
+import uk.gov.di.authentication.shared.entity.AccountDataScope;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
+import static uk.gov.di.authentication.accountdata.helpers.ScopeAuthorizerHelper.isScopeAuthorized;
+import static uk.gov.di.authentication.accountdata.helpers.SubjectIdAuthorizerHelper.isSubjectIdAuthorized;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -19,8 +28,24 @@ public class VerifyPasswordHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(VerifyPasswordHandler.class);
+    private final Json objectMapper = SerializationService.getInstance();
+    private final ConfigurationService configurationService;
+    private final PasswordService passwordService;
 
-    public VerifyPasswordHandler() {}
+    public VerifyPasswordHandler() {
+        this(new ConfigurationService());
+    }
+
+    public VerifyPasswordHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
+        this.passwordService = new PasswordService(configurationService);
+    }
+
+    public VerifyPasswordHandler(
+            ConfigurationService configurationService, PasswordService passwordService) {
+        this.configurationService = configurationService;
+        this.passwordService = passwordService;
+    }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
@@ -35,11 +60,70 @@ public class VerifyPasswordHandler
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("VerifyPasswordHandler called");
 
+        return validateRequest(input)
+                .flatMap(
+                        verifyPasswordContext ->
+                                passwordService.verifyPassword(
+                                        verifyPasswordContext.publicSubjectId,
+                                        verifyPasswordContext.verifyPasswordRequest.password()))
+                .flatMap(this::generateApiResponse)
+                .fold(
+                        failure ->
+                                switch (failure) {
+                                    case INVALID_REQUEST_BODY -> generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.INVALID_REQUEST_BODY);
+                                    case MISSING_SUBJECT_ID -> generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.MISSING_SUBJECT_ID);
+                                    case UNAUTHORIZED_REQUEST -> generateApiGatewayProxyErrorResponse(
+                                            403, ErrorResponse.UNAUTHORIZED_REQUEST);
+                                    case USER_NOT_FOUND -> generateApiGatewayProxyErrorResponse(
+                                            404, ErrorResponse.USER_NOT_FOUND);
+                                    case FAILED_TO_SERIALIZE_RESPONSE -> generateApiGatewayProxyErrorResponse(
+                                            500, ErrorResponse.INTERNAL_SERVER_ERROR);
+                                },
+                        success -> success);
+    }
+
+    private Result<VerifyPasswordFailureReason, VerifyPasswordContext> validateRequest(
+            APIGatewayProxyRequestEvent input) {
+        VerifyPasswordRequest verifyPasswordRequest;
         try {
-            return generateApiGatewayProxyResponse(200, new VerifyPasswordResponse(false), true);
+            verifyPasswordRequest =
+                    objectMapper.readValue(input.getBody(), VerifyPasswordRequest.class);
+        } catch (Json.JsonException e) {
+            return Result.failure(VerifyPasswordFailureReason.INVALID_REQUEST_BODY);
+        }
+
+        var publicSubjectId = input.getPathParameters().get("publicSubjectId");
+        if (publicSubjectId == null || publicSubjectId.isEmpty()) {
+            LOG.error("Request does not include public subject id");
+            return Result.failure(VerifyPasswordFailureReason.MISSING_SUBJECT_ID);
+        }
+
+        if (!isSubjectIdAuthorized(publicSubjectId, input.getRequestContext())) {
+            return Result.failure(VerifyPasswordFailureReason.UNAUTHORIZED_REQUEST);
+        }
+
+        if (!isScopeAuthorized(AccountDataScope.VERIFY_PASSWORD, input.getRequestContext())) {
+            return Result.failure(VerifyPasswordFailureReason.UNAUTHORIZED_REQUEST);
+        }
+
+        return Result.success(new VerifyPasswordContext(publicSubjectId, verifyPasswordRequest));
+    }
+
+    private Result<VerifyPasswordFailureReason, APIGatewayProxyResponseEvent> generateApiResponse(
+            boolean verified) {
+        try {
+            return Result.success(
+                    generateApiGatewayProxyResponse(
+                            200, new VerifyPasswordResponse(verified), true));
         } catch (Json.JsonException e) {
             LOG.error("Failed to serialize VerifyPasswordResponse", e);
-            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
+            return Result.failure(VerifyPasswordFailureReason.FAILED_TO_SERIALIZE_RESPONSE);
         }
     }
+
+    private record VerifyPasswordContext(
+            String publicSubjectId, VerifyPasswordRequest verifyPasswordRequest) {}
+    ;
 }
