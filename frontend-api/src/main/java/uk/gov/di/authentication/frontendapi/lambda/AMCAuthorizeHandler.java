@@ -252,7 +252,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         var amcScopeForAuditEvent =
                 switch (request.amcJourneyType()) {
                     case PASSKEY_CREATE -> "passkey-create";
-                    case SFAD -> "sfad"; // note we'll probably want to review this when we get to
+                    case SSAD -> "sfad"; // note we'll probably want to review this when we get to
                         // implementing sfad fully
                 };
 
