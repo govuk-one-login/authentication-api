@@ -457,6 +457,16 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
+    public boolean canStartSsad(AuthSessionItem authSession) {
+        if (authSession.getHasVerifiedWithPassword()) {
+            return true;
+        } else {
+            LOG.warn("Cannot start SSAD, user has not verified with password in current session");
+            return false;
+        }
+    }
+
+    @Override
     public boolean canResetPassword(
             AuthSessionItem authSession,
             PasswordResetType passwordResetType,

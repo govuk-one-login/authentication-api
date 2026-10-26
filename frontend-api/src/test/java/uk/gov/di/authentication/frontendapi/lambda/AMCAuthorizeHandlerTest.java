@@ -167,6 +167,8 @@ class AMCAuthorizeHandlerTest {
                             anyString(),
                             any(State.class)))
                     .thenReturn(Result.success(authorizationUrlAndCookie));
+            when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
+            when(permissionDecisionManager.canStartSsad(authSession)).thenReturn(true);
         }
 
         @ParameterizedTest
@@ -174,9 +176,6 @@ class AMCAuthorizeHandlerTest {
         void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
                 AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
-            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
-                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
-            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -192,9 +191,6 @@ class AMCAuthorizeHandlerTest {
         void shouldConstructTheAuthorizationResultWithTheCorrectTransportJwtAndTokenConfigs(
                 AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
-            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
-                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
-            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -226,9 +222,6 @@ class AMCAuthorizeHandlerTest {
         void shouldEmitTheRelevantAuditEventAndCloudwatchMetric(
                 AMCJourneyType amcJourneyType, String expectedAmcScopeInAuditEvent) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
-            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
-                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
-            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -286,6 +279,7 @@ class AMCAuthorizeHandlerTest {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
             when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
+            when(permissionDecisionManager.canStartSsad(authSession)).thenReturn(true);
         }
 
         @Test
@@ -335,6 +329,33 @@ class AMCAuthorizeHandlerTest {
                             any(AuditService.MetadataPair[].class));
             verifyFailureGettingAuthorisationMetricEmitted(
                     "PasskeyCreateNotPermitted", AMCJourneyType.PASSKEY_CREATE);
+        }
+
+        @Test
+        void shouldReturn400WhenNotPermittedToStartSsad() {
+            when(permissionDecisionManager.canStartSsad(authSession)).thenReturn(false);
+
+            APIGatewayProxyResponseEvent result =
+                    handler.handleRequestWithUserContext(
+                            VALID_EVENT,
+                            context,
+                            new AMCAuthorizeRequest(AMCJourneyType.SSAD),
+                            userContext);
+
+            assertEquals(400, result.getStatusCode());
+            assertTrue(
+                    result.getBody()
+                            .contains(
+                                    ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED.getMessage()));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_AMC_AUTHORISATION_REQUESTED),
+                            any(),
+                            any(AuditService.MetadataPair[].class));
+            verifyFailureGettingAuthorisationMetricEmitted("SSADNotPermitted", AMCJourneyType.SSAD);
+            verify(amcService, never())
+                    .buildAuthorizationResult(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test

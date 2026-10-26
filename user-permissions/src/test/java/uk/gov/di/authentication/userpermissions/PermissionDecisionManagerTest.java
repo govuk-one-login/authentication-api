@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -1373,6 +1374,32 @@ class PermissionDecisionManagerTest {
         void shouldReturnFalseIfSessionIndicatesOneOrBothOfPasswordOrMfaNotVerified(
                 AuthSessionItem session) {
             assertFalse(permissionDecisionManager.canSetupPasskey(session));
+        }
+    }
+
+    @Nested
+    class CanStartSsad {
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldReturnTrueIfSessionIndicatesPasswordInputRegardlessOfMfa(
+                boolean hasVerifiedWithMfa) {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(true)
+                            .withHasVerifiedWithMfa(hasVerifiedWithMfa);
+
+            assertTrue(permissionDecisionManager.canStartSsad(session));
+        }
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldReturnFalseIfSessionIndicatesPasswordNotVerified(boolean hasVerifiedWithMfa) {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(false)
+                            .withHasVerifiedWithMfa(hasVerifiedWithMfa);
+
+            assertFalse(permissionDecisionManager.canStartSsad(session));
         }
     }
 

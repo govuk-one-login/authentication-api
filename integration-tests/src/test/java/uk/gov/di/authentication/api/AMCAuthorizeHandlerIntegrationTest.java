@@ -364,6 +364,48 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertThat(response, hasStatus(400));
     }
 
+    @Test
+    void shouldReturn400WhenAttemptingToStartSsadWithoutVerifiedPassword() {
+        handler = new AMCAuthorizeHandler();
+        authSessionStore.addHasVerifiedWithPasswordAndMfaToSession(sessionId, false, false);
+
+        var requestBody =
+                """
+                {
+                    "journeyType": "SSAD"
+                    }
+                """;
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+    }
+
+    @Test
+    void shouldAuthorizeSsadWithVerifiedPasswordAndNoMfa() {
+        handler = new AMCAuthorizeHandler();
+        authSessionStore.addHasVerifiedWithPasswordAndMfaToSession(sessionId, true, false);
+
+        var requestBody =
+                """
+                {
+                    "journeyType": "SSAD"
+                    }
+                """;
+
+        var response =
+                makeRequest(
+                        Optional.of(requestBody),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+    }
+
     private void verifyAuditEvents(Map<AuditableEvent, Map<String, Object>> eventExpectations) {
         var receivedEvents =
                 assertTxmaAuditEventsReceived(txmaAuditQueue, eventExpectations.keySet());
