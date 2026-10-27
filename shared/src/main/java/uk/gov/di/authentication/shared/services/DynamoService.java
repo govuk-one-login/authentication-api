@@ -48,7 +48,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Objects.nonNull;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.numberValue;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.warmUp;
@@ -300,20 +299,6 @@ public class DynamoService implements AuthenticationService {
             throw new RuntimeException("No userCredentials found with query search");
         }
         return userCredentials.get();
-    }
-
-    @Override
-    public Optional<UserProfile> getUserProfileFromEmail(String email) {
-        if (nonNull(email) && !email.isBlank()) {
-            var userCredentials =
-                    dynamoUserCredentialsTable.getItem(
-                            Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-
-            if (nonNull(userCredentials)) {
-                return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
-            }
-        }
-        return Optional.empty();
     }
 
     @Override
