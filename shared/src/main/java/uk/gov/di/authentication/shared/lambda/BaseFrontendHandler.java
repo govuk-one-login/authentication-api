@@ -113,6 +113,9 @@ public abstract class BaseFrontendHandler<T>
 
         LOG.info("Processing request in base handler");
 
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID,
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         String clientSessionId =
                 getHeaderValueFromHeaders(
                         input.getHeaders(),
@@ -135,6 +138,9 @@ public abstract class BaseFrontendHandler<T>
             LOG.info("Session retrieved");
         }
 
+        var clientID = Optional.ofNullable(authSession.get().getClientId());
+        attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
+
         var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
         var maybeUserLanguage =
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
@@ -147,10 +153,6 @@ public abstract class BaseFrontendHandler<T>
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
 
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
@@ -159,10 +161,6 @@ public abstract class BaseFrontendHandler<T>
             onRequestValidationError(clientSessionId, txmaAuditEncoded);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
-
-        var clientID = Optional.ofNullable(authSession.get().getClientId());
-
-        attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
 
         authSession
                 .map(AuthSessionItem::getEmailAddress)
