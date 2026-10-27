@@ -1,7 +1,7 @@
-pylint==4.0.5
-pylint-actions==0.6.0
+pylint==4.0.9
+pylint-actions==0.7.0
 black==26.5.1
-isort==8.0.1
-flake8==7.3.0
+isort==9.0.1
+flake8==7.4.1
 Flake8-pyproject==1.2.4
 flake8-github-actions==0.1.1
