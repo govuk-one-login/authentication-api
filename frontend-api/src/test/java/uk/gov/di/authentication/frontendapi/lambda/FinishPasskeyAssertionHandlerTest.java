@@ -78,7 +78,7 @@ class FinishPasskeyAssertionHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(
                         Optional.of(
                                 new UserProfile()
@@ -280,7 +280,8 @@ class FinishPasskeyAssertionHandlerTest {
         @Test
         void shouldReturn400IfNoUserProfile() {
             // Given
-            when(authenticationService.getUserProfileFromEmail(EMAIL)).thenReturn(Optional.empty());
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                    .thenReturn(Optional.empty());
 
             // When
             var response = handler.handleRequest(finishPasskeyAssertionRequest(), context);

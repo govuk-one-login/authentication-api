@@ -168,11 +168,11 @@ public abstract class BaseFrontendHandler<T>
                 .ifPresentOrElse(
                         email ->
                                 userContextBuilder.withUserProfile(
-                                        authenticationService.getUserProfileFromEmail(email)),
+                                        authenticationService.getUserProfileByEmailMaybe(email)),
                         () -> {
                             if (request instanceof BaseFrontendRequest)
                                 userContextBuilder.withUserProfile(
-                                        authenticationService.getUserProfileFromEmail(
+                                        authenticationService.getUserProfileByEmailMaybe(
                                                 ((BaseFrontendRequest) request)
                                                         .getEmail()
                                                         .toLowerCase(Locale.ROOT)));
