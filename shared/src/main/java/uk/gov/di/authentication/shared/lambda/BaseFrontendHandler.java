@@ -165,9 +165,10 @@ public abstract class BaseFrontendHandler<T>
 
         authSession
                 .map(AuthSessionItem::getEmailAddress)
-                .map(authenticationService::getUserProfileFromEmail)
                 .ifPresentOrElse(
-                        userContextBuilder::withUserProfile,
+                        email ->
+                                userContextBuilder.withUserProfile(
+                                        authenticationService.getUserProfileFromEmail(email)),
                         () -> {
                             if (request instanceof BaseFrontendRequest)
                                 userContextBuilder.withUserProfile(
