@@ -147,7 +147,7 @@ public abstract class BaseFrontendHandler<T>
 
         var userContextBuilder =
                 UserContext.builder(authSession.get())
-                        .withTxmaAuditEvent(txmaAuditEncoded)
+                        .withTxmaAuditEncoded(txmaAuditEncoded)
                         .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
                         .withClientSessionId(clientSessionId);
 
