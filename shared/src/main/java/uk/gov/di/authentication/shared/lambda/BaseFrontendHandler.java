@@ -142,14 +142,6 @@ public abstract class BaseFrontendHandler<T>
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
 
         var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
-        var maybeUserLanguage =
-                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
-
-        var userContextBuilder =
-                UserContext.builder(authSession.get())
-                        .withTxmaAuditEncoded(txmaAuditEncoded)
-                        .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
-                        .withClientSessionId(clientSessionId);
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
 
@@ -161,6 +153,15 @@ public abstract class BaseFrontendHandler<T>
             onRequestValidationError(clientSessionId, txmaAuditEncoded);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
+
+        var maybeUserLanguage =
+                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
+
+        var userContextBuilder =
+                UserContext.builder(authSession.get())
+                        .withTxmaAuditEncoded(txmaAuditEncoded)
+                        .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
+                        .withClientSessionId(clientSessionId);
 
         authSession
                 .map(AuthSessionItem::getEmailAddress)
