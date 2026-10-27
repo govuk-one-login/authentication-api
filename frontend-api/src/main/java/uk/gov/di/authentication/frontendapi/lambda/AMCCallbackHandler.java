@@ -79,7 +79,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
     }
 
     public AMCCallbackHandler(ConfigurationService configurationService) {
-        super(AMCCallbackRequest.class, configurationService, true);
+        super(AMCCallbackRequest.class, configurationService);
         this.amcService =
                 new AMCService(
                         configurationService,
