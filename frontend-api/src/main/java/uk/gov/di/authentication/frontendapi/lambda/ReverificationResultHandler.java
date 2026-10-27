@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.IpvReverificationFailureCode;
 import uk.gov.di.authentication.frontendapi.entity.ReverificationResultRequest;
 import uk.gov.di.authentication.frontendapi.services.ReverificationResultService;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -28,6 +29,8 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +56,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
     private final AuditService auditService;
     private final IDReverificationStateService idReverificationStateService;
     private final CloudwatchMetricsService cloudwatchMetricService;
+    private final UserActionsManager userActionsManager;
 
     public ReverificationResultHandler(
             ConfigurationService configurationService,
@@ -61,7 +65,8 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             AuditService auditService,
             AuthSessionService authSessionService,
             IDReverificationStateService idReverificationStateService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            UserActionsManager userActionsManager) {
         super(
                 ReverificationResultRequest.class,
                 configurationService,
@@ -71,6 +76,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         this.auditService = auditService;
         this.idReverificationStateService = idReverificationStateService;
         this.cloudwatchMetricService = cloudwatchMetricsService;
+        this.userActionsManager = userActionsManager;
     }
 
     public ReverificationResultHandler() {
@@ -83,6 +89,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         this.auditService = new AuditService(configurationService);
         this.idReverificationStateService = new IDReverificationStateService(configurationService);
         this.cloudwatchMetricService = new CloudwatchMetricsService(configurationService);
+        this.userActionsManager = new UserActionsManager(configurationService);
     }
 
     @Override
@@ -197,6 +204,11 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                 return generateApiGatewayProxyErrorResponse(400, REVERIFICATION_RESULT_GET_ERROR);
             }
 
+            var outcome = result.getSuccess();
+
+            applyReverificationOutcomeToRecordedEmail(
+                    userContext.getAuthSession(), existingSessionEmail, outcome);
+
             return generateApiGatewayProxyResponse(200, reverificationResult.getBody());
         } catch (UnsuccessfulReverificationResponseException | ParseException e) {
             LOG.error("Error getting reverification result", e);
@@ -243,7 +255,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
                             json.get(IPV_REVERIFICATION_FAILURE_CODE)));
             return Result.failure(
                     new ReverificationFailure(
-                    "'failure_code' or 'failure_reason' must not be present when successful.",
+                            "'failure_code' or 'failure_reason' must not be present when successful.",
                             metadataPairs));
         }
 
@@ -277,6 +289,21 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             cloudwatchMetricService.incrementMfaResetIpvResponseCount(IPV_REVERIFICATION_SUCCESS);
         }
         return Result.success(new ReverificationOutcome(true, null, metadataPairs));
+    }
+
+    private void applyReverificationOutcomeToRecordedEmail(
+            AuthSessionItem authSession, String email, ReverificationOutcome outcome) {
+        if (!outcome.success()) {
+            LOG.info(
+                    "reverification unsuccessful, not updating email for identity verification to session");
+            return;
+        }
+
+        LOG.info("Updating recorded email for identity verification to session");
+        var permissionContext =
+                PermissionContext.builder().withAuthSessionItem(authSession).build();
+
+        userActionsManager.recordedEmailForIdentityVerification(permissionContext, email);
     }
 }
 

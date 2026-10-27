@@ -65,7 +65,7 @@ Resources:
         - !Ref LambdaBasicExecutionPolicy
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
-        - !Ref DynamoAuthSessionStoreReadAccessPolicy
+        - !Ref DynamoAuthSessionStoreReadWriteAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoIdReverificationStateReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy

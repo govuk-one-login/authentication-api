@@ -30,6 +30,8 @@ import uk.gov.di.authentication.shared.services.IDReverificationStateService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.UserActionsManager;
+import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -100,6 +102,7 @@ class ReverificationResultHandlerTest {
             mock(IDReverificationStateService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
     private final String subjectId = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
     private final AuditContext auditContextWithAllUserInfo =
             new AuditContext(
@@ -153,7 +156,8 @@ class ReverificationResultHandlerTest {
                         auditService,
                         authSessionService,
                         idReverificationStateService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        userActionsManager);
     }
 
     @Nested
@@ -511,6 +515,66 @@ class ReverificationResultHandlerTest {
             assertThat(result, hasJsonBody(EMAIL_ADDRESS_MISMATCH));
 
             verify(reverificationResultService, never()).getToken(any());
+        }
+    }
+
+    @Nested
+    class EmailSavedOnSuccessfulReverificationResult {
+
+        @BeforeEach
+        void setUp() throws ParseException {
+            when(idReverificationStateService.get(anyString()))
+                    .thenReturn(Optional.of(ID_REVERIFICATION_STATE));
+            when(reverificationResultService.getToken(any()))
+                    .thenReturn(getSuccessfulTokenResponse());
+        }
+
+        @Test
+        void shouldSaveEmailOnSuccessfulReverification()
+                throws ParseException, UnsuccessfulReverificationResponseException {
+
+            var userInfo =
+                    successfulResponseWithBody(
+                            SUCCESS_REVERIFICATION_IPV_RESPONSE_TEMPLATE.formatted(SUB, true));
+            when(reverificationResultService.sendIpvReverificationRequest(any()))
+                    .thenReturn(userInfo);
+
+            var request = new ReverificationResultRequest("test_code", AUTHENTICATION_STATE, EMAIL);
+
+            var result =
+                    handler.handleRequestWithUserContext(
+                            apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                            context,
+                            request,
+                            USER_CONTEXT);
+
+            assertThat(result, hasStatus(200));
+            verify(userActionsManager)
+                    .recordedEmailForIdentityVerification(
+                            PermissionContext.builder().withAuthSessionItem(authSession).build(),
+                            EMAIL);
+        }
+
+        @Test
+        void shouldNotSaveEmailWhenReverificationUnsuccessful()
+                throws ParseException, UnsuccessfulReverificationResponseException {
+            var userInfo =
+                    successfulResponseWithBody(
+                            FAILED_REVERIFICATION_IPV_RESPONSE_TEMPLATE.formatted(
+                                    SUB, false, "no_identity_available", "failure_reason"));
+            when(reverificationResultService.sendIpvReverificationRequest(any()))
+                    .thenReturn(userInfo);
+
+            var request = new ReverificationResultRequest("test_code", AUTHENTICATION_STATE, EMAIL);
+
+            handler.handleRequestWithUserContext(
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, "{}"),
+                    context,
+                    request,
+                    USER_CONTEXT);
+
+            verify(userActionsManager, never())
+                    .recordedEmailForIdentityVerification(any(), anyString());
         }
     }
 

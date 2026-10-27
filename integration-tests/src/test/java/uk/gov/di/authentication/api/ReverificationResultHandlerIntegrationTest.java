@@ -164,6 +164,8 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
                         Map.of());
 
         assertThat(response, hasStatus(200));
+        var updatedSession = authSessionStore.getSession(sessionId).orElseThrow();
+        assertEquals(USER_EMAIL, updatedSession.getRecordedEmailForIdentityVerification());
         checkIntegrationWithTxmaViaSQS();
         checkCorrectKeyUsedToSignRequestToIPVViaIntegrationWithKms();
         checkIntegrationWithIPV();
