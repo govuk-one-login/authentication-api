@@ -123,8 +123,6 @@ public abstract class BaseFrontendHandler<T>
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         }
 
-        String txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
-
         LOG.info("Retrieving session");
         Optional<AuthSessionItem> authSession =
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
@@ -137,8 +135,15 @@ public abstract class BaseFrontendHandler<T>
             LOG.info("Session retrieved");
         }
 
-        UserContext.Builder userContextBuilder = UserContext.builder(authSession.get());
-        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
+        var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
+        var maybeUserLanguage =
+                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
+
+        var userContextBuilder =
+                UserContext.builder(authSession.get())
+                        .withTxmaAuditEvent(txmaAuditEncoded)
+                        .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
+                        .withClientSessionId(clientSessionId);
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
 
@@ -146,8 +151,6 @@ public abstract class BaseFrontendHandler<T>
                 PERSISTENT_SESSION_ID,
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        Optional<String> userLanguage =
-                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
@@ -156,8 +159,6 @@ public abstract class BaseFrontendHandler<T>
             onRequestValidationError(clientSessionId, txmaAuditEncoded);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
-
-        userContextBuilder.withClientSessionId(clientSessionId);
 
         var clientID = Optional.ofNullable(authSession.get().getClientId());
 
@@ -187,10 +188,6 @@ public abstract class BaseFrontendHandler<T>
                                     userContextBuilder.withUserCredentials(
                                             Optional.of(userCredentials)));
         }
-
-        userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
-
-        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }
