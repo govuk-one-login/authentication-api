@@ -11,7 +11,6 @@ public class UserContext {
     private final AuthSessionItem authSession;
     private final Optional<UserProfile> userProfile;
     private final Optional<UserCredentials> userCredentials;
-    private final boolean userAuthenticated;
     private final SupportedLanguage userLanguage;
     private final String clientSessionId;
     private final String txmaAuditEncoded;
@@ -19,14 +18,12 @@ public class UserContext {
     protected UserContext(
             Optional<UserProfile> userProfile,
             Optional<UserCredentials> userCredentials,
-            boolean userAuthenticated,
             SupportedLanguage userLanguage,
             String clientSessionId,
             String txmaAuditEncoded,
             AuthSessionItem authSession) {
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
-        this.userAuthenticated = userAuthenticated;
         this.userLanguage = userLanguage;
         this.clientSessionId = clientSessionId;
         this.txmaAuditEncoded = txmaAuditEncoded;
@@ -39,10 +36,6 @@ public class UserContext {
 
     public Optional<UserCredentials> getUserCredentials() {
         return userCredentials;
-    }
-
-    public boolean isUserAuthenticated() {
-        return userAuthenticated;
     }
 
     public SupportedLanguage getUserLanguage() {
@@ -69,7 +62,6 @@ public class UserContext {
         private AuthSessionItem authSession;
         private Optional<UserProfile> userProfile = Optional.empty();
         private Optional<UserCredentials> userCredentials = Optional.empty();
-        private boolean userAuthenticated = false;
         private SupportedLanguage userLanguage;
         private String clientSessionId;
         private String txmaAuditEncoded = "";
@@ -92,11 +84,6 @@ public class UserContext {
             return this;
         }
 
-        public Builder withUserAuthenticated(boolean userAuthenticated) {
-            this.userAuthenticated = userAuthenticated;
-            return this;
-        }
-
         public Builder withUserLanguage(SupportedLanguage userLanguage) {
             this.userLanguage = userLanguage;
             return this;
@@ -116,7 +103,6 @@ public class UserContext {
             return new UserContext(
                     userProfile,
                     userCredentials,
-                    userAuthenticated,
                     userLanguage,
                     clientSessionId,
                     txmaAuditEncoded,
