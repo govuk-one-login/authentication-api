@@ -137,6 +137,15 @@ public interface PermissionDecisions {
     boolean canSetupPasskey(AuthSessionItem authSession);
 
     /**
+     * Checks if the user has passed the required checks in order to start self-service account
+     * deletion.
+     *
+     * @param authSession The user's current session
+     * @return true if the user has verified with a password in the current session
+     */
+    boolean canStartSsad(AuthSessionItem authSession);
+
+    /**
      * Checks if the user can reset their password
      *
      * @param authSession The user's current session
