@@ -183,6 +183,10 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         LOG.info("LoginHandler called");
 
         var authSession = userContext.getAuthSession();
+        if (!authSession.validateSession(request.getEmail())) {
+            LOG.warn("Email on session does not match email on request");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
+        }
 
         var auditContext =
                 auditContextFromUserContext(
