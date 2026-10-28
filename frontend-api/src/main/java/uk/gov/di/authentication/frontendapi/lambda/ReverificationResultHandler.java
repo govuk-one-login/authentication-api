@@ -293,17 +293,17 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
 
     private void applyReverificationOutcomeToRecordedEmail(
             AuthSessionItem authSession, String email, ReverificationOutcome outcome) {
-        if (!outcome.success()) {
-            LOG.info(
-                    "reverification unsuccessful, not updating email for identity verification to session");
-            return;
-        }
-
-        LOG.info("Updating recorded email for identity verification to session");
         var permissionContext =
                 PermissionContext.builder().withAuthSessionItem(authSession).build();
 
-        userActionsManager.recordedEmailForIdentityVerification(permissionContext, email);
+        if (outcome.success()) {
+            LOG.info("Updating recorded email for identity verification to session");
+            userActionsManager.successfulIdentityVerification(permissionContext, email);
+        } else {
+            LOG.info(
+                    "reverification unsuccessful, clearing email value for identity verification in session");
+            userActionsManager.unsuccessfulIdentityVerification(permissionContext);
+        }
     }
 }
 

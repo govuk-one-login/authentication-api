@@ -550,13 +550,13 @@ class ReverificationResultHandlerTest {
 
             assertThat(result, hasStatus(200));
             verify(userActionsManager)
-                    .recordedEmailForIdentityVerification(
+                    .successfulIdentityVerification(
                             PermissionContext.builder().withAuthSessionItem(authSession).build(),
                             EMAIL);
         }
 
         @Test
-        void shouldNotSaveEmailWhenReverificationUnsuccessful()
+        void shouldClearEmailUsedForIdentityVerificationWhenReverificationUnsuccessful()
                 throws ParseException, UnsuccessfulReverificationResponseException {
             var userInfo =
                     successfulResponseWithBody(
@@ -573,8 +573,10 @@ class ReverificationResultHandlerTest {
                     request,
                     USER_CONTEXT);
 
-            verify(userActionsManager, never())
-                    .recordedEmailForIdentityVerification(any(), anyString());
+            verify(userActionsManager, never()).successfulIdentityVerification(any(), anyString());
+            verify(userActionsManager)
+                    .unsuccessfulIdentityVerification(
+                            PermissionContext.builder().withAuthSessionItem(authSession).build());
         }
     }
 

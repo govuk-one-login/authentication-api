@@ -42,6 +42,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -67,6 +68,16 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
             {
                 "sub": "%s",
                 "success": true
+            }
+            """;
+
+    private static final String FAILED_USER_INFO_HTTP_RESPONSE_CONTENT =
+            """
+            {
+                "sub": "%s",
+                "success": false,
+                "failure_code": "no_identity_available",
+                "failure_reason": "failure_reason"
             }
             """;
 
@@ -169,6 +180,57 @@ class ReverificationResultHandlerIntegrationTest extends ApiGatewayHandlerIntegr
         checkIntegrationWithTxmaViaSQS();
         checkCorrectKeyUsedToSignRequestToIPVViaIntegrationWithKms();
         checkIntegrationWithIPV();
+    }
+
+    @Test
+    void shouldClearRecordedEmailWhenReverificationResultUnsuccessful() {
+        idReverificationStateExtension.store("redirect-url", sessionId);
+
+        authSessionStore.updateSession(
+                authSessionStore
+                        .getSession(sessionId)
+                        .orElseThrow()
+                        .withRecordedEmailForIdentityVerification(USER_EMAIL));
+
+        assertEquals(
+                USER_EMAIL,
+                authSessionStore
+                        .getSession(sessionId)
+                        .orElseThrow()
+                        .getRecordedEmailForIdentityVerification());
+
+        stubFor(
+                post(urlPathMatching("/ipv/token"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(SUCCESSFUL_TOKEN_RESPONSE)));
+
+        stubFor(
+                get(urlPathMatching("/ipv/reverification"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withHeader("Content-Type", "application/json")
+                                        .withBody(
+                                                FAILED_USER_INFO_HTTP_RESPONSE_CONTENT.formatted(
+                                                        internalCommonSubjectId))));
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new ReverificationResultRequest(
+                                        "code",
+                                        IDReverificationStateExtension.AUTHENTICATION_STATE_FIELD,
+                                        USER_EMAIL)),
+                        constructFrontendHeaders(sessionId, sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+        var updatedSession = authSessionStore.getSession(sessionId).orElseThrow();
+        assertNull(updatedSession.getRecordedEmailForIdentityVerification());
+        checkIntegrationWithTxmaViaSQS();
     }
 
     private static void checkIntegrationWithTxmaViaSQS() {
