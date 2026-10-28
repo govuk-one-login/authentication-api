@@ -79,14 +79,6 @@ public abstract class BaseFrontendHandler<T>
         this.authSessionService = new AuthSessionService(configurationService);
     }
 
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            boolean loadUserCredentials) {
-        this(clazz, configurationService);
-        this.loadUserCredentials = loadUserCredentials;
-    }
-
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
