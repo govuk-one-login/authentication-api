@@ -84,7 +84,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
     }
 
     public ReverificationResultHandler(ConfigurationService configurationService) {
-        super(ReverificationResultRequest.class, configurationService, true);
+        super(ReverificationResultRequest.class, configurationService);
         this.reverificationResultService = new ReverificationResultService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.idReverificationStateService = new IDReverificationStateService(configurationService);
