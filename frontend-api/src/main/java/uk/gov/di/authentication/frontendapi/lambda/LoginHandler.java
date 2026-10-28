@@ -112,12 +112,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             PermissionDecisionManager permissionDecisionManager,
             UserActionsManager userActionsManager,
             TestUserHelper testUserHelper) {
-        super(
-                LoginRequest.class,
-                configurationService,
-                authenticationService,
-                true,
-                authSessionService);
+        super(LoginRequest.class, configurationService, authenticationService, authSessionService);
         this.userMigrationService = userMigrationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -129,7 +124,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     public LoginHandler(ConfigurationService configurationService) {
-        super(LoginRequest.class, configurationService, true);
+        super(LoginRequest.class, configurationService);
         var codeStorageService = new CodeStorageService(configurationService);
         this.userMigrationService =
                 new UserMigrationService(
@@ -147,7 +142,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        super(LoginRequest.class, configurationService, true);
+        super(LoginRequest.class, configurationService);
         var codeStorageService = new CodeStorageService(configurationService, redis);
         this.userMigrationService =
                 new UserMigrationService(
@@ -205,14 +200,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var userProfileMaybe = authenticationService.getUserProfileByEmailMaybe(request.getEmail());
 
-        if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
+        if (userProfileMaybe.isEmpty()) {
             auditService.submitAuditEvent(AUTH_NO_ACCOUNT_WITH_EMAIL, auditContext);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         }
 
+        var userCredentials = authenticationService.getUserCredentialsFromEmail(request.getEmail());
         var userProfile = userProfileMaybe.get();
         var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
-        var userCredentials = userContext.getUserCredentials().get();
         auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
 
         var internalCommonSubjectId = getInternalCommonSubjectId(userProfile);
