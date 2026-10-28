@@ -77,7 +77,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -197,7 +196,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         var journeyType =
                 request.getJourneyType() != null ? request.getJourneyType() : JourneyType.SIGN_IN;
 
-        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
         attachLogFieldToLogs(
                 JOURNEY_TYPE, journeyType != null ? journeyType.getValue() : "missing");
 
