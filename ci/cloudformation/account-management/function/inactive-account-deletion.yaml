@@ -8,7 +8,7 @@ Resources:
         - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
       AutoPublishAlias: active
       ReservedConcurrentExecutions: 20
-      Timeout: 600
+      Timeout: 120
       CodeUri: ./account-management-api/build/distributions/account-management-api.zip
       Handler: uk.gov.di.accountmanagement.lambda.InactiveAccountDeletionHandler::handleRequest
       Environment:
