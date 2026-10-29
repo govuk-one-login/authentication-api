@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
@@ -204,7 +203,7 @@ public class StartHandler
                     handleReauthLockout(
                             authSession,
                             startRequest,
-                            userContext,
+                            userContext.getUserProfile(),
                             auditContext,
                             internalSubjectId);
         }
@@ -339,10 +338,10 @@ public class StartHandler
     private boolean handleReauthLockout(
             AuthSessionItem authSession,
             StartRequest startRequest,
-            UserContext userContext,
+            Optional<UserProfile> maybeUserProfile,
             AuditContext auditContext,
             String internalSubjectId) {
-        var permissionContext = buildPermissionContext(authSession, startRequest, userContext);
+        var permissionContext = buildPermissionContext(authSession, startRequest, maybeUserProfile);
         var permissionResult =
                 permissionDecisionManager.canStartJourney(
                         JourneyType.REAUTHENTICATION, permissionContext);
@@ -413,11 +412,13 @@ public class StartHandler
     }
 
     private PermissionContext buildPermissionContext(
-            AuthSessionItem authSession, StartRequest startRequest, UserContext userContext) {
+            AuthSessionItem authSession,
+            StartRequest startRequest,
+            Optional<UserProfile> maybeUserProfile) {
         return new PermissionContext(
                 authSession.getInternalCommonSubjectId(),
                 startRequest.rpPairwiseIdForReauth(),
-                userContext.getUserProfile().map(UserProfile::getEmail).orElse(null),
+                maybeUserProfile.map(UserProfile::getEmail).orElse(null),
                 authSession,
                 null);
     }
