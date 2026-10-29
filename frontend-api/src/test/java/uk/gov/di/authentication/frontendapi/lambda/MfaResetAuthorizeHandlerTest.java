@@ -109,10 +109,10 @@ class MfaResetAuthorizeHandlerTest {
     static void globalSetup() {
         userProfile.setSubjectID(INTERNAL_COMMON_SUBJECT_ID);
 
-        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
-        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+        when(userContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.authSessionItem()).thenReturn(authSession);
+        when(userContext.userProfile()).thenReturn(Optional.of(userProfile));
+        when(userContext.txmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));

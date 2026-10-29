@@ -114,7 +114,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
             CheckEmailFraudBlockRequest request) {
         var newAuditEvent =
                 AuthEmailFraudCheckBypassed.create(
-                        userContext.getAuthSession().getClientId(),
+                        userContext.authSessionItem().getClientId(),
                         new AuthEmailFraudCheckBypassed.User(
                                 StructuredAuditService.UNKNOWN,
                                 request.getEmail(),
@@ -141,7 +141,7 @@ public class CheckEmailFraudBlockHandler extends BaseFrontendHandler<CheckEmailF
                         emailCheckResult.getGovukSigninJourneyId());
         var newAuditEvent =
                 AuthEmailFraudCheckDecisionUsed.create(
-                        userContext.getAuthSession().getClientId(),
+                        userContext.authSessionItem().getClientId(),
                         new AuthEmailFraudCheckDecisionUsed.User(
                                 StructuredAuditService.UNKNOWN,
                                 request.getEmail(),

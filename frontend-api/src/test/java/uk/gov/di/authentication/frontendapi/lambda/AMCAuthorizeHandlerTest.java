@@ -134,9 +134,9 @@ class AMCAuthorizeHandlerTest {
                 .thenReturn("https://example.com/redirectUri");
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
+        when(userContext.authSessionItem()).thenReturn(authSession);
+        when(userContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.txmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
     }
 
     @Nested

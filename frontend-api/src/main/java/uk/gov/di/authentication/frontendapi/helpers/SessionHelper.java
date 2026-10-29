@@ -19,10 +19,10 @@ public class SessionHelper {
             AuthenticationService authenticationService,
             ConfigurationService configurationService) {
         LOG.info("Calculating internal common subject identifier");
-        var authSession = userContext.getAuthSession();
+        var authSession = userContext.authSessionItem();
         UserProfile userProfile =
-                userContext.getUserProfile().isPresent()
-                        ? userContext.getUserProfile().get()
+                userContext.userProfile().isPresent()
+                        ? userContext.userProfile().get()
                         : authenticationService.getUserProfileByEmail(
                                 authSession.getEmailAddress());
         var internalCommonSubjectId =
