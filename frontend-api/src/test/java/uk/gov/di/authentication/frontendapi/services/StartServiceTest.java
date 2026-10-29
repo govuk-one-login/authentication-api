@@ -18,6 +18,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.frontendapi.entity.UserDetails;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -70,8 +71,8 @@ class StartServiceTest {
     private static final Scope DOC_APP_SCOPES =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final State STATE = new State();
-    private final UserContext basicUserContext =
-            buildUserContext(Optional.empty(), Optional.empty());
+    private final UserDetails emptyUserDetails =
+            new UserDetails(Optional.empty(), Optional.empty());
 
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -119,8 +120,8 @@ class StartServiceTest {
             String gaTrackingId,
             boolean isAuthenticated,
             boolean isMfaRequired) {
-        var userContext =
-                buildUserContext(
+        var userDetails =
+                new UserDetails(
                         Optional.of(
                                 new UserProfile()
                                         .withSubjectID(new Subject().getValue())
@@ -128,7 +129,7 @@ class StartServiceTest {
                         Optional.empty());
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext,
+                        userDetails,
                         cookieConsent,
                         gaTrackingId,
                         false,
@@ -155,7 +156,7 @@ class StartServiceTest {
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        basicUserContext,
+                        emptyUserDetails,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -274,7 +275,7 @@ class StartServiceTest {
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        basicUserContext,
+                        emptyUserDetails,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -303,7 +304,7 @@ class StartServiceTest {
                 startService.isUpliftRequired(requestedCredentialTrustLevel, credentialTrustLevel);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext,
+                        emptyUserDetails,
                         "some-cookie-consent",
                         "some-ga-tracking-id",
                         true,
@@ -372,11 +373,11 @@ class StartServiceTest {
                         .withEmail(EMAIL)
                         .withPhoneNumberVerified(false);
         var userCredentials = new UserCredentials().withEmail(EMAIL).withMfaMethods(mfaMethods);
-        var userContext = buildUserContext(Optional.of(userProfile), Optional.of(userCredentials));
+        var userDetails = new UserDetails(Optional.of(userProfile), Optional.of(userCredentials));
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext,
+                        userDetails,
                         "true",
                         "tracking-id",
                         true,
@@ -397,11 +398,11 @@ class StartServiceTest {
                         .withEmail(EMAIL)
                         .withPhoneNumberVerified(false);
         var userCredentials = Optional.<UserCredentials>empty();
-        var userContext = buildUserContext(Optional.of(userProfile), userCredentials);
+        var userDetails = new UserDetails(Optional.of(userProfile), userCredentials);
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext,
+                        userDetails,
                         "true",
                         "tracking-id",
                         true,
