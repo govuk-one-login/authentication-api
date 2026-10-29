@@ -10,7 +10,6 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
-import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorMapper;
 import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapper;
@@ -78,7 +77,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -114,12 +112,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             PermissionDecisionManager permissionDecisionManager,
             UserActionsManager userActionsManager,
             TestUserHelper testUserHelper) {
-        super(
-                LoginRequest.class,
-                configurationService,
-                authenticationService,
-                true,
-                authSessionService);
+        super(LoginRequest.class, configurationService, authenticationService, authSessionService);
         this.userMigrationService = userMigrationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -131,7 +124,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     public LoginHandler(ConfigurationService configurationService) {
-        super(LoginRequest.class, configurationService, true);
+        super(LoginRequest.class, configurationService);
         var codeStorageService = new CodeStorageService(configurationService);
         this.userMigrationService =
                 new UserMigrationService(
@@ -149,7 +142,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     public LoginHandler(ConfigurationService configurationService, RedisConnectionService redis) {
-        super(LoginRequest.class, configurationService, true);
+        super(LoginRequest.class, configurationService);
         var codeStorageService = new CodeStorageService(configurationService, redis);
         this.userMigrationService =
                 new UserMigrationService(
@@ -184,9 +177,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserContext userContext) {
         LOG.info("LoginHandler called");
 
-        AuthSessionItem authSession = userContext.getAuthSession();
+        var authSession = userContext.getAuthSession();
+        if (!authSession.validateSession(request.getEmail())) {
+            LOG.warn("Email on session does not match email on request");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
+        }
 
-        AuditContext auditContext =
+        var auditContext =
                 auditContextFromUserContext(
                         userContext,
                         AuditService.UNKNOWN,
@@ -195,30 +192,28 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        JourneyType journeyType =
+        var journeyType =
                 request.getJourneyType() != null ? request.getJourneyType() : JourneyType.SIGN_IN;
 
-        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
         attachLogFieldToLogs(
                 JOURNEY_TYPE, journeyType != null ? journeyType.getValue() : "missing");
 
-        Optional<UserProfile> userProfileMaybe =
-                authenticationService.getUserProfileByEmailMaybe(request.getEmail());
+        var userProfileMaybe = authenticationService.getUserProfileByEmailMaybe(request.getEmail());
 
-        if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
+        if (userProfileMaybe.isEmpty()) {
             auditService.submitAuditEvent(AUTH_NO_ACCOUNT_WITH_EMAIL, auditContext);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ACCT_DOES_NOT_EXIST);
         }
 
-        UserProfile userProfile = userProfileMaybe.get();
+        var userCredentials = authenticationService.getUserCredentialsFromEmail(request.getEmail());
+        var userProfile = userProfileMaybe.get();
         var calculatedPairwiseId = calculatePairwiseId(userContext, userProfile);
-        UserCredentials userCredentials = userContext.getUserCredentials().get();
         auditContext = auditContext.withPhoneNumber(userProfile.getPhoneNumber());
 
         var internalCommonSubjectId = getInternalCommonSubjectId(userProfile);
         auditContext = auditContext.withUserId(internalCommonSubjectId);
 
-        PermissionContext permissionContext =
+        var permissionContext =
                 PermissionContext.builder()
                         .withInternalSubjectId(userProfile.getSubjectID())
                         .withRpPairwiseId(calculatedPairwiseId)
@@ -238,7 +233,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         int incorrectPasswordCount = decision.attemptCount();
 
         if (decision instanceof Decision.ReauthLockedOut reauthLockedOut) {
-            ReauthFailureReasons reauthFailureReason =
+            var reauthFailureReason =
                     ForbiddenReasonErrorMapper.toReauthFailureReason(
                             reauthLockedOut.forbiddenReason());
 
@@ -408,8 +403,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
         }
 
-        boolean termsAndConditionsAccepted =
-                isTermsAndConditionsAccepted(authSessionItem, userProfile);
+        var termsAndConditionsAccepted = isTermsAndConditionsAccepted(authSessionItem, userProfile);
 
         try {
             return generateApiGatewayProxyResponse(
@@ -454,7 +448,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         configurationService.getMaxPasswordRetries()));
 
         if (decision instanceof Decision.ReauthLockedOut reauthLockedOut) {
-            ReauthFailureReasons reauthFailureReason =
+            var reauthFailureReason =
                     ForbiddenReasonErrorMapper.toReauthFailureReason(
                             reauthLockedOut.forbiddenReason());
             auditService.submitAuditEvent(
@@ -508,7 +502,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return Optional.of(DecisionErrorMapper.toErrorResponse(failure));
         }
 
-        Decision canSendSmsOtpDecision = canSendSmsOtpResult.getSuccess();
+        var canSendSmsOtpDecision = canSendSmsOtpResult.getSuccess();
         if (canSendSmsOtpDecision instanceof Decision.TemporarilyLockedOut) {
             LOG.info("User is blocked from requesting any OTP codes");
             return Optional.of(ErrorResponse.BLOCKED_FOR_SENDING_MFA_OTPS);
@@ -527,7 +521,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             return Optional.of(DecisionErrorMapper.toErrorResponse(failure));
         }
 
-        Decision canVerifyMfaOtpDecision = canVerifyMfaOtpResult.getSuccess();
+        var canVerifyMfaOtpDecision = canVerifyMfaOtpResult.getSuccess();
         if (canVerifyMfaOtpDecision instanceof Decision.TemporarilyLockedOut) {
             LOG.info("User is blocked from entering any OTP codes");
             return Optional.of(ErrorResponse.TOO_MANY_INVALID_MFA_OTPS_ENTERED);
@@ -596,7 +590,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             if (!configurationService.isPasswordRehashOnLoginEnabled()) {
                 return;
             }
-            boolean needsRehash =
+            var needsRehash =
                     Argon2MatcherHelper.needsRehash(
                             userCredentials.getPassword(), configurationService);
             LOG.info("Password rehash check: needsRehash={}", needsRehash);

@@ -49,7 +49,6 @@ public abstract class BaseFrontendHandler<T>
     protected final AuthenticationService authenticationService;
     protected final AuthSessionService authSessionService;
     protected final Json objectMapper = SerializationService.getInstance();
-    protected boolean loadUserCredentials = false;
 
     protected BaseFrontendHandler(
             Class<T> clazz,
@@ -62,29 +61,11 @@ public abstract class BaseFrontendHandler<T>
         this.authSessionService = authSessionService;
     }
 
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            AuthenticationService authenticationService,
-            boolean loadUserCredentials,
-            AuthSessionService authSessionService) {
-        this(clazz, configurationService, authenticationService, authSessionService);
-        this.loadUserCredentials = loadUserCredentials;
-    }
-
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.authenticationService = new DynamoService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            boolean loadUserCredentials) {
-        this(clazz, configurationService);
-        this.loadUserCredentials = loadUserCredentials;
     }
 
     @Override
@@ -177,16 +158,6 @@ public abstract class BaseFrontendHandler<T>
                                                         .getEmail()
                                                         .toLowerCase(Locale.ROOT)));
                         });
-
-        if (loadUserCredentials) {
-            authSession
-                    .map(AuthSessionItem::getEmailAddress)
-                    .map(authenticationService::getUserCredentialsFromEmail)
-                    .ifPresent(
-                            userCredentials ->
-                                    userContextBuilder.withUserCredentials(
-                                            Optional.of(userCredentials)));
-        }
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }
