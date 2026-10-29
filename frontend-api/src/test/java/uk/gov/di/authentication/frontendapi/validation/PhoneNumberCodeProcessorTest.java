@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -36,7 +35,6 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -111,24 +109,6 @@ class PhoneNumberCodeProcessorTest {
     void setup() {
         when(configurationService.getCodeMaxRetries()).thenReturn(3);
         when(userContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
-
-        var userCredentials =
-                new UserCredentials()
-                        .withMfaMethods(
-                                List.of(
-                                        MFAMethod.smsMfaMethod(
-                                                true,
-                                                true,
-                                                "+447700900000",
-                                                PriorityIdentifier.DEFAULT,
-                                                "sms-id"),
-                                        MFAMethod.authAppMfaMethod(
-                                                "auth-app-secret",
-                                                true,
-                                                true,
-                                                PriorityIdentifier.BACKUP,
-                                                "auth-app-id")));
-        when(userContext.getUserCredentials()).thenReturn(Optional.of(userCredentials));
     }
 
     @ParameterizedTest
@@ -416,6 +396,36 @@ class PhoneNumberCodeProcessorTest {
                                 AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, ACCOUNT_RECOVERY));
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    void shouldAuditDefaultMfaMethodPriorityForMigratedAccountRecovery() {
+        when(userProfile.isMfaMethodsMigrated()).thenReturn(true);
+
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
+                CodeRequestType.MFA_ACCOUNT_RECOVERY);
+
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
+
+        ArgumentCaptor<AuditService.MetadataPair[]> captor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER),
+                        eq(AUDIT_CONTEXT),
+                        captor.capture());
+        Set<AuditService.MetadataPair> actual = Set.of(captor.getValue());
+        assertTrue(
+                actual.contains(
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                PriorityIdentifier.DEFAULT.name())));
     }
 
     @Test
