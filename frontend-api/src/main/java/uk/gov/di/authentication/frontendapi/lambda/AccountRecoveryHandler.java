@@ -73,7 +73,7 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
             LOG.info("AccountRecoveryHandler called");
             var commonSubjectId =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userContext.getUserProfile().orElseThrow(),
+                            userContext.userProfile().orElseThrow(),
                             configurationService.getInternalSectorUri(),
                             authenticationService);
             var accountRecoveryPermitted =
@@ -91,7 +91,7 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                             userContext,
                             commonSubjectId.getValue(),
                             userContext
-                                    .getUserProfile()
+                                    .userProfile()
                                     .map(UserProfile::getEmail)
                                     .orElse(AuditService.UNKNOWN),
                             IpAddressHelper.extractIpAddress(input),

@@ -102,7 +102,7 @@ public class FinishPasskeyAssertionHandler
 
         reportPasskeyAuthenticationSuccess();
 
-        var maybeUserProfile = userContext.getUserProfile();
+        var maybeUserProfile = userContext.userProfile();
 
         if (maybeUserProfile.isEmpty()) {
             LOG.error("User profile not found for finish passkey assertion");
@@ -144,15 +144,15 @@ public class FinishPasskeyAssertionHandler
         var auditContext =
                 AuditContext.auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
-                        userContext.getAuthSession().getEmailAddress(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         var publicSubjectId =
-                userContext.getUserProfile().map(UserProfile::getPublicSubjectID).orElse(null);
+                userContext.userProfile().map(UserProfile::getPublicSubjectID).orElse(null);
         return passkeyAssertionService.finishAssertion(
-                userContext.getAuthSession().getPasskeyAssertionRequest(),
+                userContext.authSessionItem().getPasskeyAssertionRequest(),
                 request.pkc(),
                 auditContext,
                 publicSubjectId);
@@ -161,7 +161,7 @@ public class FinishPasskeyAssertionHandler
     private Result<FinishPasskeyAssertionFailureReason, Void> updatePasskeyRecord(
             AssertionResult assertionResult, UserContext userContext, UserProfile userProfile) {
         var publicSubjectId = userProfile.getPublicSubjectID();
-        var sessionId = userContext.getAuthSession().getSessionId();
+        var sessionId = userContext.authSessionItem().getSessionId();
         var passkeyId = assertionResult.getCredential().getCredentialId().getBase64Url();
         var signCount = assertionResult.getSignatureCount();
         var result =
@@ -174,7 +174,7 @@ public class FinishPasskeyAssertionHandler
     private Void reportCorrectPasskeyReceived(UserContext userContext) {
         PermissionContext permissionContext =
                 PermissionContext.builder()
-                        .withAuthSessionItem(userContext.getAuthSession())
+                        .withAuthSessionItem(userContext.authSessionItem())
                         .build();
         userActionsManager.correctPasskeyReceived(null, permissionContext);
 
@@ -190,7 +190,7 @@ public class FinishPasskeyAssertionHandler
             UserContext userContext, FinishPasskeyAssertionFailureReason failureReason) {
         PermissionContext permissionContext =
                 PermissionContext.builder()
-                        .withAuthSessionItem(userContext.getAuthSession())
+                        .withAuthSessionItem(userContext.authSessionItem())
                         .build();
         userActionsManager.incorrectPasskeyReceived(null, permissionContext);
 

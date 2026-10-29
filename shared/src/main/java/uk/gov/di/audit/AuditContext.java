@@ -22,15 +22,15 @@ public record AuditContext(
             String phoneNumber,
             String persistentSessionId) {
         return new AuditContext(
-                userContext.getAuthSession().getClientId(),
-                userContext.getClientSessionId(),
-                userContext.getAuthSession().getSessionId(),
+                userContext.authSessionItem().getClientId(),
+                userContext.clientSessionId(),
+                userContext.authSessionItem().getSessionId(),
                 subjectId,
                 email,
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                userContext.getTxmaAuditEncoded());
+                userContext.txmaAuditEncoded());
     }
 
     public static AuditContext emptyAuditContext() {

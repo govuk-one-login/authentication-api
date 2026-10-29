@@ -95,8 +95,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UpdateProfileRequest request,
             UserContext userContext) {
 
-        AuthSessionItem authSession = userContext.getAuthSession();
-        LogLineHelper.attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+        AuthSessionItem authSession = userContext.authSessionItem();
+        LogLineHelper.attachSessionIdToLogs(userContext.authSessionItem().getSessionId());
         LOG.info("UpdateProfileHandler called");
 
         if (!authSession.validateSession(request.getEmail())) {
@@ -104,7 +104,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             return generateErrorResponse(
                     ErrorResponse.SESSION_ID_MISSING,
                     auditContextWithOnlyClientSessionId(
-                            userContext.getClientSessionId(), userContext.getTxmaAuditEncoded()));
+                            userContext.clientSessionId(), userContext.txmaAuditEncoded()));
         }
 
         var auditContext = buildAuditContext(input, userContext, authSession);
@@ -131,7 +131,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 LOG.error(
                         "Unexpected UpdateProfileType '{}' while processing session '{}'",
                         request.getUpdateProfileType().toString(),
-                        userContext.getAuthSession().getSessionId());
+                        userContext.authSessionItem().getSessionId());
                 return generateErrorResponse(
                         ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
             }
@@ -151,7 +151,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         String auditablePhoneNumber =
                 userContext
-                        .getUserProfile()
+                        .userProfile()
                         .map(UserProfile::getPhoneNumber)
                         .orElse(AuditService.UNKNOWN);
 

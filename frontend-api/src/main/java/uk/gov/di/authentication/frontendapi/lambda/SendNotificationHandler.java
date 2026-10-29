@@ -190,18 +190,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             SendNotificationRequest request,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+        attachSessionIdToLogs(userContext.authSessionItem().getSessionId());
         LOG.info("SendNotificationHandler called");
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        if (!userContext.getAuthSession().validateSession(request.getEmail())) {
+        if (!userContext.authSessionItem().validateSession(request.getEmail())) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         }
 
@@ -211,9 +211,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     new NotifyRequest(
                             request.getEmail(),
                             request.getNotificationType(),
-                            userContext.getUserLanguage(),
-                            userContext.getAuthSession().getSessionId(),
-                            userContext.getClientSessionId());
+                            userContext.userLanguage(),
+                            userContext.authSessionItem().getSessionId(),
+                            userContext.clientSessionId());
 
             try {
                 if (!testUserHelper.isTestJourney(userContext)) {
@@ -232,7 +232,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var permissionContext =
                 PermissionContext.builder()
                         .withEmailAddress(request.getEmail())
-                        .withAuthSessionItem(userContext.getAuthSession())
+                        .withAuthSessionItem(userContext.authSessionItem())
                         .withE164FormattedPhoneNumber(
                                 request.getPhoneNumber() != null
                                         ? PhoneNumberHelper.formatPhoneNumber(
@@ -304,7 +304,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             return generateApiGatewayProxyResponse(400, PHONE_NUMBER_MISSING);
         }
 
-        boolean isSmokeTest = userContext.getAuthSession().getIsSmokeTest();
+        boolean isSmokeTest = userContext.authSessionItem().getIsSmokeTest();
 
         var errorResponse =
                 ValidationHelper.validatePhoneNumber(
@@ -336,7 +336,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             APIGatewayProxyRequestEvent input,
             AuditContext auditContext)
             throws JsonException {
-        var authSession = userContext.getAuthSession();
+        var authSession = userContext.authSessionItem();
         var sessionId = authSession.getSessionId();
 
         String emailAddress = authSession.getEmailAddress();
@@ -368,7 +368,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
             var emailCheckResult = dynamoEmailCheckResultService.getEmailCheckStore(destination);
             if (emailCheckResult.isEmpty()) {
-                String clientSessionId = userContext.getClientSessionId();
+                String clientSessionId = userContext.clientSessionId();
                 String persistentSessionId =
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
@@ -413,9 +413,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             destination,
                             notificationType,
                             code,
-                            userContext.getUserLanguage(),
+                            userContext.userLanguage(),
                             sessionId,
-                            userContext.getClientSessionId());
+                            userContext.clientSessionId());
             emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info(
                     "{} placed on queue with reference: {}",

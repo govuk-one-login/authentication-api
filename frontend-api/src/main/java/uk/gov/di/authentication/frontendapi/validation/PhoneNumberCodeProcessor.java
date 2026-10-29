@@ -224,7 +224,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     private void submitRequestToExperianPhoneCheckSQSQueue(
             JourneyType journeyType, String phoneNumber) {
-        Optional<UserProfile> userProfileOpt = userContext.getUserProfile();
+        Optional<UserProfile> userProfileOpt = userContext.userProfile();
         if (userProfileOpt.isEmpty()) {
             LOG.error("Database Corruption: User does not have UserProfile in the UserContext.");
             return;
@@ -236,7 +236,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
         if (configurationService.isPhoneCheckerWithReplyEnabled()
                 && (journeyType != JourneyType.ACCOUNT_RECOVERY || updatedPhoneNumber)) {
-            AuthSessionItem authSession = userContext.getAuthSession();
+            AuthSessionItem authSession = userContext.authSessionItem();
             String internalCommonSubjectIdentifier =
                     authSession != null ? authSession.getInternalCommonSubjectId() : "";
 
@@ -259,7 +259,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     }
 
     private boolean isValidTestNumberForEnvironment(String phoneNumber) {
-        AuthSessionItem authSession = userContext.getAuthSession();
+        AuthSessionItem authSession = userContext.authSessionItem();
         return ValidationHelper.isValidTestNumberForEnvironment(
                 phoneNumber,
                 configurationService.getEnvironment(),

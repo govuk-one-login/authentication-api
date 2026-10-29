@@ -138,12 +138,6 @@ public abstract class BaseFrontendHandler<T>
         var maybeUserLanguage =
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
 
-        var userContextBuilder =
-                UserContext.builder(authSession.get())
-                        .withTxmaAuditEncoded(txmaAuditEncoded)
-                        .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
-                        .withClientSessionId(clientSessionId);
-
         var maybeUserProfile =
                 authSession
                         .map(AuthSessionItem::getEmailAddress)
@@ -160,8 +154,14 @@ public abstract class BaseFrontendHandler<T>
                                 })
                         .flatMap(authenticationService::getUserProfileByEmailMaybe);
 
-        userContextBuilder.withUserProfile(maybeUserProfile);
+        var userContext =
+                new UserContext(
+                        authSession.get(),
+                        maybeUserProfile,
+                        matchSupportedLanguage(maybeUserLanguage),
+                        clientSessionId,
+                        txmaAuditEncoded);
 
-        return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
+        return handleRequestWithUserContext(input, context, request, userContext);
     }
 }
