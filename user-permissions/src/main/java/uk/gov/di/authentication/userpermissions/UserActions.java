@@ -189,8 +189,12 @@ public interface UserActions {
             PermissionContext permissionContext, String email);
 
     /** Records the email that a user entered when attempting IPV / Identity verification */
-    Result<TrackingError, Void> recordedEmailForIdentityVerification(
+    Result<TrackingError, Void> successfulIdentityVerification(
             PermissionContext permissionContext, String email);
+
+    /** Clears the recorded email for IPV / Identity verification from the session */
+    Result<TrackingError, Void> unsuccessfulIdentityVerification(
+            PermissionContext permissionContext);
 
     /**
      * Records that a user entered an incorrect email code when attempting to reset their password.

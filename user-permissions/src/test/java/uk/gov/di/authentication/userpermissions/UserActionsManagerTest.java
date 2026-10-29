@@ -628,13 +628,38 @@ class UserActionsManagerTest {
 
             // Act
             var result =
-                    userActionsManager.recordedEmailForIdentityVerification(
-                            permissionContext, EMAIL);
+                    userActionsManager.successfulIdentityVerification(permissionContext, EMAIL);
 
             // Assert
             verify(authSessionService).updateSession(captor.capture());
             AuthSessionItem capturedSession = captor.getValue();
             assertEquals(EMAIL, capturedSession.getRecordedEmailForIdentityVerification());
+            assertTrue(result.isSuccess());
+        }
+
+        @Test
+        void shouldClearEmailUsedForIdentityVerification() {
+            // Arrange
+            var sessionWithRecordedEmail =
+                    new AuthSessionItem()
+                            .withSessionId(SESSION_ID)
+                            .withEmailAddress(EMAIL)
+                            .withRecordedEmailForIdentityVerification(EMAIL);
+            var contextWithRecordedEmail =
+                    PermissionContext.builder()
+                            .withEmailAddress(EMAIL)
+                            .withAuthSessionItem(sessionWithRecordedEmail)
+                            .build();
+            ArgumentCaptor<AuthSessionItem> captor = ArgumentCaptor.forClass(AuthSessionItem.class);
+
+            // Act
+            var result =
+                    userActionsManager.unsuccessfulIdentityVerification(contextWithRecordedEmail);
+
+            // Assert
+            verify(authSessionService).updateSession(captor.capture());
+            AuthSessionItem capturedSession = captor.getValue();
+            assertNull(capturedSession.getRecordedEmailForIdentityVerification());
             assertTrue(result.isSuccess());
         }
     }
