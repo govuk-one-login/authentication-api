@@ -45,6 +45,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -705,28 +706,23 @@ class InactiveAccountDeletionHandlerTest {
         private static final long WORK_ALLOWANCE_MS = 5_000L;
 
         @Test
-        void calculatePauseMsReturnsZeroWhenNoMessagesProcessed() {
-            assertEquals(0, InactiveAccountDeletionHandler.calculatePauseMs(0, 0L, 3000L));
+        void calculatePauseMsReturnsFullMinDurationWhenNoWorkElapsed() {
+            assertEquals(3000, InactiveAccountDeletionHandler.calculatePauseMs(0L, 3000L));
         }
 
         @Test
-        void calculatePauseMsReturnsFullTargetWhenNoWorkElapsed() {
-            assertEquals(9000, InactiveAccountDeletionHandler.calculatePauseMs(3, 0L, 3000L));
+        void calculatePauseMsSubtractsElapsedWorkFromMinDuration() {
+            assertEquals(2846, InactiveAccountDeletionHandler.calculatePauseMs(154L, 3000L));
         }
 
         @Test
-        void calculatePauseMsSubtractsElapsedWorkFromTarget() {
-            // 3 messages * 3000ms = 9000ms target, minus 1000ms (1_000_000_000ns) elapsed.
-            assertEquals(
-                    8000,
-                    InactiveAccountDeletionHandler.calculatePauseMs(3, 1_000_000_000L, 3000L));
+        void calculatePauseMsNeverReturnsNegativeWhenWorkExceedsMinDuration() {
+            assertEquals(0, InactiveAccountDeletionHandler.calculatePauseMs(10_000L, 3000L));
         }
 
         @Test
-        void calculatePauseMsNeverReturnsNegativeWhenWorkExceedsTarget() {
-            // 2 messages * 3000ms = 6000ms target, minus 10000ms (10_000_000_000ns) elapsed.
-            assertEquals(
-                    0, InactiveAccountDeletionHandler.calculatePauseMs(2, 10_000_000_000L, 3000L));
+        void calculatePauseMsReturnsZeroWhenMinDurationIsZero() {
+            assertEquals(0, InactiveAccountDeletionHandler.calculatePauseMs(154L, 0L));
         }
 
         @Test
@@ -740,12 +736,12 @@ class InactiveAccountDeletionHandlerTest {
                     Mockito.mockStatic(LambdaPauseHelper.class)) {
                 handler.handleRequest(event, context);
 
-                pauseHelper.verify(() -> LambdaPauseHelper.pauseBetweenInvocations(0L));
+                pauseHelper.verify(() -> LambdaPauseHelper.pause(0L));
             }
         }
 
         @Test
-        void shouldCountEverySuccessfulSkippedAndFailedMessageTowardsBudget() {
+        void shouldOnlyThrottleMessagesThatEmittedAnAuditEvent() {
             when(configurationService.getInactiveAccountDeletionMinDurationPerMessageMs())
                     .thenReturn(LARGE_MIN_DURATION_MS);
 
@@ -774,56 +770,52 @@ class InactiveAccountDeletionHandlerTest {
                     Mockito.mockStatic(LambdaPauseHelper.class)) {
                 handler.handleRequest(event, context);
 
+                // Only msg-1 emitted an audit event, so it is the only message throttled.
                 var sleepCaptor = ArgumentCaptor.forClass(Long.class);
-                pauseHelper.verify(
-                        () -> LambdaPauseHelper.pauseBetweenInvocations(sleepCaptor.capture()));
+                pauseHelper.verify(() -> LambdaPauseHelper.pause(sleepCaptor.capture()));
                 long sleepMs = sleepCaptor.getValue();
 
                 assertTrue(
-                        sleepMs > (3 * LARGE_MIN_DURATION_MS) - WORK_ALLOWANCE_MS,
-                        "Expected all 3 messages counted, but sleep was " + sleepMs);
+                        sleepMs > LARGE_MIN_DURATION_MS - WORK_ALLOWANCE_MS,
+                        "Expected a single message throttled, but sleep was " + sleepMs);
                 assertTrue(
-                        sleepMs <= 3 * LARGE_MIN_DURATION_MS,
-                        "Sleep must not exceed target, but was " + sleepMs);
+                        sleepMs <= LARGE_MIN_DURATION_MS,
+                        "Sleep must not exceed min duration, but was " + sleepMs);
             }
         }
 
         @Test
-        void shouldNotCountCircuitBreakerAbortedMessagesTowardsBudget() {
+        void shouldThrottleOncePerDeletionRatherThanOncePerBatch() {
             when(configurationService.getInactiveAccountDeletionMinDurationPerMessageMs())
                     .thenReturn(LARGE_MIN_DURATION_MS);
-            // CB not tripped for first two messages, then tripped before the third.
-            when(iadCircuitBreakerService.isCircuitBreakerTripped())
-                    .thenReturn(false)
-                    .thenReturn(false)
-                    .thenReturn(true);
             when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-1"))
                     .thenReturn(Optional.of(inactiveUserProfile("sub-1", "sub1@example.com")));
             when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-2"))
                     .thenReturn(Optional.of(inactiveUserProfile("sub-2", "sub2@example.com")));
+            when(dynamoService.getOptionalUserProfileFromPublicSubject("sub-3"))
+                    .thenReturn(Optional.of(inactiveUserProfile("sub-3", "sub3@example.com")));
 
-            var msg1 = createSQSMessage("msg-1", "{\"publicSubjectId\": \"sub-1\"}");
-            var msg2 = createSQSMessage("msg-2", "{\"publicSubjectId\": \"sub-2\"}");
-            var msg3 = createSQSMessage("msg-3", "{\"publicSubjectId\": \"sub-3\"}");
-            var msg4 = createSQSMessage("msg-4", "{\"publicSubjectId\": \"sub-4\"}");
             var event = new SQSEvent();
-            event.setRecords(List.of(msg1, msg2, msg3, msg4));
+            event.setRecords(
+                    List.of(
+                            createSQSMessage("msg-1", "{\"publicSubjectId\": \"sub-1\"}"),
+                            createSQSMessage("msg-2", "{\"publicSubjectId\": \"sub-2\"}"),
+                            createSQSMessage("msg-3", "{\"publicSubjectId\": \"sub-3\"}")));
 
             try (MockedStatic<LambdaPauseHelper> pauseHelper =
                     Mockito.mockStatic(LambdaPauseHelper.class)) {
                 handler.handleRequest(event, context);
 
                 var sleepCaptor = ArgumentCaptor.forClass(Long.class);
-                pauseHelper.verify(
-                        () -> LambdaPauseHelper.pauseBetweenInvocations(sleepCaptor.capture()));
-                long sleepMs = sleepCaptor.getValue();
-                // Only msg-1 and msg-2 entered processAccountDeletion: target = 2 * 10000ms.
-                assertTrue(
-                        sleepMs > (2 * LARGE_MIN_DURATION_MS) - WORK_ALLOWANCE_MS,
-                        "Expected 2 messages counted, but sleep was " + sleepMs);
-                assertTrue(
-                        sleepMs <= 2 * LARGE_MIN_DURATION_MS,
-                        "Sleep must not exceed 2-message target, but was " + sleepMs);
+                pauseHelper.verify(() -> LambdaPauseHelper.pause(sleepCaptor.capture()), times(3));
+                for (long sleepMs : sleepCaptor.getAllValues()) {
+                    assertTrue(
+                            sleepMs > LARGE_MIN_DURATION_MS - WORK_ALLOWANCE_MS,
+                            "Expected a full per-message throttle, but sleep was " + sleepMs);
+                    assertTrue(
+                            sleepMs <= LARGE_MIN_DURATION_MS,
+                            "Sleep must not exceed min duration, but was " + sleepMs);
+                }
             }
         }
 
@@ -839,8 +831,8 @@ class InactiveAccountDeletionHandlerTest {
                     Mockito.mockStatic(LambdaPauseHelper.class)) {
                 handler.handleRequest(event, context);
 
-                // No messages entered processAccountDeletion, so target is 0.
-                pauseHelper.verify(() -> LambdaPauseHelper.pauseBetweenInvocations(0L));
+                // No deletions occurred, so nothing is throttled at all.
+                pauseHelper.verify(() -> LambdaPauseHelper.pause(anyLong()), never());
             }
         }
     }
