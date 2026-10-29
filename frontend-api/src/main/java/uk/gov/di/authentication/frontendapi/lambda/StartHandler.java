@@ -14,7 +14,6 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
-import uk.gov.di.authentication.frontendapi.entity.UserDetails;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
@@ -179,7 +178,7 @@ public class StartHandler
                         requestedCredentialTrustLevel, authSession.getAchievedCredentialStrength());
         authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
-        var userContext = startService.buildUserContext(authSession);
+        var userDetails = startService.getUserDetails(authSession);
         var clientStartInfo = buildClientStartInfo(startRequest, authSession);
 
         var reauthenticate = isReauthenticateRequest(input);
@@ -194,7 +193,7 @@ public class StartHandler
                         input,
                         sessionId,
                         authSession,
-                        userContext.getUserProfile(),
+                        userDetails.maybeUserProfile(),
                         internalSubjectId);
 
         var isBlockedForReauth = false;
@@ -204,7 +203,7 @@ public class StartHandler
                     handleReauthLockout(
                             authSession,
                             startRequest,
-                            userContext.getUserProfile(),
+                            userDetails.maybeUserProfile(),
                             auditContext,
                             internalSubjectId);
         }
@@ -221,9 +220,6 @@ public class StartHandler
             authSessionService.updateSession(authSession);
             emitAuthenticatedOverrideObservability();
         }
-
-        var userDetails =
-                new UserDetails(userContext.getUserProfile(), userContext.getUserCredentials());
 
         var userStartInfo =
                 startService.buildUserStartInfo(

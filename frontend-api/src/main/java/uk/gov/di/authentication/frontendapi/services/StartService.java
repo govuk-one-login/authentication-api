@@ -14,7 +14,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.util.Collection;
@@ -36,21 +35,19 @@ public class StartService {
         this.dynamoService = dynamoService;
     }
 
-    public UserContext buildUserContext(AuthSessionItem authSession) {
-        var builder = UserContext.builder(authSession);
-        UserContext userContext;
-        Optional.of(authSession)
+    public UserDetails getUserDetails(AuthSessionItem authSession) {
+        return Optional.of(authSession)
                 .map(AuthSessionItem::getEmailAddress)
                 .flatMap(dynamoService::getUserProfileByEmailMaybe)
-                .ifPresent(
-                        t ->
-                                builder.withUserProfile(t)
-                                        .withUserCredentials(
-                                                Optional.of(
-                                                        dynamoService.getUserCredentialsFromEmail(
-                                                                authSession.getEmailAddress()))));
-        userContext = builder.build();
-        return userContext;
+                .map(
+                        userProfile -> {
+                            var userCredentials =
+                                    Optional.ofNullable(
+                                            dynamoService.getUserCredentialsFromEmail(
+                                                    authSession.getEmailAddress()));
+                            return new UserDetails(Optional.of(userProfile), userCredentials);
+                        })
+                .orElse(new UserDetails(Optional.empty(), Optional.empty()));
     }
 
     public ClientStartInfo buildClientStartInfo(
