@@ -144,20 +144,23 @@ public abstract class BaseFrontendHandler<T>
                         .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
                         .withClientSessionId(clientSessionId);
 
-        authSession
-                .map(AuthSessionItem::getEmailAddress)
-                .ifPresentOrElse(
-                        email ->
-                                userContextBuilder.withUserProfile(
-                                        authenticationService.getUserProfileByEmailMaybe(email)),
-                        () -> {
-                            if (request instanceof BaseFrontendRequest)
-                                userContextBuilder.withUserProfile(
-                                        authenticationService.getUserProfileByEmailMaybe(
+        var maybeUserProfile =
+                authSession
+                        .map(AuthSessionItem::getEmailAddress)
+                        .or(
+                                () -> {
+                                    if (request instanceof BaseFrontendRequest) {
+                                        LOG.info("retrieving session from request email");
+                                        return Optional.of(
                                                 ((BaseFrontendRequest) request)
                                                         .getEmail()
-                                                        .toLowerCase(Locale.ROOT)));
-                        });
+                                                        .toLowerCase(Locale.ROOT));
+                                    }
+                                    return Optional.empty();
+                                })
+                        .flatMap(authenticationService::getUserProfileByEmailMaybe);
+
+        userContextBuilder.withUserProfile(maybeUserProfile);
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }
