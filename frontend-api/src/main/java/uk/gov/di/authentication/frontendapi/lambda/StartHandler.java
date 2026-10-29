@@ -190,7 +190,12 @@ public class StartHandler
 
         var internalSubjectId = authSession.getInternalCommonSubjectId();
         var auditContext =
-                buildAuditContext(input, sessionId, authSession, userContext, internalSubjectId);
+                buildAuditContext(
+                        input,
+                        sessionId,
+                        authSession,
+                        userContext.getUserProfile(),
+                        internalSubjectId);
 
         var isBlockedForReauth = false;
         if (reauthenticate) {
@@ -311,7 +316,7 @@ public class StartHandler
             APIGatewayProxyRequestEvent input,
             String sessionId,
             AuthSessionItem authSession,
-            UserContext userContext,
+            Optional<UserProfile> maybeUserProfile,
             String internalSubjectId) {
         var clientSessionId =
                 getHeaderValueFromHeaders(
@@ -324,10 +329,7 @@ public class StartHandler
                 clientSessionId,
                 sessionId,
                 internalSubjectId == null ? AuditService.UNKNOWN : internalSubjectId,
-                userContext
-                        .getUserProfile()
-                        .map(UserProfile::getEmail)
-                        .orElse(AuditService.UNKNOWN),
+                maybeUserProfile.map(UserProfile::getEmail).orElse(AuditService.UNKNOWN),
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
