@@ -151,32 +151,40 @@ public class StartService {
         if (maybeUserProfile.isEmpty()) {
             return null;
         }
-
         var userProfile = maybeUserProfile.get();
+
         if (userProfile.isMfaMethodsMigrated()) {
-            var maybeUserCredentials = userContext.getUserCredentials();
-            if (maybeUserCredentials.isPresent()) {
-                var userCredentials = maybeUserCredentials.get();
-                var defaultMfaMethod =
-                        MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
-                if (defaultMfaMethod.isPresent()) {
-                    return MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType());
-                } else {
-                    LOG.error(
-                            "Unexpected error getting default mfa method for user: no default method exists");
-                    return MFAMethodType.NONE;
-                }
-            } else {
-                LOG.error(
-                        "Attempted to get default mfa method for migrated user without user credentials");
-                return MFAMethodType.NONE;
-            }
+            return getMfaMethodForMigratedUser(userContext);
+        } else {
+            return getMfaMethodForNonMigratedUser(userContext);
         }
+    }
+
+    private MFAMethodType getMfaMethodForNonMigratedUser(UserContext userContext) {
         if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
             return MFAMethodType.SMS;
         } else if (authApp(userContext)) {
             return MFAMethodType.AUTH_APP;
         } else return null;
+    }
+
+    private MFAMethodType getMfaMethodForMigratedUser(UserContext userContext) {
+        var maybeUserCredentials = userContext.getUserCredentials();
+        if (maybeUserCredentials.isPresent()) {
+            var userCredentials = maybeUserCredentials.get();
+            var defaultMfaMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
+            if (defaultMfaMethod.isPresent()) {
+                return MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType());
+            } else {
+                LOG.error(
+                        "Unexpected error getting default mfa method for user: no default method exists");
+                return MFAMethodType.NONE;
+            }
+        } else {
+            LOG.error(
+                    "Attempted to get default mfa method for migrated user without user credentials");
+            return MFAMethodType.NONE;
+        }
     }
 
     private boolean validCookieConsentValueIsPresent(String cookieConsent) {
