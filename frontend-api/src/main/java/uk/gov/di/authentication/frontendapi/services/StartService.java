@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
+import uk.gov.di.authentication.frontendapi.entity.UserDetails;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -101,19 +102,22 @@ public class StartService {
                 isBlockedForReauth,
                 isMfaRequired);
 
+        var userDetails =
+                new UserDetails(userContext.getUserProfile(), userContext.getUserCredentials());
+
         return new UserStartInfo(
                 upliftRequired,
                 identityRequired,
                 userIsAuthenticated,
                 cookieConsent,
                 gaTrackingId,
-                getMfaMethodType(userContext),
+                getMfaMethodType(userDetails),
                 isBlockedForReauth,
                 isMfaRequired);
     }
 
-    private boolean authApp(UserContext userContext) {
-        return userContext.getUserCredentials().stream()
+    private boolean authApp(UserDetails userDetails) {
+        return userDetails.maybeUserCredentials().stream()
                 .map(UserCredentials::getMfaMethods)
                 .filter(Objects::nonNull)
                 .filter(not(List::isEmpty))
@@ -146,30 +150,30 @@ public class StartService {
         return currentCredentialStrength.isLowerThan(requestedCredentialStrength);
     }
 
-    public MFAMethodType getMfaMethodType(UserContext userContext) {
-        var maybeUserProfile = userContext.getUserProfile();
+    public MFAMethodType getMfaMethodType(UserDetails userDetails) {
+        var maybeUserProfile = userDetails.maybeUserProfile();
         if (maybeUserProfile.isEmpty()) {
             return null;
         }
         var userProfile = maybeUserProfile.get();
 
         if (userProfile.isMfaMethodsMigrated()) {
-            return getMfaMethodForMigratedUser(userContext);
+            return getMfaMethodForMigratedUser(userDetails);
         } else {
-            return getMfaMethodForNonMigratedUser(userContext);
+            return getMfaMethodForNonMigratedUser(userDetails);
         }
     }
 
-    private MFAMethodType getMfaMethodForNonMigratedUser(UserContext userContext) {
-        if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
+    private MFAMethodType getMfaMethodForNonMigratedUser(UserDetails userDetails) {
+        if (userDetails.maybeUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
             return MFAMethodType.SMS;
-        } else if (authApp(userContext)) {
+        } else if (authApp(userDetails)) {
             return MFAMethodType.AUTH_APP;
         } else return null;
     }
 
-    private MFAMethodType getMfaMethodForMigratedUser(UserContext userContext) {
-        var maybeUserCredentials = userContext.getUserCredentials();
+    private MFAMethodType getMfaMethodForMigratedUser(UserDetails userDetails) {
+        var maybeUserCredentials = userDetails.maybeUserCredentials();
         if (maybeUserCredentials.isPresent()) {
             var userCredentials = maybeUserCredentials.get();
             var defaultMfaMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
