@@ -113,6 +113,9 @@ public abstract class BaseFrontendHandler<T>
 
         LOG.info("Processing request in base handler");
 
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID,
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         String clientSessionId =
                 getHeaderValueFromHeaders(
                         input.getHeaders(),
@@ -122,8 +125,6 @@ public abstract class BaseFrontendHandler<T>
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         }
-
-        String txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
 
         LOG.info("Retrieving session");
         Optional<AuthSessionItem> authSession =
@@ -137,17 +138,13 @@ public abstract class BaseFrontendHandler<T>
             LOG.info("Session retrieved");
         }
 
-        UserContext.Builder userContextBuilder = UserContext.builder(authSession.get());
-        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
+        var clientID = Optional.ofNullable(authSession.get().getClientId());
+        attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
+
+        var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
 
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-
-        Optional<String> userLanguage =
-                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
@@ -157,21 +154,25 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
-        userContextBuilder.withClientSessionId(clientSessionId);
+        var maybeUserLanguage =
+                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
 
-        var clientID = Optional.ofNullable(authSession.get().getClientId());
-
-        attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
+        var userContextBuilder =
+                UserContext.builder(authSession.get())
+                        .withTxmaAuditEncoded(txmaAuditEncoded)
+                        .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
+                        .withClientSessionId(clientSessionId);
 
         authSession
                 .map(AuthSessionItem::getEmailAddress)
-                .map(authenticationService::getUserProfileFromEmail)
                 .ifPresentOrElse(
-                        userContextBuilder::withUserProfile,
+                        email ->
+                                userContextBuilder.withUserProfile(
+                                        authenticationService.getUserProfileByEmailMaybe(email)),
                         () -> {
                             if (request instanceof BaseFrontendRequest)
                                 userContextBuilder.withUserProfile(
-                                        authenticationService.getUserProfileFromEmail(
+                                        authenticationService.getUserProfileByEmailMaybe(
                                                 ((BaseFrontendRequest) request)
                                                         .getEmail()
                                                         .toLowerCase(Locale.ROOT)));
@@ -186,10 +187,6 @@ public abstract class BaseFrontendHandler<T>
                                     userContextBuilder.withUserCredentials(
                                             Optional.of(userCredentials)));
         }
-
-        userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
-
-        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }

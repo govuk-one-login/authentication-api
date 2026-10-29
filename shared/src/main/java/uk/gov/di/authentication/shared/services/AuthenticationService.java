@@ -62,8 +62,6 @@ public interface AuthenticationService {
 
     UserCredentials getUserCredentialsFromSubject(String subject);
 
-    Optional<UserProfile> getUserProfileFromEmail(String email);
-
     UserCredentials getUserCredentialsFromEmail(String email);
 
     UserCredentials getUserCredentialsFromEmailWithStronglyConsistentRead(String email);

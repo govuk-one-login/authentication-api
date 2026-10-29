@@ -94,7 +94,7 @@ public class UserContext {
             return this;
         }
 
-        public Builder withTxmaAuditEvent(String txmaAuditEncoded) {
+        public Builder withTxmaAuditEncoded(String txmaAuditEncoded) {
             this.txmaAuditEncoded = txmaAuditEncoded;
             return this;
         }

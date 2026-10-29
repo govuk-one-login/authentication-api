@@ -148,7 +148,7 @@ class AuthenticationAuthCodeHandlerTest {
         void shouldReturn200AndSaveNewAuthCodeRequest() throws URISyntaxException {
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
             var userProfile = new UserProfile().withSubjectID(TEST_SUBJECT_ID).withEmail(EMAIL);
-            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
             var event = validAuthCodeRequest();
 
@@ -189,7 +189,7 @@ class AuthenticationAuthCodeHandlerTest {
                         new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
                 userProfile.setSubjectID(TEST_SUBJECT_ID);
                 when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-                when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                         .thenReturn(Optional.of(userProfile));
                 mockedClientSubjectHelperClass
                         .when(() -> ClientSubjectHelper.getSubject(eq(userProfile), any(), any()))
@@ -257,7 +257,7 @@ class AuthenticationAuthCodeHandlerTest {
                         new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
                 userProfile.setSubjectID(TEST_SUBJECT_ID);
                 when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
-                when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+                when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                         .thenReturn(Optional.of(userProfile));
                 mockedClientSubjectHelperClass
                         .when(() -> ClientSubjectHelper.getSubject(eq(userProfile), any(), any()))
@@ -300,7 +300,7 @@ class AuthenticationAuthCodeHandlerTest {
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
             var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
             userProfile.setSubjectID(TEST_SUBJECT_ID);
-            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
 
             var result = handler.handleRequest(validAuthCodeRequest(), context);
@@ -334,7 +334,7 @@ class AuthenticationAuthCodeHandlerTest {
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
             var userProfile = new UserProfile();
             userProfile.setSubjectID(TEST_SUBJECT_ID);
-            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
 
             var result = handler.handleRequest(event, context);
@@ -359,7 +359,7 @@ class AuthenticationAuthCodeHandlerTest {
             when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
             var userProfile = new UserProfile();
             userProfile.setSubjectID(TEST_SUBJECT_ID);
-            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
             var event = validAuthCodeRequest();
 
@@ -385,7 +385,7 @@ class AuthenticationAuthCodeHandlerTest {
         void shouldReturn500WhenNotPermittedToIssueAuthCode() throws Json.JsonException {
             var userProfile = new UserProfile().withEmail(EMAIL).withPhoneNumber(UK_MOBILE_NUMBER);
             userProfile.setSubjectID(TEST_SUBJECT_ID);
-            when(authenticationService.getUserProfileFromEmail(CommonTestVariables.EMAIL))
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
                     .thenReturn(Optional.of(userProfile));
             when(permissionDecisionManager.canIssueAuthCode(any())).thenReturn(false);
             var event = validAuthCodeRequest();
