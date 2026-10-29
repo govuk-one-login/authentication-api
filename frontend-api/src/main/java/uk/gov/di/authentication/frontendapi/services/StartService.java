@@ -80,7 +80,7 @@ public class StartService {
     }
 
     public UserStartInfo buildUserStartInfo(
-            UserContext userContext,
+            UserDetails userDetails,
             String cookieConsent,
             String gaTrackingId,
             boolean identityRequired,
@@ -101,9 +101,6 @@ public class StartService {
                 gaTrackingId,
                 isBlockedForReauth,
                 isMfaRequired);
-
-        var userDetails =
-                new UserDetails(userContext.getUserProfile(), userContext.getUserCredentials());
 
         return new UserStartInfo(
                 upliftRequired,

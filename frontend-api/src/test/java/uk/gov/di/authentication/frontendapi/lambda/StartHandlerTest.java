@@ -18,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
+import uk.gov.di.authentication.frontendapi.entity.UserDetails;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
@@ -107,6 +108,7 @@ class StartHandlerTest {
     private final UserProfile userProfile = mock(UserProfile.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final UserContext userContext = mock(UserContext.class);
+    private final UserDetails userDetails = mock(UserDetails.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -535,7 +537,7 @@ class StartHandlerTest {
                         any(), any(), any(), any(), any(), anyBoolean(), anyBoolean()))
                 .thenReturn(clientStartInfo);
         when(startService.buildUserStartInfo(
-                        eq(userContext),
+                        any(UserDetails.class),
                         any(),
                         any(),
                         anyBoolean(),

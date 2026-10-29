@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
+import uk.gov.di.authentication.frontendapi.entity.UserDetails;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
@@ -221,9 +222,12 @@ public class StartHandler
             emitAuthenticatedOverrideObservability();
         }
 
+        var userDetails =
+                new UserDetails(userContext.getUserProfile(), userContext.getUserCredentials());
+
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext,
+                        userDetails,
                         startService.getCookieConsentValue(
                                 startRequest.cookieConsent(), startRequest.isCookieConsentShared()),
                         startRequest.ga(),
