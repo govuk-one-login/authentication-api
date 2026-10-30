@@ -108,7 +108,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             CheckUserExistsRequest request,
             UserContext userContext) {
 
-        var sessionId = userContext.getAuthSession().getSessionId();
+        var sessionId = userContext.authSessionItem().getSessionId();
         attachSessionIdToLogs(sessionId);
 
         try {
@@ -163,7 +163,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     decisionResult.getSuccess() instanceof Decision.TemporarilyLockedOut;
             if (isUserAccountLocked) {
                 LOG.info("User account is locked");
-                String existingSessionEmail = userContext.getAuthSession().getEmailAddress();
+                String existingSessionEmail = userContext.authSessionItem().getEmailAddress();
                 updateEmailAndResetReverificationInformationIfRequired(
                         existingSessionEmail, emailAddress, sessionId);
 
@@ -187,7 +187,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             var needsForcedMFAResetAfterMFACheck = false;
             var shouldSuppressPasskeyRegistrationPrompt = false;
 
-            AuthSessionItem authSession = userContext.getAuthSession();
+            AuthSessionItem authSession = userContext.authSessionItem();
 
             String internalCommonSubjectIdToBeUpdatedInSession;
             if (userExists) {
@@ -196,7 +196,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 rpPairwiseId =
                         ClientSubjectHelper.getSubject(
                                         userProfile,
-                                        userContext.getAuthSession(),
+                                        userContext.authSessionItem(),
                                         authenticationService)
                                 .getValue();
 
@@ -262,7 +262,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     AuthSessionItem.ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID,
                     internalCommonSubjectIdToBeUpdatedInSession);
 
-            String existingSessionEmail = userContext.getAuthSession().getEmailAddress();
+            String existingSessionEmail = userContext.authSessionItem().getEmailAddress();
             updateEmailAndResetReverificationInformationIfRequired(
                     existingSessionEmail, emailAddress, sessionId);
 

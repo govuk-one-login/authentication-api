@@ -136,10 +136,10 @@ class CheckReAuthUserHandlerTest {
                 .thenReturn(USER_PROFILE);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
 
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
-        when(userContext.getUserProfile()).thenReturn(Optional.of(USER_PROFILE));
+        when(userContext.authSessionItem()).thenReturn(authSession);
+        when(userContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.txmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+        when(userContext.userProfile()).thenReturn(Optional.of(USER_PROFILE));
 
         when(configurationService.getEnvironment()).thenReturn("test");
         when(configurationService.getMaxEmailReAuthRetries()).thenReturn(MAX_RETRIES);
@@ -674,7 +674,7 @@ class CheckReAuthUserHandlerTest {
                                 () -> {
                                     reset(auditService, cloudwatchMetricsService);
 
-                                    when(userContext.getUserProfile())
+                                    when(userContext.userProfile())
                                             .thenReturn(
                                                     switch (scenario.signedInState) {
                                                         case NOT_SIGNED_IN -> Optional.empty();

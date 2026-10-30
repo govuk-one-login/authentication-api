@@ -109,11 +109,11 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         var baseAuditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
                         request.email(),
                         IpAddressHelper.extractIpAddress(input),
                         userContext
-                                .getUserProfile()
+                                .userProfile()
                                 .map(UserProfile::getPhoneNumber)
                                 .orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -125,12 +125,12 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
         }
 
         var idReverificationState = idReverificationStateMaybe.get();
-        if (!idReverificationState.getClientSessionId().equals(userContext.getClientSessionId())) {
+        if (!idReverificationState.getClientSessionId().equals(userContext.clientSessionId())) {
             LOG.error("Received state belongs to a different session");
             return generateApiGatewayProxyErrorResponse(400, IPV_STATE_MISMATCH);
         }
 
-        String existingSessionEmail = userContext.getAuthSession().getEmailAddress();
+        String existingSessionEmail = userContext.authSessionItem().getEmailAddress();
         if (existingSessionEmail == null) {
             LOG.error("No email found on session");
             return generateApiGatewayProxyErrorResponse(500, SESSION_EMAIL_NOT_SET);
@@ -183,7 +183,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             var result =
                     extractResponseMetadata(
                             reverificationResultJson,
-                            userContext.getAuthSession().getInternalCommonSubjectId());
+                            userContext.authSessionItem().getInternalCommonSubjectId());
 
             metadataPairs.addAll(
                     result.fold(
@@ -207,7 +207,7 @@ public class ReverificationResultHandler extends BaseFrontendHandler<Reverificat
             var outcome = result.getSuccess();
 
             applyReverificationOutcomeToRecordedEmail(
-                    userContext.getAuthSession(), existingSessionEmail, outcome);
+                    userContext.authSessionItem(), existingSessionEmail, outcome);
 
             return generateApiGatewayProxyResponse(200, reverificationResult.getBody());
         } catch (UnsuccessfulReverificationResponseException | ParseException e) {

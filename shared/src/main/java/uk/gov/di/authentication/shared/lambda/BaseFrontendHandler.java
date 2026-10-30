@@ -138,27 +138,30 @@ public abstract class BaseFrontendHandler<T>
         var maybeUserLanguage =
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
 
-        var userContextBuilder =
-                UserContext.builder(authSession.get())
-                        .withTxmaAuditEncoded(txmaAuditEncoded)
-                        .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
-                        .withClientSessionId(clientSessionId);
-
-        authSession
-                .map(AuthSessionItem::getEmailAddress)
-                .ifPresentOrElse(
-                        email ->
-                                userContextBuilder.withUserProfile(
-                                        authenticationService.getUserProfileByEmailMaybe(email)),
-                        () -> {
-                            if (request instanceof BaseFrontendRequest)
-                                userContextBuilder.withUserProfile(
-                                        authenticationService.getUserProfileByEmailMaybe(
+        var maybeUserProfile =
+                authSession
+                        .map(AuthSessionItem::getEmailAddress)
+                        .or(
+                                () -> {
+                                    if (request instanceof BaseFrontendRequest) {
+                                        LOG.info("retrieving session from request email");
+                                        return Optional.of(
                                                 ((BaseFrontendRequest) request)
                                                         .getEmail()
-                                                        .toLowerCase(Locale.ROOT)));
-                        });
+                                                        .toLowerCase(Locale.ROOT));
+                                    }
+                                    return Optional.empty();
+                                })
+                        .flatMap(authenticationService::getUserProfileByEmailMaybe);
 
-        return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
+        var userContext =
+                new UserContext(
+                        authSession.get(),
+                        maybeUserProfile,
+                        matchSupportedLanguage(maybeUserLanguage),
+                        clientSessionId,
+                        txmaAuditEncoded);
+
+        return handleRequestWithUserContext(input, context, request, userContext);
     }
 }

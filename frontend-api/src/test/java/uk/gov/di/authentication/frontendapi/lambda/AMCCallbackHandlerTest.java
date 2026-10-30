@@ -145,10 +145,10 @@ class AMCCallbackHandlerTest {
     @BeforeEach
     void setup() {
         when(dynamoAmcStateService.getNonExpiredState(STATE)).thenReturn(Optional.of(AMC_STATE));
-        when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
-        when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
-        when(USER_CONTEXT.getUserLanguage()).thenReturn(LocaleHelper.SupportedLanguage.EN);
+        when(USER_CONTEXT.authSessionItem()).thenReturn(authSession);
+        when(USER_CONTEXT.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(USER_CONTEXT.txmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+        when(USER_CONTEXT.userLanguage()).thenReturn(LocaleHelper.SupportedLanguage.EN);
     }
 
     @AfterEach
@@ -209,7 +209,7 @@ class AMCCallbackHandlerTest {
 
     @Test
     void shouldTolerateANullTxmaEncodedValue() throws IOException, ParseException {
-        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
+        when(USER_CONTEXT.txmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
         String journeyOutcomeResult =
                 createJourneyOutcomeResultForAMCScope(AMCScope.ACCOUNT_DELETE);
         setupSuccessfulTokenResponse();

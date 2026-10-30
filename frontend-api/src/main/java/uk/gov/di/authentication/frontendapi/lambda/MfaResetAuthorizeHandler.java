@@ -88,14 +88,14 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             UserContext userContext) {
         LOG.info("MfaResetAuthorizeHandler called");
         try {
-            String clientSessionId = userContext.getClientSessionId();
-            AuthSessionItem authSession = userContext.getAuthSession();
+            String clientSessionId = userContext.clientSessionId();
+            AuthSessionItem authSession = userContext.authSessionItem();
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
             AuditContext auditContext =
                     AuditContext.auditContextFromUserContext(
                             userContext,
-                            userContext.getAuthSession().getInternalCommonSubjectId(),
+                            userContext.authSessionItem().getInternalCommonSubjectId(),
                             request.email(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
@@ -118,11 +118,11 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
             idReverificationStateService.store(
                     authenticationState.getValue(),
                     request.orchestrationRedirectUrl(),
-                    userContext.getClientSessionId());
+                    userContext.clientSessionId());
 
             var userProfile =
                     userContext
-                            .getUserProfile()
+                            .userProfile()
                             .orElseThrow(() -> new RuntimeException("UserProfile not found"));
 
             String rpPairwiseId =
@@ -131,7 +131,7 @@ public class MfaResetAuthorizeHandler extends BaseFrontendHandler<MfaResetReques
 
             authSessionService.updateSession(
                     userContext
-                            .getAuthSession()
+                            .authSessionItem()
                             .withResetMfaState(AuthSessionItem.ResetMfaState.ATTEMPTED));
 
             auditService.submitAuditEvent(

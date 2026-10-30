@@ -159,7 +159,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             UserContext userContext) {
         LOG.info("AMCAuthorizeHandler called");
 
-        AuthSessionItem authSessionItem = userContext.getAuthSession();
+        AuthSessionItem authSessionItem = userContext.authSessionItem();
         var userProfile =
                 authenticationService
                         .getUserProfileByEmailMaybe(authSessionItem.getEmailAddress())
@@ -188,7 +188,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         TransportJWTConfig transportJwtConfig =
                 request.amcJourneyType().getTransportJwtConfig(configurationService);
         var state = new State();
-        dynamoAmcStateService.store(state.getValue(), userContext.getClientSessionId());
+        dynamoAmcStateService.store(state.getValue(), userContext.clientSessionId());
 
         Result<AMCFailureReason, AMCAuthorizationUrlAndCookie> result =
                 getAMCPublicEncryptionKey()
@@ -243,8 +243,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
-                        userContext.getAuthSession().getEmailAddress(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService
                                 .UNKNOWN, // the schema does not include phone number for this event

@@ -104,7 +104,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
 
         incrementAuthenticationRequestedMetric();
 
-        var emailAddress = userContext.getAuthSession().getEmailAddress();
+        var emailAddress = userContext.authSessionItem().getEmailAddress();
         if (emailAddress == null || emailAddress.isEmpty()) {
             incrementAuthenticationGenerationFailedMetric("emailAddressNotFound");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.EMAIL_ADDRESS_EMPTY);
@@ -132,7 +132,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
         }
 
         authSessionService.updateSessionAttribute(
-                userContext.getAuthSession().getSessionId(),
+                userContext.authSessionItem().getSessionId(),
                 AuthSessionItem.ATTRIBUTE_PASSKEY_ASSERTION_REQUEST,
                 assertionRequestJsonToStore);
 
@@ -150,7 +150,7 @@ public class StartPasskeyAssertionHandler extends BaseFrontendHandler<StartPassk
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,

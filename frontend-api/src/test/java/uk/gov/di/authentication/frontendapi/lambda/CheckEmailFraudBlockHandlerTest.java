@@ -92,9 +92,9 @@ class CheckEmailFraudBlockHandlerTest {
         Mockito.reset(auditServiceMock);
 
         var userProfile = generateUserProfile();
-        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
+        when(userContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.authSessionItem()).thenReturn(authSession);
+        when(userContext.txmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
         when(configurationServiceMock.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationServiceMock.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         when(authenticationServiceMock.getUserProfileByEmailMaybe(EMAIL))
