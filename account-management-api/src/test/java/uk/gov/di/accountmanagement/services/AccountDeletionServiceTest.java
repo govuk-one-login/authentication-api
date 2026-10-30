@@ -65,13 +65,6 @@ class AccountDeletionServiceTest {
             Mockito.mockStatic(PersistentIdHelper.class);
     private static final MockedStatic<IpAddressHelper> ipAddressHelperMockedStatic =
             Mockito.mockStatic(IpAddressHelper.class);
-    private final AccountDeletionService underTest =
-            new AccountDeletionService(
-                    authenticationService,
-                    sqsClient,
-                    structuredAuditService,
-                    configurationService,
-                    dynamoDeleteService);
     private static final String TEST_CLIENT_SESSION_ID = "test-client-session-id";
     private static final Map<String, String> TEST_HEADERS = Map.of("test-header", "test-header");
     private static final String TEST_CLIENT_ID = "test-client-id";
@@ -105,183 +98,6 @@ class AccountDeletionServiceTest {
         if (ipAddressHelperMockedStatic != null) {
             ipAddressHelperMockedStatic.close();
         }
-    }
-
-    @Test
-    void removeAccountCallsDeleteAccount() throws Json.JsonException {
-        // given
-        var expectedEmail = TEST_EMAIL;
-        when(userProfile.getEmail()).thenReturn(expectedEmail);
-        when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
-        when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
-        // when
-        underTest.removeAccount(
-                input,
-                userProfile,
-                StructuredAuditService.UNKNOWN,
-                AccountDeletionReason.USER_INITIATED,
-                true);
-        // then
-        verify(dynamoDeleteService)
-                .deleteAccount(eq(expectedEmail), any(), eq(TEST_PUBLIC_SUBJECT_ID));
-    }
-
-    @Test
-    void removeAccountThrowsIfDeleteAccountFails() {
-        // given
-        var expectedException = new RuntimeException();
-        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
-        when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
-        doThrow(expectedException).when(dynamoDeleteService).deleteAccount(any(), any(), any());
-
-        // then
-        assertThrows(
-                expectedException.getClass(),
-                () ->
-                        underTest.removeAccount(
-                                input,
-                                userProfile,
-                                StructuredAuditService.UNKNOWN,
-                                AccountDeletionReason.USER_INITIATED,
-                                true));
-    }
-
-    @Test
-    void removeAccountSendsNotificationEmail() throws Json.JsonException {
-        // given
-        var expectedEmail = TEST_EMAIL;
-        when(userProfile.getEmail()).thenReturn(expectedEmail);
-        when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
-
-        // when
-        underTest.removeAccount(
-                input,
-                userProfile,
-                StructuredAuditService.UNKNOWN,
-                AccountDeletionReason.USER_INITIATED,
-                true);
-
-        // then
-        var captor = ArgumentCaptor.forClass(String.class);
-        verify(sqsClient).send(captor.capture());
-        var notifyRequest =
-                SerializationService.getInstance().readValue(captor.getValue(), HashMap.class);
-        assertEquals(expectedEmail, notifyRequest.get("destination"));
-        assertEquals("DELETE_ACCOUNT", notifyRequest.get("notificationType"));
-        assertEquals("EN", notifyRequest.get("language"));
-    }
-
-    @Test
-    void removeAccountSucceedsIfEmailNotificationFails() {
-        // given
-        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
-        when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
-        doThrow(new RuntimeException()).when(sqsClient).send(any());
-
-        // then
-        assertDoesNotThrow(
-                () ->
-                        underTest.removeAccount(
-                                input,
-                                userProfile,
-                                StructuredAuditService.UNKNOWN,
-                                AccountDeletionReason.USER_INITIATED,
-                                true));
-        assertThat(
-                logging.events(),
-                hasItem(withMessageContaining("Failed to send account deletion email")));
-    }
-
-    @EnumSource()
-    @ParameterizedTest
-    void removeAccountAudits(AccountDeletionReason reason) throws Json.JsonException {
-        var expectedPhoneNumber = "+44123456789";
-        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
-        when(userProfile.getPhoneNumber()).thenReturn(expectedPhoneNumber);
-        when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
-        when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
-        when(userProfile.getLegacySubjectID()).thenReturn(TEST_LEGACY_SUBJECT_ID);
-        when(input.getHeaders()).thenReturn(TEST_HEADERS);
-        clientSessionIdHelperMockedStatic
-                .when(() -> ClientSessionIdHelper.extractSessionIdFromHeaders(TEST_HEADERS))
-                .thenReturn(TEST_CLIENT_SESSION_ID);
-        when(input.getRequestContext()).thenReturn(proxyRequestContext);
-        when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
-        when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
-        persistentSessionIdHelperMockedStatic
-                .when(() -> PersistentIdHelper.extractPersistentIdFromHeaders(TEST_HEADERS))
-                .thenReturn(TEST_PERSISTENT_SESSION_ID);
-        ipAddressHelperMockedStatic
-                .when(() -> IpAddressHelper.extractIpAddress(input))
-                .thenReturn(TEST_IP_ADDRESS);
-
-        underTest.removeAccount(input, userProfile, StructuredAuditService.UNKNOWN, reason, true);
-
-        var captor = ArgumentCaptor.forClass(AuthDeleteAccount.class);
-        verify(structuredAuditService).submitAuditEvent(captor.capture());
-        var event = captor.getValue();
-
-        assertEquals("AUTH_DELETE_ACCOUNT", event.eventName());
-        assertEquals(TEST_CLIENT_ID, event.clientId());
-        assertEquals(TEST_PUBLIC_SUBJECT_ID, event.user().publicSubjectId());
-        assertEquals(TEST_LEGACY_SUBJECT_ID, event.user().legacySubjectId());
-        assertEquals(reason.name(), event.extensions().accountDeletionReason());
-    }
-
-    @Test
-    void removeAccountAuditsWithNullLegacySubjectId() throws Json.JsonException {
-        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
-        when(userProfile.getPhoneNumber()).thenReturn("+44123456789");
-        when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
-        when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
-        when(userProfile.getLegacySubjectID()).thenReturn(null);
-        when(input.getHeaders()).thenReturn(TEST_HEADERS);
-        clientSessionIdHelperMockedStatic
-                .when(() -> ClientSessionIdHelper.extractSessionIdFromHeaders(TEST_HEADERS))
-                .thenReturn(TEST_CLIENT_SESSION_ID);
-        when(input.getRequestContext()).thenReturn(proxyRequestContext);
-        when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
-        when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
-        persistentSessionIdHelperMockedStatic
-                .when(() -> PersistentIdHelper.extractPersistentIdFromHeaders(TEST_HEADERS))
-                .thenReturn(TEST_PERSISTENT_SESSION_ID);
-        ipAddressHelperMockedStatic
-                .when(() -> IpAddressHelper.extractIpAddress(input))
-                .thenReturn(TEST_IP_ADDRESS);
-
-        underTest.removeAccount(
-                input,
-                userProfile,
-                StructuredAuditService.UNKNOWN,
-                AccountDeletionReason.USER_INITIATED,
-                true);
-
-        var captor = ArgumentCaptor.forClass(AuthDeleteAccount.class);
-        verify(structuredAuditService).submitAuditEvent(captor.capture());
-        var event = captor.getValue();
-
-        assertEquals(TEST_PUBLIC_SUBJECT_ID, event.user().publicSubjectId());
-        assertEquals(null, event.user().legacySubjectId());
-    }
-
-    @Test
-    void removeAccountSucceedsIfAuditingFails() {
-        // given
-        when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
-        when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
-        doThrow(new RuntimeException()).when(structuredAuditService).submitAuditEvent(any());
-        // then
-        assertDoesNotThrow(
-                () ->
-                        underTest.removeAccount(
-                                input,
-                                userProfile,
-                                StructuredAuditService.UNKNOWN,
-                                AccountDeletionReason.USER_INITIATED,
-                                true));
-        assertThat(
-                logging.events(),
-                hasItem(withMessageContaining("Failed to audit account deletion")));
     }
 
     @Nested
@@ -325,23 +141,135 @@ class AccountDeletionServiceTest {
                     SerializationService.getInstance().readValue(captor.getValue(), HashMap.class);
             assertEquals(TEST_EMAIL, notifyRequest.get("destination"));
             assertEquals("DELETE_ACCOUNT", notifyRequest.get("notificationType"));
+            assertEquals("EN", notifyRequest.get("language"));
         }
 
         @Test
-        void removeAccountFallsBackToDynamoWhenTokenIsEmpty() throws Json.JsonException {
+        void removeAccountSucceedsIfEmailNotificationFails()
+                throws UnsuccessfulAccountDataApiResponseException {
+            stubSuccessfulDataApiResponse();
             when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
             when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
             when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
+            doThrow(new RuntimeException()).when(sqsClient).send(any());
+
+            assertDoesNotThrow(
+                    () ->
+                            underTestWithDataApi.removeAccount(
+                                    input,
+                                    userProfile,
+                                    StructuredAuditService.UNKNOWN,
+                                    AccountDeletionReason.USER_INITIATED,
+                                    true,
+                                    TEST_ADAPI_TOKEN));
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining("Failed to send account deletion email")));
+        }
+
+        @EnumSource()
+        @ParameterizedTest
+        void removeAccountAudits(AccountDeletionReason reason)
+                throws UnsuccessfulAccountDataApiResponseException {
+            stubSuccessfulDataApiResponse();
+            when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+            when(userProfile.getPhoneNumber()).thenReturn("+44123456789");
+            when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
+            when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
+            when(userProfile.getLegacySubjectID()).thenReturn(TEST_LEGACY_SUBJECT_ID);
+            when(input.getHeaders()).thenReturn(TEST_HEADERS);
+            clientSessionIdHelperMockedStatic
+                    .when(() -> ClientSessionIdHelper.extractSessionIdFromHeaders(TEST_HEADERS))
+                    .thenReturn(TEST_CLIENT_SESSION_ID);
+            when(input.getRequestContext()).thenReturn(proxyRequestContext);
+            when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
+            when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
+            persistentSessionIdHelperMockedStatic
+                    .when(() -> PersistentIdHelper.extractPersistentIdFromHeaders(TEST_HEADERS))
+                    .thenReturn(TEST_PERSISTENT_SESSION_ID);
+            ipAddressHelperMockedStatic
+                    .when(() -> IpAddressHelper.extractIpAddress(input))
+                    .thenReturn(TEST_IP_ADDRESS);
+
+            underTestWithDataApi.removeAccount(
+                    input,
+                    userProfile,
+                    StructuredAuditService.UNKNOWN,
+                    reason,
+                    true,
+                    TEST_ADAPI_TOKEN);
+
+            var captor = ArgumentCaptor.forClass(AuthDeleteAccount.class);
+            verify(structuredAuditService).submitAuditEvent(captor.capture());
+            var event = captor.getValue();
+
+            assertEquals("AUTH_DELETE_ACCOUNT", event.eventName());
+            assertEquals(TEST_CLIENT_ID, event.clientId());
+            assertEquals(TEST_PUBLIC_SUBJECT_ID, event.user().publicSubjectId());
+            assertEquals(TEST_LEGACY_SUBJECT_ID, event.user().legacySubjectId());
+            assertEquals(reason.name(), event.extensions().accountDeletionReason());
+        }
+
+        @Test
+        void removeAccountAuditsWithNullLegacySubjectId()
+                throws UnsuccessfulAccountDataApiResponseException {
+            stubSuccessfulDataApiResponse();
+            when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+            when(userProfile.getPhoneNumber()).thenReturn("+44123456789");
+            when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
+            when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
+            when(userProfile.getLegacySubjectID()).thenReturn(null);
+            when(input.getHeaders()).thenReturn(TEST_HEADERS);
+            clientSessionIdHelperMockedStatic
+                    .when(() -> ClientSessionIdHelper.extractSessionIdFromHeaders(TEST_HEADERS))
+                    .thenReturn(TEST_CLIENT_SESSION_ID);
+            when(input.getRequestContext()).thenReturn(proxyRequestContext);
+            when(proxyRequestContext.getAuthorizer()).thenReturn(TEST_AUTHORIZER);
+            when(testClientIdObject.toString()).thenReturn(TEST_CLIENT_ID);
+            persistentSessionIdHelperMockedStatic
+                    .when(() -> PersistentIdHelper.extractPersistentIdFromHeaders(TEST_HEADERS))
+                    .thenReturn(TEST_PERSISTENT_SESSION_ID);
+            ipAddressHelperMockedStatic
+                    .when(() -> IpAddressHelper.extractIpAddress(input))
+                    .thenReturn(TEST_IP_ADDRESS);
 
             underTestWithDataApi.removeAccount(
                     input,
                     userProfile,
                     StructuredAuditService.UNKNOWN,
                     AccountDeletionReason.USER_INITIATED,
-                    true);
+                    true,
+                    TEST_ADAPI_TOKEN);
 
-            verify(dynamoDeleteService)
-                    .deleteAccount(eq(TEST_EMAIL), any(), eq(TEST_PUBLIC_SUBJECT_ID));
+            var captor = ArgumentCaptor.forClass(AuthDeleteAccount.class);
+            verify(structuredAuditService).submitAuditEvent(captor.capture());
+            var event = captor.getValue();
+
+            assertEquals(TEST_PUBLIC_SUBJECT_ID, event.user().publicSubjectId());
+            assertEquals(null, event.user().legacySubjectId());
+        }
+
+        @Test
+        void removeAccountSucceedsIfAuditingFails()
+                throws UnsuccessfulAccountDataApiResponseException {
+            stubSuccessfulDataApiResponse();
+            when(userProfile.getEmail()).thenReturn(TEST_EMAIL);
+            when(userProfile.getSubjectID()).thenReturn(new Subject().getValue());
+            when(userProfile.getPublicSubjectID()).thenReturn(TEST_PUBLIC_SUBJECT_ID);
+            doThrow(new RuntimeException()).when(structuredAuditService).submitAuditEvent(any());
+
+            assertDoesNotThrow(
+                    () ->
+                            underTestWithDataApi.removeAccount(
+                                    input,
+                                    userProfile,
+                                    StructuredAuditService.UNKNOWN,
+                                    AccountDeletionReason.USER_INITIATED,
+                                    true,
+                                    TEST_ADAPI_TOKEN));
+            assertThat(
+                    logging.events(),
+                    hasItem(withMessageContaining("Failed to audit account deletion")));
         }
 
         @ParameterizedTest
@@ -388,6 +316,13 @@ class AccountDeletionServiceTest {
                                     AccountDeletionReason.USER_INITIATED,
                                     true,
                                     TEST_ADAPI_TOKEN));
+        }
+
+        private void stubSuccessfulDataApiResponse()
+                throws UnsuccessfulAccountDataApiResponseException {
+            var mockResponse = mock(HttpResponse.class);
+            when(mockResponse.statusCode()).thenReturn(204);
+            when(accountDataApiService.deleteAccount(any(), any())).thenReturn(mockResponse);
         }
     }
 }

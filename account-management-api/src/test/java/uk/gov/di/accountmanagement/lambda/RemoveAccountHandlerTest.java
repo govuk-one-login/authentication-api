@@ -33,9 +33,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -153,10 +151,7 @@ class RemoveAccountHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-        verify(accountDeletionService, never())
-                .removeAccount(any(), any(), any(), any(), anyBoolean(), any());
-        verify(accountDeletionService, never())
-                .removeAccount(any(), any(), any(), any(), anyBoolean());
+        verifyNoInteractions(accountDeletionService);
         assertThat(
                 logging.events(),
                 hasItem(withMessageContaining("X-ADAPI-AccessToken header is missing")));
@@ -179,10 +174,7 @@ class RemoveAccountHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
-        verify(accountDeletionService, never())
-                .removeAccount(any(), any(), any(), any(), anyBoolean(), any());
-        verify(accountDeletionService, never())
-                .removeAccount(any(), any(), any(), any(), anyBoolean());
+        verifyNoInteractions(accountDeletionService);
     }
 
     @Test
