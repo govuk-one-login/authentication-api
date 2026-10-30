@@ -9,6 +9,7 @@ services:
     restart: no
     environment:
       SERVICES: sqs, sns, kms, ssm, s3, secretsmanager
+      EAGER_SERVICE_LOADING: "1"
       GATEWAY_LISTEN: 0.0.0.0:45678
       LOCALSTACK_HOST: localhost:45678
       TEST_AWS_ACCOUNT_ID: 123456789012
@@ -21,10 +22,14 @@ services:
     ports:
       - 45678:45678
     healthcheck:
-      test: curl -f http://localhost:45678/_localstack/health || exit 1
+      test:
+        [
+          "CMD-SHELL",
+          'curl -sf http://localhost:45678/_localstack/health | grep -q ''"sqs": "running"'' || exit 1',
+        ]
       interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
 
   redis:
     image: redis:6.2.19-alpine@sha256:7fe72c486b910f6b1a9769c937dad5d63648ddee82e056f47417542dd40825bb
