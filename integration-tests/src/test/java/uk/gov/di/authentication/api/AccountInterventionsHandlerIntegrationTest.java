@@ -14,13 +14,13 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthSessionExtension;
-import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 
 import java.net.URI;
 import java.net.URISyntaxException;
