@@ -104,41 +104,6 @@ public class AccountDeletionService {
     }
 
     /**
-     * Removes a user account directly via DynamoDB, incorporating HTTP request context for enriched
-     * auditing.
-     *
-     * <p>This method performs a direct DynamoDB deletion and optionally sends a notification.
-     * Unlike the standard method, it extracts IP addresses, session IDs, and client IDs from the
-     * provided API Gateway request event to construct a more detailed audit context.
-     *
-     * @param input The API Gateway request event containing headers and context for auditing.
-     * @param userProfile The profile of the user whose account is being deleted.
-     * @param txmaAuditEncoded The encoded TxMA audit information.
-     * @param reason The reason for the account deletion.
-     * @param sendNotification {@code true} to send an account deletion email notification; {@code
-     *     false} otherwise.
-     */
-    public void removeAccount(
-            APIGatewayProxyRequestEvent input,
-            UserProfile userProfile,
-            String txmaAuditEncoded,
-            AccountDeletionReason reason,
-            boolean sendNotification) {
-        var internalCommonSubjectIdentifier = calculateICS(userProfile);
-
-        dynamoDeleteService.deleteAccount(
-                userProfile.getEmail(),
-                internalCommonSubjectIdentifier.getValue(),
-                userProfile.getPublicSubjectID());
-        LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
-
-        if (sendNotification) sendNotifyRequest(userProfile);
-
-        emitAuditEvent(
-                input, userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
-    }
-
-    /**
      * Removes a user account by delegating to the Account Data API.
      *
      * <p>This method deletes the user by invoking the external Account Data API using the provided
