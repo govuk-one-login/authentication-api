@@ -122,11 +122,6 @@ ext {
             'CVE-2026-8763 is fixed in org.bouncycastle:bcprov-jdk18on 1.85 and higher'
         ],
         [
-            'io.opentelemetry:opentelemetry-api',
-            '[1.62.0,)',
-            'CVE-2026-45292 is fixed in io.opentelemetry:opentelemetry-api:1.62.0 and higher'
-        ],
-        [
             'com.github.jknack:handlebars',
             '[4.5.2,)',
             'CVE-2026-55760 is fixed in com.github.jknack:handlebars:4.5.2 and higher'
