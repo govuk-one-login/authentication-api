@@ -323,10 +323,19 @@ public class UserActionsManager implements UserActions {
     }
 
     @Override
-    public Result<TrackingError, Void> recordedEmailForIdentityVerification(
+    public Result<TrackingError, Void> successfulIdentityVerification(
             PermissionContext permissionContext, String email) {
         var updatedSession =
                 permissionContext.authSessionItem().withRecordedEmailForIdentityVerification(email);
+        getAuthSessionService().updateSession(updatedSession);
+        return Result.emptySuccess();
+    }
+
+    @Override
+    public Result<TrackingError, Void> unsuccessfulIdentityVerification(
+            PermissionContext permissionContext) {
+        var updatedSession =
+                permissionContext.authSessionItem().withRecordedEmailForIdentityVerification(null);
         getAuthSessionService().updateSession(updatedSession);
         return Result.emptySuccess();
     }

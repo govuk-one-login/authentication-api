@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -351,6 +353,81 @@ class LastSignedInBackfillHandlerTest {
     }
 
     @Test
+    void shouldLogContinuationPayloadMatchingTheSelfInvocationPayload() {
+        when(configurationService.getLastSignedInBackfillMaxItemsPerSegment()).thenReturn(5);
+        mockScanWithPagination(25, 5);
+
+        createHandler()
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
+
+        var payloadCaptor = ArgumentCaptor.forClass(String.class);
+        verify(lambdaInvokerService)
+                .invokeAsyncWithPayload(payloadCaptor.capture(), eq(LAMBDA_NAME));
+
+        assertEquals(payloadCaptor.getValue(), loggedContinuationPayload());
+    }
+
+    @Test
+    void shouldNotLogEmailAddressesInContinuationPayload() {
+        when(configurationService.getLastSignedInBackfillMaxItemsPerSegment()).thenReturn(5);
+        mockScanWithPagination(25, 5);
+
+        createHandler()
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
+
+        assertThat(loggedContinuationPayload(), not(containsString("@example.com")));
+    }
+
+    @Test
+    void shouldNotLogContinuationPayloadWhenAllSegmentsAreExhausted() {
+        mockScanWithItems(createTrackerItems(5));
+
+        createHandler()
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
+
+        verify(lambdaInvokerService, never()).invokeAsyncWithPayload(any(), any());
+        assertThat(
+                logging.events(),
+                not(
+                        hasItem(
+                                LogEventMatcher.withLevelAndMessageContaining(
+                                        Level.INFO,
+                                        LastSignedInBackfillHandler
+                                                .CONTINUATION_PAYLOAD_LOG_MARKER))));
+    }
+
+    @Test
+    void shouldResumeFromLoggedContinuationPayload() {
+        when(configurationService.getLastSignedInBackfillMaxItemsPerSegment()).thenReturn(5);
+        mockScanWithPagination(25, 5);
+
+        createHandler()
+                .handleRequest(new LastSignedInBackfillRequest(null, null, null, null, null, null));
+
+        var resumeRequest =
+                objectMapper.readValueUnchecked(
+                        loggedContinuationPayload(), LastSignedInBackfillRequest.class);
+
+        mockScanWithItems(createTrackerItems(3));
+
+        var response = createHandler().handleRequest(resumeRequest);
+
+        var scanCaptor = ArgumentCaptor.forClass(ScanRequest.class);
+        verify(client, atLeastOnce()).scan(scanCaptor.capture());
+        var scans = scanCaptor.getAllValues();
+
+        assertEquals(
+                Map.of(
+                        "dateForDeletion",
+                        AttributeValue.fromS("2031-06-01"),
+                        "commonSubjectId",
+                        AttributeValue.fromS("urn:fdc:gov.uk:2022:key-5")),
+                scans.get(scans.size() - 1).exclusiveStartKey());
+        assertEquals(8L, response.processedCount());
+        assertEquals(8L, response.updatedCount());
+    }
+
+    @Test
     void shouldReturnLastEvaluatedKeyWhenItemLimitStopsSegmentEarly() {
         mockScanWithPagination(25, 5);
 
@@ -615,6 +692,16 @@ class LastSignedInBackfillHandlerTest {
         assertEquals(0, response.updatedCount());
         assertEquals(1, response.skippedCount());
         verify(client, never()).updateItem(any(UpdateItemRequest.class));
+    }
+
+    private String loggedContinuationPayload() {
+        var prefix = LastSignedInBackfillHandler.CONTINUATION_PAYLOAD_LOG_MARKER + "=";
+        return logging.events().stream()
+                .map(event -> event.getMessage().getFormattedMessage())
+                .filter(message -> message.startsWith(prefix))
+                .map(message -> message.substring(prefix.length()))
+                .reduce((first, second) -> second)
+                .orElseThrow();
     }
 
     private List<Map<String, AttributeValue>> createTrackerItems(int count) {

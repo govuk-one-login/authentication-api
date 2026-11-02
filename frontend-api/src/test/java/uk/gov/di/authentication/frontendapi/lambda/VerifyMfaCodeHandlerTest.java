@@ -197,7 +197,7 @@ class VerifyMfaCodeHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
 

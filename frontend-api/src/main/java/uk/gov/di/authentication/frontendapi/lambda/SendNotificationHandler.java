@@ -113,7 +113,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 SendNotificationRequest.class,
                 configurationService,
                 authenticationService,
-                true,
                 authSessionService);
         this.emailSqsClient = emailSqsClient;
         this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;

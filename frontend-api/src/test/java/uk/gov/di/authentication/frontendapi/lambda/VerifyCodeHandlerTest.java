@@ -213,10 +213,10 @@ class VerifyCodeHandlerTest {
                         testUserHelper,
                         structuredAuditService);
 
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        when(authenticationService.getUserProfileFromEmail(TEST_CLIENT_EMAIL))
+        when(authenticationService.getUserProfileByEmailMaybe(TEST_CLIENT_EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);

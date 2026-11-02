@@ -131,7 +131,7 @@ class UpdateProfileHandlerTest {
         @Test
         void shouldReturn204WhenUpdatingTermsAndConditions() {
             usingValidSession();
-            when(authenticationService.getUserProfileFromEmail(EMAIL))
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(generateUserProfile()));
 
             var body =
@@ -161,7 +161,7 @@ class UpdateProfileHandlerTest {
         @Test
         void shouldReturn204WhenRenewingLastSkippedAddingPasskeyTimestamp() {
             usingValidSession();
-            when(authenticationService.getUserProfileFromEmail(EMAIL))
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(generateUserProfile()));
 
             var body =

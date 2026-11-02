@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.accountdata.entity;
+package uk.gov.di.authentication.accountdata.entity.password;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;

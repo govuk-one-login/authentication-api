@@ -26,7 +26,7 @@ Resources:
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt InactiveAccountDeletionStubDeadLetterQueue.Arn
         maxReceiveCount: 1
-      VisibilityTimeout: 60
+      VisibilityTimeout: 540
       Tags:
         - Key: Service
           Value: inactive-account-deletion

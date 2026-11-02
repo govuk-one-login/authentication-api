@@ -229,7 +229,7 @@ class SendNotificationHandlerTest {
         var userProfile = new UserProfile();
         userProfile.setMfaMethodsMigrated(true);
 
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
         when(permissionDecisionManager.canSendEmailOtpNotification(
@@ -733,7 +733,7 @@ class SendNotificationHandlerTest {
             // Setup a non-migrated user profile
             var userProfile = new UserProfile();
             userProfile.setMfaMethodsMigrated(false);
-            when(authenticationService.getUserProfileFromEmail(EMAIL))
+            when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
 
             var body =

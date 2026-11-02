@@ -220,10 +220,10 @@ class PasskeysDeleteProxyHandlerTest {
             assertEquals(
                     PASSKEY_IDENTIFIER,
                     submittedAuditEvent.restricted().passkey().passkeyCredentialId());
-            assertEquals(passkeyAaguid, submittedAuditEvent.restricted().passkey().passkeyAaguid());
+            assertEquals(passkeyAaguid, submittedAuditEvent.extensions().passkey().passkeyAaguid());
             assertEquals(
                     expectedCredentialDeviceType,
-                    submittedAuditEvent.restricted().passkey().passkeyCredentialDeviceType());
+                    submittedAuditEvent.extensions().passkey().passkeyCredentialDeviceType());
             var expectedDimensions = Map.of("Environment", ENV);
             verify(cloudwatchMetricsService)
                     .incrementCounter(PASSKEY_DELETION_SUCCESSFUL, expectedDimensions);

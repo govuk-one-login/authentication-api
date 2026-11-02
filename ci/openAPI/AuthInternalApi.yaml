@@ -500,24 +500,6 @@ paths:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${VerifyMfaCodeFunction.Arn}:active/invocations
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
-  /processing-identity:
-    post:
-      security:
-        - api_key: []
-      responses:
-        "200":
-          description: "Processing identity status returned (PROCESSING, COMPLETED, NO_ENTRY, ERROR, or INTERVENTION)"
-        "400":
-          description: "Bad Request - session missing or missing params"
-        "500":
-          description: "Internal Server Error - serialization or data retrieval failure"
-      x-amazon-apigateway-integration:
-        type: "aws_proxy"
-        httpMethod: "POST"
-        uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ProcessingIdentityFunction.Arn}:active/invocations
-        passthroughBehavior: "when_no_match"
-        timeoutInMillis: 29000
   /start-passkey-assertion:
     post:
       security:

@@ -113,8 +113,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
 
         LOG.info("Processing inactive account deletion batch, size: {}", event.getRecords().size());
 
-        int processedCount = 0;
-        long processedWorkNanos = 0L;
+        int deletedCount = 0;
 
         for (SQSMessage msg : event.getRecords()) {
             try {
@@ -124,11 +123,10 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
                     break;
                 }
                 long startNanos = System.nanoTime();
-                try {
-                    processAccountDeletion(msg);
-                } finally {
-                    processedCount++;
-                    processedWorkNanos += System.nanoTime() - startNanos;
+                boolean accountDeleted = processAccountDeletion(msg);
+                if (accountDeleted) {
+                    applyMinDurationThrottle(startNanos);
+                    deletedCount++;
                 }
             } catch (RecentlyActiveAccountException e) {
                 LOG.warn(
@@ -145,38 +143,32 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
             }
         }
 
-        applyMinDurationThrottle(processedCount, processedWorkNanos);
-
         LOG.info(
-                "Completed batch processing. Failures: {}/{}",
+                "Completed batch processing. Deletions: {}. Failures: {}/{}",
+                deletedCount,
                 failures.size(),
                 event.getRecords().size());
         return new SQSBatchResponse(failures);
     }
 
-    private void applyMinDurationThrottle(int processedCount, long processedWorkNanos) {
+    private void applyMinDurationThrottle(long startNanos) {
         long minDurationMs =
                 configurationService.getInactiveAccountDeletionMinDurationPerMessageMs();
-        long targetMs = (long) processedCount * minDurationMs;
-        long elapsedMs = processedWorkNanos / 1_000_000;
-        long sleepMs = calculatePauseMs(processedCount, processedWorkNanos, minDurationMs);
+        long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
+        long sleepMs = calculatePauseMs(elapsedMs, minDurationMs);
         LOG.info(
-                "Applying min-duration throttle. Processed messages: {}, min duration per message: {} ms, target: {} ms, elapsed: {} ms, sleeping: {} ms",
-                processedCount,
+                "Applying min-duration throttle. Min duration: {} ms, elapsed: {} ms, sleeping: {} ms",
                 minDurationMs,
-                targetMs,
                 elapsedMs,
                 sleepMs);
-        LambdaPauseHelper.pauseBetweenInvocations(sleepMs);
+        LambdaPauseHelper.pause(sleepMs);
     }
 
-    static long calculatePauseMs(int processedCount, long processedWorkNanos, long minDurationMs) {
-        long targetMs = (long) processedCount * minDurationMs;
-        long elapsedMs = processedWorkNanos / 1_000_000;
-        return Math.max(0, targetMs - elapsedMs);
+    static long calculatePauseMs(long elapsedMs, long minDurationMs) {
+        return Math.max(0, minDurationMs - elapsedMs);
     }
 
-    private void processAccountDeletion(SQSMessage msg) throws JsonException {
+    private boolean processAccountDeletion(SQSMessage msg) throws JsonException {
         var message = parseMessage(msg);
         var publicSubjectId = message.publicSubjectId();
         LOG.info("Processing inactive account deletion for publicSubjectId: {}", publicSubjectId);
@@ -186,7 +178,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
             LOG.warn(
                     "User profile not found for publicSubjectId: {}. Account may have already been deleted. Skipping.",
                     publicSubjectId);
-            return;
+            return false;
         }
         var userProfile = maybeUserProfile.get();
 
@@ -206,6 +198,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
 
         deleteAccount(publicSubjectId);
         emitAuditEvent(userProfile);
+        return true;
     }
 
     private Optional<UserProfile> getUserProfile(String publicSubjectId) {

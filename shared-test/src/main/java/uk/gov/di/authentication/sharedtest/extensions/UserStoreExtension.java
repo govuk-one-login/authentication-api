@@ -182,7 +182,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     }
 
     public Optional<UserProfile> getUserProfileFromEmail(String email) {
-        return dynamoService.getUserProfileFromEmail(email);
+        return dynamoService.getUserProfileByEmailMaybe(email);
     }
 
     public Optional<UserCredentials> getUserCredentialsFromEmail(String email) {

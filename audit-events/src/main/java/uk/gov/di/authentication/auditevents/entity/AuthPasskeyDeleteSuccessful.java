@@ -3,8 +3,9 @@ package uk.gov.di.authentication.auditevents.entity;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.shared.EncodedDeviceInformation;
-import uk.gov.di.authentication.auditevents.entity.shared.PasskeyInformation;
 import uk.gov.di.authentication.auditevents.entity.shared.Users.UserWithPasskeyCount;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.PasskeyDetail;
+import uk.gov.di.authentication.auditevents.entity.shared.passkeys.RestrictedPasskeySection;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 
 import java.time.Clock;
@@ -30,12 +31,14 @@ public record AuthPasskeyDeleteSuccessful(
             Clock clock) {
         Instant now = clock.instant();
         var user = UserWithPasskeyCount.from(auditContext, passkeyCount);
-        var restrictedSection =
+        var restricted =
                 new Restricted(
                         EncodedDeviceInformation.from(auditContext),
-                        new PasskeyInformation(
-                                deletedCredentialId, deletedAaguid, deletedCredentialDeviceType));
-        var extensions = new Extensions(JourneyType.ACCOUNT_MANAGEMENT.getValue());
+                        new RestrictedPasskeySection(null, deletedCredentialId));
+        var extensions =
+                new Extensions(
+                        JourneyType.ACCOUNT_MANAGEMENT.getValue(),
+                        PasskeyDetail.deleteSuccessful(deletedCredentialDeviceType, deletedAaguid));
         return new AuthPasskeyDeleteSuccessful(
                 "AUTH_PASSKEY_DELETE_SUCCESSFUL",
                 now.getEpochSecond(),
@@ -43,12 +46,13 @@ public record AuthPasskeyDeleteSuccessful(
                 auditContext.clientId(),
                 ComponentId.HOME.getValue(),
                 user,
-                restrictedSection,
+                restricted,
                 extensions);
     }
 
     public record Restricted(
-            EncodedDeviceInformation deviceInformation, PasskeyInformation passkey) {}
+            EncodedDeviceInformation deviceInformation, RestrictedPasskeySection passkey) {}
 
-    public record Extensions(@SerializedName("journey-type") String journeyType) {}
+    public record Extensions(
+            @SerializedName("journey-type") String journeyType, PasskeyDetail passkey) {}
 }

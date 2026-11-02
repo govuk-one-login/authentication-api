@@ -287,10 +287,11 @@ spotless {
         importOrder "", "javax", "java", "\\#"
     }
 
-    groovyGradle {
-        target "**/*.gradle"
-        greclipse().configFile("tools/spotless-gradle.properties")
-    }
+    // Temporarily disabled - P2 repo for greclipse is down
+    // groovyGradle {
+    //     target "**/*.gradle"
+    //     greclipse().configFile("tools/spotless-gradle.properties")
+    // }
 }
 
 if (!System.getenv('CI') && !System.getenv('GITHUB_ACTIONS') && !System.getenv('CODEBUILD_BUILD_ID')) {

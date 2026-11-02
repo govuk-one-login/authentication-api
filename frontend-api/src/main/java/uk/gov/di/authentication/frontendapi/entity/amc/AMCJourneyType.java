@@ -6,12 +6,12 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.List;
 
 public enum AMCJourneyType {
-    SFAD,
+    SSAD,
     PASSKEY_CREATE;
 
     public List<AccessTokenConfig> getAccessTokenConfigs(ConfigurationService config) {
         return switch (this) {
-            case SFAD -> List.of(
+            case SSAD -> List.of(
                     new AccessTokenConfig(
                             "account_management_api_access_token",
                             List.of(AccountManagementScope.ACCOUNT_DELETE),
@@ -30,7 +30,7 @@ public enum AMCJourneyType {
 
     public TransportJWTConfig getTransportJwtConfig(ConfigurationService config) {
         return switch (this) {
-            case SFAD -> new TransportJWTConfig(
+            case SSAD -> new TransportJWTConfig(
                     AMCScope.ACCOUNT_DELETE, config.getAMCSfadRedirectURI());
             case PASSKEY_CREATE -> new TransportJWTConfig(
                     AMCScope.PASSKEY_CREATE, config.getAMCCreatePasskeyRedirectURI());

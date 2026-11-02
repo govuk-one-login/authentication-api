@@ -25,7 +25,6 @@ import java.util.Locale;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
@@ -39,7 +38,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getOptionalHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown;
 
 public abstract class BaseFrontendHandler<T>
@@ -51,7 +49,6 @@ public abstract class BaseFrontendHandler<T>
     protected final AuthenticationService authenticationService;
     protected final AuthSessionService authSessionService;
     protected final Json objectMapper = SerializationService.getInstance();
-    protected boolean loadUserCredentials = false;
 
     protected BaseFrontendHandler(
             Class<T> clazz,
@@ -64,29 +61,11 @@ public abstract class BaseFrontendHandler<T>
         this.authSessionService = authSessionService;
     }
 
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            AuthenticationService authenticationService,
-            boolean loadUserCredentials,
-            AuthSessionService authSessionService) {
-        this(clazz, configurationService, authenticationService, authSessionService);
-        this.loadUserCredentials = loadUserCredentials;
-    }
-
     protected BaseFrontendHandler(Class<T> clazz, ConfigurationService configurationService) {
         this.clazz = clazz;
         this.configurationService = configurationService;
         this.authenticationService = new DynamoService(configurationService);
         this.authSessionService = new AuthSessionService(configurationService);
-    }
-
-    protected BaseFrontendHandler(
-            Class<T> clazz,
-            ConfigurationService configurationService,
-            boolean loadUserCredentials) {
-        this(clazz, configurationService);
-        this.loadUserCredentials = loadUserCredentials;
     }
 
     @Override
@@ -115,6 +94,9 @@ public abstract class BaseFrontendHandler<T>
 
         LOG.info("Processing request in base handler");
 
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID,
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         String clientSessionId =
                 getHeaderValueFromHeaders(
                         input.getHeaders(),
@@ -125,36 +107,25 @@ public abstract class BaseFrontendHandler<T>
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         }
 
-        String txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
-
-        var sessionId =
-                getOptionalHeaderValueFromHeaders(
-                        input.getHeaders(),
-                        SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
         LOG.info("Retrieving session");
         Optional<AuthSessionItem> authSession =
                 authSessionService.getSessionFromRequestHeaders(input.getHeaders());
 
-        if (sessionId.isEmpty() || authSession.isEmpty()) {
+        if (authSession.isEmpty()) {
             LOG.warn("Auth session cannot be found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         } else {
-            attachSessionIdToLogs(sessionId.get());
+            attachSessionIdToLogs(authSession.get().getSessionId());
             LOG.info("Session retrieved");
         }
 
-        UserContext.Builder userContextBuilder = UserContext.builder(authSession.get());
-        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
+        var clientID = Optional.ofNullable(authSession.get().getClientId());
+        attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
+
+        var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
 
         onRequestReceived(clientSessionId, txmaAuditEncoded);
 
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-
-        Optional<String> userLanguage =
-                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
@@ -164,44 +135,29 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
-        userContextBuilder.withClientSessionId(clientSessionId);
+        var maybeUserLanguage =
+                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
 
-        var clientID = Optional.ofNullable(authSession.get().getClientId());
-
-        attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
+        var userContextBuilder =
+                UserContext.builder(authSession.get())
+                        .withTxmaAuditEncoded(txmaAuditEncoded)
+                        .withUserLanguage(matchSupportedLanguage(maybeUserLanguage))
+                        .withClientSessionId(clientSessionId);
 
         authSession
                 .map(AuthSessionItem::getEmailAddress)
-                .map(authenticationService::getUserProfileFromEmail)
                 .ifPresentOrElse(
-                        userProfile ->
-                                userContextBuilder
-                                        .withUserProfile(userProfile)
-                                        .withUserAuthenticated(true),
+                        email ->
+                                userContextBuilder.withUserProfile(
+                                        authenticationService.getUserProfileByEmailMaybe(email)),
                         () -> {
                             if (request instanceof BaseFrontendRequest)
-                                userContextBuilder
-                                        .withUserProfile(
-                                                authenticationService.getUserProfileFromEmail(
-                                                        ((BaseFrontendRequest) request)
-                                                                .getEmail()
-                                                                .toLowerCase(Locale.ROOT)))
-                                        .withUserAuthenticated(false);
+                                userContextBuilder.withUserProfile(
+                                        authenticationService.getUserProfileByEmailMaybe(
+                                                ((BaseFrontendRequest) request)
+                                                        .getEmail()
+                                                        .toLowerCase(Locale.ROOT)));
                         });
-
-        if (loadUserCredentials) {
-            authSession
-                    .map(AuthSessionItem::getEmailAddress)
-                    .map(authenticationService::getUserCredentialsFromEmail)
-                    .ifPresent(
-                            userCredentials ->
-                                    userContextBuilder.withUserCredentials(
-                                            Optional.of(userCredentials)));
-        }
-
-        userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
-
-        userContextBuilder.withTxmaAuditEvent(txmaAuditEncoded);
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }

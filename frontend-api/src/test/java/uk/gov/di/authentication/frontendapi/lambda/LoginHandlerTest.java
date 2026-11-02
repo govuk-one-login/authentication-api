@@ -514,6 +514,29 @@ class LoginHandlerTest {
     }
 
     @Test
+    void shouldReturn400IfEmailOnSessionDoesNotMatchEmailInRequest() {
+        when(authSessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(
+                        Optional.of(
+                                new AuthSessionItem()
+                                        .withSessionId(SESSION_ID)
+                                        .withEmailAddress(EMAIL)));
+        setupExistingUserInDatabase(EMAIL);
+
+        var requestBody =
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        CommonTestVariables.PASSWORD, "another.email@example.com");
+
+        var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, requestBody);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.SESSION_ID_MISSING));
+    }
+
+    @Test
     void shouldReturn400IfUserEntersInvalidCredentialsThatLockThemOut() {
         var userProfile = setupExistingUserInDatabase(EMAIL);
         var maxRetriesAllowed = configurationService.getMaxPasswordRetries();

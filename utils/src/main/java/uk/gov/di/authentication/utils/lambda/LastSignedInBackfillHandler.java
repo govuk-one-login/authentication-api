@@ -11,6 +11,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 import software.amazon.awssdk.services.dynamodb.model.TransactionConflictException;
 import uk.gov.di.authentication.shared.helpers.LambdaPauseHelper;
 import uk.gov.di.authentication.shared.helpers.TableNameHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.utils.entity.LastSignedInBackfillRequest;
@@ -29,6 +30,9 @@ public class LastSignedInBackfillHandler
     private static final Logger LOG = LogManager.getLogger(LastSignedInBackfillHandler.class);
 
     private static final String USER_PROFILE_TABLE = "user-profile";
+
+    static final String CONTINUATION_PAYLOAD_LOG_MARKER =
+            "LAST_SIGNED_IN_BACKFILL_CONTINUATION_PAYLOAD";
 
     private final DynamoDbClient client;
     private final String userProfileTableName;
@@ -194,13 +198,29 @@ public class LastSignedInBackfillHandler
             Map<Integer, Map<String, String>> remainingSegmentKeys,
             long processedCount,
             long invocationCount) {
-        return new LastSignedInBackfillRequest(
-                remainingSegmentKeys,
-                processedCount,
-                runningUpdatedCount.get(),
-                runningSkippedCount.get(),
-                runningFailedCount.get(),
-                invocationCount);
+        var continuationRequest =
+                new LastSignedInBackfillRequest(
+                        remainingSegmentKeys,
+                        processedCount,
+                        runningUpdatedCount.get(),
+                        runningSkippedCount.get(),
+                        runningFailedCount.get(),
+                        invocationCount);
+        logContinuationPayload(continuationRequest);
+        return continuationRequest;
+    }
+
+    private void logContinuationPayload(LastSignedInBackfillRequest continuationRequest) {
+        try {
+            LOG.info(
+                    "{}={}",
+                    CONTINUATION_PAYLOAD_LOG_MARKER,
+                    objectMapper.writeValueAsString(continuationRequest));
+        } catch (Json.JsonException e) {
+            LOG.warn(
+                    "Failed to serialise continuation payload for resume logging. The run can only"
+                            + " be resumed from an earlier logged payload.");
+        }
     }
 
     @Override
