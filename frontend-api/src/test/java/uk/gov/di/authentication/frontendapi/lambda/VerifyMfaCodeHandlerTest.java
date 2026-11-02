@@ -150,6 +150,7 @@ class VerifyMfaCodeHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
+                    .withRecordedEmailForIdentityVerification(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
                     .withClientId(CLIENT_ID)
                     .withClientName(CLIENT_NAME)
@@ -1321,6 +1322,114 @@ class VerifyMfaCodeHandlerTest {
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             verifyNoInteractions(auditService);
             verifyNoInteractions(cloudwatchMetricsService);
+        }
+
+        @Test
+        void
+                shouldReturn400ForAccountRecoveryWhenSessionEmailDoesNotMatchIdentityVerificationEmail()
+                        throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+            authSession.withRecordedEmailForIdentityVerification("different-email@example.com");
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP,
+                                    CODE,
+                                    ACCOUNT_RECOVERY,
+                                    AUTH_APP_SECRET));
+
+            assertThat(result, hasStatus(400));
+            assertThat(
+                    result,
+                    hasJsonBody(
+                            ErrorResponse
+                                    .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
+            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
+            verify(authAppCodeProcessor, never())
+                    .processSuccessfulCodeRequest(anyString(), anyString(), any());
+            verifyNoInteractions(cloudwatchMetricsService);
+        }
+
+        @Test
+        void shouldReturn400ForAccountRecoveryWhenRecordedEmailForIdentityVerificationIsNull()
+                throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+            authSession.withRecordedEmailForIdentityVerification(null);
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP,
+                                    CODE,
+                                    ACCOUNT_RECOVERY,
+                                    AUTH_APP_SECRET));
+
+            assertThat(result, hasStatus(400));
+            assertThat(
+                    result,
+                    hasJsonBody(
+                            ErrorResponse
+                                    .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
+            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
+        }
+
+        @Test
+        void shouldReturn204ForAccountRecoveryWhenSessionEmailMatchesWithDifferentCase()
+                throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+            authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
+            authSession.withRecordedEmailForIdentityVerification(EMAIL.toUpperCase());
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP,
+                                    CODE,
+                                    ACCOUNT_RECOVERY,
+                                    AUTH_APP_SECRET));
+
+            assertThat(result, hasStatus(204));
+            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
+            verify(authAppCodeProcessor)
+                    .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = JourneyType.class,
+                names = {"ACCOUNT_RECOVERY"},
+                mode = EnumSource.Mode.EXCLUDE)
+        void shouldNotApplyIdentityVerificationEmailCheckForNonAccountRecoveryJourneys(
+                JourneyType journeyType) throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+            when(authenticationAttemptsService.getCountsByJourney(anyString(), any()))
+                    .thenReturn(Map.of());
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            anyString(), anyString(), any()))
+                    .thenReturn(Map.of());
+
+            authSession.withRecordedEmailForIdentityVerification("different-email@example.com");
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, journeyType, AUTH_APP_SECRET));
+
+            assertThat(
+                    result,
+                    not(
+                            hasJsonBody(
+                                    ErrorResponse
+                                            .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL)));
         }
     }
 

@@ -150,7 +150,9 @@ public enum ErrorResponse {
     AMC_AUTHORIZE_ACTION_NOT_PERMITTED(1212, "Not permitted to perform authorize action"),
     PASSWORD_RESET_NOT_PERMITTED(1213, "Not permitted to perform password reset action"),
     SESSION_EMAIL_NOT_SET(1214, "Failed to find email set on session"),
-    EMAIL_ADDRESS_MISMATCH(1215, "Request email does not match session email");
+    EMAIL_ADDRESS_MISMATCH(1215, "Request email does not match session email"),
+    SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL(
+            1216, "Email in session does not match email recorded for identity verification");
 
     private int code;
 
