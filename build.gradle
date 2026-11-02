@@ -131,6 +131,11 @@ ext {
             '[4.5.2,)',
             'CVE-2026-55760 is fixed in com.github.jknack:handlebars:4.5.2 and higher'
         ],
+        [
+            'com.google.guava:guava',
+            '[33.7.2-jre,)',
+            'CVE-2026-102554 is fixed in com.google.guava:guava:33.7.2 and higher'
+        ],
         // Apache HttpComponents
         [
             'org.apache.httpcomponents.client5:httpclient5',
