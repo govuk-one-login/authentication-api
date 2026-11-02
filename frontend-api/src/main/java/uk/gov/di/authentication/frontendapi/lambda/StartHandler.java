@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
@@ -179,7 +178,7 @@ public class StartHandler
                         requestedCredentialTrustLevel, authSession.getAchievedCredentialStrength());
         authSessionService.addSession(authSession.withUpliftRequired(upliftRequired));
 
-        var userContext = startService.buildUserContext(authSession);
+        var userDetails = startService.getUserDetails(authSession);
         var clientStartInfo = buildClientStartInfo(startRequest, authSession);
 
         var reauthenticate = isReauthenticateRequest(input);
@@ -190,7 +189,12 @@ public class StartHandler
 
         var internalSubjectId = authSession.getInternalCommonSubjectId();
         var auditContext =
-                buildAuditContext(input, sessionId, authSession, userContext, internalSubjectId);
+                buildAuditContext(
+                        input,
+                        sessionId,
+                        authSession,
+                        userDetails.maybeUserProfile(),
+                        internalSubjectId);
 
         var isBlockedForReauth = false;
         if (reauthenticate) {
@@ -199,7 +203,7 @@ public class StartHandler
                     handleReauthLockout(
                             authSession,
                             startRequest,
-                            userContext,
+                            userDetails.maybeUserProfile(),
                             auditContext,
                             internalSubjectId);
         }
@@ -219,7 +223,7 @@ public class StartHandler
 
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext,
+                        userDetails,
                         startService.getCookieConsentValue(
                                 startRequest.cookieConsent(), startRequest.isCookieConsentShared()),
                         startRequest.ga(),
@@ -311,7 +315,7 @@ public class StartHandler
             APIGatewayProxyRequestEvent input,
             String sessionId,
             AuthSessionItem authSession,
-            UserContext userContext,
+            Optional<UserProfile> maybeUserProfile,
             String internalSubjectId) {
         var clientSessionId =
                 getHeaderValueFromHeaders(
@@ -324,10 +328,7 @@ public class StartHandler
                 clientSessionId,
                 sessionId,
                 internalSubjectId == null ? AuditService.UNKNOWN : internalSubjectId,
-                userContext
-                        .getUserProfile()
-                        .map(UserProfile::getEmail)
-                        .orElse(AuditService.UNKNOWN),
+                maybeUserProfile.map(UserProfile::getEmail).orElse(AuditService.UNKNOWN),
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
@@ -337,10 +338,10 @@ public class StartHandler
     private boolean handleReauthLockout(
             AuthSessionItem authSession,
             StartRequest startRequest,
-            UserContext userContext,
+            Optional<UserProfile> maybeUserProfile,
             AuditContext auditContext,
             String internalSubjectId) {
-        var permissionContext = buildPermissionContext(authSession, startRequest, userContext);
+        var permissionContext = buildPermissionContext(authSession, startRequest, maybeUserProfile);
         var permissionResult =
                 permissionDecisionManager.canStartJourney(
                         JourneyType.REAUTHENTICATION, permissionContext);
@@ -411,11 +412,13 @@ public class StartHandler
     }
 
     private PermissionContext buildPermissionContext(
-            AuthSessionItem authSession, StartRequest startRequest, UserContext userContext) {
+            AuthSessionItem authSession,
+            StartRequest startRequest,
+            Optional<UserProfile> maybeUserProfile) {
         return new PermissionContext(
                 authSession.getInternalCommonSubjectId(),
                 startRequest.rpPairwiseIdForReauth(),
-                userContext.getUserProfile().map(UserProfile::getEmail).orElse(null),
+                maybeUserProfile.map(UserProfile::getEmail).orElse(null),
                 authSession,
                 null);
     }
