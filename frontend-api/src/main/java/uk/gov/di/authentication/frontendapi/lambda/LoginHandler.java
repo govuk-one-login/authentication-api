@@ -177,7 +177,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserContext userContext) {
         LOG.info("LoginHandler called");
 
-        var authSession = userContext.getAuthSession();
+        var authSession = userContext.authSessionItem();
         if (!authSession.validateSession(request.getEmail())) {
             LOG.warn("Email on session does not match email on request");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
@@ -294,7 +294,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
     private String calculatePairwiseId(UserContext userContext, UserProfile userProfile) {
         return ClientSubjectHelper.getSubject(
-                        userProfile, userContext.getAuthSession(), authenticationService)
+                        userProfile, userContext.authSessionItem(), authenticationService)
                 .getValue();
     }
 
@@ -331,7 +331,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         auditService.submitAuditEvent(
                 AUTH_LOG_IN_SUCCESS, auditContext, pairs.toArray(AuditService.MetadataPair[]::new));
-        var clientId = userContext.getAuthSession().getClientId();
+        var clientId = userContext.authSessionItem().getClientId();
         if (!isMfaRequired) {
             cloudwatchMetricsService.incrementAuthenticationSuccessWithoutMfa(
                     AuthSessionItem.AccountState.EXISTING,

@@ -38,7 +38,7 @@ public abstract class MfaCodeProcessor {
             AuditService auditService,
             DynamoAccountModifiersService accountModifiersService,
             MFAMethodsService mfaMethodsService) {
-        this.emailAddress = userContext.getAuthSession().getEmailAddress();
+        this.emailAddress = userContext.authSessionItem().getEmailAddress();
         this.userContext = userContext;
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;
@@ -77,7 +77,7 @@ public abstract class MfaCodeProcessor {
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
                         emailAddress,
                         ipAddress,
                         phoneNumber,
@@ -95,15 +95,15 @@ public abstract class MfaCodeProcessor {
             MFAMethodType mfaMethodType, String ipAddress, String persistentSessionId) {
         var accountRecoveryBlockPresent =
                 accountModifiersService.isAccountRecoveryBlockPresent(
-                        userContext.getAuthSession().getInternalCommonSubjectId());
+                        userContext.authSessionItem().getInternalCommonSubjectId());
         if (accountRecoveryBlockPresent) {
             LOG.info("AccountRecovery block is present. Removing block");
             accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    userContext.getAuthSession().getInternalCommonSubjectId());
+                    userContext.authSessionItem().getInternalCommonSubjectId());
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            userContext.getAuthSession().getInternalCommonSubjectId(),
+                            userContext.authSessionItem().getInternalCommonSubjectId(),
                             emailAddress,
                             ipAddress,
                             AuditService.UNKNOWN,

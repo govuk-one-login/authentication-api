@@ -141,12 +141,12 @@ class ReverificationResultHandlerTest {
                 .thenReturn(Optional.of(authSession));
         when(configurationService.getIPVBackendURI())
                 .thenReturn(new URI("https://api.identity.account.gov.uk/token"));
-        when(USER_CONTEXT.getAuthSession()).thenReturn(authSession);
-        when(USER_CONTEXT.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(USER_CONTEXT.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
+        when(USER_CONTEXT.authSessionItem()).thenReturn(authSession);
+        when(USER_CONTEXT.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(USER_CONTEXT.txmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
         var userProfile = mock(UserProfile.class);
         when(userProfile.getPhoneNumber()).thenReturn(CommonTestVariables.UK_MOBILE_NUMBER);
-        when(USER_CONTEXT.getUserProfile()).thenReturn(Optional.of(userProfile));
+        when(USER_CONTEXT.userProfile()).thenReturn(Optional.of(userProfile));
 
         handler =
                 new ReverificationResultHandler(

@@ -46,7 +46,7 @@ class MfaCodeProcessorFactoryTest {
         when(configurationService.getIncreasedCodeMaxRetries()).thenReturn(999999);
 
         when(authSession.getEmailAddress()).thenReturn("test@test.com");
-        when(userContext.getAuthSession()).thenReturn(authSession);
+        when(userContext.authSessionItem()).thenReturn(authSession);
     }
 
     @Test

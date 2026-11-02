@@ -108,7 +108,7 @@ class PhoneNumberCodeProcessorTest {
     @BeforeEach
     void setup() {
         when(configurationService.getCodeMaxRetries()).thenReturn(3);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
+        when(userContext.txmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
     }
 
     @ParameterizedTest
@@ -600,9 +600,9 @@ class PhoneNumberCodeProcessorTest {
 
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
-        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
+        when(userContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.authSessionItem()).thenReturn(authSession);
+        when(userContext.userProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.isPhoneNumberVerified()).thenReturn(true);
         when(userProfile.getPhoneNumber()).thenReturn(differentPhoneNumber);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
@@ -634,7 +634,7 @@ class PhoneNumberCodeProcessorTest {
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
                 .thenReturn(6);
-        when(userContext.getAuthSession()).thenReturn(authSession);
+        when(userContext.authSessionItem()).thenReturn(authSession);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
                         CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
@@ -659,7 +659,7 @@ class PhoneNumberCodeProcessorTest {
 
     public void setUpBlockedPhoneNumberCode(
             CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(userContext.getAuthSession()).thenReturn(authSession);
+        when(userContext.authSessionItem()).thenReturn(authSession);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
                         CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),

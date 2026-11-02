@@ -41,7 +41,7 @@ public class TestUserHelper {
     }
 
     public boolean isTestJourney(UserContext userContext) {
-        return isTestJourney(userContext.getAuthSession().getEmailAddress());
+        return isTestJourney(userContext.authSessionItem().getEmailAddress());
     }
 
     public boolean isTestJourney(String emailAddress) {

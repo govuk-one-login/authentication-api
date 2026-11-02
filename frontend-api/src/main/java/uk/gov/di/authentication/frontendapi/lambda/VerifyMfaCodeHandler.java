@@ -66,7 +66,6 @@ import java.util.Optional;
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
@@ -193,10 +192,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext) {
         LOG.info("VerifyMfaCodeHandler called");
 
-        AuthSessionItem authSession = userContext.getAuthSession();
+        AuthSessionItem authSession = userContext.authSessionItem();
 
         var journeyType = codeRequest.getJourneyType();
-        Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
+        Optional<UserProfile> userProfileMaybe = userContext.userProfile();
         UserProfile userProfile = userProfileMaybe.orElse(null);
 
         Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, authSession);
@@ -307,7 +306,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Optional<String> maybeRpPairwiseId,
             UserProfile userProfile) {
 
-        var authSession = userContext.getAuthSession();
+        var authSession = userContext.authSessionItem();
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
@@ -382,7 +381,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     || errorResponse.equals(
                             ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED)) {
                 blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-                        userContext.getAuthSession().getEmailAddress(),
+                        userContext.authSessionItem().getEmailAddress(),
                         codeRequest.getMfaMethodType(),
                         codeRequest.getJourneyType());
             }
@@ -404,7 +403,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             auditSuccess(codeRequest, auditContext, activeMfaMethod, userProfile);
 
             processSuccessfulCodeSession(
-                    userContext.getAuthSession(),
+                    userContext.authSessionItem(),
                     input,
                     subjectId,
                     codeRequest,
@@ -417,7 +416,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
                 codeRequest.getJourneyType(),
-                userContext.getUserProfile().orElse(null),
+                userContext.userProfile().orElse(null),
                 auditContext,
                 maybeRpPairwiseId)) {
             return generateApiGatewayProxyErrorResponse(

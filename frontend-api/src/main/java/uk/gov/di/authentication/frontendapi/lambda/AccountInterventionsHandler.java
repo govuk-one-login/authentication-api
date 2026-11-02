@@ -183,7 +183,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
             if (configurationService.isInvokeTicfCRILambdaEnabled()
                     && request.authenticated() != null) {
-                AuthSessionItem authSession = userContext.getAuthSession();
+                AuthSessionItem authSession = userContext.authSessionItem();
                 sendTICF(
                         userContext,
                         internalPairwiseId,
@@ -220,7 +220,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         var vtr = new ArrayList<String>();
 
         try {
-            vtr.add(userContext.getAuthSession().getRequestedCredentialStrength().getValue());
+            vtr.add(userContext.authSessionItem().getRequestedCredentialStrength().getValue());
         } catch (Exception e) {
             LOG.warn(
                     "Error retrieving effective vector of trust for TICF CRI Request: {}",
@@ -228,7 +228,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                     e);
         }
 
-        String journeyId = userContext.getClientSessionId();
+        String journeyId = userContext.clientSessionId();
 
         var ticfRequest =
                 new InternalTICFCRIRequest(
@@ -344,11 +344,11 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
-                        userContext.getAuthSession().getEmailAddress(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         userContext
-                                .getUserProfile()
+                                .userProfile()
                                 .map(UserProfile::getPhoneNumber)
                                 .orElse(AuditService.UNKNOWN),
                         persistentSessionID);
