@@ -23,13 +23,10 @@ dependencies {
             libs.pactProvider
 
     implementation project(":shared"), noXray
-    implementation project(":orchestration-shared"), noXray
     implementation project(":shared-test"), noXray
-    implementation project(":orchestration-shared-test"), noXray
     implementation project(":audit-events"), noXray
     implementation project(":frontend-api"), noXray
     implementation project(":auth-external-api"), noXray
-    implementation project(":ipv-api"), noXray
     implementation project(":interventions-api-stub"), noXray
     implementation project(":utils"), noXray
     implementation project(":user-permissions"), noXray
