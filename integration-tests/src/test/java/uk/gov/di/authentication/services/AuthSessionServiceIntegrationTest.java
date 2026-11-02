@@ -84,6 +84,7 @@ class AuthSessionServiceIntegrationTest {
                         .withResetMfaState(AuthSessionItem.ResetMfaState.ATTEMPTED)
                         .withResetPasswordState(AuthSessionItem.ResetPasswordState.ATTEMPTED)
                         .withResetPasswordEmailCodeVerified(TEST_EMAIL)
+                        .withRecordedEmailForIdentityVerification(TEST_EMAIL)
                         .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
         authSessionService.addSession(existingSessionItem);
 
@@ -98,6 +99,7 @@ class AuthSessionServiceIntegrationTest {
         assertThat(newSession.getResetPasswordState(), is(AuthSessionItem.ResetPasswordState.NONE));
         assertThat(newSession.getResetMfaState(), is(AuthSessionItem.ResetMfaState.NONE));
         assertNull(newSession.getResetPasswordEmailCodeVerified());
+        assertNull(newSession.getRecordedEmailForIdentityVerification());
     }
 
     @Test
