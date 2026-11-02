@@ -47,6 +47,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REVERIFY_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.MFA_RESET_JAR_GENERATION_ERROR;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage.EN;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
@@ -70,7 +71,6 @@ class MfaResetAuthorizeHandlerTest {
     private static final AuthenticationService authenticationService =
             mock(AuthenticationService.class);
     private static final Context context = mock(Context.class);
-    private static final UserContext userContext = mock(UserContext.class);
     private static final AuditService auditService = mock(AuditService.class);
     private static final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -103,16 +103,18 @@ class MfaResetAuthorizeHandlerTest {
                     .withClientId(CLIENT_ID)
                     .withRpSectorIdentifierHost("gov.uk");
     private static MfaResetAuthorizeHandler handler;
-    private static UserProfile userProfile = new UserProfile();
+    private static final UserProfile userProfile = new UserProfile();
+    private static final UserContext userContext =
+            new UserContext(
+                    authSession,
+                    Optional.of(userProfile),
+                    EN,
+                    CLIENT_SESSION_ID,
+                    ENCODED_DEVICE_DETAILS);
 
     @BeforeAll
     static void globalSetup() {
         userProfile.setSubjectID(INTERNAL_COMMON_SUBJECT_ID);
-
-        when(userContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.authSessionItem()).thenReturn(authSession);
-        when(userContext.userProfile()).thenReturn(Optional.of(userProfile));
-        when(userContext.txmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
 
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));

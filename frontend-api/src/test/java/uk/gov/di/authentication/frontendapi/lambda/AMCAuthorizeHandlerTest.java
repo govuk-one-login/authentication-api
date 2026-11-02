@@ -62,6 +62,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage.EN;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
@@ -98,7 +99,7 @@ class AMCAuthorizeHandlerTest {
                     .withEmailAddress(EMAIL);
     private final UserProfile userProfile =
             new UserProfile().withEmail(EMAIL).withPublicSubjectID(PUBLIC_SUBJECT_ID);
-    private final UserContext userContext = mock(UserContext.class);
+    private UserContext userContext;
 
     private static final String AMC_COOKIE = "some-cookie";
     private static final RSAKey TEST_RSA_JWK =
@@ -134,9 +135,8 @@ class AMCAuthorizeHandlerTest {
                 .thenReturn("https://example.com/redirectUri");
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
-        when(userContext.authSessionItem()).thenReturn(authSession);
-        when(userContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.txmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
+        userContext =
+                new UserContext(authSession, Optional.of(userProfile), EN, CLIENT_SESSION_ID, "");
     }
 
     @Nested
