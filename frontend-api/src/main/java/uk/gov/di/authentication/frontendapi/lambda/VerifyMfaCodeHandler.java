@@ -75,6 +75,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
@@ -221,6 +222,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.TOO_MANY_INVALID_REAUTH_ATTEMPTS);
 
+        if (journeyType == ACCOUNT_RECOVERY
+                && !sessionEmailMatchesIdentityVerificationEmail(authSession)) {
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL);
+        }
+
         try {
             String subjectID = userProfileMaybe.map(UserProfile::getSubjectID).orElse(null);
             return verifyCode(
@@ -249,6 +256,32 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private static boolean userProfileMissingForReauthenticationJourney(
             UserProfile userProfile, JourneyType journeyType) {
         return userProfile == null && journeyType == REAUTHENTICATION;
+    }
+
+    private static boolean sessionEmailMatchesIdentityVerificationEmail(
+            AuthSessionItem authSession) {
+        var sessionEmail = authSession.getEmailAddress();
+        var emailUsedForIdentityVerification =
+                authSession.getRecordedEmailForIdentityVerification();
+
+        if (sessionEmail == null) {
+            LOG.warn("Session email is null");
+            return false;
+        }
+
+        if (emailUsedForIdentityVerification == null) {
+            LOG.warn("Recorded email for identity verification is null");
+            return false;
+        }
+
+        var sessionEmailMatchesIdentityVerificationEmail =
+                sessionEmail.equalsIgnoreCase(emailUsedForIdentityVerification);
+
+        LOG.info(
+                "Session email matches recorded email for identity verification: {}",
+                sessionEmailMatchesIdentityVerificationEmail);
+
+        return sessionEmailMatchesIdentityVerificationEmail;
     }
 
     private boolean checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
