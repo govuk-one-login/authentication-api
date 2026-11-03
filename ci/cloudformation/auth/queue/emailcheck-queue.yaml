@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  PendingEmailCheckQueueEncryptionKey:
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for encrypting Experian email check queue
+      EnableKeyRotation: true
+      PendingWindowInDays: 30
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyUsage: ENCRYPT_DECRYPT
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: key-policy-sqs
+        Statement:
+          - Sid: DefaultAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+          - Sid: AllowAuthExperianAcctAccessToPendingemailCheckKmsKey
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AccountID}:root
+                - AccountID: !If
+                    - UseSubEnvironment
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref SubEnvironment,
+                        AuthExpAccountId,
+                      ]
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        AuthExpAccountId,
+                      ]
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource: "*"
+
+  PendingEmailCheckQueueEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub
+        - alias/${Env}-experian-email-check-sqs-kms-alias
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      TargetKeyId: !Ref PendingEmailCheckQueueEncryptionKey
+
+  # ── SQS Queues ────────────────────────────────────────────────────────────────
+  ExperianEmailCheckDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-pending-email-check-dlq
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      MessageRetentionPeriod: 1209600
+      KmsMasterKeyId: !GetAtt PendingEmailCheckQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+
+  ExperianEmailCheckQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub
+        - ${Env}-pending-email-check-queue
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      MaximumMessageSize: 2048
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 10
+      VisibilityTimeout: 270
+      KmsMasterKeyId: !GetAtt PendingEmailCheckQueueEncryptionKey.Arn
+      KmsDataKeyReusePeriodSeconds: 300
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ExperianEmailCheckDeadLetterQueue.Arn
+        maxReceiveCount: 3
+
+  ExperianEmailCheckQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ExperianEmailCheckQueue
+      PolicyDocument:
+        Statement:
+          - Sid: AllowAuthExperianAcctCrossAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AccountID}:root
+                - AccountID: !If
+                    - UseSubEnvironment
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref SubEnvironment,
+                        AuthExpAccountId,
+                      ]
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        AuthExpAccountId,
+                      ]
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:ChangeMessageVisibility
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+            Resource: !GetAtt ExperianEmailCheckQueue.Arn
+
+  ExperianEmailCheckDlQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref ExperianEmailCheckDeadLetterQueue
+      PolicyDocument:
+        Statement:
+          - Sid: AllowAuthExperianAcctCrossAccountAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub
+                - arn:aws:iam::${AccountID}:root
+                - AccountID: !If
+                    - UseSubEnvironment
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref SubEnvironment,
+                        AuthExpAccountId,
+                      ]
+                    - !FindInMap [
+                        EnvironmentConfiguration,
+                        !Ref Environment,
+                        AuthExpAccountId,
+                      ]
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt ExperianEmailCheckDeadLetterQueue.Arn
+
+  PendingEmailCheckDeadLetterQueueHasMessagesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub
+        - ${Env}-pending-email-check-dlq-has-messages-alarm
+        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+      AlarmDescription: !Sub "100 or more messages have appeared on a DLQ that need manual processing (pending-email-check-dlq-has-messages-alarm in account ${AWS::AccountId}). Runbook: https://govukverify.atlassian.net/wiki/x/OChukQE"
+      Namespace: AWS/SQS
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt ExperianEmailCheckDeadLetterQueue.QueueName
+      MetricName: ApproximateNumberOfMessagesVisible
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      AlarmActions: !If
+        - UseAlarmActions
+        - - !Sub "{{resolve:ssm:/deploy/${Environment}/slack_alert_notification_topic_arn}}"
+        - []
