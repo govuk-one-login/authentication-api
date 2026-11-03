@@ -497,112 +497,6 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void
-            shouldReturn400AndNotModifyMfaWhenAccountRecoverySessionEmailDoesNotMatchIdentityVerificationEmail() {
-        setUpAuthAppRequest(JourneyType.ACCOUNT_RECOVERY);
-        authSessionExtension.addRecordedEmailForIdentityVerificationToSession(
-                sessionId, "someone.else@example.com");
-        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP,
-                        code,
-                        JourneyType.ACCOUNT_RECOVERY,
-                        ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(400));
-        assertThat(
-                response,
-                hasJsonBody(
-                        ErrorResponse.SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
-
-        assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
-        assertThat(
-                userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                equalTo(AUTH_APP_SECRET_BASE_32));
-        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
-    }
-
-    @Test
-    void shouldReturn400ForAccountRecoveryWhenRecordedEmailForIdentityVerificationIsNotPresent() {
-        setUpAuthAppRequest(JourneyType.ACCOUNT_RECOVERY);
-        authSessionExtension.addRecordedEmailForIdentityVerificationToSession(sessionId, null);
-        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP,
-                        code,
-                        JourneyType.ACCOUNT_RECOVERY,
-                        ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(400));
-        assertThat(
-                response,
-                hasJsonBody(
-                        ErrorResponse.SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
-        assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
-        assertThat(
-                userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                equalTo(AUTH_APP_SECRET_BASE_32));
-    }
-
-    @Test
-    void
-            shouldReturn204ForAccountRecoveryWhenSessionEmailMatchesIdentityVerificationEmailCaseInsensitively() {
-        setUpAuthAppRequest(JourneyType.ACCOUNT_RECOVERY);
-        authSessionExtension.addRecordedEmailForIdentityVerificationToSession(
-                sessionId, EMAIL_ADDRESS.toUpperCase());
-        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP,
-                        code,
-                        JourneyType.ACCOUNT_RECOVERY,
-                        ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-        assertThat(
-                userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
-                equalTo(ALTERNATIVE_AUTH_APP_SECRET_BASE_32));
-    }
-
-    @Test
-    void shouldNotApplyIdentityVerificationEmailCheckForNonAccountRecoveryJourney() {
-        setUpAuthAppRequest(JourneyType.SIGN_IN);
-        authSessionExtension.addRecordedEmailForIdentityVerificationToSession(
-                sessionId, "someone.else@example.com");
-        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, JourneyType.SIGN_IN);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-    }
-
-    @Test
-    void
             shouldReturn204WhenSuccessfulAuthAppOtpCodeRegistrationRequestAndOverwriteExistingMfaMethod() {
         var currentAuthAppCredential = "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3UYTS";
         var newAuthAppCredential = "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -1768,7 +1662,6 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private void setupUser(String sessionId, String email, boolean mfaMethodsMigrated) {
         userStore.addUnverifiedUser(email, USER_PASSWORD);
         authSessionExtension.addEmailToSession(sessionId, email);
-        authSessionExtension.addRecordedEmailForIdentityVerificationToSession(sessionId, email);
         userStore.setMfaMethodsMigrated(email, mfaMethodsMigrated);
     }
 
