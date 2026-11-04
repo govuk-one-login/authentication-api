@@ -78,6 +78,9 @@ public class UserInfoServiceTest {
     private static final CredentialTrustLevel TEST_ACHIEVED_CREDENTIAL_STRENGTH =
             CredentialTrustLevel.MEDIUM_LEVEL;
     private static final boolean TEST_UPLIFT_REQUIRED = true;
+    private static final boolean TEST_VERIFIED_PASSKEY = true;
+    private static final AuthSessionItem.LoginType TEST_LOGIN_TYPE =
+            AuthSessionItem.LoginType.PROMPTED;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
     private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
     private static final String TEST_ACCOUNT_DATA_API_ACCESS_TOKEN =
@@ -371,6 +374,72 @@ public class UserInfoServiceTest {
         assertFalse(actual.getPhoneNumberVerified());
     }
 
+    @Test
+    void shouldPopulateVerifiedPasskeyAndLoginTypeClaimsWhenRequested() {
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
+                .thenReturn(
+                        Result.success(
+                                List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
+
+        UserInfo actual =
+                userInfoService
+                        .populateUserInfo(
+                                getMockAccessTokenStore(List.of("verified_passkey", "login_type")),
+                                generateAuthSessionItem(),
+                                generateUserProfile(),
+                                TEST_INTERNAL_PAIRWISE_ID)
+                        .getSuccess();
+
+        assertEquals(TEST_VERIFIED_PASSKEY, actual.getClaim("verified_passkey"));
+        assertEquals(TEST_LOGIN_TYPE.name(), actual.getClaim("login_type"));
+    }
+
+    @Test
+    void shouldNotPopulateVerifiedPasskeyAndLoginTypeClaimsWhenNotRequested() {
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
+                .thenReturn(
+                        Result.success(
+                                List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
+
+        UserInfo actual =
+                userInfoService
+                        .populateUserInfo(
+                                getMockAccessTokenStore(List.of("local_account_id")),
+                                generateAuthSessionItem(),
+                                generateUserProfile(),
+                                TEST_INTERNAL_PAIRWISE_ID)
+                        .getSuccess();
+
+        assertNull(actual.getClaim("verified_passkey"));
+        assertNull(actual.getClaim("login_type"));
+    }
+
+    @Test
+    void shouldDefaultLoginTypeToUnknownWhenSessionLoginTypeIsNull() {
+        when(mfaMethodsService.getMfaMethods(any(), anyBoolean()))
+                .thenReturn(
+                        Result.success(
+                                List.of(generatePhoneNumberMFAMethod(PriorityIdentifier.DEFAULT))));
+
+        var authSession =
+                new AuthSessionItem()
+                        .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
+                        .withAchievedCredentialStrength(TEST_ACHIEVED_CREDENTIAL_STRENGTH)
+                        .withUpliftRequired(TEST_UPLIFT_REQUIRED)
+                        .withHasVerifiedWithPasskey(TEST_VERIFIED_PASSKEY);
+
+        UserInfo actual =
+                userInfoService
+                        .populateUserInfo(
+                                getMockAccessTokenStore(List.of("login_type")),
+                                authSession,
+                                generateUserProfile(),
+                                TEST_INTERNAL_PAIRWISE_ID)
+                        .getSuccess();
+
+        assertEquals(AuthSessionItem.LoginType.UNKNOWN.name(), actual.getClaim("login_type"));
+    }
+
     private static UserCredentials generateUserCredentials() {
         return new UserCredentials().withSubjectID(TEST_SUBJECT.getValue()).withEmail(TEST_EMAIL);
     }
@@ -379,7 +448,9 @@ public class UserInfoServiceTest {
         return new AuthSessionItem()
                 .withVerifiedMfaMethodType(TEST_VERIFIED_MFA_METHOD_TYPE)
                 .withAchievedCredentialStrength(TEST_ACHIEVED_CREDENTIAL_STRENGTH)
-                .withUpliftRequired(TEST_UPLIFT_REQUIRED);
+                .withUpliftRequired(TEST_UPLIFT_REQUIRED)
+                .withHasVerifiedWithPasskey(TEST_VERIFIED_PASSKEY)
+                .withLoginType(TEST_LOGIN_TYPE);
     }
 
     private static MFAMethod generatePhoneNumberMFAMethod(PriorityIdentifier priorityIdentifier) {

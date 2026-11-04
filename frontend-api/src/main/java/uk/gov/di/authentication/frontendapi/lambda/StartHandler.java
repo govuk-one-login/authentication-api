@@ -220,6 +220,12 @@ public class StartHandler
             authSessionService.updateSession(authSession);
             emitAuthenticatedOverrideObservability();
         }
+        
+        var loginType = deduceLoginType(reauthenticate, authenticated);
+        authSession.setLoginType(loginType);
+        authSessionService.updateSessionAttribute(
+                authSession.getSessionId(), AuthSessionItem.ATTRIBUTE_LOGIN_TYPE, loginType.name());
+        LOG.info("Login type for session: {}", loginType);
 
         var userStartInfo =
                 startService.buildUserStartInfo(
@@ -375,6 +381,16 @@ public class StartHandler
                             failureReason == null ? "unknown" : failureReason.getValue()));
         }
         return true;
+    }
+
+    private AuthSessionItem.LoginType deduceLoginType(
+            boolean reauthenticate, boolean authenticated) {
+        if (reauthenticate) {
+            return AuthSessionItem.LoginType.REAUTHENTICATION;
+        }
+        return authenticated
+                ? AuthSessionItem.LoginType.SILENT
+                : AuthSessionItem.LoginType.PROMPTED;
     }
 
     private void clearVerifiedState(AuthSessionItem authSession) {
