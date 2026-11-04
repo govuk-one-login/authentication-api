@@ -73,37 +73,6 @@ public class AccountDeletionService {
     }
 
     /**
-     * Removes a user account directly via DynamoDB.
-     *
-     * <p>This method calculates the internal common subject identifier, deletes the user's account
-     * records from DynamoDB directly, optionally sends a deletion notification via SQS, and emits a
-     * standard audit event.
-     *
-     * @param userProfile The profile of the user whose account is being deleted.
-     * @param txmaAuditEncoded The encoded TxMA audit information.
-     * @param reason The reason for the account deletion.
-     * @param sendNotification {@code true} to send an account deletion email notification; {@code
-     *     false} otherwise.
-     */
-    public void removeAccount(
-            UserProfile userProfile,
-            String txmaAuditEncoded,
-            AccountDeletionReason reason,
-            boolean sendNotification) {
-        var internalCommonSubjectIdentifier = calculateICS(userProfile);
-
-        dynamoDeleteService.deleteAccount(
-                userProfile.getEmail(),
-                internalCommonSubjectIdentifier.getValue(),
-                userProfile.getPublicSubjectID());
-        LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
-
-        if (sendNotification) sendNotifyRequest(userProfile);
-
-        emitAuditEvent(userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
-    }
-
-    /**
      * Removes a user account by delegating to the Account Data API.
      *
      * <p>This method deletes the user by invoking the external Account Data API using the provided
