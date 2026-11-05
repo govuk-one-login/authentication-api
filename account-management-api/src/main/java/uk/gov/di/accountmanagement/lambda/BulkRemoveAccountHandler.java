@@ -74,7 +74,6 @@ public class BulkRemoveAccountHandler
         this.manualAccountDeletionService =
                 new ManualAccountDeletionService(
                         accountDeletionService,
-                        configurationService,
                         accountDeletionTokenService,
                         configurationService.getBulkAccountDeletionClientId());
     }

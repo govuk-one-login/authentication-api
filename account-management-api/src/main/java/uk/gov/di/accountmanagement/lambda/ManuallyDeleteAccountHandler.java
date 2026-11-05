@@ -51,7 +51,6 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
         this.manualAccountDeletionService =
                 new ManualAccountDeletionService(
                         accountDeletionService,
-                        configurationService,
                         accountDeletionTokenService,
                         configurationService.getManualAccountDeletionClientId());
     }

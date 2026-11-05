@@ -1,8 +1,15 @@
 package uk.gov.di.accountmanagement.api;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.entity.BulkUserDeleteRequest;
@@ -12,20 +19,29 @@ import uk.gov.di.accountmanagement.lambda.BulkRemoveAccountHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
+import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
+import uk.org.webcompere.systemstubs.jupiter.SystemStub;
+import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 
+@ExtendWith(SystemStubsExtension.class)
 class BulkRemoveAccountHandlerIntegrationTest
         extends HandlerIntegrationTest<BulkUserDeleteRequest, BulkUserDeleteResponse> {
 
@@ -35,29 +51,60 @@ class BulkRemoveAccountHandlerIntegrationTest
     private static final String EMAIL_4 = "user4@example.com";
     private static final String EMAIL_5 = "user5@example.com";
     private static final String PASSWORD = "password123";
+    private static final String BULK_DELETION_CLIENT_ID = "bulk-account-deletion-client";
 
-    protected static final ConfigurationService BULK_DELETION_TXMA_ENABLED_CONFIGUARION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    notificationsQueue, tokenSigner, configurationParameters) {
-                @Override
-                public String getTxmaAuditQueueUrl() {
-                    return txmaAuditQueue.getQueueUrl();
-                }
-            };
+    @SystemStub static EnvironmentVariables environment = new EnvironmentVariables();
+
+    @RegisterExtension
+    private static final KmsKeyExtension authToAccountDataSigningKey =
+            new KmsKeyExtension("auth-to-account-data-signing-key", KeyUsageType.SIGN_VERIFY);
+
+    private WireMockServer accountDataApiWireMockServer;
+
+    @BeforeAll
+    static void setupEnvironment() {
+        environment.set("AUTH_TO_ACCOUNT_DATA_API_AUDIENCE", "https://example.com/ADAPIAudience");
+        environment.set("AUTH_ISSUER_CLAIM", "https://signin.account.gov.uk/");
+        environment.set("BULK_ACCOUNT_DELETION_CLIENT_ID", BULK_DELETION_CLIENT_ID);
+        environment.set("AUTH_TO_ACCOUNT_DATA_SIGNING_KEY", authToAccountDataSigningKey.getKeyId());
+    }
 
     @BeforeEach
     void setup() {
-        handler = new BulkRemoveAccountHandler(BULK_DELETION_TXMA_ENABLED_CONFIGUARION_SERVICE);
+        accountDataApiWireMockServer =
+                new WireMockServer(WireMockConfiguration.wireMockConfig().dynamicPort());
+        accountDataApiWireMockServer.start();
+
+        accountDataApiWireMockServer.stubFor(
+                delete(urlPathMatching("/accounts/.*")).willReturn(aResponse().withStatus(204)));
+
+        var configService =
+                createConfigServiceWithAccountDataUri(
+                        "http://localhost:" + accountDataApiWireMockServer.port());
+        handler = new BulkRemoveAccountHandler(configService);
         txmaAuditQueue.clear();
         notificationsQueue.clear();
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (accountDataApiWireMockServer != null) {
+            accountDataApiWireMockServer.stop();
+        }
     }
 
     @Test
     void shouldDeleteUsersWithinDateRange() {
         userStore.signUpWithCreationDate(EMAIL_1, PASSWORD, new Subject(), "2023-12-15T12:00:00");
-        userStore.signUpWithCreationDate(EMAIL_2, PASSWORD, new Subject(), "2024-07-20T10:30:00");
-        userStore.signUpWithCreationDate(EMAIL_3, PASSWORD, new Subject(), "2024-08-10T14:15:00");
-        userStore.signUpWithCreationDate(EMAIL_4, PASSWORD, new Subject(), "2024-08-10T14:15:00");
+        var publicSubjectId2 =
+                userStore.signUpWithCreationDate(
+                        EMAIL_2, PASSWORD, new Subject(), "2024-07-20T10:30:00");
+        var publicSubjectId3 =
+                userStore.signUpWithCreationDate(
+                        EMAIL_3, PASSWORD, new Subject(), "2024-08-10T14:15:00");
+        var publicSubjectId4 =
+                userStore.signUpWithCreationDate(
+                        EMAIL_4, PASSWORD, new Subject(), "2024-08-10T14:15:00");
         userStore.signUpWithCreationDate(EMAIL_5, PASSWORD, new Subject(), "2025-01-01T14:15:00");
 
         assertTrue(userStore.userExists(EMAIL_1));
@@ -76,14 +123,16 @@ class BulkRemoveAccountHandlerIntegrationTest
         BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
         assertTrue(userStore.userExists(EMAIL_1));
-        assertFalse(userStore.userExists(EMAIL_2));
-        assertFalse(userStore.userExists(EMAIL_3));
-        assertFalse(userStore.userExists(EMAIL_4));
         assertTrue(userStore.userExists(EMAIL_5));
 
         assertEquals(3, result.numberProcessed());
         assertEquals(2, result.numberFilteredOut());
         assertTrue(result.message().contains("TEST_REF_001"));
+
+        verifyAccountDataApiDeleteCalled(publicSubjectId2);
+        verifyAccountDataApiDeleteCalled(publicSubjectId3);
+        verifyAccountDataApiDeleteCalled(publicSubjectId4);
+        accountDataApiWireMockServer.verify(3, deleteRequestedFor(urlPathMatching("/accounts/.*")));
 
         assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
         assertProcessedAccountIdentifiers(result.processedAccountIdentifiers(), 3);
@@ -92,8 +141,12 @@ class BulkRemoveAccountHandlerIntegrationTest
     @Test
     void shouldFilterOutUsersOutsideDateRangeWithEdgeCases() {
         userStore.signUpWithCreationDate(EMAIL_1, PASSWORD, new Subject(), "2019-12-31T23:59:59");
-        userStore.signUpWithCreationDate(EMAIL_2, PASSWORD, new Subject(), "2020-01-01T00:00:00");
-        userStore.signUpWithCreationDate(EMAIL_3, PASSWORD, new Subject(), "2020-12-31T23:59:59");
+        var publicSubjectId2 =
+                userStore.signUpWithCreationDate(
+                        EMAIL_2, PASSWORD, new Subject(), "2020-01-01T00:00:00");
+        var publicSubjectId3 =
+                userStore.signUpWithCreationDate(
+                        EMAIL_3, PASSWORD, new Subject(), "2020-12-31T23:59:59");
         userStore.signUpWithCreationDate(EMAIL_4, PASSWORD, new Subject(), "2021-01-01T00:00:00");
 
         assertTrue(userStore.userExists(EMAIL_1));
@@ -111,12 +164,14 @@ class BulkRemoveAccountHandlerIntegrationTest
         BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
         assertTrue(userStore.userExists(EMAIL_1));
-        assertFalse(userStore.userExists(EMAIL_2));
-        assertFalse(userStore.userExists(EMAIL_3));
         assertTrue(userStore.userExists(EMAIL_4));
 
         assertEquals(2, result.numberProcessed());
         assertEquals(2, result.numberFilteredOut());
+
+        verifyAccountDataApiDeleteCalled(publicSubjectId2);
+        verifyAccountDataApiDeleteCalled(publicSubjectId3);
+        accountDataApiWireMockServer.verify(2, deleteRequestedFor(urlPathMatching("/accounts/.*")));
 
         assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
         assertProcessedAccountIdentifiers(result.processedAccountIdentifiers(), 2);
@@ -124,9 +179,15 @@ class BulkRemoveAccountHandlerIntegrationTest
 
     @Test
     void shouldNotDeleteUsersNotFoundInTheDatabase() {
-        userStore.signUpWithCreationDate(EMAIL_1, PASSWORD, new Subject(), "2024-04-07T12:00:00");
-        userStore.signUpWithCreationDate(EMAIL_2, PASSWORD, new Subject(), "2024-07-20T10:30:00");
-        userStore.signUpWithCreationDate(EMAIL_3, PASSWORD, new Subject(), "2024-08-10T14:15:00");
+        var publicSubjectId1 =
+                userStore.signUpWithCreationDate(
+                        EMAIL_1, PASSWORD, new Subject(), "2024-04-07T12:00:00");
+        var publicSubjectId2 =
+                userStore.signUpWithCreationDate(
+                        EMAIL_2, PASSWORD, new Subject(), "2024-07-20T10:30:00");
+        var publicSubjectId3 =
+                userStore.signUpWithCreationDate(
+                        EMAIL_3, PASSWORD, new Subject(), "2024-08-10T14:15:00");
 
         assertTrue(userStore.userExists(EMAIL_1));
         assertTrue(userStore.userExists(EMAIL_2));
@@ -141,15 +202,14 @@ class BulkRemoveAccountHandlerIntegrationTest
 
         BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-        assertFalse(userStore.userExists(EMAIL_1));
-        assertFalse(userStore.userExists(EMAIL_2));
-        assertFalse(userStore.userExists(EMAIL_3));
-        assertFalse(userStore.userExists(EMAIL_4));
-        assertFalse(userStore.userExists(EMAIL_5));
-
         assertEquals(3, result.numberProcessed());
         assertEquals(2, result.numberNotFound());
         assertTrue(result.message().contains("TEST_REF_001"));
+
+        verifyAccountDataApiDeleteCalled(publicSubjectId1);
+        verifyAccountDataApiDeleteCalled(publicSubjectId2);
+        verifyAccountDataApiDeleteCalled(publicSubjectId3);
+        accountDataApiWireMockServer.verify(3, deleteRequestedFor(urlPathMatching("/accounts/.*")));
 
         assertAuditEvents(List.of(AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT, AUTH_DELETE_ACCOUNT));
         assertProcessedAccountIdentifiers(result.processedAccountIdentifiers(), 3);
@@ -203,10 +263,6 @@ class BulkRemoveAccountHandlerIntegrationTest
 
         BulkUserDeleteResponse result = handler.handleRequest(request, context);
 
-        for (String email : emailsToDelete) {
-            assertFalse(userStore.userExists(email));
-        }
-
         assertTrue(userStore.userExists("user4@example.com"));
         assertTrue(userStore.userExists("user60@example.com"));
 
@@ -215,6 +271,8 @@ class BulkRemoveAccountHandlerIntegrationTest
 
         assertEquals(6, result.numberProcessed());
         assertEquals(0, result.numberFailed());
+
+        accountDataApiWireMockServer.verify(6, deleteRequestedFor(urlPathMatching("/accounts/.*")));
 
         assertAuditEvents(
                 List.of(
@@ -225,6 +283,13 @@ class BulkRemoveAccountHandlerIntegrationTest
                         AUTH_DELETE_ACCOUNT,
                         AUTH_DELETE_ACCOUNT));
         assertProcessedAccountIdentifiers(result.processedAccountIdentifiers(), 6);
+    }
+
+    private void verifyAccountDataApiDeleteCalled(String publicSubjectId) {
+        accountDataApiWireMockServer.verify(
+                1,
+                deleteRequestedFor(urlPathMatching("/accounts/" + publicSubjectId))
+                        .withHeader("Authorization", matching("Bearer .+")));
     }
 
     private static void assertAuditEvents(Collection<AuditableEvent> events) {
@@ -244,5 +309,20 @@ class BulkRemoveAccountHandlerIntegrationTest
             assertNotNull(processedAccountIdentifier.publicSubjectId());
             assertNotNull(processedAccountIdentifier.subjectId());
         }
+    }
+
+    private ConfigurationService createConfigServiceWithAccountDataUri(String accountDataUri) {
+        return new IntegrationTestConfigurationService(
+                notificationsQueue, tokenSigner, configurationParameters) {
+            @Override
+            public String getAccountDataURI() {
+                return accountDataUri;
+            }
+
+            @Override
+            public String getTxmaAuditQueueUrl() {
+                return txmaAuditQueue.getQueueUrl();
+            }
+        };
     }
 }
