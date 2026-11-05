@@ -14,17 +14,20 @@ Mappings:
   AcceptanceTestTags:
     dev:
       tags: >-
-        @UI and not (ReauthMultiTabLogout or @InternationalSmsSendingDisabled)
+        @UI and not (@ReauthMultiTabLogout or @InternationalSmsSendingDisabled
+        or @SelfServeAccountDeletionDisabled)
         and not (@InternationalNumbersIndefiniteLockout and @under-development)
     build:
       tags: >-
         @UI and not (@under-development or @ReauthMultiTabLogout or
-        @AcceptInternationalNumbers or @InternationalSmsSendingDisabled)
+        @AcceptInternationalNumbers or @InternationalSmsSendingDisabled
+        or @SelfServeAccountDeletionEnabled)
     staging:
       tags: >-
         @UI and not (@under-development or @AccountInterventions or @ReauthMultiTabLogout or
         @new-mfa-reset-with-ipv or @AcceptInternationalNumbers
-        or @InternationalSmsSendingDisabled or @EnvironmentWithAMCStubDeployed)
+        or @InternationalSmsSendingDisabled or @EnvironmentWithAMCStubDeployed
+        or @SelfServeAccountDeletionEnabled)
 
 Resources:
   AcceptanceTestAPICucumberFilterTags:
