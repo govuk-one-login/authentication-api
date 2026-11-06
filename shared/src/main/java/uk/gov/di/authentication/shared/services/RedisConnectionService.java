@@ -64,6 +64,20 @@ public class RedisConnectionService implements AutoCloseable {
                 () -> executeCommand(commands -> commands.setex(key, expiry, value)));
     }
 
+    public long incrementWithExpiry(final String key, final long expiry) {
+        return segmentedFunctionCall(
+                "Redis: incrementWithExpiry",
+                () ->
+                        executeCommand(
+                                commands -> {
+                                    commands.multi();
+                                    commands.incr(key);
+                                    commands.expire(key, expiry);
+                                    TransactionResult result = commands.exec();
+                                    return (Long) result.get(0);
+                                }));
+    }
+
     public Long getTimeToLive(final String key) {
         return segmentedFunctionCall(
                 "Redis: getTimeToLive", () -> executeCommand(commands -> commands.ttl(key)));
