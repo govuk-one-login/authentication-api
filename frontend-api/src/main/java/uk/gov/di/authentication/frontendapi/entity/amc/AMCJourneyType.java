@@ -31,7 +31,7 @@ public enum AMCJourneyType {
     public TransportJWTConfig getTransportJwtConfig(ConfigurationService config) {
         return switch (this) {
             case SSAD -> new TransportJWTConfig(
-                    AMCScope.ACCOUNT_DELETE, config.getAMCSfadRedirectURI());
+                    AMCScope.ACCOUNT_DELETE, config.getAMCSsadRedirectURI());
             case PASSKEY_CREATE -> new TransportJWTConfig(
                     AMCScope.PASSKEY_CREATE, config.getAMCCreatePasskeyRedirectURI());
         };

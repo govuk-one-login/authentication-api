@@ -174,7 +174,7 @@ class AMCServiceTest {
                 .thenReturn(ACCESS_TOKEN_KEY_ALIAS);
         when(configurationService.getAuthToAMCTransportJWTSigningKey())
                 .thenReturn(COMPOSITE_JWT_KEY_ALIAS);
-        when(configurationService.getAMCSfadRedirectURI()).thenReturn(REDIRECT_URI);
+        when(configurationService.getAMCSsadRedirectURI()).thenReturn(REDIRECT_URI);
         when(configurationService.getAMCClientId()).thenReturn(AMC_CLIENT_ID);
         when(configurationService.getAMCAuthorizeURI()).thenReturn(URI.create(AMC_AUTHORIZE_URI));
         when(configurationService.getAmcJwksUrl()).thenReturn(URI.create(AMC_JWKS_URL).toURL());
