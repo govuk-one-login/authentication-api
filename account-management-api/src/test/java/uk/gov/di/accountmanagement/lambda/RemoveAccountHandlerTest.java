@@ -10,7 +10,6 @@ import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -62,7 +61,6 @@ class RemoveAccountHandlerTest {
     private final StructuredAuditService structuredAuditService =
             mock(StructuredAuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final DynamoDeleteService dynamoDeleteService = mock(DynamoDeleteService.class);
     private final AccountDeletionService accountDeletionService =
             mock(AccountDeletionService.class);
 
@@ -78,7 +76,6 @@ class RemoveAccountHandlerTest {
                         sqsClient,
                         structuredAuditService,
                         configurationService,
-                        dynamoDeleteService,
                         accountDeletionService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -237,7 +234,7 @@ class RemoveAccountHandlerTest {
         var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
         var result = handler.handleRequest(event, context);
 
-        verifyNoInteractions(dynamoDeleteService);
+        verifyNoInteractions(accountDeletionService);
         verifyNoInteractions(structuredAuditService);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));
