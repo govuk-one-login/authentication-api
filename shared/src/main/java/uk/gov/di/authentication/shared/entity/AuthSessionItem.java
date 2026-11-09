@@ -23,7 +23,6 @@ public class AuthSessionItem {
     public static final String ATTRIBUTE_RESET_PASSWORD_STATE = "resetPasswordState";
     public static final String ATTRIBUTE_RESET_MFA_STATE = "resetMfaState";
     public static final String ATTRIBUTE_VERIFIED_MFA_METHOD_TYPE = "VerifiedMfaMethodType";
-    public static final String ATTRIBUTE_LOGIN_TYPE = "LoginType";
     public static final String ATTRIBUTE_INTERNAL_COMMON_SUBJECT_ID = "InternalCommonSubjectId";
     public static final String ATTRIBUTE_UPLIFT_REQUIRED = "UpliftRequired";
     public static final String ATTRIBUTE_EMAIL = "Email";
@@ -75,16 +74,8 @@ public class AuthSessionItem {
         SUCCEEDED,
     }
 
-    public enum LoginType {
-        SILENT,
-        REAUTHENTICATION,
-        PROMPTED,
-        UNKNOWN,
-    }
-
     private String sessionId;
     private MFAMethodType verifiedMfaMethodType;
-    private LoginType loginType;
     private long timeToLive;
     private AccountState isNewAccount;
     private ResetPasswordState resetPasswordState = ResetPasswordState.NONE;
@@ -146,20 +137,6 @@ public class AuthSessionItem {
 
     public AuthSessionItem withVerifiedMfaMethodType(MFAMethodType verifiedMfaMethodType) {
         this.verifiedMfaMethodType = verifiedMfaMethodType;
-        return this;
-    }
-
-    @DynamoDbAttribute(ATTRIBUTE_LOGIN_TYPE)
-    public LoginType getLoginType() {
-        return loginType;
-    }
-
-    public void setLoginType(LoginType loginType) {
-        this.loginType = loginType;
-    }
-
-    public AuthSessionItem withLoginType(LoginType loginType) {
-        this.loginType = loginType;
         return this;
     }
 
@@ -657,8 +634,6 @@ public class AuthSessionItem {
                 + sessionId
                 + "', verifiedMfaMethodType = '"
                 + verifiedMfaMethodType
-                + "', loginType = '"
-                + loginType
                 + "', timeToLive = '"
                 + timeToLive
                 + "', isNewAccount = '"

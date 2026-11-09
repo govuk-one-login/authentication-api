@@ -50,7 +50,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -361,8 +360,7 @@ class StartHandlerTest {
             verify(cloudwatchMetricsService, never())
                     .incrementCounter(
                             eq(CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue()), any());
-            verify(authSessionService).updateSession(authSession);
-            assertEquals(AuthSessionItem.LoginType.SILENT, authSession.getLoginType());
+            verify(authSessionService, never()).updateSession(any());
             assertTrue(authSession.getHasVerifiedWithPassword());
             assertTrue(authSession.getHasVerifiedWithMfa());
             assertTrue(authSession.getHasVerifiedWithPasskey());
@@ -374,8 +372,7 @@ class StartHandlerTest {
                     .incrementCounter(
                             CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue(),
                             Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
-            verify(authSessionService, times(1)).updateSession(authSession);
-            assertEquals(AuthSessionItem.LoginType.PROMPTED, authSession.getLoginType());
+            verify(authSessionService).updateSession(authSession);
             assertFalse(authSession.getHasVerifiedWithPassword());
             assertFalse(authSession.getHasVerifiedWithMfa());
             assertFalse(authSession.getHasVerifiedWithPasskey());

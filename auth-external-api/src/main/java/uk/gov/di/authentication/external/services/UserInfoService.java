@@ -185,23 +185,6 @@ public class UserInfoService {
             LOG.info("verified_mfa value: {}", authSession.getVerifiedMfaMethodType());
         }
 
-        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.VERIFIED_PASSKEY.getValue())) {
-            userInfo.setClaim(
-                    AuthUserInfoClaims.VERIFIED_PASSKEY.getValue(),
-                    authSession.getHasVerifiedWithPasskey());
-            LOG.info("verified_passkey value: {}", authSession.getHasVerifiedWithPasskey());
-        }
-
-        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LOGIN_TYPE.getValue())) {
-            var loginType = authSession.getLoginType();
-            userInfo.setClaim(
-                    AuthUserInfoClaims.LOGIN_TYPE.getValue(),
-                    loginType == null
-                            ? AuthSessionItem.LoginType.UNKNOWN.name()
-                            : loginType.name());
-            LOG.info("login_type value: {}", loginType);
-        }
-
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue())) {
             userInfo.setClaim(
                     AuthUserInfoClaims.UPLIFT_REQUIRED.getValue(), authSession.getUpliftRequired());

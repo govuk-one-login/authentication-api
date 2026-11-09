@@ -14,8 +14,6 @@ public enum AuthUserInfoClaims {
     PHONE_VERIFIED("phone_number_verified"),
     SALT("salt"),
     VERIFIED_MFA_METHOD_TYPE("verified_mfa_method_type"),
-    VERIFIED_PASSKEY("verified_passkey"),
-    LOGIN_TYPE("login_type"),
     CURRENT_CREDENTIAL_STRENGTH("current_credential_strength"),
     NEW_ACCOUNT("new_account"),
     UPLIFT_REQUIRED("uplift_required"),
