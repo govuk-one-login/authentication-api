@@ -54,9 +54,7 @@ Resources:
         - !Ref DynamoAuthSessionStoreReadAccessPolicy
         - !Ref DynamoClientRegistryReadAccessPolicy
         - !Ref DynamoUserReadAccessPolicy
-        - !Ref DynamoUserDeleteAccessPolicy
         - !Ref DynamoAccountModifiersReadAccessPolicy
-        - !Ref DynamoAccountModifiersDeleteAccessPolicy
         - !Ref DynamoAuthenticatorTableReadDeleteAccessPolicy
         - !Ref AccountModifiersTableKmsPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
