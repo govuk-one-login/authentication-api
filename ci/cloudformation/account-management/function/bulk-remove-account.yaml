@@ -92,8 +92,6 @@ Resources:
                 ]
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
-        - !Ref DynamoAccountModifiersReadAccessPolicy
-        - !Ref DynamoAuthenticatorTableReadDeleteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref ClientRegistryTableKmsPolicy
         - !Ref EmailCheckResultsTableKmsPolicy
