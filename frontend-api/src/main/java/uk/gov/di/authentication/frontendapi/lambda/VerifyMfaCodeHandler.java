@@ -75,6 +75,7 @@ import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.FAILURE_REASON;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.INVALID_NOTIFICATION_TYPE;
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.JourneyType.REAUTHENTICATION;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
@@ -251,6 +252,44 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         return userProfile == null && journeyType == REAUTHENTICATION;
     }
 
+    private static boolean sessionEmailMatchesIdentityVerificationEmail(
+            AuthSessionItem authSession) {
+        var sessionEmail = authSession.getEmailAddress();
+        var emailUsedForIdentityVerification =
+                authSession.getRecordedEmailForIdentityVerification();
+
+        if (sessionEmail == null) {
+            LOG.warn("Session email is null");
+            return false;
+        }
+
+        if (emailUsedForIdentityVerification == null) {
+            LOG.warn("Recorded email for identity verification is null");
+            return false;
+        }
+
+        var sessionEmailMatchesIdentityVerificationEmail =
+                sessionEmail.equalsIgnoreCase(emailUsedForIdentityVerification);
+
+        LOG.info(
+                "Session email matches recorded email for identity verification: {}",
+                sessionEmailMatchesIdentityVerificationEmail);
+
+        return sessionEmailMatchesIdentityVerificationEmail;
+    }
+
+    private boolean shouldRejectForIdentityVerificationMismatch(
+            VerifyMfaCodeRequest codeRequest,
+            AuthSessionItem authSession,
+            boolean isForcedMfaResetRequired) {
+        if (isForcedMfaResetRequired) {
+            LOG.info("Forced MFA reset is required, skipping identity verification email check");
+            return false;
+        }
+        return codeRequest.getJourneyType() == ACCOUNT_RECOVERY
+                && !sessionEmailMatchesIdentityVerificationEmail(authSession);
+    }
+
     private boolean checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
             JourneyType journeyType,
             UserProfile userProfile,
@@ -367,6 +406,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     ForcedMfaResetHelper.isMfaResetRequired(
                             configurationService, retrievedMfaMethods);
         }
+
+        if (shouldRejectForIdentityVerificationMismatch(
+                codeRequest, authSession, isForcedMfaResetRequired)) {
+            LOG.info("Rejecting MFA code verification due to identity verification email mismatch");
+            return generateApiGatewayProxyErrorResponse(
+                    400, ErrorResponse.SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL);
+        }
+
         final Optional<MFAMethod> finalActiveMfaMethod = activeMfaMethod;
 
         var errorResponseMaybe = mfaCodeProcessor.validateCode();
