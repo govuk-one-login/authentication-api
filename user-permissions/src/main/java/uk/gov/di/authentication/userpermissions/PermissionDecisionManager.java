@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -498,14 +499,10 @@ public class PermissionDecisionManager implements PermissionDecisions {
     @Override
     public boolean canResetMfaCode(
             AuthSessionItem authSession, JourneyType journeyType, boolean isForcedMfaReset) {
-        switch (journeyType) {
-            case ACCOUNT_RECOVERY -> {
-                return canResetMfaCodeInAccountRecoveryJourney(authSession, isForcedMfaReset);
-            }
-            default -> {
-                return true;
-            }
+        if (journeyType == ACCOUNT_RECOVERY) {
+            return canResetMfaCodeInAccountRecoveryJourney(authSession, isForcedMfaReset);
         }
+        return true;
     }
 
     private boolean canResetMfaCodeInAccountRecoveryJourney(
@@ -513,6 +510,14 @@ public class PermissionDecisionManager implements PermissionDecisions {
         if (isForcedMfaReset) {
             LOG.info("Forced MFA reset detected for account recovery journey, allowing MFA reset");
             return true;
+        }
+
+        var hasVerifiedWithPassword = authSession.getHasVerifiedWithPassword();
+
+        if (!hasVerifiedWithPassword) {
+            LOG.warn(
+                    "Cannot reset MFA code, user has not verified with password in current session");
+            return false;
         }
 
         var sessionEmail = authSession.getEmailAddress();

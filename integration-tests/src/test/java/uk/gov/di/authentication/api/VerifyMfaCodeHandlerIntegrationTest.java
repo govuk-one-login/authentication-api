@@ -498,6 +498,28 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
+    void shouldReturn400WhenAccountRecoveryRequestHasNoPasswordVerification() {
+        setUpAuthAppRequest(JourneyType.ACCOUNT_RECOVERY);
+        authSessionExtension.addHasVerifiedWithPasswordToSession(sessionId, false);
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP,
+                        code,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED));
+    }
+
+    @Test
     void
             shouldReturn400AndNotModifyMfaWhenAccountRecoverySessionEmailDoesNotMatchIdentityVerificationEmail() {
         setUpSmsRequest(JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER);
