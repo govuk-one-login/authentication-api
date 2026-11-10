@@ -495,6 +495,52 @@ public class PermissionDecisionManager implements PermissionDecisions {
         };
     }
 
+    @Override
+    public boolean canResetMfaCode(
+            AuthSessionItem authSession, JourneyType journeyType, boolean isForcedMfaReset) {
+        switch (journeyType) {
+            case ACCOUNT_RECOVERY -> {
+                return canResetMfaCodeInAccountRecoveryJourney(authSession, isForcedMfaReset);
+            }
+            default -> {
+                return true;
+            }
+        }
+    }
+
+    private boolean canResetMfaCodeInAccountRecoveryJourney(
+            AuthSessionItem authSession, boolean isForcedMfaReset) {
+        if (isForcedMfaReset) {
+            LOG.info("Forced MFA reset detected for account recovery journey, allowing MFA reset");
+            return true;
+        }
+
+        var sessionEmail = authSession.getEmailAddress();
+        var emailUsedForIdentityVerification =
+                authSession.getRecordedEmailForIdentityVerification();
+
+        if (sessionEmail == null) {
+            LOG.warn("Cannot reset MFA code, session email is null");
+            return false;
+        }
+
+        if (emailUsedForIdentityVerification == null) {
+            LOG.warn("Cannot reset MFA code, email used for identity verification is null");
+            return false;
+        }
+
+        var sessionEmailMatchesIdentityVerificationEmail =
+                sessionEmail.equalsIgnoreCase(emailUsedForIdentityVerification);
+
+        if (!sessionEmailMatchesIdentityVerificationEmail) {
+            LOG.warn(
+                    "Cannot reset MFA code, session email does not match email used for identity verification");
+            return false;
+        }
+
+        return true;
+    }
+
     private boolean canResetPasswordInVoluntaryPasswordResetJourney(
             AuthSessionItem authSession,
             boolean sessionHasResetPasswordEmailCodeVerified,

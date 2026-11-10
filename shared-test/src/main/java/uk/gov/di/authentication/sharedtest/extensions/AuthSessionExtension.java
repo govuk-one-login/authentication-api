@@ -126,6 +126,14 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
                         .withRpSectorIdentifierHost(rpSectorIdentifierHost));
     }
 
+    public void addHasVerifiedWithPasswordToSession(
+            String sessionId, boolean hasVerifiedWithPassword) {
+        updateSession(
+                getSession(sessionId)
+                        .orElseThrow()
+                        .withHasVerifiedWithPassword(hasVerifiedWithPassword));
+    }
+
     public void addHasVerifiedWithPasswordAndMfaToSession(
             String sessionId, boolean hasVerifiedWithPassword, boolean hasVerifiedWithMfa) {
         updateSession(

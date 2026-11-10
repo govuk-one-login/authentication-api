@@ -1641,6 +1641,94 @@ class PermissionDecisionManagerTest {
         }
     }
 
+    @Nested
+    class CanResetMfaCode {
+
+        static Stream<JourneyType> nonAccountRecoveryJourneyTypes() {
+            return Arrays.stream(JourneyType.values())
+                    .filter(jt -> jt != JourneyType.ACCOUNT_RECOVERY);
+        }
+
+        @ParameterizedTest
+        @MethodSource("nonAccountRecoveryJourneyTypes")
+        void shouldReturnTrueForNonAccountRecoveryJourneyRegardlessOfSessionState(
+                JourneyType journeyType) {
+            var session = new AuthSessionItem();
+
+            assertTrue(permissionDecisionManager.canResetMfaCode(session, journeyType, false));
+        }
+
+        @Test
+        void shouldReturnTrueForAccountRecoveryWhenForcedMfaResetRegardlessOfSessionState() {
+            var session = new AuthSessionItem();
+
+            assertTrue(
+                    permissionDecisionManager.canResetMfaCode(
+                            session, JourneyType.ACCOUNT_RECOVERY, true));
+        }
+
+        @Test
+        void shouldReturnTrueForAccountRecoveryWhenEmailsMatch() {
+            var session =
+                    new AuthSessionItem()
+                            .withEmailAddress(EMAIL)
+                            .withRecordedEmailForIdentityVerification(EMAIL);
+
+            assertTrue(
+                    permissionDecisionManager.canResetMfaCode(
+                            session, JourneyType.ACCOUNT_RECOVERY, false));
+        }
+
+        @Test
+        void shouldReturnTrueForAccountRecoveryWhenEmailsMatchIgnoringCase() {
+            var session =
+                    new AuthSessionItem()
+                            .withEmailAddress(EMAIL.toLowerCase())
+                            .withRecordedEmailForIdentityVerification(EMAIL.toUpperCase());
+
+            assertTrue(
+                    permissionDecisionManager.canResetMfaCode(
+                            session, JourneyType.ACCOUNT_RECOVERY, false));
+        }
+
+        @Test
+        void shouldReturnFalseForAccountRecoveryWhenSessionEmailIsNull() {
+            var session =
+                    new AuthSessionItem()
+                            .withEmailAddress(null)
+                            .withRecordedEmailForIdentityVerification(EMAIL);
+
+            assertFalse(
+                    permissionDecisionManager.canResetMfaCode(
+                            session, JourneyType.ACCOUNT_RECOVERY, false));
+        }
+
+        @Test
+        void shouldReturnFalseForAccountRecoveryWhenIdentityVerificationEmailIsNull() {
+            var session =
+                    new AuthSessionItem()
+                            .withEmailAddress(EMAIL)
+                            .withRecordedEmailForIdentityVerification(null);
+
+            assertFalse(
+                    permissionDecisionManager.canResetMfaCode(
+                            session, JourneyType.ACCOUNT_RECOVERY, false));
+        }
+
+        @Test
+        void shouldReturnFalseForAccountRecoveryWhenEmailsDoNotMatch() {
+            var session =
+                    new AuthSessionItem()
+                            .withEmailAddress(EMAIL)
+                            .withRecordedEmailForIdentityVerification(
+                                    "a.different.email@example.com");
+
+            assertFalse(
+                    permissionDecisionManager.canResetMfaCode(
+                            session, JourneyType.ACCOUNT_RECOVERY, false));
+        }
+    }
+
     private PermissionContext createUserContext(int passwordResetCount) {
         return createUserContext(passwordResetCount, EMAIL, Optional.of(PHONE_NUMBER));
     }

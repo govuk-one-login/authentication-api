@@ -124,6 +124,7 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         authSessionExtension.addClientNameToSession(this.sessionId, CLIENT_NAME);
         authSessionExtension.addRpSectorIdentifierHostToSession(
                 this.sessionId, SECTOR_IDENTIFIER_HOST);
+        authSessionExtension.addHasVerifiedWithPasswordToSession(this.sessionId, true);
         setupUser(sessionId, EMAIL_ADDRESS, false);
     }
 
@@ -519,10 +520,7 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(
-                response,
-                hasJsonBody(
-                        ErrorResponse.SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
+        assertThat(response, hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED));
 
         assertThat(
                 userStore.getPhoneNumberForUser(EMAIL_ADDRESS), equalTo(Optional.of(PHONE_NUMBER)));
@@ -555,12 +553,7 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertThat(
-                response,
-                not(
-                        hasJsonBody(
-                                ErrorResponse
-                                        .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL)));
+        assertThat(response, not(hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED)));
 
         assertThat(
                 userStore.getPhoneNumberForUser(EMAIL_ADDRESS),
@@ -588,10 +581,7 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(
-                response,
-                hasJsonBody(
-                        ErrorResponse.SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
+        assertThat(response, hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED));
         assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
         assertThat(
                 userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),

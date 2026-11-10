@@ -54,6 +54,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.time.Instant;
@@ -73,6 +74,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -154,7 +156,8 @@ class VerifyMfaCodeHandlerTest {
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
                     .withClientId(CLIENT_ID)
                     .withClientName(CLIENT_NAME)
-                    .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST);
+                    .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST)
+                    .withHasVerifiedWithPassword(true);
     private final Json objectMapper = SerializationService.getInstance();
     public VerifyMfaCodeHandler handler;
 
@@ -175,6 +178,8 @@ class VerifyMfaCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
@@ -212,6 +217,8 @@ class VerifyMfaCodeHandlerTest {
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
+        when(permissionDecisionManager.canResetMfaCode(any(), any(), anyBoolean()))
+                .thenReturn(true);
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -226,7 +233,8 @@ class VerifyMfaCodeHandlerTest {
                         mfaMethodsService,
                         userActionsManager,
                         testUserHelper,
-                        structuredAuditService);
+                        structuredAuditService,
+                        permissionDecisionManager);
     }
 
     @AfterEach
@@ -1325,105 +1333,25 @@ class VerifyMfaCodeHandlerTest {
         }
 
         @Test
-        void
-                shouldReturn400ForAccountRecoveryWhenSessionEmailDoesNotMatchIdentityVerificationEmailAndIsNotForcedMfaReset()
-                        throws Json.JsonException {
+        void shouldReturn400ForAccountRecoveryWhenMfaResetIsNotPermitted()
+                throws Json.JsonException {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(false);
-            authSession.withRecordedEmailForIdentityVerification("different-email@example.com");
+            when(permissionDecisionManager.canResetMfaCode(any(), any(), anyBoolean()))
+                    .thenReturn(false);
 
             var result =
                     makeCallWithCode(
                             new VerifyMfaCodeRequest(
-                                    MFAMethodType.SMS, CODE, ACCOUNT_RECOVERY, AUTH_APP_SECRET));
+                                    MFAMethodType.SMS, CODE, ACCOUNT_RECOVERY, UK_MOBILE_NUMBER));
 
             assertThat(result, hasStatus(400));
-            assertThat(
-                    result,
-                    hasJsonBody(
-                            ErrorResponse
-                                    .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
+            assertThat(result, hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED));
             assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
             verify(phoneNumberCodeProcessor, never())
                     .processSuccessfulCodeRequest(anyString(), anyString(), any());
             verifyNoInteractions(cloudwatchMetricsService);
-        }
-
-        @Test
-        void shouldSkipIdentityVerificationEmailCheckForAccountRecoveryWhenForcedMFAReset()
-                throws Json.JsonException {
-            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
-            when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
-            when(configurationService.isForcedMFAResetAfterMFACheckEnabled()).thenReturn(true);
-            when(mfaMethodsService.getMfaMethods(EMAIL))
-                    .thenReturn(
-                            Result.success(
-                                    List.of(
-                                            new MFAMethod(DEFAULT_SMS_METHOD)
-                                                    .withDestination(
-                                                            INTERNATIONAL_MOBILE_NUMBER))));
-            authSession.withRecordedEmailForIdentityVerification(null);
-
-            var result =
-                    makeCallWithCode(
-                            new VerifyMfaCodeRequest(
-                                    MFAMethodType.SMS,
-                                    CODE,
-                                    ACCOUNT_RECOVERY,
-                                    INTERNATIONAL_MOBILE_NUMBER));
-
-            assertThat(result, hasStatus(204));
-            assertThat(
-                    result,
-                    not(
-                            hasJsonBody(
-                                    ErrorResponse
-                                            .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL)));
-        }
-
-        @Test
-        void shouldReturn400ForAccountRecoveryWhenRecordedEmailForIdentityVerificationIsNull()
-                throws Json.JsonException {
-            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
-            when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
-            authSession.withRecordedEmailForIdentityVerification(null);
-
-            var result =
-                    makeCallWithCode(
-                            new VerifyMfaCodeRequest(
-                                    MFAMethodType.SMS, CODE, ACCOUNT_RECOVERY, UK_MOBILE_NUMBER));
-
-            assertThat(result, hasStatus(400));
-            assertThat(
-                    result,
-                    hasJsonBody(
-                            ErrorResponse
-                                    .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
-            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
-        }
-
-        @Test
-        void shouldReturn204ForAccountRecoveryWhenSessionEmailMatchesWithDifferentCase()
-                throws Json.JsonException {
-            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
-                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
-            when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
-            authSession.setIsNewAccount(AuthSessionItem.AccountState.EXISTING);
-            authSession.withRecordedEmailForIdentityVerification(EMAIL.toUpperCase());
-
-            var result =
-                    makeCallWithCode(
-                            new VerifyMfaCodeRequest(
-                                    MFAMethodType.SMS, CODE, ACCOUNT_RECOVERY, UK_MOBILE_NUMBER));
-
-            assertThat(result, hasStatus(204));
-            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-            verify(phoneNumberCodeProcessor)
-                    .processSuccessfulCodeRequest(anyString(), anyString(), eq(userProfile));
         }
 
         @ParameterizedTest
