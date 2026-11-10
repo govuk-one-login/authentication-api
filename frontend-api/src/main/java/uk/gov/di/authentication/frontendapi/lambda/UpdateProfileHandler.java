@@ -29,7 +29,6 @@ import java.time.Clock;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.audit.AuditContext.emptyAuditContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -72,13 +71,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {
         auditService.submitAuditEvent(
                 AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                auditContextWithOnlyClientSessionId(clientSessionId, txmaAuditEncoded));
-    }
-
-    @Override
-    public void onRequestValidationError(String clientSessionId, String txmaAuditEncoded) {
-        auditService.submitAuditEvent(
-                AUTH_UPDATE_PROFILE_REQUEST_ERROR,
                 auditContextWithOnlyClientSessionId(clientSessionId, txmaAuditEncoded));
     }
 
@@ -166,7 +158,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
             ErrorResponse errorResponse, AuditContext auditContext) {
-        auditService.submitAuditEvent(AUTH_UPDATE_PROFILE_REQUEST_ERROR, auditContext);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 
