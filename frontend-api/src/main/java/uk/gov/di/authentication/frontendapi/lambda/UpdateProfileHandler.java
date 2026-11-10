@@ -93,10 +93,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");
-            return generateErrorResponse(
-                    ErrorResponse.SESSION_ID_MISSING,
-                    auditContextWithOnlyClientSessionId(
-                            userContext.clientSessionId(), userContext.txmaAuditEncoded()));
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         }
 
         var auditContext = buildAuditContext(input, userContext, authSession);
@@ -124,8 +121,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         "Unexpected UpdateProfileType '{}' while processing session '{}'",
                         request.getUpdateProfileType().toString(),
                         userContext.authSessionItem().getSessionId());
-                return generateErrorResponse(
-                        ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.INVALID_UPDATE_PROFILE_TYPE);
             }
         }
 
@@ -154,11 +151,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 ipAddress,
                 auditablePhoneNumber,
                 persistentSessionId);
-    }
-
-    private APIGatewayProxyResponseEvent generateErrorResponse(
-            ErrorResponse errorResponse, AuditContext auditContext) {
-        return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 
     private AuditContext auditContextWithOnlyClientSessionId(
