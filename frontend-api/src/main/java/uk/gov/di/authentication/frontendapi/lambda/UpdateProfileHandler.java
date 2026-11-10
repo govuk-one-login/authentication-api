@@ -68,13 +68,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     @Override
-    public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {
-        auditService.submitAuditEvent(
-                AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                auditContextWithOnlyClientSessionId(clientSessionId, txmaAuditEncoded));
-    }
-
-    @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return super.handleRequest(input, context);
@@ -90,6 +83,11 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         AuthSessionItem authSession = userContext.authSessionItem();
         LogLineHelper.attachSessionIdToLogs(userContext.authSessionItem().getSessionId());
         LOG.info("UpdateProfileHandler called");
+
+        auditService.submitAuditEvent(
+                AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
+                auditContextWithOnlyClientSessionId(
+                        userContext.clientSessionId(), userContext.txmaAuditEncoded()));
 
         if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");

@@ -210,9 +210,6 @@ class UpdateProfileHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
         verifyNoInteractions(authenticationService);
-        verify(auditService)
-                .submitAuditEvent(
-                        AUTH_UPDATE_PROFILE_REQUEST_RECEIVED, auditContextWithOnlyClientSession);
     }
 
     private void usingValidSession() {
