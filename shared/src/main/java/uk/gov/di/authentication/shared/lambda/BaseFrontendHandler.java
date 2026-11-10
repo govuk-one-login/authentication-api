@@ -76,8 +76,6 @@ public abstract class BaseFrontendHandler<T>
                 () -> validateAndHandleRequest(input, context));
     }
 
-    public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {}
-
     public abstract APIGatewayProxyResponseEvent handleRequestWithUserContext(
             APIGatewayProxyRequestEvent input,
             Context context,
@@ -121,8 +119,6 @@ public abstract class BaseFrontendHandler<T>
         attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
 
         var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
-
-        onRequestReceived(clientSessionId, txmaAuditEncoded);
 
         final T request;
         try {
