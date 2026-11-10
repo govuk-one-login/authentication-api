@@ -65,7 +65,7 @@ public class InactiveAccountDeletionHandler implements RequestHandler<SQSEvent, 
         var accountDataApiService = new AccountDataApiService(configurationService);
         this.accountDeletionService =
                 new AccountDeletionService(
-                        null, null, null, configurationService, null, accountDataApiService);
+                        null, null, null, configurationService, accountDataApiService);
         this.dynamoService = new DynamoService(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
         this.configurationService = configurationService;

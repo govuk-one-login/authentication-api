@@ -38,7 +38,6 @@ public class AccountDeletionService {
     private final AwsSqsClient sqsClient;
     private final StructuredAuditService structuredAuditService;
     private final ConfigurationService configurationService;
-    private final DynamoDeleteService dynamoDeleteService;
     private final AccountDataApiService accountDataApiService;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -47,29 +46,12 @@ public class AccountDeletionService {
             AwsSqsClient sqsClient,
             StructuredAuditService structuredAuditService,
             ConfigurationService configurationService,
-            DynamoDeleteService dynamoDeleteService,
             AccountDataApiService accountDataApiService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.structuredAuditService = structuredAuditService;
         this.configurationService = configurationService;
-        this.dynamoDeleteService = dynamoDeleteService;
         this.accountDataApiService = accountDataApiService;
-    }
-
-    public AccountDeletionService(
-            AuthenticationService authenticationService,
-            AwsSqsClient sqsClient,
-            StructuredAuditService structuredAuditService,
-            ConfigurationService configurationService,
-            DynamoDeleteService dynamoDeleteService) {
-        this(
-                authenticationService,
-                sqsClient,
-                structuredAuditService,
-                configurationService,
-                dynamoDeleteService,
-                null);
     }
 
     /**
