@@ -41,7 +41,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -54,7 +53,6 @@ class AccountDeletionServiceTest {
     private final StructuredAuditService structuredAuditService =
             mock(StructuredAuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final DynamoDeleteService dynamoDeleteService = mock(DynamoDeleteService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final APIGatewayProxyRequestEvent input = mock(APIGatewayProxyRequestEvent.class);
     private final APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
@@ -110,7 +108,6 @@ class AccountDeletionServiceTest {
                         sqsClient,
                         structuredAuditService,
                         configurationService,
-                        dynamoDeleteService,
                         accountDataApiService);
 
         @Test
@@ -133,7 +130,6 @@ class AccountDeletionServiceTest {
 
             verify(accountDataApiService)
                     .deleteAccount(eq(TEST_PUBLIC_SUBJECT_ID), eq(TEST_ADAPI_TOKEN));
-            verify(dynamoDeleteService, never()).deleteAccount(any(), any(), any());
 
             var captor = ArgumentCaptor.forClass(String.class);
             verify(sqsClient).send(captor.capture());

@@ -299,11 +299,6 @@ class ConfigurationServiceTest {
     }
 
     @Test
-    void isAccountDeletionDataApiEnabledShouldDefaultToFalse() {
-        assertFalse(configurationService.isAccountDeletionDataApiEnabled());
-    }
-
-    @Test
     void getTicfCRILambdaNameShouldDefault() {
         assertEquals("", configurationService.getTicfCRILambdaIdentifier());
     }

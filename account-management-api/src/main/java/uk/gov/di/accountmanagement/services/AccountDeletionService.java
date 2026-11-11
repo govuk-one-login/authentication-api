@@ -38,7 +38,6 @@ public class AccountDeletionService {
     private final AwsSqsClient sqsClient;
     private final StructuredAuditService structuredAuditService;
     private final ConfigurationService configurationService;
-    private final DynamoDeleteService dynamoDeleteService;
     private final AccountDataApiService accountDataApiService;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -47,60 +46,12 @@ public class AccountDeletionService {
             AwsSqsClient sqsClient,
             StructuredAuditService structuredAuditService,
             ConfigurationService configurationService,
-            DynamoDeleteService dynamoDeleteService,
             AccountDataApiService accountDataApiService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.structuredAuditService = structuredAuditService;
         this.configurationService = configurationService;
-        this.dynamoDeleteService = dynamoDeleteService;
         this.accountDataApiService = accountDataApiService;
-    }
-
-    public AccountDeletionService(
-            AuthenticationService authenticationService,
-            AwsSqsClient sqsClient,
-            StructuredAuditService structuredAuditService,
-            ConfigurationService configurationService,
-            DynamoDeleteService dynamoDeleteService) {
-        this(
-                authenticationService,
-                sqsClient,
-                structuredAuditService,
-                configurationService,
-                dynamoDeleteService,
-                null);
-    }
-
-    /**
-     * Removes a user account directly via DynamoDB.
-     *
-     * <p>This method calculates the internal common subject identifier, deletes the user's account
-     * records from DynamoDB directly, optionally sends a deletion notification via SQS, and emits a
-     * standard audit event.
-     *
-     * @param userProfile The profile of the user whose account is being deleted.
-     * @param txmaAuditEncoded The encoded TxMA audit information.
-     * @param reason The reason for the account deletion.
-     * @param sendNotification {@code true} to send an account deletion email notification; {@code
-     *     false} otherwise.
-     */
-    public void removeAccount(
-            UserProfile userProfile,
-            String txmaAuditEncoded,
-            AccountDeletionReason reason,
-            boolean sendNotification) {
-        var internalCommonSubjectIdentifier = calculateICS(userProfile);
-
-        dynamoDeleteService.deleteAccount(
-                userProfile.getEmail(),
-                internalCommonSubjectIdentifier.getValue(),
-                userProfile.getPublicSubjectID());
-        LOG.info("User account deleted via DynamoDB directly, not via ADAPI");
-
-        if (sendNotification) sendNotifyRequest(userProfile);
-
-        emitAuditEvent(userProfile, txmaAuditEncoded, reason, internalCommonSubjectIdentifier);
     }
 
     /**

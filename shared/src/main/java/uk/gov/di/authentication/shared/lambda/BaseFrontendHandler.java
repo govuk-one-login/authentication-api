@@ -76,10 +76,6 @@ public abstract class BaseFrontendHandler<T>
                 () -> validateAndHandleRequest(input, context));
     }
 
-    public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {}
-
-    public void onRequestValidationError(String clientSessionId, String txmaAuditEncoded) {}
-
     public abstract APIGatewayProxyResponseEvent handleRequestWithUserContext(
             APIGatewayProxyRequestEvent input,
             Context context,
@@ -124,14 +120,11 @@ public abstract class BaseFrontendHandler<T>
 
         var txmaAuditEncoded = getTxmaAuditEncodedHeaderOrUnknown(input);
 
-        onRequestReceived(clientSessionId, txmaAuditEncoded);
-
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
         } catch (JsonException e) {
             LOG.warn("Request is missing parameters.");
-            onRequestValidationError(clientSessionId, txmaAuditEncoded);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 

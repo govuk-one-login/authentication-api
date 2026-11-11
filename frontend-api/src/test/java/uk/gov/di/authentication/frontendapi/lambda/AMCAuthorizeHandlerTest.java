@@ -122,7 +122,7 @@ class AMCAuthorizeHandlerTest {
                         cloudwatchMetricsService,
                         permissionDecisionManager);
         when(jwkSource.get(any(), any())).thenReturn(List.of(TEST_RSA_JWK));
-        when(configurationService.getAMCSfadRedirectURI())
+        when(configurationService.getAMCSsadRedirectURI())
                 .thenReturn("https://example.com/callback");
         when(configurationService.getAuthToAMApiAudience())
                 .thenReturn("https://example.com/AmAudience");
@@ -131,7 +131,7 @@ class AMCAuthorizeHandlerTest {
         when(configurationService.getAuthToAccountDataApiAudience())
                 .thenReturn("https://example.com/ADAPIAudience");
         when(configurationService.getEnvironment()).thenReturn(ENV);
-        when(configurationService.getAMCSfadRedirectURI())
+        when(configurationService.getAMCSsadRedirectURI())
                 .thenReturn("https://example.com/redirectUri");
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));

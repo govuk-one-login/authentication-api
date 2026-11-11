@@ -13,7 +13,6 @@ import uk.gov.di.accountmanagement.exceptions.BulkRemoveAccountException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AccountDeletionTokenService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -60,7 +59,6 @@ public class BulkRemoveAccountHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         var structuredAuditService = new StructuredAuditService(configurationService);
-        var dynamoDeleteService = new DynamoDeleteService(configurationService);
         var accountDataApiService = new AccountDataApiService(configurationService);
         var accountDeletionService =
                 new AccountDeletionService(
@@ -68,13 +66,11 @@ public class BulkRemoveAccountHandler
                         emailSqsClient,
                         structuredAuditService,
                         configurationService,
-                        dynamoDeleteService,
                         accountDataApiService);
         var accountDeletionTokenService = new AccountDeletionTokenService(configurationService);
         this.manualAccountDeletionService =
                 new ManualAccountDeletionService(
                         accountDeletionService,
-                        configurationService,
                         accountDeletionTokenService,
                         configurationService.getBulkAccountDeletionClientId());
     }
