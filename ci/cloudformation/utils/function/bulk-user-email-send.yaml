@@ -41,10 +41,10 @@ Resources:
                 notifyUrl,
               ]
             - !FindInMap [EnvironmentConfiguration, !Ref Environment, notifyUrl]
-          NOTIFY_API_KEY: !Sub
-            - "{{resolve:secretsmanager:/deploy/${env}/notify_api_key}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          NOTIFY_API_KEY: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - notifyApiKey
           TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID:
             !FindInMap [
               !If [
