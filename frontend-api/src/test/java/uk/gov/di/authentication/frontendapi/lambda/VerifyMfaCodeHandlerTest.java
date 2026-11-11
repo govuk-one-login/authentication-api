@@ -217,8 +217,7 @@ class VerifyMfaCodeHandlerTest {
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
-        when(permissionDecisionManager.canResetMfaCode(any(), any(), anyBoolean()))
-                .thenReturn(true);
+        when(permissionDecisionManager.canResetMfaCode(any(), anyBoolean())).thenReturn(true);
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -1338,8 +1337,7 @@ class VerifyMfaCodeHandlerTest {
             when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                     .thenReturn(Optional.of(phoneNumberCodeProcessor));
             when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
-            when(permissionDecisionManager.canResetMfaCode(any(), any(), anyBoolean()))
-                    .thenReturn(false);
+            when(permissionDecisionManager.canResetMfaCode(any(), anyBoolean())).thenReturn(false);
 
             var result =
                     makeCallWithCode(

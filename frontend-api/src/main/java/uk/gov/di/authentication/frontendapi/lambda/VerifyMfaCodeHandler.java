@@ -374,8 +374,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             configurationService, retrievedMfaMethods);
         }
 
-        if (!permissionDecisionManager.canResetMfaCode(
-                authSession, codeRequest.getJourneyType(), isForcedMfaResetRequired)) {
+        if (codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY
+                && !permissionDecisionManager.canResetMfaCode(
+                        authSession, isForcedMfaResetRequired)) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MFA_RESET_NOT_PERMITTED);
         }
 

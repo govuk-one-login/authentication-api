@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.entity.JourneyType.ACCOUNT_RECOVERY;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -497,16 +496,7 @@ public class PermissionDecisionManager implements PermissionDecisions {
     }
 
     @Override
-    public boolean canResetMfaCode(
-            AuthSessionItem authSession, JourneyType journeyType, boolean isForcedMfaReset) {
-        if (journeyType == ACCOUNT_RECOVERY) {
-            return canResetMfaCodeInAccountRecoveryJourney(authSession, isForcedMfaReset);
-        }
-        return true;
-    }
-
-    private boolean canResetMfaCodeInAccountRecoveryJourney(
-            AuthSessionItem authSession, boolean isForcedMfaReset) {
+    public boolean canResetMfaCode(AuthSessionItem authSession, boolean isForcedMfaReset) {
         if (isForcedMfaReset) {
             LOG.info("Forced MFA reset detected for account recovery journey, allowing MFA reset");
             return true;

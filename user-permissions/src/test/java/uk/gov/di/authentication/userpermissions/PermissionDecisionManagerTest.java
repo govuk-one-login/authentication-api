@@ -1644,20 +1644,6 @@ class PermissionDecisionManagerTest {
     @Nested
     class CanResetMfaCode {
 
-        static Stream<JourneyType> nonAccountRecoveryJourneyTypes() {
-            return Arrays.stream(JourneyType.values())
-                    .filter(jt -> jt != JourneyType.ACCOUNT_RECOVERY);
-        }
-
-        @ParameterizedTest
-        @MethodSource("nonAccountRecoveryJourneyTypes")
-        void shouldReturnTrueForNonAccountRecoveryJourneyRegardlessOfSessionState(
-                JourneyType journeyType) {
-            var session = new AuthSessionItem();
-
-            assertTrue(permissionDecisionManager.canResetMfaCode(session, journeyType, false));
-        }
-
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
         void shouldReturnTrueForAccountRecoveryWhenForcedMfaResetRegardlessOfSessionState(
@@ -1665,9 +1651,7 @@ class PermissionDecisionManagerTest {
             var session =
                     new AuthSessionItem().withHasVerifiedWithPassword(hasVerifiedWithPassword);
 
-            assertTrue(
-                    permissionDecisionManager.canResetMfaCode(
-                            session, JourneyType.ACCOUNT_RECOVERY, true));
+            assertTrue(permissionDecisionManager.canResetMfaCode(session, true));
         }
 
         @Test
@@ -1678,9 +1662,7 @@ class PermissionDecisionManagerTest {
                             .withEmailAddress(EMAIL)
                             .withRecordedEmailForIdentityVerification(EMAIL);
 
-            assertTrue(
-                    permissionDecisionManager.canResetMfaCode(
-                            session, JourneyType.ACCOUNT_RECOVERY, false));
+            assertTrue(permissionDecisionManager.canResetMfaCode(session, false));
         }
 
         @Test
@@ -1691,9 +1673,7 @@ class PermissionDecisionManagerTest {
                             .withEmailAddress(EMAIL.toLowerCase())
                             .withRecordedEmailForIdentityVerification(EMAIL.toUpperCase());
 
-            assertTrue(
-                    permissionDecisionManager.canResetMfaCode(
-                            session, JourneyType.ACCOUNT_RECOVERY, false));
+            assertTrue(permissionDecisionManager.canResetMfaCode(session, false));
         }
 
         @Test
@@ -1704,9 +1684,7 @@ class PermissionDecisionManagerTest {
                             .withEmailAddress(EMAIL)
                             .withRecordedEmailForIdentityVerification(EMAIL);
 
-            assertFalse(
-                    permissionDecisionManager.canResetMfaCode(
-                            session, JourneyType.ACCOUNT_RECOVERY, false));
+            assertFalse(permissionDecisionManager.canResetMfaCode(session, false));
         }
 
         @Test
@@ -1717,9 +1695,7 @@ class PermissionDecisionManagerTest {
                             .withEmailAddress(null)
                             .withRecordedEmailForIdentityVerification(EMAIL);
 
-            assertFalse(
-                    permissionDecisionManager.canResetMfaCode(
-                            session, JourneyType.ACCOUNT_RECOVERY, false));
+            assertFalse(permissionDecisionManager.canResetMfaCode(session, false));
         }
 
         @Test
@@ -1730,9 +1706,7 @@ class PermissionDecisionManagerTest {
                             .withEmailAddress(EMAIL)
                             .withRecordedEmailForIdentityVerification(null);
 
-            assertFalse(
-                    permissionDecisionManager.canResetMfaCode(
-                            session, JourneyType.ACCOUNT_RECOVERY, false));
+            assertFalse(permissionDecisionManager.canResetMfaCode(session, false));
         }
 
         @Test
@@ -1744,9 +1718,7 @@ class PermissionDecisionManagerTest {
                             .withRecordedEmailForIdentityVerification(
                                     "a.different.email@example.com");
 
-            assertFalse(
-                    permissionDecisionManager.canResetMfaCode(
-                            session, JourneyType.ACCOUNT_RECOVERY, false));
+            assertFalse(permissionDecisionManager.canResetMfaCode(session, false));
         }
     }
 
