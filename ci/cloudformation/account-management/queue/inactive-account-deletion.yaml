@@ -65,7 +65,7 @@ Resources:
       FunctionName: !Ref InactiveAccountDeletionQueueProcessorFunction
       BatchSize: 10
       ScalingConfig:
-        MaximumConcurrency: 15
+        MaximumConcurrency: 3
       FunctionResponseTypes:
         - ReportBatchItemFailures
 
@@ -111,7 +111,7 @@ Resources:
       FunctionName: !Ref InactiveAccountDeletionQueueProcessorFunction
       BatchSize: 10
       ScalingConfig:
-        MaximumConcurrency: 15
+        MaximumConcurrency: 3
       FunctionResponseTypes:
         - ReportBatchItemFailures
 
