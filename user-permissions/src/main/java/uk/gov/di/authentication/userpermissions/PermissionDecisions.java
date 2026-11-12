@@ -158,4 +158,14 @@ public interface PermissionDecisions {
             AuthSessionItem authSession,
             PasswordResetType passwordResetType,
             boolean isPartiallyCreatedAccount);
+
+    /**
+     * Checks if the user can reset their MFA method
+     *
+     * @param authSession The user's current session
+     * @param isForcedMfaReset Whether the user is being forced to reset their MFA method (e.g. due
+     *     to having an international phone number)
+     * @return A result containing either a Decision or a Decision Error
+     */
+    boolean canResetMfaCode(AuthSessionItem authSession, boolean isForcedMfaReset);
 }

@@ -1641,6 +1641,87 @@ class PermissionDecisionManagerTest {
         }
     }
 
+    @Nested
+    class CanResetMfaCode {
+
+        @ParameterizedTest
+        @ValueSource(booleans = {true, false})
+        void shouldReturnTrueForAccountRecoveryWhenForcedMfaResetRegardlessOfSessionState(
+                boolean hasVerifiedWithPassword) {
+            var session =
+                    new AuthSessionItem().withHasVerifiedWithPassword(hasVerifiedWithPassword);
+
+            assertTrue(permissionDecisionManager.canResetMfaCode(session, true));
+        }
+
+        @Test
+        void shouldReturnTrueForAccountRecoveryWhenPasswordVerifiedAndEmailsMatch() {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(true)
+                            .withEmailAddress(EMAIL)
+                            .withRecordedEmailForIdentityVerification(EMAIL);
+
+            assertTrue(permissionDecisionManager.canResetMfaCode(session, false));
+        }
+
+        @Test
+        void shouldReturnTrueForAccountRecoveryWhenEmailsMatchIgnoringCase() {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(true)
+                            .withEmailAddress(EMAIL.toLowerCase())
+                            .withRecordedEmailForIdentityVerification(EMAIL.toUpperCase());
+
+            assertTrue(permissionDecisionManager.canResetMfaCode(session, false));
+        }
+
+        @Test
+        void shouldReturnFalseForAccountRecoveryWhenNotVerifiedWithPassword() {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(false)
+                            .withEmailAddress(EMAIL)
+                            .withRecordedEmailForIdentityVerification(EMAIL);
+
+            assertFalse(permissionDecisionManager.canResetMfaCode(session, false));
+        }
+
+        @Test
+        void shouldReturnFalseForAccountRecoveryWhenSessionEmailIsNull() {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(true)
+                            .withEmailAddress(null)
+                            .withRecordedEmailForIdentityVerification(EMAIL);
+
+            assertFalse(permissionDecisionManager.canResetMfaCode(session, false));
+        }
+
+        @Test
+        void shouldReturnFalseForAccountRecoveryWhenIdentityVerificationEmailIsNull() {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(true)
+                            .withEmailAddress(EMAIL)
+                            .withRecordedEmailForIdentityVerification(null);
+
+            assertFalse(permissionDecisionManager.canResetMfaCode(session, false));
+        }
+
+        @Test
+        void shouldReturnFalseForAccountRecoveryWhenEmailsDoNotMatch() {
+            var session =
+                    new AuthSessionItem()
+                            .withHasVerifiedWithPassword(true)
+                            .withEmailAddress(EMAIL)
+                            .withRecordedEmailForIdentityVerification(
+                                    "a.different.email@example.com");
+
+            assertFalse(permissionDecisionManager.canResetMfaCode(session, false));
+        }
+    }
+
     private PermissionContext createUserContext(int passwordResetCount) {
         return createUserContext(passwordResetCount, EMAIL, Optional.of(PHONE_NUMBER));
     }

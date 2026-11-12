@@ -124,6 +124,7 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
         authSessionExtension.addClientNameToSession(this.sessionId, CLIENT_NAME);
         authSessionExtension.addRpSectorIdentifierHostToSession(
                 this.sessionId, SECTOR_IDENTIFIER_HOST);
+        authSessionExtension.addHasVerifiedWithPasswordToSession(this.sessionId, true);
         setupUser(sessionId, EMAIL_ADDRESS, false);
     }
 
@@ -497,6 +498,28 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
+    void shouldReturn400WhenAccountRecoveryRequestHasNoPasswordVerification() {
+        setUpAuthAppRequest(JourneyType.ACCOUNT_RECOVERY);
+        authSessionExtension.addHasVerifiedWithPasswordToSession(sessionId, false);
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP,
+                        code,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        ALTERNATIVE_AUTH_APP_SECRET_BASE_32);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED));
+    }
+
+    @Test
     void
             shouldReturn400AndNotModifyMfaWhenAccountRecoverySessionEmailDoesNotMatchIdentityVerificationEmail() {
         setUpSmsRequest(JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER);
@@ -519,10 +542,7 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(
-                response,
-                hasJsonBody(
-                        ErrorResponse.SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
+        assertThat(response, hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED));
 
         assertThat(
                 userStore.getPhoneNumberForUser(EMAIL_ADDRESS), equalTo(Optional.of(PHONE_NUMBER)));
@@ -555,12 +575,7 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertThat(
-                response,
-                not(
-                        hasJsonBody(
-                                ErrorResponse
-                                        .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL)));
+        assertThat(response, not(hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED)));
 
         assertThat(
                 userStore.getPhoneNumberForUser(EMAIL_ADDRESS),
@@ -588,10 +603,7 @@ class VerifyMfaCodeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(
-                response,
-                hasJsonBody(
-                        ErrorResponse.SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL));
+        assertThat(response, hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED));
         assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
         assertThat(
                 userStore.getMfaMethod(EMAIL_ADDRESS).get(0).getCredentialValue(),
