@@ -7,10 +7,15 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.audit.AuditContext;
+import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+
+import java.time.Clock;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -22,17 +27,22 @@ public class AccountDeleteProxyHandler
 
     private static final Logger LOG = LogManager.getLogger(AccountDeleteProxyHandler.class);
     private final AccountDataApiService accountDataApiService;
+    private final StructuredAuditService structuredAuditService;
 
     public AccountDeleteProxyHandler() {
         this(ConfigurationService.getInstance());
     }
 
     public AccountDeleteProxyHandler(ConfigurationService configurationService) {
-        this(new AccountDataApiService(configurationService));
+        this.accountDataApiService = new AccountDataApiService(configurationService);
+        this.structuredAuditService = new StructuredAuditService(configurationService);
     }
 
-    public AccountDeleteProxyHandler(AccountDataApiService accountDataApiService) {
+    public AccountDeleteProxyHandler(
+            AccountDataApiService accountDataApiService,
+            StructuredAuditService structuredAuditService) {
         this.accountDataApiService = accountDataApiService;
+        this.structuredAuditService = structuredAuditService;
     }
 
     @Override
@@ -61,10 +71,21 @@ public class AccountDeleteProxyHandler
 
         try {
             var response = accountDataApiService.deleteAccount(publicSubjectId, token);
+            if (response.statusCode() == 204) {
+                reportAccountDeleted();
+            }
+
             return generateApiGatewayProxyResponse(response.statusCode(), response.body());
         } catch (UnsuccessfulAccountDataApiResponseException e) {
             LOG.warn("Attempted deleting account but failed due to '{}'", e.getMessage());
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private void reportAccountDeleted() {
+        var auditEvent =
+                AuthDeleteAccount.create(
+                        AuditContext.emptyAuditContext(), "", "", "", Clock.systemUTC());
+        structuredAuditService.submitAuditEvent(auditEvent);
     }
 }

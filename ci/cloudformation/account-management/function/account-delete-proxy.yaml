@@ -29,10 +29,13 @@ Resources:
                   ],
                   accountDataApiId,
                 ]
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
         LogGroup: !Ref AccountDeleteProxyFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref AuditEventsSnsPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:

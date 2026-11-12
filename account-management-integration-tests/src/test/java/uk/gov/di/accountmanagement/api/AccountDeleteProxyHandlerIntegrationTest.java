@@ -15,6 +15,7 @@ import uk.org.webcompere.systemstubs.jupiter.SystemStub;
 import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -24,6 +25,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -53,7 +56,9 @@ class AccountDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         environment.set(
                 "ACCOUNT_DATA_API_URI", "http://localhost:" + accountDataApiWireMockServer.port());
 
-        handler = new AccountDeleteProxyHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new AccountDeleteProxyHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+
+        txmaAuditQueue.clear();
     }
 
     @AfterEach
@@ -71,6 +76,7 @@ class AccountDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
 
         assertThat(response, hasStatus(204));
         verifyAccountDataApiDeleteCalledOnce();
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of("AUTH_DELETE_ACCOUNT"));
     }
 
     @Test
@@ -89,6 +95,7 @@ class AccountDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(response, hasStatus(404));
         assertThat(response.getBody(), equalTo(adapiResponse));
         verifyAccountDataApiDeleteCalledOnce();
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     private void stubAccountDataApiDelete(int statusCode, String body) {

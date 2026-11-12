@@ -8,15 +8,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 
 import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,6 +34,8 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class AccountDeleteProxyHandlerTest {
     private final Context context = mock(Context.class);
     private final AccountDataApiService accountDataApiService = mock(AccountDataApiService.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
 
     private AccountDeleteProxyHandler handler;
 
@@ -39,7 +44,7 @@ class AccountDeleteProxyHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new AccountDeleteProxyHandler(accountDataApiService);
+        handler = new AccountDeleteProxyHandler(accountDataApiService, structuredAuditService);
     }
 
     @Nested
@@ -65,6 +70,25 @@ class AccountDeleteProxyHandlerTest {
             assertThat(result, hasStatus(statusCode));
             assertThat(result, hasBody(body));
             verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+        }
+
+        @ParameterizedTest
+        @MethodSource("accountDataApiResponses")
+        void shouldEmitAccountDeleteAuditEventWhenResponseIs204(int statusCode, String body)
+                throws UnsuccessfulAccountDataApiResponseException {
+            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, statusCode, body);
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(statusCode));
+            verify(structuredAuditService)
+                    .submitAuditEvent(
+                            argThat(
+                                    event ->
+                                            Objects.equals(
+                                                    event.eventName(), "AUTH_DELETE_ACCOUNT")));
         }
 
         @Test
