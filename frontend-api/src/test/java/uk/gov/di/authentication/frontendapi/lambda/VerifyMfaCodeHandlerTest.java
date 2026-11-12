@@ -1375,12 +1375,7 @@ class VerifyMfaCodeHandlerTest {
                             new VerifyMfaCodeRequest(
                                     MFAMethodType.AUTH_APP, CODE, journeyType, AUTH_APP_SECRET));
 
-            assertThat(
-                    result,
-                    not(
-                            hasJsonBody(
-                                    ErrorResponse
-                                            .SESSION_EMAIL_DOES_NOT_MATCH_IDENTITY_VERIFICATION_EMAIL)));
+            assertThat(result, not(hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED)));
         }
     }
 
