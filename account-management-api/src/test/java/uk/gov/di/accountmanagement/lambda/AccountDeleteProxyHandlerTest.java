@@ -134,6 +134,40 @@ class AccountDeleteProxyHandlerTest {
         }
 
         @Test
+        void shouldStillReturn204ButNotEmitAuditEventWhenNoUserProfileFound()
+                throws UnsuccessfulAccountDataApiResponseException {
+            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.empty());
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(204));
+            verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(structuredAuditService, never())
+                    .submitAuditEvent(any(StructuredAuditEvent.class));
+        }
+
+        @Test
+        void shouldStillReturn204ButNotEmitAuditEventWhenAuditContextCannotBeBuilt()
+                throws UnsuccessfulAccountDataApiResponseException {
+            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
+            // An invalid internal sector URI causes audit context construction to fail
+            when(configurationService.getInternalSectorUri()).thenReturn("not-a-valid-uri");
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(204));
+            verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(structuredAuditService, never())
+                    .submitAuditEvent(any(StructuredAuditEvent.class));
+        }
+
+        @Test
         void shouldForwardRequestWithoutPublicSubjectId()
                 throws UnsuccessfulAccountDataApiResponseException {
             var accountDataApiStatus = 400;
