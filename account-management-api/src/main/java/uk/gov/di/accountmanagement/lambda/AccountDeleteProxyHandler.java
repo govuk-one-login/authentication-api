@@ -117,11 +117,24 @@ public class AccountDeleteProxyHandler
             Optional<UserProfile> maybeUserProfile,
             AccountDeleteProxyRequest request,
             APIGatewayProxyRequestEvent input) {
-        var userProfile = maybeUserProfile.get(); // will fix in subsequent commit
+        if (maybeUserProfile.isEmpty()) {
+            LOG.warn(
+                    "No user profile found for public subject; skipping AUTH_DELETE_ACCOUNT audit event");
+            return;
+        }
+        var userProfile = maybeUserProfile.get();
+
         var auditContextResult =
                 accountManagementAuditContext(
                         configurationService, dynamoService, input, userProfile);
-        var auditContext = auditContextResult.getSuccess(); // will fix in subsequent commit
+        if (auditContextResult.isFailure()) {
+            LOG.warn(
+                    "Could not build audit context ({}); skipping AUTH_DELETE_ACCOUNT audit event",
+                    auditContextResult.getFailure());
+            return;
+        }
+        var auditContext = auditContextResult.getSuccess();
+
         var auditEvent =
                 AuthDeleteAccount.create(
                         auditContext.withPhoneNumber(userProfile.getPhoneNumber()),
