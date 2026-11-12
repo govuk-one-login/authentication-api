@@ -7,16 +7,19 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.time.Clock;
+import java.util.Optional;
 
+import static uk.gov.di.accountmanagement.helpers.AuditHelper.accountManagementAuditContext;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -28,21 +31,29 @@ public class AccountDeleteProxyHandler
     private static final Logger LOG = LogManager.getLogger(AccountDeleteProxyHandler.class);
     private final AccountDataApiService accountDataApiService;
     private final StructuredAuditService structuredAuditService;
+    private final DynamoService dynamoService;
+    private final ConfigurationService configurationService;
 
     public AccountDeleteProxyHandler() {
         this(ConfigurationService.getInstance());
     }
 
     public AccountDeleteProxyHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.accountDataApiService = new AccountDataApiService(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     public AccountDeleteProxyHandler(
+            ConfigurationService configurationService,
             AccountDataApiService accountDataApiService,
-            StructuredAuditService structuredAuditService) {
+            StructuredAuditService structuredAuditService,
+            DynamoService dynamoService) {
+        this.configurationService = configurationService;
         this.accountDataApiService = accountDataApiService;
         this.structuredAuditService = structuredAuditService;
+        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -59,9 +70,14 @@ public class AccountDeleteProxyHandler
         attachTraceId();
         LOG.info("AccountDeleteProxyHandler called");
 
+        var maybeUserProfile = Optional.<UserProfile>empty();
+
         var publicSubjectId = input.getPathParameters().getOrDefault("publicSubjectId", "");
         if (publicSubjectId.isEmpty()) {
             LOG.warn("No publicSubjectId in path parameters, request will likely fail");
+        } else {
+            maybeUserProfile =
+                    dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
         }
 
         var token = input.getHeaders().getOrDefault("X-ADAPI-AccessToken", "");
@@ -72,7 +88,7 @@ public class AccountDeleteProxyHandler
         try {
             var response = accountDataApiService.deleteAccount(publicSubjectId, token);
             if (response.statusCode() == 204) {
-                reportAccountDeleted();
+                reportAccountDeleted(publicSubjectId, maybeUserProfile, input);
             }
 
             return generateApiGatewayProxyResponse(response.statusCode(), response.body());
@@ -82,10 +98,22 @@ public class AccountDeleteProxyHandler
         }
     }
 
-    private void reportAccountDeleted() {
+    private void reportAccountDeleted(
+            String publicSubject,
+            Optional<UserProfile> maybeUserProfile,
+            APIGatewayProxyRequestEvent input) {
+        var userProfile = maybeUserProfile.get(); // will fix in subsequent commit
+        var auditContextResult =
+                accountManagementAuditContext(
+                        configurationService, dynamoService, input, userProfile);
+        var auditContext = auditContextResult.getSuccess(); // will fix in subsequent commit
         var auditEvent =
                 AuthDeleteAccount.create(
-                        AuditContext.emptyAuditContext(), "", "", "", Clock.systemUTC());
+                        auditContext.withPhoneNumber(userProfile.getPhoneNumber()),
+                        publicSubject,
+                        userProfile.getLegacySubjectID(),
+                        "",
+                        Clock.systemUTC());
         structuredAuditService.submitAuditEvent(auditEvent);
     }
 }
