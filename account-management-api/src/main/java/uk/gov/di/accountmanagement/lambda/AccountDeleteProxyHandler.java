@@ -102,7 +102,7 @@ public class AccountDeleteProxyHandler
         try {
             var response = accountDataApiService.deleteAccount(publicSubjectId, token);
             if (response.statusCode() == 204) {
-                reportAccountDeleted(publicSubjectId, maybeUserProfile, input);
+                reportAccountDeleted(publicSubjectId, maybeUserProfile, request, input);
             }
 
             return generateApiGatewayProxyResponse(response.statusCode(), response.body());
@@ -115,6 +115,7 @@ public class AccountDeleteProxyHandler
     private void reportAccountDeleted(
             String publicSubject,
             Optional<UserProfile> maybeUserProfile,
+            AccountDeleteProxyRequest request,
             APIGatewayProxyRequestEvent input) {
         var userProfile = maybeUserProfile.get(); // will fix in subsequent commit
         var auditContextResult =
@@ -126,7 +127,7 @@ public class AccountDeleteProxyHandler
                         auditContext.withPhoneNumber(userProfile.getPhoneNumber()),
                         publicSubject,
                         userProfile.getLegacySubjectID(),
-                        "",
+                        request.reason().name(),
                         Clock.systemUTC());
         structuredAuditService.submitAuditEvent(auditEvent);
     }
