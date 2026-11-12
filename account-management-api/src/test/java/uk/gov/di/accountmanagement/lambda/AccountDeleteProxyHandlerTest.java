@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
@@ -173,6 +174,27 @@ class AccountDeleteProxyHandlerTest {
             assertThat(result, hasStatus(500));
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
             verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+        }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    "not-json",
+                    "{\"reason\":\"USER_INITIATED\"}",
+                    "{\"clientId\":\"amc\"}",
+                    "{}"
+                })
+        void shouldReturn400WhenRequestBodyIsInvalidOrMissingRequiredFields(String body)
+                throws UnsuccessfulAccountDataApiResponseException {
+            var request = accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN).withBody(body);
+
+            var result = handler.handleRequest(request, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            verify(accountDataApiService, never()).deleteAccount(any(), any());
+            verify(structuredAuditService, never())
+                    .submitAuditEvent(any(StructuredAuditEvent.class));
         }
     }
 
