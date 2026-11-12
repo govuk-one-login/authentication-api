@@ -153,7 +153,7 @@ class AccountDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         var expectedExtensions =
                 """
                 {
-                  "account_deletion_reason": "",
+                  "account_deletion_reason": "USER_INITIATED",
                   "phone_number_country_code": "44"
                 }
                 """;
