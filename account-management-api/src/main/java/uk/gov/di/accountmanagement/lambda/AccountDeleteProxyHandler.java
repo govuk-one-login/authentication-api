@@ -7,14 +7,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.accountmanagement.entity.AccountDeleteProxyRequest;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.time.Clock;
 import java.util.Optional;
@@ -33,6 +37,7 @@ public class AccountDeleteProxyHandler
     private final StructuredAuditService structuredAuditService;
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
+    private final Json objectMapper = SerializationService.getInstance();
 
     public AccountDeleteProxyHandler() {
         this(ConfigurationService.getInstance());
@@ -69,6 +74,15 @@ public class AccountDeleteProxyHandler
             APIGatewayProxyRequestEvent input, Context context) {
         attachTraceId();
         LOG.info("AccountDeleteProxyHandler called");
+
+        AccountDeleteProxyRequest request;
+        try {
+            request =
+                    objectMapper.readValue(input.getBody(), AccountDeleteProxyRequest.class, true);
+        } catch (JsonException e) {
+            LOG.warn("Could not parse account delete proxy request body");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
+        }
 
         var maybeUserProfile = Optional.<UserProfile>empty();
 
