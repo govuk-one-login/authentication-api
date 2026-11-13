@@ -2,26 +2,42 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
+import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
+import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.net.http.HttpResponse;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.IP_ADDRESS;
 import static uk.gov.di.accountmanagement.helpers.CommonTestVariables.VALID_HEADERS;
-import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.IP_ADDRESS;
+import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.PUBLIC_SUBJECT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -31,6 +47,21 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class AccountDeleteProxyHandlerTest {
     private final Context context = mock(Context.class);
     private final AccountDataApiService accountDataApiService = mock(AccountDataApiService.class);
+    private final StructuredAuditService structuredAuditService =
+            mock(StructuredAuditService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+
+    private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
+    private static final String TEST_SUBJECT = new Subject().getValue();
+    private static final String TEST_LEGACY_SUBJECT = new Subject().getValue();
+
+    private static final UserProfile userProfile =
+            new UserProfile()
+                    .withEmail(EMAIL)
+                    .withPublicSubjectID(PUBLIC_SUBJECT_ID)
+                    .withSubjectID(TEST_SUBJECT)
+                    .withLegacySubjectID(TEST_LEGACY_SUBJECT);
 
     private AccountDeleteProxyHandler handler;
 
@@ -39,7 +70,16 @@ class AccountDeleteProxyHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new AccountDeleteProxyHandler(accountDataApiService);
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(TEST_SALT);
+        handler =
+                new AccountDeleteProxyHandler(
+                        configurationService,
+                        accountDataApiService,
+                        structuredAuditService,
+                        dynamoService);
     }
 
     @Nested
@@ -65,6 +105,66 @@ class AccountDeleteProxyHandlerTest {
             assertThat(result, hasStatus(statusCode));
             assertThat(result, hasBody(body));
             verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+        }
+
+        @ParameterizedTest
+        @MethodSource("accountDataApiResponses")
+        void shouldEmitAccountDeleteAuditEventWhenResponseIs204(int statusCode, String body)
+                throws UnsuccessfulAccountDataApiResponseException {
+            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, statusCode, body);
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(statusCode));
+            if (statusCode == 204) {
+                var auditEventCaptor = ArgumentCaptor.forClass(AuthDeleteAccount.class);
+                verify(structuredAuditService).submitAuditEvent(auditEventCaptor.capture());
+
+                var auditEvent = auditEventCaptor.getValue();
+                assertThat(auditEvent.eventName(), equalTo("AUTH_DELETE_ACCOUNT"));
+                assertThat(auditEvent.user().email(), equalTo(EMAIL));
+                assertThat(auditEvent.user().publicSubjectId(), equalTo(PUBLIC_SUBJECT_ID));
+                assertThat(auditEvent.user().legacySubjectId(), equalTo(TEST_LEGACY_SUBJECT));
+            } else {
+                verify(structuredAuditService, never())
+                        .submitAuditEvent(any(StructuredAuditEvent.class));
+            }
+        }
+
+        @Test
+        void shouldStillReturn204ButNotEmitAuditEventWhenNoUserProfileFound()
+                throws UnsuccessfulAccountDataApiResponseException {
+            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.empty());
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(204));
+            verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(structuredAuditService, never())
+                    .submitAuditEvent(any(StructuredAuditEvent.class));
+        }
+
+        @Test
+        void shouldStillReturn204ButNotEmitAuditEventWhenAuditContextCannotBeBuilt()
+                throws UnsuccessfulAccountDataApiResponseException {
+            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
+            // An invalid internal sector URI causes audit context construction to fail
+            when(configurationService.getInternalSectorUri()).thenReturn("not-a-valid-uri");
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(204));
+            verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(structuredAuditService, never())
+                    .submitAuditEvent(any(StructuredAuditEvent.class));
         }
 
         @Test
@@ -109,6 +209,27 @@ class AccountDeleteProxyHandlerTest {
             assertThat(result, hasJsonBody(ErrorResponse.INTERNAL_SERVER_ERROR));
             verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
         }
+
+        @ParameterizedTest
+        @ValueSource(
+                strings = {
+                    "not-json",
+                    "{\"reason\":\"USER_INITIATED\"}",
+                    "{\"clientId\":\"amc\"}",
+                    "{}"
+                })
+        void shouldReturn400WhenRequestBodyIsInvalidOrMissingRequiredFields(String body)
+                throws UnsuccessfulAccountDataApiResponseException {
+            var request = accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN).withBody(body);
+
+            var result = handler.handleRequest(request, context);
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+            verify(accountDataApiService, never()).deleteAccount(any(), any());
+            verify(structuredAuditService, never())
+                    .submitAuditEvent(any(StructuredAuditEvent.class));
+        }
     }
 
     private void mockAccountDataApiResponse(
@@ -133,10 +254,13 @@ class AccountDeleteProxyHandlerTest {
             pathParameters.put("publicSubjectId", publicSubjectId);
         }
 
+        var requestContext = contextWithSourceIp(IP_ADDRESS);
+        requestContext.setAuthorizer(Map.of("ClientId", "test-client-id"));
+
         return new APIGatewayProxyRequestEvent()
                 .withPathParameters(pathParameters)
                 .withHeaders(headers)
                 .withBody("{\"clientId\":\"amc\",\"reason\":\"USER_INITIATED\"}")
-                .withRequestContext(contextWithSourceIp(IP_ADDRESS));
+                .withRequestContext(requestContext);
     }
 }
