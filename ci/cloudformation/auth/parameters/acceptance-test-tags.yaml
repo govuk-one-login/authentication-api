@@ -25,7 +25,7 @@ Mappings:
     staging:
       tags: >-
         @UI and not (@under-development or @AccountInterventions or @ReauthMultiTabLogout or
-        @new-mfa-reset-with-ipv or @AcceptInternationalNumbers
+        @EnvironmentWithIpvStubDeployed or @AcceptInternationalNumbers
         or @InternationalSmsSendingDisabled or @EnvironmentWithAMCStubDeployed
         or @SelfServeAccountDeletionEnabled)
 
