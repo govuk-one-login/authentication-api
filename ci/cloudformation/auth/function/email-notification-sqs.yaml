@@ -81,10 +81,10 @@ Resources:
                   dataStoreAccountId,
                 ]
           GOV_UK_ACCOUNTS_URL: "https://www.gov.uk/account"
-          NOTIFY_API_KEY: !Sub
-            - "{{resolve:secretsmanager:/deploy/${env}/notify_api_key}}"
-            - env:
-                !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+          NOTIFY_API_KEY: !FindInMap
+            - EnvironmentConfiguration
+            - !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
+            - notifyApiKey
           NOTIFY_TEST_DESTINATIONS: !Sub
             - "{{resolve:secretsmanager:/deploy/${env}/notify_test_destinations}}"
             - env:

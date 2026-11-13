@@ -10,6 +10,7 @@ Metadata:
         - W1028
         - W8003
         - E1011
+        - E1051
         - W2531
         - E2531
 
@@ -268,6 +269,7 @@ Mappings:
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev1.dev.account.gov.uk
       passkeyPromptSuppressionInMinutes: 5
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev1/notify_api_key::::19341490-ca86-4d60-8f37-31076882c6bb}}"
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -328,6 +330,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev2.dev.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 5
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
@@ -393,6 +396,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev3.dev.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 5
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
@@ -463,6 +467,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: dev.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 5
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
@@ -538,6 +543,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "false"
       relyingPartyId: build.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/build/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 10080
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
@@ -613,6 +619,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: staging.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/staging/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 5
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
@@ -688,6 +695,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "false"
       relyingPartyId: integration.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/integration/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 10080
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
@@ -763,6 +771,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "false"
       relyingPartyId: account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/production/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 10080
   LambdaConfiguration:
     account-recovery:
