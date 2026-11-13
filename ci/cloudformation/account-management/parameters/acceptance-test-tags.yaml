@@ -23,7 +23,7 @@ Mappings:
     staging:
       tags: >-
         @AccountManagementAPI and not (@under-development
-        or @AcceptInternationalNumbers or @new-mfa-reset-with-ipv)
+        or @AcceptInternationalNumbers or @EnvironmentWithIpvStubDeployed)
 
 Resources:
   AcceptanceTestAMCucumberFilterTags:
