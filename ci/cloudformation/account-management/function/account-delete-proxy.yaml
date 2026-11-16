@@ -29,10 +29,30 @@ Resources:
                   ],
                   accountDataApiId,
                 ]
+          DYNAMO_ARN_PREFIX: !Sub
+            - "arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/"
+            - DataStoreAccountId:
+                !FindInMap [
+                  EnvironmentConfiguration,
+                  !Ref Environment,
+                  dataStoreAccountId,
+                ]
+          INTERNAl_SECTOR_URI: !If
+            - IsNotProduction
+            - !If
+              - UseSubEnvironment
+              - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
+              - !Sub "https://identity.${Environment}.account.gov.uk"
+            - "https://identity.account.gov.uk"
+          TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
         LogGroup: !Ref AccountDeleteProxyFunctionLogGroup
       Policies:
         - !Ref LambdaBasicExecutionPolicy
+        - !Ref DynamoUserReadAccessPolicy
+        - !Ref UserProfileTableKmsPolicy
+        - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
+        - !Ref AuditEventsSnsPolicy
       SnapStart:
         ApplyOn: PublishedVersions
       VpcConfig:
