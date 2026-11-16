@@ -161,6 +161,7 @@ class AccountDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThatJson(event).node("user").isEqualTo(expectedUser);
         assertThatJson(event).node("restricted").isEqualTo(expectedRestricted);
         assertThatJson(event).node("extensions").isEqualTo(expectedExtensions);
+        assertThatJson(event).node("client_id").isEqualTo("amc");
     }
 
     @Test

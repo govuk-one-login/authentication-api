@@ -41,12 +41,29 @@ public class AuditHelper {
             APIGatewayProxyRequestEvent input,
             UserProfile userProfile) {
         try {
+            var clientId =
+                    input.getRequestContext()
+                            .getAuthorizer()
+                            .getOrDefault(ATTRIBUTE_CLIENT_ID, AuditService.UNKNOWN)
+                            .toString();
+            return accountManagementAuditContext(
+                    configurationService, authenticationService, input, userProfile, clientId);
+        } catch (Exception e) {
+            LOG.error(ERROR_BUILDING_AUDIT_CONTEXT, e);
+            return Result.failure(UNEXPECTED_ACCT_MGMT_ERROR);
+        }
+    }
+
+    public static Result<ErrorResponse, AuditContext> accountManagementAuditContext(
+            ConfigurationService configurationService,
+            AuthenticationService authenticationService,
+            APIGatewayProxyRequestEvent input,
+            UserProfile userProfile,
+            String clientId) {
+        try {
             return Result.success(
                     new AuditContext(
-                            input.getRequestContext()
-                                    .getAuthorizer()
-                                    .getOrDefault(ATTRIBUTE_CLIENT_ID, AuditService.UNKNOWN)
-                                    .toString(),
+                            clientId,
                             ClientSessionIdHelper.extractSessionIdFromHeaders(input.getHeaders()),
                             RequestHeaderHelper.getHeaderValueOrElse(
                                     input.getHeaders(), SESSION_ID_HEADER, ""),

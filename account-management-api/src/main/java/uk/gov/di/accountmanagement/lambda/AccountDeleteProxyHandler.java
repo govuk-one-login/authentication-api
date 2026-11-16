@@ -126,7 +126,11 @@ public class AccountDeleteProxyHandler
 
         var auditContextResult =
                 accountManagementAuditContext(
-                        configurationService, dynamoService, input, userProfile);
+                        configurationService,
+                        dynamoService,
+                        input,
+                        userProfile,
+                        request.clientId());
         if (auditContextResult.isFailure()) {
             LOG.warn(
                     "Could not build audit context ({}); skipping AUTH_DELETE_ACCOUNT audit event",
