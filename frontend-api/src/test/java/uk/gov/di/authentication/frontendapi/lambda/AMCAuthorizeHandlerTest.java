@@ -124,8 +124,6 @@ class AMCAuthorizeHandlerTest {
         when(jwkSource.get(any(), any())).thenReturn(List.of(TEST_RSA_JWK));
         when(configurationService.getAMCSsadRedirectURI())
                 .thenReturn("https://example.com/callback");
-        when(configurationService.getAuthToAMApiAudience())
-                .thenReturn("https://example.com/AmAudience");
         when(configurationService.getAMCCreatePasskeyRedirectURI())
                 .thenReturn("https://example.com/account-data-callback");
         when(configurationService.getAuthToAccountDataApiAudience())

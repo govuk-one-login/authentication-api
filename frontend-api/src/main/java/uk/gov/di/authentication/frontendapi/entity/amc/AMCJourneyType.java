@@ -13,10 +13,12 @@ public enum AMCJourneyType {
         return switch (this) {
             case SSAD -> List.of(
                     new AccessTokenConfig(
-                            "account_management_api_access_token",
-                            List.of(AccountManagementScope.ACCOUNT_DELETE),
-                            config.getAuthToAMApiAudience(),
-                            config.getAuthToAccountManagementSigningKey()));
+                            "account_data_api_access_token",
+                            List.of(
+                                    AccountDataScope.ACCOUNT_DELETE,
+                                    AccountDataScope.VERIFY_PASSWORD),
+                            config.getAuthToAccountDataApiAudience(),
+                            config.getAuthToAccountDataSigningKey()));
             case PASSKEY_CREATE -> List.of(
                     new AccessTokenConfig(
                             "account_data_api_access_token",
