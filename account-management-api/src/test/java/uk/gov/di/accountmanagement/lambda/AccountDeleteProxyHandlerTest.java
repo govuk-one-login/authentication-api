@@ -11,16 +11,22 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.entity.StructuredAuditEvent;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.http.HttpResponse;
 import java.util.HashMap;
@@ -31,6 +37,8 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -51,6 +59,7 @@ class AccountDeleteProxyHandlerTest {
             mock(StructuredAuditService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
 
     private static final byte[] TEST_SALT = SaltHelper.generateNewSalt();
     private static final String TEST_SUBJECT = new Subject().getValue();
@@ -79,7 +88,8 @@ class AccountDeleteProxyHandlerTest {
                         configurationService,
                         accountDataApiService,
                         structuredAuditService,
-                        dynamoService);
+                        dynamoService,
+                        sqsClient);
     }
 
     @Nested
@@ -109,6 +119,52 @@ class AccountDeleteProxyHandlerTest {
 
         @ParameterizedTest
         @MethodSource("accountDataApiResponses")
+        void shouldSendAccountDeletedEmailWhenResponseIs204(int statusCode, String body)
+                throws UnsuccessfulAccountDataApiResponseException, Json.JsonException {
+            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, statusCode, body);
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(statusCode));
+            if (statusCode == 204) {
+                var sqsMessageCaptor = ArgumentCaptor.forClass(String.class);
+                verify(sqsClient).send(sqsMessageCaptor.capture());
+
+                var sentNotifyRequest =
+                        SerializationService.getInstance()
+                                .readValue(sqsMessageCaptor.getValue(), NotifyRequest.class);
+                assertThat(sentNotifyRequest.getDestination(), equalTo(EMAIL));
+                assertThat(
+                        sentNotifyRequest.getNotificationType(),
+                        equalTo(NotificationType.ACCOUNT_DELETED_SELF_SERVICE));
+                assertThat(
+                        sentNotifyRequest.getLanguage(),
+                        equalTo(LocaleHelper.SupportedLanguage.EN));
+            } else {
+                verify(sqsClient, never()).send(anyString());
+            }
+        }
+
+        @Test
+        void shouldStillReturn204AndEmitAuditEventWhenSendingEmailNotificationFails()
+                throws UnsuccessfulAccountDataApiResponseException {
+            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
+            doThrow(new RuntimeException("SQS failure")).when(sqsClient).send(anyString());
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(204));
+            verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(sqsClient).send(anyString());
+            verify(structuredAuditService).submitAuditEvent(any(StructuredAuditEvent.class));
+        }
+
+        @ParameterizedTest
+        @MethodSource("accountDataApiResponses")
         void shouldEmitAccountDeleteAuditEventWhenResponseIs204(int statusCode, String body)
                 throws UnsuccessfulAccountDataApiResponseException {
             mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, statusCode, body);
@@ -134,23 +190,6 @@ class AccountDeleteProxyHandlerTest {
         }
 
         @Test
-        void shouldStillReturn204ButNotEmitAuditEventWhenNoUserProfileFound()
-                throws UnsuccessfulAccountDataApiResponseException {
-            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
-            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
-                    .thenReturn(Optional.empty());
-
-            var result =
-                    handler.handleRequest(
-                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
-
-            assertThat(result, hasStatus(204));
-            verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
-            verify(structuredAuditService, never())
-                    .submitAuditEvent(any(StructuredAuditEvent.class));
-        }
-
-        @Test
         void shouldStillReturn204ButNotEmitAuditEventWhenAuditContextCannotBeBuilt()
                 throws UnsuccessfulAccountDataApiResponseException {
             mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
@@ -165,18 +204,6 @@ class AccountDeleteProxyHandlerTest {
             verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
             verify(structuredAuditService, never())
                     .submitAuditEvent(any(StructuredAuditEvent.class));
-        }
-
-        @Test
-        void shouldForwardRequestWithoutPublicSubjectId()
-                throws UnsuccessfulAccountDataApiResponseException {
-            var accountDataApiStatus = 400;
-            mockAccountDataApiResponse("", TOKEN, accountDataApiStatus, "");
-
-            var result = handler.handleRequest(accountDeleteProxyRequest(null, TOKEN), context);
-
-            assertThat(result, hasStatus(accountDataApiStatus));
-            verify(accountDataApiService).deleteAccount("", TOKEN);
         }
 
         @Test
@@ -195,6 +222,23 @@ class AccountDeleteProxyHandlerTest {
 
     @Nested
     class FailedRequest {
+        @Test
+        void shouldReturn404WhenNoUserProfileFound()
+                throws UnsuccessfulAccountDataApiResponseException {
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.empty());
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(404));
+            verify(accountDataApiService, never()).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(structuredAuditService, never())
+                    .submitAuditEvent(any(StructuredAuditEvent.class));
+            verify(sqsClient, never()).send(anyString());
+        }
+
         @Test
         void shouldReturn500IfServiceThrowsException()
                 throws UnsuccessfulAccountDataApiResponseException {

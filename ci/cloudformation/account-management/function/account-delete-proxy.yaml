@@ -44,6 +44,7 @@ Resources:
               - !Sub "https://identity.${SubEnvironment}.dev.account.gov.uk"
               - !Sub "https://identity.${Environment}.account.gov.uk"
             - "https://identity.account.gov.uk"
+          EMAIL_QUEUE_URL: !GetAtt EmailNotificationQueue.QueueUrl
           TXMA_AUDIT_QUEUE_URL: !GetAtt AuthInternalApiTxMAAuditQueue.QueueUrl
       LoggingConfig:
         LogGroup: !Ref AccountDeleteProxyFunctionLogGroup

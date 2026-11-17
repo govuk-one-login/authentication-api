@@ -520,6 +520,31 @@ class NotificationHandlerTest {
     }
 
     @Test
+    void shouldSuccessfullyProcessAccountDeletedSelfServiceMessageFromSQSQueue()
+            throws Json.JsonException, NotificationClientException {
+        var notificationType = NotificationType.ACCOUNT_DELETED_SELF_SERVICE;
+
+        var notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN);
+
+        var notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        var sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, Map.of(), notificationType);
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                formatMessage(
+                                        EMAIL_HAS_BEEN_SENT_USING_NOTIFY, notificationType))));
+        verify(cloudwatchMetricsService)
+                .emitMetricForNotification(
+                        notificationType, TEST_EMAIL_ADDRESS, false, ONE_LOGIN_HOME);
+    }
+
+    @Test
     void shouldSuccessfullyWriteOTPToS3ForTestClient()
             throws Json.JsonException, NotificationClientException {
         when(configService.getNotifyTestDestinations()).thenReturn(List.of(TEST_PHONE_NUMBER));

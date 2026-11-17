@@ -9,8 +9,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.AccountDeleteProxyHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -29,6 +31,8 @@ import static java.lang.String.format;
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.accountmanagement.entity.NotificationType.ACCOUNT_DELETED_SELF_SERVICE;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -86,6 +90,7 @@ class AccountDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         handler = new AccountDeleteProxyHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
 
         txmaAuditQueue.clear();
+        notificationsQueue.clear();
     }
 
     @AfterEach
@@ -162,6 +167,22 @@ class AccountDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThatJson(event).node("restricted").isEqualTo(expectedRestricted);
         assertThatJson(event).node("extensions").isEqualTo(expectedExtensions);
         assertThatJson(event).node("client_id").isEqualTo("amc");
+    }
+
+    @Test
+    void shouldSendAccountDeletedEmailNotification() {
+        stubAccountDataApiDelete(204, "");
+
+        var response = makeAccountDeleteRequest();
+
+        assertThat(response, hasStatus(204));
+        assertNotificationsReceived(
+                notificationsQueue,
+                List.of(
+                        new NotifyRequest(
+                                TEST_EMAIL,
+                                ACCOUNT_DELETED_SELF_SERVICE,
+                                LocaleHelper.SupportedLanguage.EN)));
     }
 
     @Test

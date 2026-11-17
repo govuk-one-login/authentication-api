@@ -142,6 +142,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     notifyRequest);
             case PASSKEY_DELETED_SOME_REMAINING -> sendPasskeyDeletedSomeRemainingNotification(
                     notifyRequest);
+            case ACCOUNT_DELETED_SELF_SERVICE -> sendAccountDeletedSelfServiceNotification(
+                    notifyRequest);
         }
     }
 
@@ -337,6 +339,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                 e.getMessage());
                     }
                 });
+    }
+
+    private void sendAccountDeletedSelfServiceNotification(NotifyRequest notifyRequest) {
+        sendEmailNotification(
+                notifyRequest,
+                Collections.emptyMap(),
+                String.valueOf(NotificationType.ACCOUNT_DELETED_SELF_SERVICE));
     }
 
     @FunctionalInterface

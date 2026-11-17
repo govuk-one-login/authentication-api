@@ -61,6 +61,11 @@ public enum NotificationType implements TemplateAware, NotifiableType {
             "PASSKEY_DELETED_TEMPLATE_ID",
             new EnumMap<>(Map.of(SupportedLanguage.CY, "PASSKEY_DELETED_TEMPLATE_ID_CY")),
             false),
+    ACCOUNT_DELETED_SELF_SERVICE(
+            "ACCOUNT_DELETED_SELF_SERVICE_TEMPLATE_ID",
+            new EnumMap<>(
+                    Map.of(SupportedLanguage.CY, "ACCOUNT_DELETED_SELF_SERVICE_TEMPLATE_ID_CY")),
+            false),
     ;
 
     private final String templateName;
