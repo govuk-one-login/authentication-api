@@ -50,6 +50,7 @@ Resources:
                 - !GetAtt UpdatePhoneNumberFunctionRole.Arn
                 - !GetAtt DeleteAccountFunctionRole.Arn
                 - !GetAtt PasskeysDeleteProxyFunctionRole.Arn
+                - !GetAtt AccountDeleteProxyFunctionRole.Arn
 
   EmailNotificationDeadLetterQueue:
     Type: AWS::SQS::Queue

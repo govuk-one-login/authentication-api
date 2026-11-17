@@ -8,11 +8,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.AccountDeleteProxyRequest;
+import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.auditevents.entity.AuthDeleteAccount;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
@@ -38,6 +42,7 @@ public class AccountDeleteProxyHandler
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
     private final Json objectMapper = SerializationService.getInstance();
+    private final AwsSqsClient sqsClient;
 
     public AccountDeleteProxyHandler() {
         this(ConfigurationService.getInstance());
@@ -48,17 +53,24 @@ public class AccountDeleteProxyHandler
         this.accountDataApiService = new AccountDataApiService(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
     }
 
     public AccountDeleteProxyHandler(
             ConfigurationService configurationService,
             AccountDataApiService accountDataApiService,
             StructuredAuditService structuredAuditService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            AwsSqsClient sqsClient) {
         this.configurationService = configurationService;
         this.accountDataApiService = accountDataApiService;
         this.structuredAuditService = structuredAuditService;
         this.dynamoService = dynamoService;
+        this.sqsClient = sqsClient;
     }
 
     @Override
@@ -103,6 +115,8 @@ public class AccountDeleteProxyHandler
             var response = accountDataApiService.deleteAccount(publicSubjectId, token);
             if (response.statusCode() == 204) {
                 reportAccountDeleted(publicSubjectId, maybeUserProfile, request, input);
+                var userProfile = maybeUserProfile.get(); // will fix in subsequent commit
+                sendEmailNotification(userProfile.getEmail(), publicSubjectId);
             }
 
             return generateApiGatewayProxyResponse(response.statusCode(), response.body());
@@ -147,5 +161,28 @@ public class AccountDeleteProxyHandler
                         request.reason().name(),
                         Clock.systemUTC());
         structuredAuditService.submitAuditEvent(auditEvent);
+    }
+
+    private void sendEmailNotification(String email, String publicSubjectId) {
+        var notificationType = NotificationType.ACCOUNT_DELETED_SELF_SERVICE;
+
+        try {
+
+            var notifyRequest =
+                    new NotifyRequest(email, notificationType, LocaleHelper.SupportedLanguage.EN);
+
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+
+            LOG.info(
+                    "Notify request sent with notification type '{}' and publicSubjectId '{}'",
+                    notificationType,
+                    publicSubjectId);
+        } catch (Exception e) {
+            LOG.error(
+                    "Error {} when sending Notify request sent with notification type '{}' and publicSubjectId '{}', account may have been deleted without notification sent",
+                    e,
+                    notificationType,
+                    publicSubjectId);
+        }
     }
 }
