@@ -44,7 +44,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
-import uk.gov.di.authentication.frontendapi.entity.amc.AccountManagementScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.JourneyOutcomeError;
 import uk.gov.di.authentication.shared.entity.AccessTokenScope;
 import uk.gov.di.authentication.shared.entity.AccountDataScope;
@@ -122,7 +121,7 @@ class AMCServiceTest {
             List.of(
                     new AccessTokenConfig(
                             "account_management_api_access_token",
-                            List.of(AccountManagementScope.ACCOUNT_DELETE),
+                            List.of(AccountDataScope.ACCOUNT_DELETE),
                             ACCESS_TOKEN_AUDIENCE,
                             ACCESS_TOKEN_KEY_ALIAS));
     private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
@@ -189,14 +188,14 @@ class AMCServiceTest {
                             List.of(
                                     new AccessTokenConfig(
                                             "account_management_api_access_token",
-                                            List.of(AccountManagementScope.ACCOUNT_DELETE),
+                                            List.of(AccountDataScope.ACCOUNT_DELETE),
                                             ACCESS_TOKEN_AUDIENCE,
                                             ACCESS_TOKEN_KEY_ALIAS))),
                     Arguments.of(
                             List.of(
                                     new AccessTokenConfig(
                                             "account_management_api_access_token",
-                                            List.of(AccountManagementScope.ACCOUNT_DELETE),
+                                            List.of(AccountDataScope.ACCOUNT_DELETE),
                                             ACCESS_TOKEN_AUDIENCE,
                                             OTHER_ACCESS_TOKEN_KEY_ALIAS),
                                     new AccessTokenConfig(
