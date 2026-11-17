@@ -106,6 +106,14 @@ public class AccountDeleteProxyHandler
                     dynamoService.getOptionalUserProfileFromPublicSubject(publicSubjectId);
         }
 
+        if (maybeUserProfile.isEmpty()) {
+            LOG.warn(
+                    "No user profile found for account delete request, not proxying request to account data api");
+            return generateApiGatewayProxyErrorResponse(404, ErrorResponse.USER_NOT_FOUND);
+        }
+
+        var userProfile = maybeUserProfile.get();
+
         var token = input.getHeaders().getOrDefault("X-ADAPI-AccessToken", "");
         if (token.isEmpty()) {
             LOG.warn("No X-ADAPI-AccessToken in headers, request will likely fail");
@@ -114,8 +122,7 @@ public class AccountDeleteProxyHandler
         try {
             var response = accountDataApiService.deleteAccount(publicSubjectId, token);
             if (response.statusCode() == 204) {
-                reportAccountDeleted(publicSubjectId, maybeUserProfile, request, input);
-                var userProfile = maybeUserProfile.get(); // will fix in subsequent commit
+                reportAccountDeleted(publicSubjectId, userProfile, request, input);
                 sendEmailNotification(userProfile.getEmail(), publicSubjectId);
             }
 
@@ -128,16 +135,9 @@ public class AccountDeleteProxyHandler
 
     private void reportAccountDeleted(
             String publicSubject,
-            Optional<UserProfile> maybeUserProfile,
+            UserProfile userProfile,
             AccountDeleteProxyRequest request,
             APIGatewayProxyRequestEvent input) {
-        if (maybeUserProfile.isEmpty()) {
-            LOG.warn(
-                    "No user profile found for public subject; skipping AUTH_DELETE_ACCOUNT audit event");
-            return;
-        }
-        var userProfile = maybeUserProfile.get();
-
         var auditContextResult =
                 accountManagementAuditContext(
                         configurationService,
