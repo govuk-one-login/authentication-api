@@ -190,23 +190,6 @@ class AccountDeleteProxyHandlerTest {
         }
 
         @Test
-        void shouldStillReturn204ButNotEmitAuditEventWhenNoUserProfileFound()
-                throws UnsuccessfulAccountDataApiResponseException {
-            mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
-            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
-                    .thenReturn(Optional.empty());
-
-            var result =
-                    handler.handleRequest(
-                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
-
-            assertThat(result, hasStatus(204));
-            verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
-            verify(structuredAuditService, never())
-                    .submitAuditEvent(any(StructuredAuditEvent.class));
-        }
-
-        @Test
         void shouldStillReturn204ButNotEmitAuditEventWhenAuditContextCannotBeBuilt()
                 throws UnsuccessfulAccountDataApiResponseException {
             mockAccountDataApiResponse(PUBLIC_SUBJECT_ID, TOKEN, 204, "");
@@ -221,18 +204,6 @@ class AccountDeleteProxyHandlerTest {
             verify(accountDataApiService).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
             verify(structuredAuditService, never())
                     .submitAuditEvent(any(StructuredAuditEvent.class));
-        }
-
-        @Test
-        void shouldForwardRequestWithoutPublicSubjectId()
-                throws UnsuccessfulAccountDataApiResponseException {
-            var accountDataApiStatus = 400;
-            mockAccountDataApiResponse("", TOKEN, accountDataApiStatus, "");
-
-            var result = handler.handleRequest(accountDeleteProxyRequest(null, TOKEN), context);
-
-            assertThat(result, hasStatus(accountDataApiStatus));
-            verify(accountDataApiService).deleteAccount("", TOKEN);
         }
 
         @Test
@@ -251,6 +222,23 @@ class AccountDeleteProxyHandlerTest {
 
     @Nested
     class FailedRequest {
+        @Test
+        void shouldReturn404WhenNoUserProfileFound()
+                throws UnsuccessfulAccountDataApiResponseException {
+            when(dynamoService.getOptionalUserProfileFromPublicSubject(PUBLIC_SUBJECT_ID))
+                    .thenReturn(Optional.empty());
+
+            var result =
+                    handler.handleRequest(
+                            accountDeleteProxyRequest(PUBLIC_SUBJECT_ID, TOKEN), context);
+
+            assertThat(result, hasStatus(404));
+            verify(accountDataApiService, never()).deleteAccount(PUBLIC_SUBJECT_ID, TOKEN);
+            verify(structuredAuditService, never())
+                    .submitAuditEvent(any(StructuredAuditEvent.class));
+            verify(sqsClient, never()).send(anyString());
+        }
+
         @Test
         void shouldReturn500IfServiceThrowsException()
                 throws UnsuccessfulAccountDataApiResponseException {
