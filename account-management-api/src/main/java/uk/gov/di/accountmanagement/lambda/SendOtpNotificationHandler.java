@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
@@ -59,8 +58,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.FraudCheckMetricsHelper.incrementUserSubmittedCredentialIfNotificationSetupJourney;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
@@ -224,10 +221,6 @@ public class SendOtpNotificationHandler
             return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
         }
 
-        SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(headers, configurationService));
-
         String email = sendNotificationRequest.email();
 
         Optional<ErrorResponse> emailErrorResponse = ValidationHelper.validateEmailAddress(email);
@@ -254,12 +247,7 @@ public class SendOtpNotificationHandler
                         isTestUserRequest);
 
                 return handleNotificationRequest(
-                        isTestUserRequest,
-                        email,
-                        sendNotificationRequest,
-                        input,
-                        context,
-                        userLanguage);
+                        isTestUserRequest, email, sendNotificationRequest, input, context);
             }
             case VERIFY_PHONE_NUMBER -> {
                 LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
@@ -297,8 +285,7 @@ public class SendOtpNotificationHandler
                         sendNotificationRequest.phoneNumber(),
                         sendNotificationRequest,
                         input,
-                        context,
-                        userLanguage);
+                        context);
             }
             default -> {
                 return generateApiGatewayProxyErrorResponse(400, INVALID_NOTIFICATION_TYPE);
@@ -350,8 +337,7 @@ public class SendOtpNotificationHandler
             String destination,
             SendNotificationRequest sendNotificationRequest,
             APIGatewayProxyRequestEvent input,
-            Context context,
-            SupportedLanguage language)
+            Context context)
             throws JsonException {
 
         var notificationType = sendNotificationRequest.notificationType();

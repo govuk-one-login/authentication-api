@@ -55,11 +55,6 @@ public class NotifyRequest {
         this.clientSessionId = clientSessionId;
     }
 
-    public NotifyRequest(
-            String destination, NotificationType notificationType, SupportedLanguage language) {
-        this(destination, notificationType, null, language, false, null);
-    }
-
     public NotifyRequest(String destination, NotificationType notificationType) {
         this(destination, notificationType, null, null, false, null);
     }
