@@ -51,7 +51,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_FAILED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_OUTCOME;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_AMC_SCOPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.AMC_AUTHORISATION_OVERALL_SUCCESS;
@@ -305,7 +305,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                 FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_RECEIVED,
                 auditContext,
                 pair(
-                        AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_OUTCOME,
+                        AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_SUCCESS,
                         journeyOutcome.success()),
                 pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS, allActions),
                 pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS, actionErrors),

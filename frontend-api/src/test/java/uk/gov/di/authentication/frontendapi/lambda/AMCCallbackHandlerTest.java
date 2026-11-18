@@ -185,7 +185,7 @@ class AMCCallbackHandlerTest {
                 .submitAuditEvent(
                         AUTH_AMC_AUTHORISATION_RECEIVED,
                         expectedAuditContext,
-                        pair("account_action_overall_outcome", true),
+                        pair("account_action_overall_success", true),
                         pair("account_actions", List.of(amcScope.getValue())),
                         pair("account_actions_errors", List.of()),
                         pair("account_actions_failed", List.of()),
@@ -481,7 +481,7 @@ class AMCCallbackHandlerTest {
                 .submitAuditEvent(
                         AUTH_AMC_AUTHORISATION_RECEIVED,
                         expectedAuditContext,
-                        pair("account_action_overall_outcome", false),
+                        pair("account_action_overall_success", false),
                         pair("account_actions", List.of("passkey-create")),
                         pair("account_actions_errors", List.of("UserBackedOutOfJourney")),
                         pair("account_actions_failed", List.of("passkey-create")),
