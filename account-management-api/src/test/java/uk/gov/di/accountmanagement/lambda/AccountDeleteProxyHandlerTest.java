@@ -20,7 +20,6 @@ import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
@@ -36,6 +35,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -139,9 +139,7 @@ class AccountDeleteProxyHandlerTest {
                 assertThat(
                         sentNotifyRequest.getNotificationType(),
                         equalTo(NotificationType.ACCOUNT_DELETED_SELF_SERVICE));
-                assertThat(
-                        sentNotifyRequest.getLanguage(),
-                        equalTo(LocaleHelper.SupportedLanguage.EN));
+                assertNull(sentNotifyRequest.getLanguage());
             } else {
                 verify(sqsClient, never()).send(anyString());
             }
