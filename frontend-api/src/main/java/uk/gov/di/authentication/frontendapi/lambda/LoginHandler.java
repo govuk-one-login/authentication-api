@@ -82,7 +82,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.NoDefaultMfaMethodLogHelper.logNoDefaultMfaMethodDebug;
 import static uk.gov.di.authentication.shared.helpers.PhoneNumberHelper.formatPhoneNumber;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CloudwatchMetricsService.UNKNOWN_VALUE;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -655,24 +654,18 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 currentParameters, Argon2HashParameters.fromConfiguration(configurationService));
     }
 
-    private void emitPasswordRehashMetric(Argon2HashParameters oldParams) {
-        String oldMemory = oldParams != null ? String.valueOf(oldParams.memory()) : UNKNOWN_VALUE;
-        String oldIterations =
-                oldParams != null ? String.valueOf(oldParams.iterations()) : UNKNOWN_VALUE;
-        String oldParallelism =
-                oldParams != null ? String.valueOf(oldParams.parallelism()) : UNKNOWN_VALUE;
-
+    private void emitPasswordRehashMetric(Argon2HashParameters oldParameters) {
         cloudwatchMetricsService.incrementCounter(
                 CloudwatchMetrics.PASSWORD_REHASH_COMPLETED.getValue(),
                 Map.of(
                         ENVIRONMENT.getValue(),
                         configurationService.getEnvironment(),
                         OLD_MEMORY.getValue(),
-                        oldMemory,
+                        String.valueOf(oldParameters.memory()),
                         OLD_ITERATIONS.getValue(),
-                        oldIterations,
+                        String.valueOf(oldParameters.iterations()),
                         OLD_PARALLELISM.getValue(),
-                        oldParallelism,
+                        String.valueOf(oldParameters.parallelism()),
                         NEW_MEMORY.getValue(),
                         String.valueOf(configurationService.getArgon2MemoryInKibibytes()),
                         NEW_ITERATIONS.getValue(),
