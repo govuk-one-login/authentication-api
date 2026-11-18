@@ -8,4 +8,5 @@ public record AccessTokenConfig(
         String accessTokenName,
         List<AccessTokenScope> scopes,
         String audience,
-        String signingKey) {}
+        String signingKey,
+        long lifetime) {}
