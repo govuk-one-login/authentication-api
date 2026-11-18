@@ -22,6 +22,7 @@ import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeRequest;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCAuthorizeResponse;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCFailureReason;
 import uk.gov.di.authentication.frontendapi.entity.amc.AMCJourneyType;
+import uk.gov.di.authentication.frontendapi.entity.amc.AMCScope;
 import uk.gov.di.authentication.frontendapi.entity.amc.AccessTokenConfig;
 import uk.gov.di.authentication.frontendapi.entity.amc.TransportJWTConfig;
 import uk.gov.di.authentication.frontendapi.errormapper.AMCFailureHttpMapper;
@@ -171,7 +172,10 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                     400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
         }
 
-        reportAuthorizationRequested(userContext, input, request);
+        TransportJWTConfig transportJwtConfig =
+                request.amcJourneyType().getTransportJwtConfig(configurationService);
+
+        reportAuthorizationRequested(userContext, input, request, transportJwtConfig.scope());
 
         if (!actionIsPermitted(request.amcJourneyType(), authSessionItem)) {
             LOG.warn(
@@ -185,8 +189,6 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
 
         List<AccessTokenConfig> accessTokenConfigsForJourneyType =
                 request.amcJourneyType().getAccessTokenConfigs(configurationService);
-        TransportJWTConfig transportJwtConfig =
-                request.amcJourneyType().getTransportJwtConfig(configurationService);
         var state = new State();
         dynamoAmcStateService.store(state.getValue(), userContext.clientSessionId());
 
@@ -231,15 +233,14 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
     private void reportAuthorizationRequested(
             UserContext userContext,
             APIGatewayProxyRequestEvent input,
-            AMCAuthorizeRequest request) {
-        emitAuthorizationRequestedAuditEvent(userContext, input, request);
+            AMCAuthorizeRequest request,
+            AMCScope amcScope) {
+        emitAuthorizationRequestedAuditEvent(userContext, input, amcScope);
         emitAmcAuthorisationRequestedMetric(request);
     }
 
     private void emitAuthorizationRequestedAuditEvent(
-            UserContext userContext,
-            APIGatewayProxyRequestEvent input,
-            AMCAuthorizeRequest request) {
+            UserContext userContext, APIGatewayProxyRequestEvent input, AMCScope amcScope) {
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
@@ -250,15 +251,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
                                 .UNKNOWN, // the schema does not include phone number for this event
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        var amcScopeForAuditEvent =
-                switch (request.amcJourneyType()) {
-                    case PASSKEY_CREATE -> "passkey-create";
-                    case SSAD -> "sfad"; // note we'll probably want to review this when we get to
-                        // implementing sfad fully
-                };
-
         var journeyTypePair = pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, JourneyType.SIGN_IN);
-        var amcScopePair = pair(AUDIT_EVENT_EXTENSIONS_AMC_SCOPE, amcScopeForAuditEvent);
+        var amcScopePair = pair(AUDIT_EVENT_EXTENSIONS_AMC_SCOPE, amcScope.getValue());
         auditService.submitAuditEvent(
                 AUTH_AMC_AUTHORISATION_REQUESTED, auditContext, journeyTypePair, amcScopePair);
     }
