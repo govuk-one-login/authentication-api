@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
@@ -246,11 +245,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    CHANGED_AUTHENTICATOR_APP,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, CHANGED_AUTHENTICATOR_APP)));
 
             List<AuditableEvent> expectedEvents =
                     List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP);
@@ -341,11 +336,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    PHONE_NUMBER_UPDATED,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, PHONE_NUMBER_UPDATED)));
 
             List<AuditableEvent> expectedEvents =
                     List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER);
@@ -430,11 +421,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    CHANGED_DEFAULT_MFA,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, CHANGED_DEFAULT_MFA)));
 
             List<AuditableEvent> expectedEvents =
                     List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PHONE_NUMBER);
@@ -511,11 +498,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    CHANGED_DEFAULT_MFA,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, CHANGED_DEFAULT_MFA)));
 
             List<AuditableEvent> expectedEvents =
                     List.of(AUTH_CODE_VERIFIED, AUTH_UPDATE_PROFILE_AUTH_APP);
@@ -719,11 +702,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    SWITCHED_MFA_METHODS,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, SWITCHED_MFA_METHODS)));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
 
@@ -788,11 +767,7 @@ class MFAMethodsPutHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    SWITCHED_MFA_METHODS,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, SWITCHED_MFA_METHODS)));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_SWITCH_COMPLETED);
 

@@ -20,7 +20,6 @@ import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -40,6 +39,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -175,7 +175,7 @@ class PasskeysDeleteProxyHandlerTest {
                             .readValue(sqsMessageCaptor.getValue(), NotifyRequest.class);
             assertThat(sentNotifyRequest.getDestination(), equalTo(TEST_EMAIL_ADDRESS));
             assertThat(sentNotifyRequest.getNotificationType(), equalTo(expectedNotificationType));
-            assertThat(sentNotifyRequest.getLanguage(), equalTo(SupportedLanguage.EN));
+            assertNull(sentNotifyRequest.getLanguage());
         }
 
         static Stream<Arguments> successAuditEventValues() {
