@@ -59,17 +59,6 @@ public class NotifyRequest {
         this(destination, notificationType, null, null, false, null);
     }
 
-    public NotifyRequest(
-            String destination,
-            NotificationType notificationType,
-            SupportedLanguage language,
-            String sessionId,
-            String clientSessionId) {
-        this(destination, notificationType, null, language, false, null);
-        this.sessionId = sessionId;
-        this.clientSessionId = clientSessionId;
-    }
-
     public String getEmail() {
         return email;
     }
