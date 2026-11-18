@@ -10,6 +10,7 @@ import uk.gov.di.audit.AuditContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
+import uk.gov.di.authentication.frontendapi.entity.PasswordHashParametersOutcome;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorMapper;
 import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapper;
@@ -584,27 +585,51 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         return null;
     }
 
-    private void rehashPasswordIfRequired(
+    private Optional<PasswordHashParametersOutcome> rehashPasswordIfRequired(
             String email, String password, UserCredentials userCredentials) {
         try {
             if (!configurationService.isPasswordRehashOnLoginEnabled()) {
-                return;
+                return Optional.empty();
             }
-            var needsRehash =
-                    Argon2MatcherHelper.needsRehash(
-                            userCredentials.getPassword(), configurationService);
-            LOG.info("Password rehash check: needsRehash={}", needsRehash);
-            if (needsRehash) {
-                var oldParams =
-                        Argon2MatcherHelper.extractParameters(userCredentials.getPassword());
-                authenticationService.updatePassword(email, password);
 
-                LOG.info("Password rehash completed for user");
-                emitPasswordRehashMetric(oldParams.orElse(null));
+            var storedParameters =
+                    Argon2MatcherHelper.extractParameters(userCredentials.getPassword());
+            if (storedParameters.isEmpty()) {
+                LOG.warn(
+                        "Failed to extract stored password hash parameters from user credentials item.");
+                return Optional.empty();
             }
+
+            var currentParameters = storedParameters.get();
+
+            var needsRehash =
+                    Argon2MatcherHelper.needsRehash(currentParameters, configurationService);
+            LOG.info("Password rehash check: needsRehash={}", needsRehash);
+            if (!needsRehash) {
+                return Optional.of(PasswordHashParametersOutcome.notRehashed(currentParameters));
+            }
+
+            return Optional.of(rehashPassword(email, password, currentParameters));
         } catch (Exception e) {
             LOG.error("Error during password rehash", e);
+            return Optional.empty();
         }
+    }
+
+    private PasswordHashParametersOutcome rehashPassword(
+            String email, String password, Argon2HashParameters currentParameters) {
+        try {
+            authenticationService.updatePassword(email, password);
+        } catch (Exception e) {
+            LOG.error("Error while updating password during password rehash", e);
+            return PasswordHashParametersOutcome.notRehashed(currentParameters);
+        }
+
+        LOG.info("Password rehash completed for user");
+        emitPasswordRehashMetric(currentParameters);
+
+        return PasswordHashParametersOutcome.rehashed(
+                currentParameters, Argon2HashParameters.fromConfiguration(configurationService));
     }
 
     private void emitPasswordRehashMetric(Argon2HashParameters oldParams) {

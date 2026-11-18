@@ -1074,13 +1074,29 @@ class LoginHandlerTest {
         @Test
         void shouldNotRehashPasswordWhenFlagDisabled() {
             when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(false);
-
-            usingApplicableUserCredentialsWithLogin(SMS, true);
+            var password = "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw";
+            setupUserWhoCanSuccessfullyLoginWithPassword(password);
 
             var event =
                     apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-            handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
+            assertThat(result, hasStatus(200));
+            verify(authenticationService, never()).updatePassword(anyString(), anyString());
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
+        }
+
+        @Test
+        void shouldNotRehashPasswordWhenStoredHashCannotBeParsed() {
+            when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
+            setupUserWhoCanSuccessfullyLoginWithPassword("not-a-valid-hash");
+
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
             verify(authenticationService, never()).updatePassword(anyString(), anyString());
             verify(cloudwatchMetricsService, never())
                     .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
