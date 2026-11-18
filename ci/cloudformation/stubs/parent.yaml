@@ -175,7 +175,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       IPVApiEnabled: true
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       UseAlarmActions: "No"
       orchApiVpcEndpointId: vpce-0867442e4d95fb43e
       oldAuthApiVpcEndpointId: "vpce-02837b184c6538fce"

@@ -485,7 +485,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 7
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       HomeApiVpcEndpointId: ["vpce-0e1bb7e9c33b0e516", "vpce-0f4845b63ae267db4"]
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
@@ -537,7 +537,7 @@ Mappings:
       cloudwatchLogRetentionInDays: 30
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       HomeApiVpcEndpointId: ["vpce-0c9ce65be09f99db7", "vpce-0fed7b2d44a0bde33"]
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       lambdaMinConcurrency: 3
       manuallyDeleteAccountReservedConcurrency: 1
       pendingEmailCheckQueueEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/5f371b75-013d-4caf-b225-9963ac8ce558
@@ -590,7 +590,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       TokenSigningkeyArn: arn:aws:kms:eu-west-2:761723964695:key/44d26c18-f460-4d6f-b94c-3f356540a055
       HomeApiVpcEndpointId: ["vpce-0e594accb3d775457", "vpce-00865f4c00dcdbb83"]
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 0
       manuallyDeleteAccountReservedConcurrency: 1
@@ -646,7 +646,7 @@ Mappings:
       frontendBaseUrl: https://signin.account.gov.uk
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       HomeApiVpcEndpointId: ["vpce-0d7972874707185a0", "vpce-08bfce415b33dc8f6"]
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 3
       manuallyDeleteAccountReservedConcurrency: 1

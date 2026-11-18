@@ -45,7 +45,7 @@ test_signing_key_enabled                     = false
 
 # Logging
 cloudwatch_log_retention = 30
-logging_endpoint_arns    = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
+logging_endpoint_arns    = []
 
 # FMS
 am_api_fms_tag_value = "accountmanagementprod"
