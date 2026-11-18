@@ -280,17 +280,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectMfaCodeAttemptGenericKey() {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
-
-        verify(redisConnectionService)
-                .incrementWithExpiry(
-                        RedisKeys.INCORRECT_MFA_COUNTER.getKeyWithTestEmailHash(),
-                        CODE_EXPIRY_TIME);
-    }
-
-    @Test
-    void shouldIncrementCountWhenThereHasBeenPreviousIncorrectMfaCodeAttemptGenericKey() {
+    void shouldIncrementIncorrectMfaCodeAttemptsCountWithGenericKeyAndLockoutTtl() {
         codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
 
         verify(redisConnectionService)
@@ -342,7 +332,7 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectPasswordAttempt() {
+    void shouldIncrementIncorrectPasswordCountWithLockoutTtl() {
         codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL);
 
         verify(redisConnectionService)
@@ -352,13 +342,13 @@ class CodeStorageServiceTest {
     }
 
     @Test
-    void shouldIncrementCountWhenThereHasBeenPreviousIncorrectPasswordAttempts() {
-        codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL);
-
-        verify(redisConnectionService)
-                .incrementWithExpiry(
+    void shouldReturnIncrementedIncorrectPasswordCount() {
+        when(redisConnectionService.incrementWithExpiry(
                         RedisKeys.INCORRECT_PASSWORD_COUNTER.getKeyWithTestEmailHash(),
-                        CODE_EXPIRY_TIME);
+                        CODE_EXPIRY_TIME))
+                .thenReturn(4L);
+
+        assertThat(codeStorageService.increaseIncorrectPasswordCount(TEST_EMAIL), equalTo(4));
     }
 
     @Test
