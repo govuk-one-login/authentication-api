@@ -36,6 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -137,7 +138,7 @@ class AccountDeletionServiceTest {
                     SerializationService.getInstance().readValue(captor.getValue(), HashMap.class);
             assertEquals(TEST_EMAIL, notifyRequest.get("destination"));
             assertEquals("DELETE_ACCOUNT", notifyRequest.get("notificationType"));
-            assertEquals("EN", notifyRequest.get("language"));
+            assertNull(notifyRequest.get("language"));
         }
 
         @Test

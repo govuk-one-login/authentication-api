@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.PasskeysDeleteProxyHandler;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -231,11 +230,7 @@ class PasskeysDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         .withHeader("Authorization", WireMock.equalTo("Bearer " + token)));
         assertNotificationsReceived(
                 notificationsQueue,
-                List.of(
-                        new NotifyRequest(
-                                TEST_EMAIL,
-                                PASSKEY_DELETED_NONE_REMAINING,
-                                LocaleHelper.SupportedLanguage.EN)));
+                List.of(new NotifyRequest(TEST_EMAIL, PASSKEY_DELETED_NONE_REMAINING)));
     }
 
     @Test

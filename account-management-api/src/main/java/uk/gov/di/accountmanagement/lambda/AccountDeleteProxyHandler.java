@@ -16,7 +16,6 @@ import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
@@ -167,9 +166,7 @@ public class AccountDeleteProxyHandler
         var notificationType = NotificationType.ACCOUNT_DELETED_SELF_SERVICE;
 
         try {
-
-            var notifyRequest =
-                    new NotifyRequest(email, notificationType, LocaleHelper.SupportedLanguage.EN);
+            var notifyRequest = new NotifyRequest(email, notificationType);
 
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 

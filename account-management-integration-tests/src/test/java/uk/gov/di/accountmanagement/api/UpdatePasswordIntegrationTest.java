@@ -9,7 +9,6 @@ import uk.gov.di.accountmanagement.entity.UpdatePasswordRequest;
 import uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -63,8 +62,7 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
         assertThat(userStore.getPasswordForUser(TEST_EMAIL), not(is(hashedOriginalPassword)));
 
         assertNotificationsReceived(
-                notificationsQueue,
-                List.of(new NotifyRequest(TEST_EMAIL, PASSWORD_UPDATED, SupportedLanguage.EN)));
+                notificationsQueue, List.of(new NotifyRequest(TEST_EMAIL, PASSWORD_UPDATED)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue, List.of(AUTH_UPDATE_PASSWORD));

@@ -17,7 +17,6 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -37,8 +36,6 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -168,16 +165,8 @@ public class MFAMethodsDeleteHandler
 
         LOG.info("Audit event emitted.");
 
-        LocaleHelper.SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
-
         NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        userProfile.getEmail(),
-                        NotificationType.BACKUP_METHOD_REMOVED,
-                        userLanguage);
+                new NotifyRequest(userProfile.getEmail(), NotificationType.BACKUP_METHOD_REMOVED);
         sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
         LOG.info("Notify request sent.");

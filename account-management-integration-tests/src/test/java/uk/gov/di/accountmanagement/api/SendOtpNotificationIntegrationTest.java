@@ -11,7 +11,6 @@ import uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper;
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
@@ -112,9 +111,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 NotificationAssertionHelper.assertNotificationsReceived(
                         notificationsQueue,
-                        List.of(
-                                new NotifyRequest(
-                                        TEST_NEW_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
+                        List.of(new NotifyRequest(TEST_NEW_EMAIL, VERIFY_EMAIL)));
 
                 List<String> receivedEvents =
                         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_SEND_OTP));
@@ -195,11 +192,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
                 NotificationAssertionHelper.assertNotificationsReceived(
                         notificationsQueue,
-                        List.of(
-                                new NotifyRequest(
-                                        TEST_PHONE_NUMBER,
-                                        VERIFY_PHONE_NUMBER,
-                                        SupportedLanguage.EN)));
+                        List.of(new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER)));
 
                 List<String> receivedEvents =
                         assertTxmaAuditEventsReceived(

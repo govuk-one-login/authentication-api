@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.AccountDeleteProxyHandler;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables;
 import uk.org.webcompere.systemstubs.jupiter.SystemStub;
@@ -178,11 +177,7 @@ class AccountDeleteProxyHandlerIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(response, hasStatus(204));
         assertNotificationsReceived(
                 notificationsQueue,
-                List.of(
-                        new NotifyRequest(
-                                TEST_EMAIL,
-                                ACCOUNT_DELETED_SELF_SERVICE,
-                                LocaleHelper.SupportedLanguage.EN)));
+                List.of(new NotifyRequest(TEST_EMAIL, ACCOUNT_DELETED_SELF_SERVICE)));
     }
 
     @Test

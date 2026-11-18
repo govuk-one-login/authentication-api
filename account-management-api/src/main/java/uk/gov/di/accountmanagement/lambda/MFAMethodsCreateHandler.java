@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -70,8 +69,6 @@ import static uk.gov.di.authentication.shared.entity.mfa.MFAMethodType.SMS;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -217,16 +214,10 @@ public class MFAMethodsCreateHandler
             return auditResult.getFailure();
         }
 
-        LocaleHelper.SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
-
         LOG.info("Backup method added successfully. Adding confirmation message to SQS queue");
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        userProfile.getEmail(), NotificationType.BACKUP_METHOD_ADDED, userLanguage);
+        var notifyRequest =
+                new NotifyRequest(userProfile.getEmail(), NotificationType.BACKUP_METHOD_ADDED);
 
         try {
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));

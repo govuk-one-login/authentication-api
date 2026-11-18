@@ -14,7 +14,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -112,13 +111,7 @@ class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        VERIFY_EMAIL,
-                        "654321",
-                        SupportedLanguage.EN,
-                        false,
-                        null);
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", false, null);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -214,13 +207,7 @@ class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_PHONE_NUMBER,
-                        VERIFY_PHONE_NUMBER,
-                        "654321",
-                        SupportedLanguage.EN,
-                        false,
-                        null);
+                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", false, null);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -246,8 +233,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessUpdateEmailMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, EMAIL_UPDATED);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -273,8 +259,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessUpdatePasswordMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_UPDATED, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_UPDATED);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -301,8 +286,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessUpdatePhoneNumberMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, PHONE_NUMBER_UPDATED, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, PHONE_NUMBER_UPDATED);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -329,8 +313,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessDeleteAccountMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, DELETE_ACCOUNT, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, DELETE_ACCOUNT);
         var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -355,8 +338,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessBackupAddedMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, BACKUP_METHOD_ADDED, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, BACKUP_METHOD_ADDED);
 
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -380,8 +362,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessBackupRemovedMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, BACKUP_METHOD_REMOVED, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, BACKUP_METHOD_REMOVED);
 
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -405,9 +386,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessChangedAuthenticatorAppMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, CHANGED_AUTHENTICATOR_APP, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, CHANGED_AUTHENTICATOR_APP);
 
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -432,8 +411,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessChangedDefaultMFAMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, CHANGED_DEFAULT_MFA, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, CHANGED_DEFAULT_MFA);
 
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -457,8 +435,7 @@ class NotificationHandlerTest {
     void shouldSuccessfullyProcessSwitchedMFAMethodsMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, SWITCHED_MFA_METHODS, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, SWITCHED_MFA_METHODS);
 
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -492,8 +469,7 @@ class NotificationHandlerTest {
             String expectedHasPasskeysRemainingPersonalisation)
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType);
 
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
@@ -524,8 +500,7 @@ class NotificationHandlerTest {
             throws Json.JsonException, NotificationClientException {
         var notificationType = NotificationType.ACCOUNT_DELETED_SELF_SERVICE;
 
-        var notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN);
+        var notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType);
 
         var notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         var sqsEvent = generateSQSEvent(notifyRequestString);
@@ -550,12 +525,7 @@ class NotificationHandlerTest {
         when(configService.getNotifyTestDestinations()).thenReturn(List.of(TEST_PHONE_NUMBER));
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER,
-                        VERIFY_PHONE_NUMBER,
-                        "654321",
-                        SupportedLanguage.EN,
-                        true,
-                        TEST_EMAIL_ADDRESS);
+                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", true, TEST_EMAIL_ADDRESS);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -579,12 +549,7 @@ class NotificationHandlerTest {
         when(configService.getNotifyTestDestinations()).thenReturn(List.of(TEST_PHONE_NUMBER));
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER,
-                        EMAIL_UPDATED,
-                        "654321",
-                        SupportedLanguage.EN,
-                        true,
-                        TEST_EMAIL_ADDRESS);
+                        TEST_PHONE_NUMBER, EMAIL_UPDATED, "654321", true, TEST_EMAIL_ADDRESS);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -609,12 +574,7 @@ class NotificationHandlerTest {
         when(configService.getEnvironment()).thenReturn("integration");
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER,
-                        VERIFY_PHONE_NUMBER,
-                        "654321",
-                        SupportedLanguage.EN,
-                        true,
-                        TEST_EMAIL_ADDRESS);
+                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", true, TEST_EMAIL_ADDRESS);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -644,12 +604,7 @@ class NotificationHandlerTest {
                 .thenThrow(s3failException);
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_PHONE_NUMBER,
-                        VERIFY_PHONE_NUMBER,
-                        "654321",
-                        SupportedLanguage.EN,
-                        true,
-                        TEST_EMAIL_ADDRESS);
+                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", true, TEST_EMAIL_ADDRESS);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -738,8 +693,7 @@ class NotificationHandlerTest {
             Exception exception, String expectedMessage, NotificationType type)
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_PHONE_NUMBER, type, "654321", SupportedLanguage.EN, false, null);
+                new NotifyRequest(TEST_PHONE_NUMBER, type, "654321", false, null);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -771,7 +725,6 @@ class NotificationHandlerTest {
                         CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         "123456",
-                        SupportedLanguage.EN,
                         "session-id",
                         "client-session-id");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -799,7 +752,6 @@ class NotificationHandlerTest {
                         CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         "123456",
-                        SupportedLanguage.EN,
                         "session-id",
                         "client-session-id");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);

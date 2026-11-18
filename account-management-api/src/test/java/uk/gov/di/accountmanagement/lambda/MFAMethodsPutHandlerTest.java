@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -221,10 +220,7 @@ class MFAMethodsPutHandlerTest {
         verify(sqsClient)
                 .send(
                         objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        EMAIL,
-                                        CHANGED_DEFAULT_MFA,
-                                        LocaleHelper.SupportedLanguage.EN)));
+                                new NotifyRequest(EMAIL, CHANGED_DEFAULT_MFA)));
         verify(authenticationService).getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT);
         verify(codeStorageService)
                 .isValidOtpCode(EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
@@ -293,10 +289,7 @@ class MFAMethodsPutHandlerTest {
         verify(sqsClient)
                 .send(
                         objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        NON_MIGRATED_EMAIL,
-                                        CHANGED_DEFAULT_MFA,
-                                        LocaleHelper.SupportedLanguage.EN)));
+                                new NotifyRequest(NON_MIGRATED_EMAIL, CHANGED_DEFAULT_MFA)));
         verify(authenticationService).getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT);
         verify(codeStorageService)
                 .isValidOtpCode(NON_MIGRATED_EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
@@ -374,12 +367,7 @@ class MFAMethodsPutHandlerTest {
         assertEquals(expectedResponseParsedToString, result.getBody());
 
         verify(sqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        EMAIL,
-                                        notificationType,
-                                        LocaleHelper.SupportedLanguage.EN)));
+                .send(objectMapper.writeValueAsString(new NotifyRequest(EMAIL, notificationType)));
         verify(authenticationService).getOptionalUserProfileFromPublicSubject(TEST_PUBLIC_SUBJECT);
         verify(codeStorageService)
                 .isValidOtpCode(EMAIL, TEST_OTP, NotificationType.VERIFY_PHONE_NUMBER);
@@ -737,10 +725,7 @@ class MFAMethodsPutHandlerTest {
             verify(sqsClient)
                     .send(
                             objectMapper.writeValueAsString(
-                                    new NotifyRequest(
-                                            NON_MIGRATED_EMAIL,
-                                            CHANGED_DEFAULT_MFA,
-                                            LocaleHelper.SupportedLanguage.EN)));
+                                    new NotifyRequest(NON_MIGRATED_EMAIL, CHANGED_DEFAULT_MFA)));
         } else {
             verify(sqsClient, never()).send(any());
         }

@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
@@ -40,8 +39,6 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
@@ -102,10 +99,6 @@ public class UpdatePhoneNumberHandler
         attachTraceId();
         attachSessionIdToLogs(sessionId);
         LOG.info("UpdatePhoneNumberHandler called");
-        SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
         try {
             UpdatePhoneNumberRequest updatePhoneNumberRequest =
                     objectMapper.readValue(input.getBody(), UpdatePhoneNumberRequest.class);
@@ -139,8 +132,7 @@ public class UpdatePhoneNumberHandler
             NotifyRequest notifyRequest =
                     new NotifyRequest(
                             updatePhoneNumberRequest.getEmail(),
-                            NotificationType.PHONE_NUMBER_UPDATED,
-                            userLanguage);
+                            NotificationType.PHONE_NUMBER_UPDATED);
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
             LOG.info("Calculating internal common subject identifier");

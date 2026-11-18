@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -126,9 +125,7 @@ class MFAMethodsDeleteHandlerTest {
                     .send(
                             objectMapper.writeValueAsString(
                                     new NotifyRequest(
-                                            TEST_EMAIL,
-                                            NotificationType.BACKUP_METHOD_REMOVED,
-                                            LocaleHelper.SupportedLanguage.EN)));
+                                            TEST_EMAIL, NotificationType.BACKUP_METHOD_REMOVED)));
 
             var expectedAuditContext =
                     AuditContext.emptyAuditContext()
@@ -165,9 +162,7 @@ class MFAMethodsDeleteHandlerTest {
                     .send(
                             objectMapper.writeValueAsString(
                                     new NotifyRequest(
-                                            TEST_EMAIL,
-                                            NotificationType.BACKUP_METHOD_REMOVED,
-                                            LocaleHelper.SupportedLanguage.EN)));
+                                            TEST_EMAIL, NotificationType.BACKUP_METHOD_REMOVED)));
         }
     }
 
