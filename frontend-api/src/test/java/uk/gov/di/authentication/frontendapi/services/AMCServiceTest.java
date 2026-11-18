@@ -120,10 +120,11 @@ class AMCServiceTest {
     private static final List<AccessTokenConfig> ACCESS_TOKEN_CONFIG =
             List.of(
                     new AccessTokenConfig(
-                            "account_management_api_access_token",
+                            "account_data_api_access_token",
                             List.of(AccountDataScope.ACCOUNT_DELETE),
                             ACCESS_TOKEN_AUDIENCE,
-                            ACCESS_TOKEN_KEY_ALIAS));
+                            ACCESS_TOKEN_KEY_ALIAS,
+                            5L));
     private final JWKSource<SecurityContext> jwkSource = mock(JWKSource.class);
 
     // Ensure 0 milliseconds for JWT compatibility
@@ -187,29 +188,31 @@ class AMCServiceTest {
                     Arguments.of(
                             List.of(
                                     new AccessTokenConfig(
-                                            "account_management_api_access_token",
+                                            "account_data_api_access_token",
                                             List.of(AccountDataScope.ACCOUNT_DELETE),
                                             ACCESS_TOKEN_AUDIENCE,
-                                            ACCESS_TOKEN_KEY_ALIAS))),
+                                            ACCESS_TOKEN_KEY_ALIAS,
+                                            30L))),
                     Arguments.of(
                             List.of(
                                     new AccessTokenConfig(
-                                            "account_management_api_access_token",
+                                            "other_api_access_token",
                                             List.of(AccountDataScope.ACCOUNT_DELETE),
                                             ACCESS_TOKEN_AUDIENCE,
-                                            OTHER_ACCESS_TOKEN_KEY_ALIAS),
+                                            OTHER_ACCESS_TOKEN_KEY_ALIAS,
+                                            20L),
                                     new AccessTokenConfig(
                                             "account_data_api_access_token",
                                             List.of(AccountDataScope.PASSKEY_CREATE),
                                             SECOND_ACCESS_TOKEN_AUDIENCE,
-                                            ACCESS_TOKEN_KEY_ALIAS))));
+                                            ACCESS_TOKEN_KEY_ALIAS,
+                                            5L))));
         }
 
         @ParameterizedTest
         @MethodSource("accessTokenConfigs")
         void shouldBuildAuthorizationUrlWithValidJWT(List<AccessTokenConfig> accessTokenConfigs)
                 throws Exception {
-
             var result =
                     amcService.buildAuthorizationResult(
                             INTERNAL_PAIRWISE_ID,
@@ -255,10 +258,14 @@ class AMCServiceTest {
                                     new ECDSAVerifier(otherAccessTokenKey.toECPublicKey())));
                 }
 
+                var expectedAccessTokenExpiryDate =
+                        Date.from(
+                                NOW_INSTANT.plus(accessTokenConfig.lifetime(), ChronoUnit.MINUTES));
                 JWTClaimsSet accessTokenClaims = accessTokenJWT.getJWTClaimsSet();
                 assertAccessTokenClaims(
                         accessTokenConfig.scopes(),
                         accessTokenConfig.audience(),
+                        expectedAccessTokenExpiryDate,
                         accessTokenClaims);
             }
         }
@@ -418,6 +425,7 @@ class AMCServiceTest {
         private void assertAccessTokenClaims(
                 List<AccessTokenScope> expectedScopes,
                 String expectedAudience,
+                Date expectedAccessTokenExpiry,
                 JWTClaimsSet accessTokenClaims) {
             var expectedScopeValue =
                     expectedScopes.stream()
@@ -440,7 +448,7 @@ class AMCServiceTest {
                                     accessTokenClaims.getNotBeforeTime().toInstant()),
                     () ->
                             assertEquals(
-                                    JWT_EXPIRY.toInstant(),
+                                    expectedAccessTokenExpiry.toInstant(),
                                     accessTokenClaims.getExpirationTime().toInstant()),
                     () -> assertDoesNotThrow(() -> UUID.fromString(accessTokenClaims.getJWTID())));
         }
