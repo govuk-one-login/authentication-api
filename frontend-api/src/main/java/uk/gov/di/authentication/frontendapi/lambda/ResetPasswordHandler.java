@@ -164,7 +164,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 request.isCommonPasswordResetJourney(),
                 request.isForcedPasswordReset());
 
-        var email = userContext.getAuthSession().getEmailAddress();
+        var email = userContext.authSessionItem().getEmailAddress();
 
         var userProfileMaybe = authenticationService.getUserProfileByEmailMaybe(email);
         var userCredentialsMaybe =
@@ -186,7 +186,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         var passwordResetType = resolvePasswordResetType(request);
 
         if (!permissionDecisionManager.canResetPassword(
-                userContext.getAuthSession(), passwordResetType, isPartiallyCreatedAccount)) {
+                userContext.authSessionItem(), passwordResetType, isPartiallyCreatedAccount)) {
             LOG.warn("Not permitted to reset password");
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.PASSWORD_RESET_NOT_PERMITTED);
@@ -213,7 +213,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
         authSessionService.updateSession(
                 userContext
-                        .getAuthSession()
+                        .authSessionItem()
                         .withResetPasswordState(AuthSessionItem.ResetPasswordState.SUCCEEDED));
 
         LOG.info("Calculating internal common subject identifier");
@@ -230,7 +230,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                         userCredentials.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         userContext
-                                .getUserProfile()
+                                .userProfile()
                                 .map(UserProfile::getPhoneNumber)
                                 .orElse(AuditService.UNKNOWN),
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -241,7 +241,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         PermissionContext.Builder permissionContextBuilder =
                 PermissionContext.builder()
                         .withEmailAddress(userCredentials.getEmail())
-                        .withAuthSessionItem(userContext.getAuthSession());
+                        .withAuthSessionItem(userContext.authSessionItem());
 
         LOG.info("Setting hasVerifiedWithPassword to true");
         userActionsManager.passwordReset(
@@ -255,9 +255,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     new NotifyRequest(
                             userCredentials.getEmail(),
                             NotificationType.PASSWORD_RESET_CONFIRMATION,
-                            userContext.getUserLanguage(),
-                            userContext.getAuthSession().getSessionId(),
-                            userContext.getClientSessionId());
+                            userContext.userLanguage(),
+                            userContext.authSessionItem().getSessionId(),
+                            userContext.clientSessionId());
             auditableEvent = FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL;
             LOG.info("Placing message on queue to send password reset confirmation to Email");
             sqsClient.send(serialiseRequest(emailNotifyRequest));
@@ -270,9 +270,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                         new NotifyRequest(
                                 userProfile.getPhoneNumber(),
                                 NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
-                                userContext.getUserLanguage(),
-                                userContext.getAuthSession().getSessionId(),
-                                userContext.getClientSessionId());
+                                userContext.userLanguage(),
+                                userContext.authSessionItem().getSessionId(),
+                                userContext.clientSessionId());
                 sqsClient.send(serialiseRequest(smsNotifyRequest));
                 LOG.info(
                         "{} SMS placed on queue with reference: {}",

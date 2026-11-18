@@ -36,6 +36,8 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_INCORRECT_EMAIL_LIMIT_BREACHED;
 import static uk.gov.di.authentication.shared.helpers.TxmaAuditHelper.TXMA_AUDIT_ENCODED_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertAuditEventExpectations;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.ATTEMPT_NO_FAILED_AT;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.FAILURE_REASON;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_EMAIL_ATTEMPT_COUNT;
@@ -44,8 +46,6 @@ import static uk.gov.di.authentication.testsupport.AuditTestConstants.INCORRECT_
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.RP_PAIRWISE_ID;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_ID_FOR_USER_SUPPLIED_EMAIL;
 import static uk.gov.di.authentication.testsupport.AuditTestConstants.USER_SUPPLIED_EMAIL;
-import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
-import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 

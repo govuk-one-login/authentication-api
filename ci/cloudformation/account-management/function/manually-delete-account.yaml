@@ -76,12 +76,6 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               manualAccountDeletionClientId,
             ]
-          ACCOUNT_DELETION_DATA_API_ENABLED:
-            !FindInMap [
-              EnvironmentConfiguration,
-              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              accountDeletionDataApiEnabled,
-            ]
       LoggingConfig:
         LogGroup: !Ref ManuallyDeleteAccountFunctionLogGroup
       Policies:
@@ -105,10 +99,6 @@ Resources:
                 ]
         - !Ref AuditSigningKeyLambdaKmsSigningPolicy
         - !Ref DynamoUserReadWriteAccessPolicy
-        - !Ref DynamoUserDeleteAccessPolicy
-        - !Ref DynamoAccountModifiersReadAccessPolicy
-        - !Ref DynamoAccountModifiersDeleteAccessPolicy
-        - !Ref DynamoAuthenticatorTableReadDeleteAccessPolicy
         - !Ref AuthInternalApiTxMAAuditQueueAccessPolicy
         - !Ref ClientRegistryTableKmsPolicy
         - !Ref EmailCheckResultsTableKmsPolicy

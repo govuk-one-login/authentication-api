@@ -6,17 +6,20 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.util.List;
 
 public enum AMCJourneyType {
-    SFAD,
+    SSAD,
     PASSKEY_CREATE;
 
     public List<AccessTokenConfig> getAccessTokenConfigs(ConfigurationService config) {
         return switch (this) {
-            case SFAD -> List.of(
+            case SSAD -> List.of(
                     new AccessTokenConfig(
-                            "account_management_api_access_token",
-                            List.of(AccountManagementScope.ACCOUNT_DELETE),
-                            config.getAuthToAMApiAudience(),
-                            config.getAuthToAccountManagementSigningKey()));
+                            "account_data_api_access_token",
+                            List.of(
+                                    AccountDataScope.ACCOUNT_DELETE,
+                                    AccountDataScope.VERIFY_PASSWORD),
+                            config.getAuthToAccountDataApiAudience(),
+                            config.getAuthToAccountDataSigningKey(),
+                            30L));
             case PASSKEY_CREATE -> List.of(
                     new AccessTokenConfig(
                             "account_data_api_access_token",
@@ -24,14 +27,15 @@ public enum AMCJourneyType {
                                     AccountDataScope.PASSKEY_CREATE,
                                     AccountDataScope.PASSKEY_RETRIEVE),
                             config.getAuthToAccountDataApiAudience(),
-                            config.getAuthToAccountDataSigningKey()));
+                            config.getAuthToAccountDataSigningKey(),
+                            5L));
         };
     }
 
     public TransportJWTConfig getTransportJwtConfig(ConfigurationService config) {
         return switch (this) {
-            case SFAD -> new TransportJWTConfig(
-                    AMCScope.ACCOUNT_DELETE, config.getAMCSfadRedirectURI());
+            case SSAD -> new TransportJWTConfig(
+                    AMCScope.ACCOUNT_DELETE, config.getAMCSsadRedirectURI());
             case PASSKEY_CREATE -> new TransportJWTConfig(
                     AMCScope.PASSKEY_CREATE, config.getAMCCreatePasskeyRedirectURI());
         };

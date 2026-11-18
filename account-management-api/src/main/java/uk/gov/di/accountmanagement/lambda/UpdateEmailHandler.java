@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -53,8 +52,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getEmailFraudCheckResponseJsonFromResult;
 import static uk.gov.di.authentication.shared.helpers.EmailCheckResultExtractorHelper.getRestrictedJsonFromResult;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
@@ -124,10 +121,6 @@ public class UpdateEmailHandler
         attachTraceId();
         attachSessionIdToLogs(sessionId);
         LOG.info("UpdateEmailHandler called");
-        SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
         try {
             UpdateEmailRequest updateInfoRequest =
                     objectMapper.readValue(input.getBody(), UpdateEmailRequest.class);
@@ -231,8 +224,7 @@ public class UpdateEmailHandler
             };
             for (String emailAddress : emailUpdateNotificationDestinations) {
                 NotifyRequest notifyEmailAddressUpdateRequest =
-                        new NotifyRequest(
-                                emailAddress, NotificationType.EMAIL_UPDATED, userLanguage);
+                        new NotifyRequest(emailAddress, NotificationType.EMAIL_UPDATED);
                 sqsClient.send(objectMapper.writeValueAsString((notifyEmailAddressUpdateRequest)));
             }
 

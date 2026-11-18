@@ -176,7 +176,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             UserContext userContext) {
         LOG.info("VerifyCodeHandler called");
 
-        AuthSessionItem authSession = userContext.getAuthSession();
+        AuthSessionItem authSession = userContext.authSessionItem();
 
         var notificationType = codeRequest.notificationType();
         var journeyType = getJourneyType(codeRequest, notificationType);
@@ -191,7 +191,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()));
 
-        Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
+        Optional<UserProfile> userProfileMaybe = userContext.userProfile();
         UserProfile userProfile = userProfileMaybe.orElse(null);
         Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, authSession);
 
@@ -498,7 +498,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Optional<String> maybeRpPairwiseId,
             Optional<MFAMethod> maybeRequestedSmsMfaMethod,
             List<MFAMethod> retrievedMfaMethods) {
-        var authSession = userContext.getAuthSession();
+        var authSession = userContext.authSessionItem();
         var notificationType = codeRequest.notificationType();
         int loginFailureCount =
                 codeStorageService.getIncorrectMfaCodeAttemptsCount(authSession.getEmailAddress());
@@ -633,7 +633,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         mfaMethod);
 
         var publicSubjectId =
-                userContext.getUserProfile().map(UserProfile::getPublicSubjectID).orElse(null);
+                userContext.userProfile().map(UserProfile::getPublicSubjectID).orElse(null);
 
         var event =
                 AuthCodeVerified.create(

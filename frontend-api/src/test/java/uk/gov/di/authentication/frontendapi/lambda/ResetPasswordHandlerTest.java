@@ -134,7 +134,7 @@ class ResetPasswordHandlerTest {
                     expectedCommonSubject,
                     EMAIL,
                     IP_ADDRESS,
-                    AuditService.UNKNOWN,
+                    CommonTestVariables.UK_MOBILE_NUMBER,
                     DI_PERSISTENT_SESSION_ID,
                     ENCODED_DEVICE_DETAILS);
 

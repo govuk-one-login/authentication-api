@@ -84,6 +84,7 @@ class AuthSessionServiceIntegrationTest {
                         .withResetMfaState(AuthSessionItem.ResetMfaState.ATTEMPTED)
                         .withResetPasswordState(AuthSessionItem.ResetPasswordState.ATTEMPTED)
                         .withResetPasswordEmailCodeVerified(TEST_EMAIL)
+                        .withRecordedEmailForIdentityVerification(TEST_EMAIL)
                         .withTimeToLive(Instant.now().plus(10L, ChronoUnit.HOURS).toEpochMilli());
         authSessionService.addSession(existingSessionItem);
 
@@ -98,6 +99,7 @@ class AuthSessionServiceIntegrationTest {
         assertThat(newSession.getResetPasswordState(), is(AuthSessionItem.ResetPasswordState.NONE));
         assertThat(newSession.getResetMfaState(), is(AuthSessionItem.ResetMfaState.NONE));
         assertNull(newSession.getResetPasswordEmailCodeVerified());
+        assertNull(newSession.getRecordedEmailForIdentityVerification());
     }
 
     @Test
@@ -294,7 +296,8 @@ class AuthSessionServiceIntegrationTest {
                         .withHasVerifiedWithMfa(true)
                         .withHasVerifiedWithPassword(true)
                         .withHasVerifiedWithPasskey(true)
-                        .withResetPasswordEmailCodeVerified("test@exmaple.com"));
+                        .withResetPasswordEmailCodeVerified("test@exmaple.com")
+                        .withRecordedEmailForIdentityVerification("test@example.com"));
 
         // Set another variable on the session just before resetting the verification information to
         // make sure the session in general remains the same
@@ -310,6 +313,7 @@ class AuthSessionServiceIntegrationTest {
         assertFalse(result.getHasVerifiedWithPasskey());
         assertFalse(result.getHasVerifiedWithPassword());
         assertNull(result.getResetPasswordEmailCodeVerified());
+        assertNull(result.getRecordedEmailForIdentityVerification());
     }
 
     @Test

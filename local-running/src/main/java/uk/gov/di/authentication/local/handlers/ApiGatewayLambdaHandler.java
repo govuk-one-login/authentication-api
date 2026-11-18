@@ -71,7 +71,15 @@ public class ApiGatewayLambdaHandler {
             APIGatewayProxyRequestEvent apiGatewayProxyRequestEvent, String authorizationHeader)
             throws ParseException, com.nimbusds.oauth2.sdk.ParseException {
         var accessToken = AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
-        var signedAccessToken = SignedJWT.parse(accessToken.getValue());
+        var tokenValue = accessToken.getValue();
+
+        if (!isCompactJws(tokenValue)) {
+            LOG.info(
+                    "Authorization token is not a signed JWT; skipping request context attachment");
+            return;
+        }
+
+        var signedAccessToken = SignedJWT.parse(tokenValue);
         var claimsSet = signedAccessToken.getJWTClaimsSet();
 
         var authorizer = new HashMap<String, Object>();
@@ -81,5 +89,9 @@ public class ApiGatewayLambdaHandler {
         var requestContext = new APIGatewayProxyRequestEvent.ProxyRequestContext();
         requestContext.setAuthorizer(authorizer);
         apiGatewayProxyRequestEvent.setRequestContext(requestContext);
+    }
+
+    private static boolean isCompactJws(String token) {
+        return token != null && token.chars().filter(c -> c == '.').count() == 2;
     }
 }

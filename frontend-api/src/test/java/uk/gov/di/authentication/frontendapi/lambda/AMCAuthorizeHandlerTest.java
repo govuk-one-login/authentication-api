@@ -62,6 +62,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage.EN;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
@@ -98,7 +99,7 @@ class AMCAuthorizeHandlerTest {
                     .withEmailAddress(EMAIL);
     private final UserProfile userProfile =
             new UserProfile().withEmail(EMAIL).withPublicSubjectID(PUBLIC_SUBJECT_ID);
-    private final UserContext userContext = mock(UserContext.class);
+    private UserContext userContext;
 
     private static final String AMC_COOKIE = "some-cookie";
     private static final RSAKey TEST_RSA_JWK =
@@ -121,22 +122,19 @@ class AMCAuthorizeHandlerTest {
                         cloudwatchMetricsService,
                         permissionDecisionManager);
         when(jwkSource.get(any(), any())).thenReturn(List.of(TEST_RSA_JWK));
-        when(configurationService.getAMCSfadRedirectURI())
+        when(configurationService.getAMCSsadRedirectURI())
                 .thenReturn("https://example.com/callback");
-        when(configurationService.getAuthToAMApiAudience())
-                .thenReturn("https://example.com/AmAudience");
         when(configurationService.getAMCCreatePasskeyRedirectURI())
                 .thenReturn("https://example.com/account-data-callback");
         when(configurationService.getAuthToAccountDataApiAudience())
                 .thenReturn("https://example.com/ADAPIAudience");
         when(configurationService.getEnvironment()).thenReturn(ENV);
-        when(configurationService.getAMCSfadRedirectURI())
+        when(configurationService.getAMCSsadRedirectURI())
                 .thenReturn("https://example.com/redirectUri");
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
+        userContext =
+                new UserContext(authSession, Optional.of(userProfile), EN, CLIENT_SESSION_ID, "");
     }
 
     @Nested
@@ -167,6 +165,8 @@ class AMCAuthorizeHandlerTest {
                             anyString(),
                             any(State.class)))
                     .thenReturn(Result.success(authorizationUrlAndCookie));
+            when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
+            when(permissionDecisionManager.canStartSsad(authSession)).thenReturn(true);
         }
 
         @ParameterizedTest
@@ -174,9 +174,6 @@ class AMCAuthorizeHandlerTest {
         void shouldReturnAuthorizationUrlAndAmcCookieOnSuccess(
                 AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
-            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
-                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
-            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -192,9 +189,6 @@ class AMCAuthorizeHandlerTest {
         void shouldConstructTheAuthorizationResultWithTheCorrectTransportJwtAndTokenConfigs(
                 AMCJourneyType amcJourneyType, AMCScope expectedAmcScope) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
-            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
-                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
-            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -226,9 +220,6 @@ class AMCAuthorizeHandlerTest {
         void shouldEmitTheRelevantAuditEventAndCloudwatchMetric(
                 AMCJourneyType amcJourneyType, String expectedAmcScopeInAuditEvent) {
             var request = new AMCAuthorizeRequest(amcJourneyType);
-            if (amcJourneyType == AMCJourneyType.PASSKEY_CREATE) {
-                when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
-            }
             var result =
                     handler.handleRequestWithUserContext(
                             EVENT_WITH_VALID_HEADERS, context, request, userContext);
@@ -263,13 +254,13 @@ class AMCAuthorizeHandlerTest {
 
         private static Stream<Arguments> amcJourneyTypeAndExpectedScope() {
             return Stream.of(
-                    Arguments.of(AMCJourneyType.SFAD, AMCScope.ACCOUNT_DELETE),
+                    Arguments.of(AMCJourneyType.SSAD, AMCScope.ACCOUNT_DELETE),
                     Arguments.of(AMCJourneyType.PASSKEY_CREATE, AMCScope.PASSKEY_CREATE));
         }
 
         private static Stream<Arguments> amcJourneyTypeAndExpectedScopeInAudtEvent() {
             return Stream.of(
-                    Arguments.of(AMCJourneyType.SFAD, "sfad"),
+                    Arguments.of(AMCJourneyType.SSAD, "sfad"),
                     Arguments.of(AMCJourneyType.PASSKEY_CREATE, "passkey-create"));
         }
     }
@@ -279,13 +270,14 @@ class AMCAuthorizeHandlerTest {
         private static final APIGatewayProxyRequestEvent VALID_EVENT =
                 apiRequestEventWithHeadersAndBody(
                         CommonTestVariables.VALID_HEADERS,
-                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SFAD));
+                        format("{\"journeyType\":\"%s\"}", AMCJourneyType.SSAD));
 
         @BeforeEach
         void setupUserProfile() {
             when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                     .thenReturn(Optional.of(userProfile));
             when(permissionDecisionManager.canSetupPasskey(authSession)).thenReturn(true);
+            when(permissionDecisionManager.canStartSsad(authSession)).thenReturn(true);
         }
 
         @Test
@@ -297,14 +289,14 @@ class AMCAuthorizeHandlerTest {
                     handler.handleRequestWithUserContext(
                             VALID_EVENT,
                             context,
-                            new AMCAuthorizeRequest(AMCJourneyType.SFAD),
+                            new AMCAuthorizeRequest(AMCJourneyType.SSAD),
                             userContext);
 
             assertEquals(400, result.getStatusCode());
             assertTrue(
                     result.getBody()
                             .contains(ErrorResponse.EMAIL_HAS_NO_USER_PROFILE.getMessage()));
-            verifyFailureGettingAuthorisationMetricEmitted("UserNotFound", AMCJourneyType.SFAD);
+            verifyFailureGettingAuthorisationMetricEmitted("UserNotFound", AMCJourneyType.SSAD);
             verify(auditService, never())
                     .submitAuditEvent(
                             eq(AUTH_AMC_AUTHORISATION_REQUESTED),
@@ -338,6 +330,33 @@ class AMCAuthorizeHandlerTest {
         }
 
         @Test
+        void shouldReturn400WhenNotPermittedToStartSsad() {
+            when(permissionDecisionManager.canStartSsad(authSession)).thenReturn(false);
+
+            APIGatewayProxyResponseEvent result =
+                    handler.handleRequestWithUserContext(
+                            VALID_EVENT,
+                            context,
+                            new AMCAuthorizeRequest(AMCJourneyType.SSAD),
+                            userContext);
+
+            assertEquals(400, result.getStatusCode());
+            assertTrue(
+                    result.getBody()
+                            .contains(
+                                    ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED.getMessage()));
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(AUTH_AMC_AUTHORISATION_REQUESTED),
+                            any(),
+                            any(AuditService.MetadataPair[].class));
+            verifyFailureGettingAuthorisationMetricEmitted("SSADNotPermitted", AMCJourneyType.SSAD);
+            verify(amcService, never())
+                    .buildAuthorizationResult(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
         void shouldReturnJwksRetrievalErrorWhenKeySourceExceptionThrown()
                 throws KeySourceException {
             when(jwkSource.get(any(), any()))
@@ -347,7 +366,7 @@ class AMCAuthorizeHandlerTest {
                     handler.handleRequestWithUserContext(
                             VALID_EVENT,
                             context,
-                            new AMCAuthorizeRequest(AMCJourneyType.SFAD),
+                            new AMCAuthorizeRequest(AMCJourneyType.SSAD),
                             userContext);
 
             var httpResponse =
@@ -360,7 +379,7 @@ class AMCAuthorizeHandlerTest {
                             any(),
                             any(AuditService.MetadataPair[].class));
             verifyFailureGettingAuthorisationMetricEmitted(
-                    AMCFailureReason.JWKS_RETRIEVAL_ERROR.getValue(), AMCJourneyType.SFAD);
+                    AMCFailureReason.JWKS_RETRIEVAL_ERROR.getValue(), AMCJourneyType.SSAD);
         }
 
         @Test
@@ -371,7 +390,7 @@ class AMCAuthorizeHandlerTest {
                     handler.handleRequestWithUserContext(
                             VALID_EVENT,
                             context,
-                            new AMCAuthorizeRequest(AMCJourneyType.SFAD),
+                            new AMCAuthorizeRequest(AMCJourneyType.SSAD),
                             userContext);
 
             var httpResponse =
@@ -384,7 +403,7 @@ class AMCAuthorizeHandlerTest {
                             any(),
                             any(AuditService.MetadataPair[].class));
             verifyFailureGettingAuthorisationMetricEmitted(
-                    AMCFailureReason.JWKS_RETRIEVAL_ERROR.getValue(), AMCJourneyType.SFAD);
+                    AMCFailureReason.JWKS_RETRIEVAL_ERROR.getValue(), AMCJourneyType.SSAD);
         }
 
         @ParameterizedTest
@@ -406,7 +425,7 @@ class AMCAuthorizeHandlerTest {
                     handler.handleRequestWithUserContext(
                             VALID_EVENT,
                             context,
-                            new AMCAuthorizeRequest(AMCJourneyType.SFAD),
+                            new AMCAuthorizeRequest(AMCJourneyType.SSAD),
                             userContext);
 
             var expectedHttpResponse = AMCFailureHttpMapper.toHttpResponse(failureReason);
@@ -420,7 +439,7 @@ class AMCAuthorizeHandlerTest {
                             any(),
                             any(AuditService.MetadataPair[].class));
             verifyFailureGettingAuthorisationMetricEmitted(
-                    failureReason.getValue(), AMCJourneyType.SFAD);
+                    failureReason.getValue(), AMCJourneyType.SSAD);
         }
     }
 

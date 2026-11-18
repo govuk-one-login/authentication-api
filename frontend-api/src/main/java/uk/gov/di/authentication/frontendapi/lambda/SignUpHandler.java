@@ -88,9 +88,9 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             SignupRequest request,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+        attachSessionIdToLogs(userContext.authSessionItem().getSessionId());
 
-        AuthSessionItem authSessionItem = userContext.getAuthSession();
+        AuthSessionItem authSessionItem = userContext.authSessionItem();
 
         LOG.info("SignUpHandler called");
 

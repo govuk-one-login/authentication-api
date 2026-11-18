@@ -54,6 +54,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.services.mfa.MfaRetrieveFailureReason;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 
 import java.time.Instant;
@@ -73,6 +74,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -150,10 +152,12 @@ class VerifyMfaCodeHandlerTest {
             new AuthSessionItem()
                     .withSessionId(SESSION_ID)
                     .withEmailAddress(EMAIL)
+                    .withRecordedEmailForIdentityVerification(EMAIL)
                     .withInternalCommonSubjectId(INTERNAL_COMMON_SUBJECT_ID)
                     .withClientId(CLIENT_ID)
                     .withClientName(CLIENT_NAME)
-                    .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST);
+                    .withRpSectorIdentifierHost(CLIENT_SECTOR_HOST)
+                    .withHasVerifiedWithPassword(true);
     private final Json objectMapper = SerializationService.getInstance();
     public VerifyMfaCodeHandler handler;
 
@@ -174,6 +178,8 @@ class VerifyMfaCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final AuthenticationAttemptsService authenticationAttemptsService =
             mock(AuthenticationAttemptsService.class);
+    private final PermissionDecisionManager permissionDecisionManager =
+            mock(PermissionDecisionManager.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
     private final MFAMethodsService mfaMethodsService = mock(MFAMethodsService.class);
     private final UserActionsManager userActionsManager = mock(UserActionsManager.class);
@@ -197,7 +203,7 @@ class VerifyMfaCodeHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
 
@@ -211,6 +217,7 @@ class VerifyMfaCodeHandlerTest {
         when(authSessionService.getSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(authSession));
         when(mfaMethodsService.getMfaMethods(EMAIL)).thenReturn(Result.success(List.of()));
+        when(permissionDecisionManager.canResetMfaCode(any(), anyBoolean())).thenReturn(true);
 
         handler =
                 new VerifyMfaCodeHandler(
@@ -225,7 +232,8 @@ class VerifyMfaCodeHandlerTest {
                         mfaMethodsService,
                         userActionsManager,
                         testUserHelper,
-                        structuredAuditService);
+                        structuredAuditService,
+                        permissionDecisionManager);
     }
 
     @AfterEach
@@ -1321,6 +1329,53 @@ class VerifyMfaCodeHandlerTest {
             verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(EMAIL);
             verifyNoInteractions(auditService);
             verifyNoInteractions(cloudwatchMetricsService);
+        }
+
+        @Test
+        void shouldReturn400ForAccountRecoveryWhenMfaResetIsNotPermitted()
+                throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(phoneNumberCodeProcessor));
+            when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
+            when(permissionDecisionManager.canResetMfaCode(any(), anyBoolean())).thenReturn(false);
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.SMS, CODE, ACCOUNT_RECOVERY, UK_MOBILE_NUMBER));
+
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED));
+            assertThat(authSession.getVerifiedMfaMethodType(), equalTo(null));
+            verify(phoneNumberCodeProcessor, never())
+                    .processSuccessfulCodeRequest(anyString(), anyString(), any());
+            verifyNoInteractions(cloudwatchMetricsService);
+        }
+
+        @ParameterizedTest
+        @EnumSource(
+                value = JourneyType.class,
+                names = {"ACCOUNT_RECOVERY"},
+                mode = EnumSource.Mode.EXCLUDE)
+        void shouldNotApplyIdentityVerificationEmailCheckForNonAccountRecoveryJourneys(
+                JourneyType journeyType) throws Json.JsonException {
+            when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                    .thenReturn(Optional.of(authAppCodeProcessor));
+            when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+            when(authenticationAttemptsService.getCountsByJourney(anyString(), any()))
+                    .thenReturn(Map.of());
+            when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
+                            anyString(), anyString(), any()))
+                    .thenReturn(Map.of());
+
+            authSession.withRecordedEmailForIdentityVerification("different-email@example.com");
+
+            var result =
+                    makeCallWithCode(
+                            new VerifyMfaCodeRequest(
+                                    MFAMethodType.AUTH_APP, CODE, journeyType, AUTH_APP_SECRET));
+
+            assertThat(result, not(hasJsonBody(ErrorResponse.MFA_RESET_NOT_PERMITTED)));
         }
     }
 

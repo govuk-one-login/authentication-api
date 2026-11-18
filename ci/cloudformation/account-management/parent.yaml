@@ -10,6 +10,7 @@ Metadata:
         - W1028
         - W8003
         - E1011
+        - E1051
         - W8001
         - W2531
         - E2531
@@ -318,10 +319,10 @@ Mappings:
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/e5a9a634-e113-44c4-8bef-388fb71041a0
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
-      accountDeletionDataApiEnabled: true
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev1/notify_api_key::::19341490-ca86-4d60-8f37-31076882c6bb}}"
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -360,11 +361,11 @@ Mappings:
       inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/73405f5d-b60a-4b17-881c-b0f3e26ef03d
       manualAccountDeletionClientId: manual-account-deletion
-      accountDeletionDataApiEnabled: true
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key}}"
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ce9680d3-953a-4b6a-9098-a0380d0afc70
@@ -403,11 +404,11 @@ Mappings:
       inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/20e15b84-6196-4b0a-8f27-632f4b858bd1
       manualAccountDeletionClientId: manual-account-deletion
-      accountDeletionDataApiEnabled: true
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key}}"
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -453,11 +454,11 @@ Mappings:
       inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:975050272416:key/c0bc7d31-32f4-4f98-addd-170187956d8d
       manualAccountDeletionClientId: manual-account-deletion
-      accountDeletionDataApiEnabled: true
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key}}"
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574
@@ -505,11 +506,11 @@ Mappings:
       inactiveAccountDeletionMinDurationPerMessageMs: 3000
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:058264536367:key/9a0c6ef7-ce45-42fe-b55e-48b09f9ff53e
       manualAccountDeletionClientId: manual-account-deletion
-      accountDeletionDataApiEnabled: false
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/build/notify_api_key}}"
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/01f3d1a6-e66f-4eb7-a3d7-412437c8f01d
@@ -561,10 +562,10 @@ Mappings:
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:851725205974:key/ecfc81ec-546e-478d-ae04-5ed5d1b375a9
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
-      accountDeletionDataApiEnabled: true
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/staging/notify_api_key}}"
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/1e526227-051b-4078-ae10-46bda94e71c4
@@ -616,11 +617,11 @@ Mappings:
       iadCircuitBreakerTableKmsKeyArn: arn:aws:kms:eu-west-2:666500506359:key/338450e1-6bb7-4391-9046-1fcda5563072
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125600642:key/f0e0c444-b70e-4d2f-9d5a-9f0bcf1d6540
       manualAccountDeletionClientId: manual-account-deletion
-      accountDeletionDataApiEnabled: true
       bulkAccountDeletionClientId: bulk-account-deletion
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/integration/notify_api_key}}"
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/075774c2-b836-452f-9684-dcd742146f81
@@ -673,10 +674,10 @@ Mappings:
       authToAccountDataSigningKeyArn: arn:aws:kms:eu-west-2:211125303002:key/29d156dd-c893-4221-8fe1-f24882e0e401
       manualAccountDeletionClientId: manual-account-deletion
       bulkAccountDeletionClientId: bulk-account-deletion
-      accountDeletionDataApiEnabled: true
       argon2MemoryInKibibytes: "15360"
       argon2Iterations: "2"
       argon2Parallelism: "1"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/production/notify_api_key}}"
   LambdaConfiguration:
     account-recovery:
       RunbookLink: "https://govukverify.atlassian.net/l/cp/LfLKwP4s"
@@ -1319,56 +1320,6 @@ Resources:
             Action:
               - dynamodb:UpdateItem
               - dynamodb:PutItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-account-modifiers
-                - DataStoreAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      dataStoreAccountId,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-
-  DynamoAccountModifiersReadAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: !Sub
-        - "IAM policy for managing read permissions to the ${Env}-account-modifiers table"
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      Path: !Sub
-        - /${Env}/auth-am-shared/
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowDecryption
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    accountModifiersTableEncryptionKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    accountModifiersTableEncryptionKey,
-                  ]
-          - Sid: AllowAccessToDynamoTables
-            Effect: Allow
-            Action:
               - dynamodb:DescribeTable
               - dynamodb:Get*
             Resource:
@@ -2202,138 +2153,6 @@ Resources:
                     userCredentialsTableEncryptionKey,
                   ]
 
-  DynamoAccountModifiersDeleteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "IAM policy for managing delete permissions to the Dynamo Account Modifiers table"
-      Path: !Sub
-        - /${Env}/am-shared/
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowAccessToDynamoTables
-            Effect: Allow
-            Action:
-              - dynamodb:DeleteItem
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-account-modifiers
-                - DataStoreAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      dataStoreAccountId,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-          - Sid: AllowDecryption
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    accountModifiersTableEncryptionKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    accountModifiersTableEncryptionKey,
-                  ]
-
-  DynamoAuthenticatorTableReadDeleteAccessPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "IAM policy for managing read and delete permissions to the Dynamo Authenticator table"
-      Path: !Sub
-        - /${Env}/am-shared/
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowReadAccessToDynamoTables
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGetItem
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator
-                - DataStoreAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      dataStoreAccountId,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-              - !Sub
-                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator/index/*
-                - DataStoreAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      dataStoreAccountId,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-          - Sid: AllowDeleteAccessToDynamoTables
-            Effect: Allow
-            Action:
-              - dynamodb:DeleteItem
-            Resource:
-              - !Sub
-                - arn:aws:dynamodb:${AWS::Region}:${DataStoreAccountId}:table/${Env}-authenticator
-                - DataStoreAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      dataStoreAccountId,
-                    ]
-                  Env:
-                    !If [
-                      UseSubEnvironment,
-                      !Ref SubEnvironment,
-                      !Ref Environment,
-                    ]
-          - Sid: AllowEncryptionDecryption
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-              - kms:Encrypt
-              - kms:GenerateDataKey
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    authenticatorTableEncryptionKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    authenticatorTableEncryptionKey,
-                  ]
-
   ManuallyDeleteAccountFunctionSQSPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -3023,30 +2842,6 @@ Resources:
                         !Ref Environment,
                       ]
             - !Ref AWS::NoValue
-  AccountModifiersTableKmsPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "IAM policy for account modifiers table KMS encryption key access"
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: AllowKmsAccess
-            Effect: Allow
-            Action:
-              - kms:*
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    accountModifiersTableEncryptionKey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    accountModifiersTableEncryptionKey,
-                  ]
 
   CommonPasswordsTableKmsPolicy:
     Type: AWS::IAM::ManagedPolicy

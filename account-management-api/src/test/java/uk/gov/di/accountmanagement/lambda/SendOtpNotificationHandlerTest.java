@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
@@ -211,7 +210,6 @@ class SendOtpNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         VERIFY_EMAIL,
                         TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN,
                         false,
                         TEST_EMAIL_ADDRESS);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
@@ -337,7 +335,6 @@ class SendOtpNotificationHandlerTest {
                         TEST_PHONE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN,
                         false,
                         TEST_EMAIL_ADDRESS);
 
@@ -442,7 +439,6 @@ class SendOtpNotificationHandlerTest {
                             TEST_EMAIL_ADDRESS,
                             VERIFY_EMAIL,
                             TEST_SIX_DIGIT_CODE,
-                            SupportedLanguage.EN,
                             false,
                             TEST_EMAIL_ADDRESS);
             String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
@@ -755,7 +751,6 @@ class SendOtpNotificationHandlerTest {
                                             TEST_PHONE_NUMBER,
                                             VERIFY_PHONE_NUMBER,
                                             TEST_CLIENT_VERIFY_SMS_CODE,
-                                            SupportedLanguage.EN,
                                             true,
                                             TEST_TEST_USER_EMAIL_ADDRESS)));
 
@@ -809,7 +804,6 @@ class SendOtpNotificationHandlerTest {
                                             TEST_TEST_USER_EMAIL_ADDRESS,
                                             VERIFY_EMAIL,
                                             TEST_CLIENT_VERIFY_EMAIL_CODE,
-                                            SupportedLanguage.EN,
                                             true,
                                             TEST_TEST_USER_EMAIL_ADDRESS)));
 

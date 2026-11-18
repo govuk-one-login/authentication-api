@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
@@ -36,7 +35,6 @@ import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -110,25 +108,7 @@ class PhoneNumberCodeProcessorTest {
     @BeforeEach
     void setup() {
         when(configurationService.getCodeMaxRetries()).thenReturn(3);
-        when(userContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
-
-        var userCredentials =
-                new UserCredentials()
-                        .withMfaMethods(
-                                List.of(
-                                        MFAMethod.smsMfaMethod(
-                                                true,
-                                                true,
-                                                "+447700900000",
-                                                PriorityIdentifier.DEFAULT,
-                                                "sms-id"),
-                                        MFAMethod.authAppMfaMethod(
-                                                "auth-app-secret",
-                                                true,
-                                                true,
-                                                PriorityIdentifier.BACKUP,
-                                                "auth-app-id")));
-        when(userContext.getUserCredentials()).thenReturn(Optional.of(userCredentials));
+        when(userContext.txmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
     }
 
     @ParameterizedTest
@@ -419,6 +399,36 @@ class PhoneNumberCodeProcessorTest {
     }
 
     @Test
+    void shouldAuditDefaultMfaMethodPriorityForMigratedAccountRecovery() {
+        when(userProfile.isMfaMethodsMigrated()).thenReturn(true);
+
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        CommonTestVariables.UK_MOBILE_NUMBER),
+                CodeRequestType.MFA_ACCOUNT_RECOVERY);
+
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
+                IP_ADDRESS, PERSISTENT_ID, userProfile);
+
+        ArgumentCaptor<AuditService.MetadataPair[]> captor =
+                ArgumentCaptor.forClass(AuditService.MetadataPair[].class);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(FrontendAuditableEvent.AUTH_UPDATE_PROFILE_PHONE_NUMBER),
+                        eq(AUDIT_CONTEXT),
+                        captor.capture());
+        Set<AuditService.MetadataPair> actual = Set.of(captor.getValue());
+        assertTrue(
+                actual.contains(
+                        AuditService.MetadataPair.pair(
+                                AUDIT_EVENT_EXTENSIONS_MFA_METHOD,
+                                PriorityIdentifier.DEFAULT.name())));
+    }
+
+    @Test
     void shouldNotUpdateDynamoOrCreateAuditEventWhenSignIn() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
@@ -590,9 +600,9 @@ class PhoneNumberCodeProcessorTest {
 
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         var differentPhoneNumber = CommonTestVariables.UK_MOBILE_NUMBER.replace("789", "987");
-        when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
+        when(userContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(userContext.authSessionItem()).thenReturn(authSession);
+        when(userContext.userProfile()).thenReturn(Optional.of(userProfile));
         when(userProfile.isPhoneNumberVerified()).thenReturn(true);
         when(userProfile.getPhoneNumber()).thenReturn(differentPhoneNumber);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
@@ -624,7 +634,7 @@ class PhoneNumberCodeProcessorTest {
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(CommonTestVariables.EMAIL))
                 .thenReturn(6);
-        when(userContext.getAuthSession()).thenReturn(authSession);
+        when(userContext.authSessionItem()).thenReturn(authSession);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
                         CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),
@@ -649,7 +659,7 @@ class PhoneNumberCodeProcessorTest {
 
     public void setUpBlockedPhoneNumberCode(
             CodeRequest codeRequest, CodeRequestType codeRequestType) {
-        when(userContext.getAuthSession()).thenReturn(authSession);
+        when(userContext.authSessionItem()).thenReturn(authSession);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
                         CommonTestVariables.EMAIL.concat(codeRequest.getProfileInformation()),

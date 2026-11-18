@@ -159,7 +159,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
-            attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+            attachSessionIdToLogs(userContext.authSessionItem().getSessionId());
 
             LOG.info("MfaHandler called");
 
@@ -172,7 +172,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             var auditContext =
                     auditContextFromUserContext(
                             userContext,
-                            userContext.getAuthSession().getInternalCommonSubjectId(),
+                            userContext.authSessionItem().getInternalCommonSubjectId(),
                             email,
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
@@ -192,7 +192,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             var journeyTypePair = pair(AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE, journeyType);
             var mfaTypePair = pair("mfa-type", MFAMethodType.SMS.getValue());
 
-            if (!userContext.getAuthSession().validateSession(email)) {
+            if (!userContext.authSessionItem().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
                 return generateApiGatewayProxyErrorResponse(400, SESSION_ID_MISSING);
             }
@@ -239,15 +239,15 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     PermissionContext.builder()
                             .withEmailAddress(email)
                             .withE164FormattedPhoneNumber(phoneNumber)
-                            .withAuthSessionItem(userContext.getAuthSession());
+                            .withAuthSessionItem(userContext.authSessionItem());
 
             userContext
-                    .getUserProfile()
+                    .userProfile()
                     .ifPresent(
                             userProfile -> {
                                 permissionContextBuilder.withInternalSubjectId(
                                         userProfile.getSubjectID());
-                                getRpPairwiseId(userProfile, userContext.getAuthSession())
+                                getRpPairwiseId(userProfile, userContext.authSessionItem())
                                         .ifPresent(permissionContextBuilder::withRpPairwiseId);
                             });
 
@@ -307,9 +307,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 phoneNumber,
                                 notificationType,
                                 code,
-                                userContext.getUserLanguage(),
-                                userContext.getAuthSession().getSessionId(),
-                                userContext.getClientSessionId());
+                                userContext.userLanguage(),
+                                userContext.authSessionItem().getSessionId(),
+                                userContext.clientSessionId());
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
                 LOG.info(
                         "{} SMS placed on queue with reference: {}",

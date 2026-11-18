@@ -114,7 +114,7 @@ class AuthAppCodeProcessorTest {
         this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
         this.mockMfaMethodsService = mock(MFAMethodsService.class);
         this.mockUserProfile = mock(UserProfile.class);
-        when(mockUserContext.getAuthSession()).thenReturn(authSession);
+        when(mockUserContext.authSessionItem()).thenReturn(authSession);
         when(mockDynamoService.getUserProfileByEmail(EMAIL))
                 .thenReturn(new UserProfile().withMfaMethodsMigrated(false));
         when(mockConfigurationService.getAuthAppCodeAllowedWindows()).thenReturn(9);
@@ -520,9 +520,9 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpSuccessfulCodeRequest(CodeRequest codeRequest) {
-        when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(mockUserContext.getAuthSession()).thenReturn(authSession);
-        when(mockUserContext.getTxmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
+        when(mockUserContext.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(mockUserContext.authSessionItem()).thenReturn(authSession);
+        when(mockUserContext.txmaAuditEncoded()).thenReturn(TXMA_ENCODED_HEADER_VALUE);
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(

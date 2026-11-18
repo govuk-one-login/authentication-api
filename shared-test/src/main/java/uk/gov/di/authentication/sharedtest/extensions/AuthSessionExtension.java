@@ -79,6 +79,13 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
         updateSession(getSession(sessionId).orElseThrow().withEmailAddress(email));
     }
 
+    public void addRecordedEmailForIdentityVerificationToSession(String sessionId, String email) {
+        updateSession(
+                getSession(sessionId)
+                        .orElseThrow()
+                        .withRecordedEmailForIdentityVerification(email));
+    }
+
     public void addClientIdToSession(String sessionId, String clientId) {
         updateSession(getSession(sessionId).orElseThrow().withClientId(clientId));
     }
@@ -117,6 +124,14 @@ public class AuthSessionExtension extends DynamoExtension implements AfterEachCa
                 getSession(sessionId)
                         .orElseThrow()
                         .withRpSectorIdentifierHost(rpSectorIdentifierHost));
+    }
+
+    public void addHasVerifiedWithPasswordToSession(
+            String sessionId, boolean hasVerifiedWithPassword) {
+        updateSession(
+                getSession(sessionId)
+                        .orElseThrow()
+                        .withHasVerifiedWithPassword(hasVerifiedWithPassword));
     }
 
     public void addHasVerifiedWithPasswordAndMfaToSession(

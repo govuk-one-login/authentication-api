@@ -181,12 +181,10 @@ public class CodeStorageService {
     private int increaseCount(String email, String prefix, long ttl) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = prefix + encodedHash;
-        Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
-        int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
         try {
-            redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), ttl);
-            LOG.info("count increased from: {} to: {}", count, newCount);
-            return newCount;
+            var newCount = redisConnectionService.incrementWithExpiry(key, ttl);
+            LOG.info("count increased to: {}", newCount);
+            return (int) newCount;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

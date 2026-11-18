@@ -29,7 +29,6 @@ import java.time.Clock;
 
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.audit.AuditContext.emptyAuditContext;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -69,20 +68,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     @Override
-    public void onRequestReceived(String clientSessionId, String txmaAuditEncoded) {
-        auditService.submitAuditEvent(
-                AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
-                auditContextWithOnlyClientSessionId(clientSessionId, txmaAuditEncoded));
-    }
-
-    @Override
-    public void onRequestValidationError(String clientSessionId, String txmaAuditEncoded) {
-        auditService.submitAuditEvent(
-                AUTH_UPDATE_PROFILE_REQUEST_ERROR,
-                auditContextWithOnlyClientSessionId(clientSessionId, txmaAuditEncoded));
-    }
-
-    @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return super.handleRequest(input, context);
@@ -95,16 +80,18 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             UpdateProfileRequest request,
             UserContext userContext) {
 
-        AuthSessionItem authSession = userContext.getAuthSession();
-        LogLineHelper.attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+        AuthSessionItem authSession = userContext.authSessionItem();
+        LogLineHelper.attachSessionIdToLogs(userContext.authSessionItem().getSessionId());
         LOG.info("UpdateProfileHandler called");
+
+        auditService.submitAuditEvent(
+                AUTH_UPDATE_PROFILE_REQUEST_RECEIVED,
+                auditContextWithOnlyClientSessionId(
+                        userContext.clientSessionId(), userContext.txmaAuditEncoded()));
 
         if (!authSession.validateSession(request.getEmail())) {
             LOG.info("Invalid session");
-            return generateErrorResponse(
-                    ErrorResponse.SESSION_ID_MISSING,
-                    auditContextWithOnlyClientSessionId(
-                            userContext.getClientSessionId(), userContext.getTxmaAuditEncoded()));
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
         }
 
         var auditContext = buildAuditContext(input, userContext, authSession);
@@ -131,9 +118,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 LOG.error(
                         "Unexpected UpdateProfileType '{}' while processing session '{}'",
                         request.getUpdateProfileType().toString(),
-                        userContext.getAuthSession().getSessionId());
-                return generateErrorResponse(
-                        ErrorResponse.INVALID_UPDATE_PROFILE_TYPE, auditContext);
+                        userContext.authSessionItem().getSessionId());
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.INVALID_UPDATE_PROFILE_TYPE);
             }
         }
 
@@ -151,7 +138,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         String auditablePhoneNumber =
                 userContext
-                        .getUserProfile()
+                        .userProfile()
                         .map(UserProfile::getPhoneNumber)
                         .orElse(AuditService.UNKNOWN);
 
@@ -162,12 +149,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 ipAddress,
                 auditablePhoneNumber,
                 persistentSessionId);
-    }
-
-    private APIGatewayProxyResponseEvent generateErrorResponse(
-            ErrorResponse errorResponse, AuditContext auditContext) {
-        auditService.submitAuditEvent(AUTH_UPDATE_PROFILE_REQUEST_ERROR, auditContext);
-        return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 
     private AuditContext auditContextWithOnlyClientSessionId(

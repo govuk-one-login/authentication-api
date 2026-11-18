@@ -29,7 +29,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethodUpdateIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodUpdateRequest;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -69,8 +68,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -156,11 +153,6 @@ public class MFAMethodsPutHandler
         }
 
         var putRequest = validRequestOrErrorResponse.getSuccess();
-
-        LocaleHelper.SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
 
         boolean isDefaultMethod =
                 putRequest
@@ -278,8 +270,7 @@ public class MFAMethodsPutHandler
         if (updateTypeIdentifier != null) {
             var emailNotificationType = mapEmailNotificationIdentifierToType(updateTypeIdentifier);
 
-            sendEmailNotification(
-                    emailNotificationType, putRequest.userProfile.getEmail(), userLanguage);
+            sendEmailNotification(emailNotificationType, putRequest.userProfile.getEmail());
 
             var maybeAuditEventsStatus =
                     sendSuccessAuditEvents(
@@ -499,10 +490,7 @@ public class MFAMethodsPutHandler
         };
     }
 
-    private void sendEmailNotification(
-            NotificationType notificationType,
-            String userEmail,
-            LocaleHelper.SupportedLanguage userLanguage)
+    private void sendEmailNotification(NotificationType notificationType, String userEmail)
             throws Json.JsonException {
         if (notificationType == null) {
             throw new IllegalArgumentException("notificationType cannot be null.");
@@ -512,7 +500,7 @@ public class MFAMethodsPutHandler
                 "Method updated successfully (notification type: '{}'). Adding confirmation message to SQS queue.",
                 notificationType.name());
 
-        NotifyRequest notifyRequest = new NotifyRequest(userEmail, notificationType, userLanguage);
+        NotifyRequest notifyRequest = new NotifyRequest(userEmail, notificationType);
         sqsClient.send(serialisationService.writeValueAsString((notifyRequest)));
 
         LOG.info(

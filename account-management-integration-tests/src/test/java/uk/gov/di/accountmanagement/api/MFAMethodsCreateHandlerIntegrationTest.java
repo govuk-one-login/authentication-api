@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
@@ -175,11 +174,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    BACKUP_METHOD_ADDED,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, BACKUP_METHOD_ADDED)));
 
             // Check audit events
             List<AuditableEvent> expectedEvents =
@@ -270,11 +265,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    BACKUP_METHOD_ADDED,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, BACKUP_METHOD_ADDED)));
 
             var extractedMfaIdentifier = retrievedSmsMethod.getMfaIdentifier();
             var expectedJson =
@@ -351,11 +342,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    BACKUP_METHOD_ADDED,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, BACKUP_METHOD_ADDED)));
 
             var extractedMfaIdentifier = retrievedAuthAppMethod.getMfaIdentifier();
             var expectedJson =
@@ -439,11 +426,7 @@ class MFAMethodsCreateHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    TEST_EMAIL,
-                                    BACKUP_METHOD_ADDED,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(TEST_EMAIL, BACKUP_METHOD_ADDED)));
 
             var extractedMfaIdentifier = retrievedAuthAppMethod.getMfaIdentifier();
             var expectedJson =

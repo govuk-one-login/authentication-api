@@ -159,7 +159,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             UserContext userContext) {
         LOG.info("AMCAuthorizeHandler called");
 
-        AuthSessionItem authSessionItem = userContext.getAuthSession();
+        AuthSessionItem authSessionItem = userContext.authSessionItem();
         var userProfile =
                 authenticationService
                         .getUserProfileByEmailMaybe(authSessionItem.getEmailAddress())
@@ -177,7 +177,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
             LOG.warn(
                     "AMC authorize with journey type {} is not permitted",
                     request.amcJourneyType());
-            reportFailureRequestingAuthorisation("PasskeyCreateNotPermitted", request);
+            reportFailureRequestingAuthorisation(
+                    notPermittedFailureReason(request.amcJourneyType()), request);
             return generateApiGatewayProxyErrorResponse(
                     400, ErrorResponse.AMC_AUTHORIZE_ACTION_NOT_PERMITTED);
         }
@@ -187,7 +188,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         TransportJWTConfig transportJwtConfig =
                 request.amcJourneyType().getTransportJwtConfig(configurationService);
         var state = new State();
-        dynamoAmcStateService.store(state.getValue(), userContext.getClientSessionId());
+        dynamoAmcStateService.store(state.getValue(), userContext.clientSessionId());
 
         Result<AMCFailureReason, AMCAuthorizationUrlAndCookie> result =
                 getAMCPublicEncryptionKey()
@@ -242,8 +243,8 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
-                        userContext.getAuthSession().getEmailAddress(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService
                                 .UNKNOWN, // the schema does not include phone number for this event
@@ -252,7 +253,7 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
         var amcScopeForAuditEvent =
                 switch (request.amcJourneyType()) {
                     case PASSKEY_CREATE -> "passkey-create";
-                    case SFAD -> "sfad"; // note we'll probably want to review this when we get to
+                    case SSAD -> "sfad"; // note we'll probably want to review this when we get to
                         // implementing sfad fully
                 };
 
@@ -303,9 +304,16 @@ public class AMCAuthorizeHandler extends BaseFrontendHandler<AMCAuthorizeRequest
     }
 
     private boolean actionIsPermitted(AMCJourneyType journeyType, AuthSessionItem sessionItem) {
-        if (journeyType.equals(AMCJourneyType.PASSKEY_CREATE)) {
-            return permissionDecisionManager.canSetupPasskey(sessionItem);
-        }
-        return true;
+        return switch (journeyType) {
+            case PASSKEY_CREATE -> permissionDecisionManager.canSetupPasskey(sessionItem);
+            case SSAD -> permissionDecisionManager.canStartSsad(sessionItem);
+        };
+    }
+
+    private static String notPermittedFailureReason(AMCJourneyType journeyType) {
+        return switch (journeyType) {
+            case PASSKEY_CREATE -> "PasskeyCreateNotPermitted";
+            case SSAD -> "SSADNotPermitted";
+        };
     }
 }

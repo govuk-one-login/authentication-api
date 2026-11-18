@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.EmailCheckResultExtension;
@@ -97,9 +96,8 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNotificationsReceived(
                 notificationsQueue,
                 List.of(
-                        new NotifyRequest(
-                                EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN),
-                        new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
+                        new NotifyRequest(EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED),
+                        new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,
@@ -160,9 +158,8 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNotificationsReceived(
                 notificationsQueue,
                 List.of(
-                        new NotifyRequest(
-                                EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN),
-                        new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
+                        new NotifyRequest(EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED),
+                        new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED)));
 
         assertTxmaAuditEventsSubmittedWithMatchingNames(
                 txmaAuditQueue,

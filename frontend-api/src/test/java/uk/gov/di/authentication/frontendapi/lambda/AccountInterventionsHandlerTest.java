@@ -147,10 +147,9 @@ class AccountInterventionsHandlerTest {
         when(configurationService.getAccountInterventionServiceURI())
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
-        when(userContext.getAuthSession()).thenReturn(authSession);
-        when(userContext.getClientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
-        when(userContext.getTxmaAuditEncoded())
-                .thenReturn(CommonTestVariables.ENCODED_DEVICE_DETAILS);
+        when(userContext.authSessionItem()).thenReturn(authSession);
+        when(userContext.clientSessionId()).thenReturn(CommonTestVariables.CLIENT_SESSION_ID);
+        when(userContext.txmaAuditEncoded()).thenReturn(CommonTestVariables.ENCODED_DEVICE_DETAILS);
         when(configurationService.getAccountInterventionsErrorMetricName())
                 .thenReturn("AISException");
         when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
@@ -665,7 +664,7 @@ class AccountInterventionsHandlerTest {
                 .thenReturn(
                         generateAccountInterventionResponse(
                                 blocked, suspended, reproveIdentity, resetPassword));
-        when(userContext.getTxmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
+        when(userContext.txmaAuditEncoded()).thenReturn(AuditService.UNKNOWN);
 
         var result =
                 handler.handleRequestWithUserContext(

@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -153,8 +152,7 @@ class UpdateEmailHandlerTest {
         verify(sqsClient)
                 .send(
                         objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
+                                new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED)));
 
         verify(auditService)
                 .submitAuditEvent(

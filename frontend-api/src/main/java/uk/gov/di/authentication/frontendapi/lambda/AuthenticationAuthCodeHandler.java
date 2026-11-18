@@ -94,7 +94,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
         LOG.info("AuthenticationAuthCodeHandler called");
 
         try {
-            var userProfile = userContext.getUserProfile();
+            var userProfile = userContext.userProfile();
             if (userProfile.isEmpty()) {
                 LOG.info(
                         "Error message: Email from session does not have a user profile required to extract Subject ID");
@@ -102,7 +102,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                         400, ErrorResponse.EMAIL_HAS_NO_USER_PROFILE);
             }
 
-            var authSession = userContext.getAuthSession();
+            var authSession = userContext.authSessionItem();
             var canIssueAuthCodeResult = permissionDecisionManager.canIssueAuthCode(authSession);
 
             if (!canIssueAuthCodeResult) {
@@ -129,7 +129,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                     authCodeRequest.sectorIdentifier(),
                     authCodeRequest.isNewAccount(),
                     authCodeRequest.passwordResetTime(),
-                    userContext.getClientSessionId());
+                    userContext.clientSessionId());
 
             var state = State.parse(authCodeRequest.state());
             var redirectUri = URI.create(authCodeRequest.redirectUri());
@@ -144,7 +144,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 var auditContext =
                         AuditContext.auditContextFromUserContext(
                                 userContext,
-                                userContext.getAuthSession().getInternalCommonSubjectId(),
+                                userContext.authSessionItem().getInternalCommonSubjectId(),
                                 userProfile.get().getEmail(),
                                 IpAddressHelper.extractIpAddress(input),
                                 userProfile.get().getPhoneNumber(),
@@ -154,14 +154,14 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 var rpPairwiseId =
                         ClientSubjectHelper.getSubject(
                                         userProfile.get(),
-                                        userContext.getAuthSession(),
+                                        userContext.authSessionItem(),
                                         authenticationService)
                                 .getValue();
                 var metadataBuilder = ReauthMetadataBuilder.builder(rpPairwiseId);
 
-                if (userContext.getAuthSession().getPreservedReauthCountsForAuditMap() != null) {
+                if (userContext.authSessionItem().getPreservedReauthCountsForAuditMap() != null) {
                     metadataBuilder.withAllIncorrectAttemptCounts(
-                            userContext.getAuthSession().getPreservedReauthCountsForAuditMap());
+                            userContext.authSessionItem().getPreservedReauthCountsForAuditMap());
                 } else {
                     LOG.warn("No preserved reauth counts found for reauth journey");
                 }
@@ -172,7 +172,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                         Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
                 LOG.info("reauthentication successful");
                 authSessionService.updateSession(
-                        userContext.getAuthSession().withPreservedReauthCountsForAuditMap(null));
+                        userContext.authSessionItem().withPreservedReauthCountsForAuditMap(null));
             }
 
             var response =

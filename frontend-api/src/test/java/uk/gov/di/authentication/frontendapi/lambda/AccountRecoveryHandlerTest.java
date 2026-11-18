@@ -75,7 +75,7 @@ class AccountRecoveryHandlerTest {
         var userProfile = generateUserProfile();
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-        when(authenticationService.getUserProfileFromEmail(EMAIL))
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         handler =
                 new AccountRecoveryHandler(

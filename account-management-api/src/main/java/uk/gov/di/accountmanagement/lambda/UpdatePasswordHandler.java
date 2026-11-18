@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
@@ -42,8 +41,6 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachTraceId;
 
@@ -108,10 +105,6 @@ public class UpdatePasswordHandler
         attachTraceId();
         attachSessionIdToLogs(sessionId);
         LOG.info("UpdatePasswordHandler called");
-        SupportedLanguage userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
         context.getClientContext();
         try {
             UpdatePasswordRequest updatePasswordRequest =
@@ -159,9 +152,7 @@ public class UpdatePasswordHandler
                     "User Password has successfully been updated.  Adding confirmation message to SQS queue");
             NotifyRequest notifyRequest =
                     new NotifyRequest(
-                            updatePasswordRequest.getEmail(),
-                            NotificationType.PASSWORD_UPDATED,
-                            userLanguage);
+                            updatePasswordRequest.getEmail(), NotificationType.PASSWORD_UPDATED);
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("Message successfully added to queue. Generating successful gateway response");
 

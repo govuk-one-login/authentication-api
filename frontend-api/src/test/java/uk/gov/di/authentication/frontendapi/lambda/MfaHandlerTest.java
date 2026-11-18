@@ -476,9 +476,9 @@ class MfaHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         MfaRequest test = new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET);
+        var userContext = new UserContext(authSession, null, null, null, null);
         APIGatewayProxyResponseEvent result =
-                handler.handleRequestWithUserContext(
-                        event, context, test, UserContext.builder(authSession).build());
+                handler.handleRequestWithUserContext(event, context, test, userContext);
 
         assertThat(result, hasStatus(400));
 

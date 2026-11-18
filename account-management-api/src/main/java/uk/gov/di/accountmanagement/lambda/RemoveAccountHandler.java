@@ -13,7 +13,6 @@ import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -47,7 +46,6 @@ public class RemoveAccountHandler
     private final AwsSqsClient sqsClient;
     private final StructuredAuditService structuredAuditService;
     private final ConfigurationService configurationService;
-    private final DynamoDeleteService dynamoDeleteService;
     private final AccountDeletionService accountDeletionService;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -56,13 +54,11 @@ public class RemoveAccountHandler
             AwsSqsClient sqsClient,
             StructuredAuditService structuredAuditService,
             ConfigurationService configurationService,
-            DynamoDeleteService dynamoDeleteService,
             AccountDeletionService accountDeletionService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.structuredAuditService = structuredAuditService;
         this.configurationService = configurationService;
-        this.dynamoDeleteService = dynamoDeleteService;
         this.accountDeletionService = accountDeletionService;
     }
 
@@ -75,7 +71,6 @@ public class RemoveAccountHandler
                         configurationService.getSqsEndpointUri());
         this.structuredAuditService = new StructuredAuditService(configurationService);
         this.configurationService = configurationService;
-        this.dynamoDeleteService = new DynamoDeleteService(configurationService);
         var accountDataApiService = new AccountDataApiService(configurationService);
         this.accountDeletionService =
                 new AccountDeletionService(
@@ -83,7 +78,6 @@ public class RemoveAccountHandler
                         sqsClient,
                         structuredAuditService,
                         configurationService,
-                        dynamoDeleteService,
                         accountDataApiService);
     }
 
@@ -128,22 +122,19 @@ public class RemoveAccountHandler
                             .map(headers -> headers.get("X-ADAPI-AccessToken"))
                             .filter(t -> !t.isEmpty());
 
-            if (token.isPresent()) {
-                accountDeletionService.removeAccount(
-                        input,
-                        userProfile,
-                        TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
-                        AccountDeletionReason.USER_INITIATED,
-                        true,
-                        token.get());
-            } else {
-                accountDeletionService.removeAccount(
-                        input,
-                        userProfile,
-                        TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
-                        AccountDeletionReason.USER_INITIATED,
-                        true);
+            if (token.isEmpty()) {
+                LOG.error("X-ADAPI-AccessToken header is missing; returning early");
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.REQUEST_MISSING_PARAMS);
             }
+
+            accountDeletionService.removeAccount(
+                    input,
+                    userProfile,
+                    TxmaAuditHelper.getTxmaAuditEncodedHeaderOrUnknown(input),
+                    AccountDeletionReason.USER_INITIATED,
+                    true,
+                    token.get());
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (UserNotFoundException e) {

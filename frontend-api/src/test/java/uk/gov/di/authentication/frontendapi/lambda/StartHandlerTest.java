@@ -18,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.ReauthFailureReasons;
 import uk.gov.di.authentication.frontendapi.entity.StartRequest;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
+import uk.gov.di.authentication.frontendapi.entity.UserDetails;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
@@ -36,7 +37,6 @@ import uk.gov.di.authentication.shared.services.AuthenticationAttemptsService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
@@ -106,7 +106,8 @@ class StartHandlerTest {
             mock(AuthenticationAttemptsService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final AuthSessionService authSessionService = mock(AuthSessionService.class);
-    private final UserContext userContext = mock(UserContext.class);
+    private final UserDetails emptyUserDetails =
+            new UserDetails(Optional.empty(), Optional.empty());
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
@@ -164,7 +165,7 @@ class StartHandlerTest {
     void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
             throws Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
         when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
                 .thenReturn(true);
@@ -193,7 +194,7 @@ class StartHandlerTest {
             throws Json.JsonException {
         var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var body =
@@ -232,7 +233,7 @@ class StartHandlerTest {
     void checkAuditEventStillEmittedWhenTICFHeaderNotProvided() throws Json.JsonException {
         var isAuthenticated = false;
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var headers = headersWithReauthenticate("true");
@@ -267,7 +268,7 @@ class StartHandlerTest {
     void shouldConsiderUserNotAuthenticatedWhenUserProfileNotPresent() throws Json.JsonException {
         withNoUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var event =
@@ -293,7 +294,7 @@ class StartHandlerTest {
     void considersUserAuthenticatedWhenUserProfilePresent() throws Json.JsonException {
         withUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
         when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
                 .thenReturn(true);
@@ -323,7 +324,7 @@ class StartHandlerTest {
             throws Json.JsonException {
         withUserProfilePresent();
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         var authSession =
                 useValidSession()
                         .withHasVerifiedWithPassword(true)
@@ -386,7 +387,7 @@ class StartHandlerTest {
         useValidSession();
         var userStartInfo =
                 new UserStartInfo(false, false, isAuthenticated, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         when(permissionDecisionManager.canIssueAuthCode(any(AuthSessionItem.class)))
                 .thenReturn(true);
 
@@ -444,8 +445,8 @@ class StartHandlerTest {
             String expectedFailureReason)
             throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
+        var userDetails = new UserDetails(Optional.of(userProfile), Optional.empty());
+        usingStartServiceThatReturns(userDetails, getClientStartInfo(), userStartInfo);
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
@@ -529,13 +530,13 @@ class StartHandlerTest {
     }
 
     private void usingStartServiceThatReturns(
-            UserContext userContext, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo) {
-        when(startService.buildUserContext(any(AuthSessionItem.class))).thenReturn(userContext);
+            UserDetails userDetails, ClientStartInfo clientStartInfo, UserStartInfo userStartInfo) {
+        when(startService.getUserDetails(any(AuthSessionItem.class))).thenReturn(userDetails);
         when(startService.buildClientStartInfo(
                         any(), any(), any(), any(), any(), anyBoolean(), anyBoolean()))
                 .thenReturn(clientStartInfo);
         when(startService.buildUserStartInfo(
-                        eq(userContext),
+                        eq(userDetails),
                         any(),
                         any(),
                         anyBoolean(),
@@ -632,7 +633,7 @@ class StartHandlerTest {
     @Test
     void shouldReturn400WhenRedirectUriIsInvalid() throws Json.JsonException {
         usingStartServiceThatReturns(
-                userContext, getClientStartInfo(), getUserStartInfo(null, null));
+                emptyUserDetails, getClientStartInfo(), getUserStartInfo(null, null));
         useValidSession();
 
         var invalidRedirectUri = "://invalid-uri";
@@ -669,7 +670,7 @@ class StartHandlerTest {
     @Test
     void shouldHandleReauthWithBlockedCountTypesButNoSubjectId() throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, true, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
 
         // Mock session with no internal subject ID
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
@@ -711,7 +712,7 @@ class StartHandlerTest {
     @Test
     void shouldHandleNullRequestedLevelOfConfidence() throws Json.JsonException {
         var userStartInfo = getUserStartInfo(null, null);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var body =
@@ -752,7 +753,7 @@ class StartHandlerTest {
     @Test
     void shouldHandleEmptyPreviousSigninJourneyIdInReauth() throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var body =
@@ -777,7 +778,7 @@ class StartHandlerTest {
     @Test
     void shouldHandleEmptyRpPairwiseIdInReauth() throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var body =
@@ -805,7 +806,7 @@ class StartHandlerTest {
     void shouldHandleNullPreviousSigninJourneyIdAndRpPairwiseIdInReauth()
             throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var body = makeRequestBody(null, null, null, false); // both null
@@ -824,7 +825,7 @@ class StartHandlerTest {
     @Test
     void shouldHandleReauthWithNullReauthenticateHeader() throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         // Headers without Reauthenticate header (null case)
@@ -847,8 +848,8 @@ class StartHandlerTest {
     @Test
     void shouldHandleNullFailureReasonInCloudwatchMetrics() throws Json.JsonException {
         var userStartInfo = new UserStartInfo(false, false, true, null, null, null, true, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
-        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
+        var userDetails = new UserDetails(Optional.of(userProfile), Optional.empty());
+        usingStartServiceThatReturns(userDetails, getClientStartInfo(), userStartInfo);
         when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
         when(authenticationAttemptsService.getCountsByJourneyForSubjectIdAndRpPairwiseId(
                         any(), any(), eq(JourneyType.REAUTHENTICATION)))
@@ -882,7 +883,7 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithPreviousSessionId() throws Json.JsonException {
         var userStartInfo = getUserStartInfo(null, null);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var previousSessionId = "previous-session-id";
@@ -898,7 +899,7 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithEmptyPreviousSessionId() throws Json.JsonException {
         var userStartInfo = getUserStartInfo(null, null);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var body = makeRequestBody("", null, null, false); // empty string
@@ -913,7 +914,7 @@ class StartHandlerTest {
     @Test
     void shouldReturn200WithBlankPreviousSessionId() throws Json.JsonException {
         var userStartInfo = getUserStartInfo(null, null);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         useValidSession();
 
         var body = makeRequestBody("   ", null, null, false); // blank string with spaces
@@ -939,7 +940,7 @@ class StartHandlerTest {
         when(authSessionService.getUpdatedPreviousSessionOrCreateNew(any(), any()))
                 .thenReturn(authSession);
         var userStartInfo = new UserStartInfo(false, false, false, null, null, null, false, false);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
         var body = makeRequestBody(null, null, TEST_RP_PAIRWISE_ID, false);
         var event = apiRequestEventWithHeadersAndBody(headersWithReauthenticate("true"), body);
 
@@ -969,7 +970,7 @@ class StartHandlerTest {
         var userStartInfo =
                 new UserStartInfo(
                         false, false, false, null, null, null, false, expectedMfaRequired);
-        usingStartServiceThatReturns(userContext, getClientStartInfo(), userStartInfo);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
 
         var body =
                 objectMapper.writeValueAsString(

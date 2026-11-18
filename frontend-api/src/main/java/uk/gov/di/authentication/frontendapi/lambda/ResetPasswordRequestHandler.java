@@ -149,21 +149,21 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             Context context,
             ResetPasswordRequest request,
             UserContext userContext) {
-        attachSessionIdToLogs(userContext.getAuthSession().getSessionId());
+        attachSessionIdToLogs(userContext.authSessionItem().getSessionId());
 
         LOG.info("ResetPasswordRequestHandler called");
         try {
-            if (Objects.isNull(userContext.getAuthSession().getEmailAddress())
-                    || !userContext.getAuthSession().validateSession(request.getEmail())) {
+            if (Objects.isNull(userContext.authSessionItem().getEmailAddress())
+                    || !userContext.authSessionItem().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.SESSION_ID_MISSING);
             }
 
             var permissionContext =
                     PermissionContext.builder()
                             .withInternalSubjectId(
-                                    userContext.getAuthSession().getInternalCommonSubjectId())
+                                    userContext.authSessionItem().getInternalCommonSubjectId())
                             .withEmailAddress(request.getEmail())
-                            .withAuthSessionItem(userContext.getAuthSession())
+                            .withAuthSessionItem(userContext.authSessionItem())
                             .build();
 
             var permissionCheckResult = checkUserPermissions(request.getEmail(), userContext);
@@ -181,7 +181,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             authSessionService.updateSession(
                     userContext
-                            .getAuthSession()
+                            .authSessionItem()
                             .withResetPasswordState(AuthSessionItem.ResetPasswordState.ATTEMPTED));
 
             return processPasswordResetRequest(request, userContext, isTestClient);
@@ -196,7 +196,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             ResetPasswordRequest request,
             UserContext userContext,
             boolean isTestClient) {
-        int passwordResetCounter = userContext.getAuthSession().getPasswordResetCount();
+        int passwordResetCounter = userContext.authSessionItem().getPasswordResetCount();
         var passwordResetCounterPair = pair("passwordResetCounter", passwordResetCounter);
         var passwordResetTypePair =
                 request.isWithinForcedPasswordResetJourney()
@@ -210,7 +210,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
-                        userContext.getAuthSession().getInternalCommonSubjectId(),
+                        userContext.authSessionItem().getInternalCommonSubjectId(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
@@ -251,9 +251,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             resetPasswordRequest.getEmail(),
                             RESET_PASSWORD_WITH_CODE,
                             code,
-                            userContext.getUserLanguage(),
-                            userContext.getAuthSession().getSessionId(),
-                            userContext.getClientSessionId());
+                            userContext.userLanguage(),
+                            userContext.authSessionItem().getSessionId(),
+                            userContext.clientSessionId());
             sqsClient.send(serialiseNotifyRequest(notifyRequest));
             LOG.info(
                     "{} EMAIL placed on queue with reference: {}",
@@ -318,9 +318,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var permissionContext =
                 PermissionContext.builder()
                         .withInternalSubjectId(
-                                userContext.getAuthSession().getInternalCommonSubjectId())
+                                userContext.authSessionItem().getInternalCommonSubjectId())
                         .withEmailAddress(email)
-                        .withAuthSessionItem(userContext.getAuthSession())
+                        .withAuthSessionItem(userContext.authSessionItem())
                         .build();
 
         var canSendResult =
@@ -369,9 +369,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var permissionContext =
                 PermissionContext.builder()
                         .withInternalSubjectId(
-                                userContext.getAuthSession().getInternalCommonSubjectId())
+                                userContext.authSessionItem().getInternalCommonSubjectId())
                         .withEmailAddress(email)
-                        .withAuthSessionItem(userContext.getAuthSession())
+                        .withAuthSessionItem(userContext.authSessionItem())
                         .build();
 
         var canSendResult =

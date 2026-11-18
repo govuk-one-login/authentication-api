@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.passkeys.PasskeysRetrieveResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResponseException;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -46,8 +45,6 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.PASSKEY_D
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class PasskeysDeleteProxyHandler
@@ -196,12 +193,7 @@ public class PasskeysDeleteProxyHandler
             LOG.warn("No X-ADAPI-AccessToken in headers, request will likely fail");
         }
 
-        var userLanguage =
-                matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
-
-        return new PasskeysDeleteRequest(publicSubjectId, token, passkeyIdentifier, userLanguage);
+        return new PasskeysDeleteRequest(publicSubjectId, token, passkeyIdentifier);
     }
 
     private Result<PasskeysDeleteProxyFailureReason, UserProfile> getUserProfile(
@@ -254,7 +246,7 @@ public class PasskeysDeleteProxyHandler
                         ? NotificationType.PASSKEY_DELETED_NONE_REMAINING
                         : NotificationType.PASSKEY_DELETED_SOME_REMAINING;
 
-        var notifyRequest = new NotifyRequest(email, notificationType, request.supportedLanguage);
+        var notifyRequest = new NotifyRequest(email, notificationType);
         sqsClient.send(serializationService.writeValueAsString((notifyRequest)));
         LOG.info(
                 "Notify request sent with notification type '{}' and publicSubjectId '{}'",
@@ -339,9 +331,5 @@ public class PasskeysDeleteProxyHandler
                 restrictedPasskeyPair);
     }
 
-    private record PasskeysDeleteRequest(
-            String publicSubjectId,
-            String token,
-            String passkeyId,
-            LocaleHelper.SupportedLanguage supportedLanguage) {}
+    private record PasskeysDeleteRequest(String publicSubjectId, String token, String passkeyId) {}
 }

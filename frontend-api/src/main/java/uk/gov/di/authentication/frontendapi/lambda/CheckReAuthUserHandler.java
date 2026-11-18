@@ -123,13 +123,13 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         LOG.info("CheckReAuthUserHandler called");
 
-        var internalPairwiseId = userContext.getAuthSession().getInternalCommonSubjectId();
+        var internalPairwiseId = userContext.authSessionItem().getInternalCommonSubjectId();
 
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
                         internalPairwiseId,
-                        userContext.getAuthSession().getEmailAddress(),
+                        userContext.authSessionItem().getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -139,7 +139,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         Optional<UserProfile> maybeUserProfileOfUserSuppliedEmail =
                 authenticationService.getUserProfileByEmailMaybe(request.email());
 
-        Optional<UserProfile> maybeUserProfileOfSignedInUser = userContext.getUserProfile();
+        Optional<UserProfile> maybeUserProfileOfSignedInUser = userContext.userProfile();
 
         if (maybeUserProfileOfUserSuppliedEmail.isEmpty()) {
             return generateErrorResponse(
@@ -171,7 +171,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         var calculatedPairwiseIdFromUserSuppliedEmail =
                 ClientSubjectHelper.getSubject(
                                 userProfileOfUserSuppliedEmail,
-                                userContext.getAuthSession(),
+                                userContext.authSessionItem(),
                                 authenticationService)
                         .getValue();
         boolean isTheUserSubmittedEmailAssociatedWithTheRpSubmittedPairwiseId =

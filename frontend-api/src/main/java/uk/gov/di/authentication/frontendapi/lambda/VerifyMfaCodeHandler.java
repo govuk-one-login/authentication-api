@@ -51,6 +51,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.mfa.MFAMethodsService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 import uk.gov.di.authentication.userpermissions.UserActionsManager;
 import uk.gov.di.authentication.userpermissions.entity.PermissionContext;
 
@@ -66,7 +67,6 @@ import java.util.Optional;
 import static java.util.Map.entry;
 import static uk.gov.di.audit.AuditContext.auditContextFromUserContext;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_MAX_RETRIES_REACHED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_INVALID_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder.getReauthFailureReasonFromCountTypes;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ATTEMPT_NO_FAILED_AT;
@@ -100,6 +100,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final UserActionsManager userActionsManager;
     private final TestUserHelper testUserHelper;
     private final StructuredAuditService structuredAuditService;
+    private final PermissionDecisionManager permissionDecisionManager;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -113,7 +114,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             MFAMethodsService mfaMethodsService,
             UserActionsManager userActionsManager,
             TestUserHelper testUserHelper,
-            StructuredAuditService structuredAuditService) {
+            StructuredAuditService structuredAuditService,
+            PermissionDecisionManager permissionDecisionManager) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -128,6 +130,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.userActionsManager = userActionsManager;
         this.testUserHelper = testUserHelper;
         this.structuredAuditService = structuredAuditService;
+        this.permissionDecisionManager = permissionDecisionManager;
     }
 
     public VerifyMfaCodeHandler() {
@@ -154,6 +157,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 new AuthenticationAttemptsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     public VerifyMfaCodeHandler(
@@ -177,6 +181,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 new AuthenticationAttemptsService(configurationService);
         this.userActionsManager = new UserActionsManager(configurationService);
         this.structuredAuditService = new StructuredAuditService(configurationService);
+        this.permissionDecisionManager = new PermissionDecisionManager(configurationService);
     }
 
     @Override
@@ -193,10 +198,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext) {
         LOG.info("VerifyMfaCodeHandler called");
 
-        AuthSessionItem authSession = userContext.getAuthSession();
+        AuthSessionItem authSession = userContext.authSessionItem();
 
         var journeyType = codeRequest.getJourneyType();
-        Optional<UserProfile> userProfileMaybe = userContext.getUserProfile();
+        Optional<UserProfile> userProfileMaybe = userContext.userProfile();
         UserProfile userProfile = userProfileMaybe.orElse(null);
 
         Optional<String> maybeRpPairwiseId = getRpPairwiseId(userProfile, authSession);
@@ -307,7 +312,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Optional<String> maybeRpPairwiseId,
             UserProfile userProfile) {
 
-        var authSession = userContext.getAuthSession();
+        var authSession = userContext.authSessionItem();
         var auditContext =
                 auditContextFromUserContext(
                         userContext,
@@ -368,6 +373,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     ForcedMfaResetHelper.isMfaResetRequired(
                             configurationService, retrievedMfaMethods);
         }
+
+        if (codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY
+                && !permissionDecisionManager.canResetMfaCode(
+                        authSession, isForcedMfaResetRequired)) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.MFA_RESET_NOT_PERMITTED);
+        }
+
         final Optional<MFAMethod> finalActiveMfaMethod = activeMfaMethod;
 
         var errorResponseMaybe = mfaCodeProcessor.validateCode();
@@ -382,7 +394,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     || errorResponse.equals(
                             ErrorResponse.TOO_MANY_INVALID_AUTH_APP_CODES_ENTERED)) {
                 blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-                        userContext.getAuthSession().getEmailAddress(),
+                        userContext.authSessionItem().getEmailAddress(),
                         codeRequest.getMfaMethodType(),
                         codeRequest.getJourneyType());
             }
@@ -404,7 +416,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             auditSuccess(codeRequest, auditContext, activeMfaMethod, userProfile);
 
             processSuccessfulCodeSession(
-                    userContext.getAuthSession(),
+                    userContext.authSessionItem(),
                     input,
                     subjectId,
                     codeRequest,
@@ -417,7 +429,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (checkErrorCountsForReauthAndEmitFailedAuditEventIfBlocked(
                 codeRequest.getJourneyType(),
-                userContext.getUserProfile().orElse(null),
+                userContext.userProfile().orElse(null),
                 auditContext,
                 maybeRpPairwiseId)) {
             return generateApiGatewayProxyErrorResponse(

@@ -6,7 +6,6 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AccountDeletionTokenService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.accountmanagement.services.ManualAccountDeletionService;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.services.AccountDataApiService;
@@ -37,7 +36,6 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         var structuredAuditService = new StructuredAuditService(configurationService);
-        var dynamoDeleteService = new DynamoDeleteService(configurationService);
         var accountDataApiService = new AccountDataApiService(configurationService);
         var accountDeletionService =
                 new AccountDeletionService(
@@ -45,13 +43,11 @@ public class ManuallyDeleteAccountHandler implements RequestHandler<String, Stri
                         emailSqsClient,
                         structuredAuditService,
                         configurationService,
-                        dynamoDeleteService,
                         accountDataApiService);
         var accountDeletionTokenService = new AccountDeletionTokenService(configurationService);
         this.manualAccountDeletionService =
                 new ManualAccountDeletionService(
                         accountDeletionService,
-                        configurationService,
                         accountDeletionTokenService,
                         configurationService.getManualAccountDeletionClientId());
     }

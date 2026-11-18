@@ -36,7 +36,7 @@ awsS3 = { module = "software.amazon.awssdk:s3", version.ref = "awsSdk" }
 bouncyCastle = "org.bouncycastle:bcpkix-jdk18on:1.85"
 crac = "org.crac:crac:1.5.0"
 govUkNotify = "uk.gov.service.notify:notifications-java-client:6.0.0-RELEASE"
-gson = "com.google.code.gson:gson:2.14.0"
+gson = "com.google.code.gson:gson:2.15.0"
 hamcrest = "org.hamcrest:hamcrest:3.0"
 jacksonDatabind = "com.fasterxml.jackson.core:jackson-databind:2.22.3"
 javaParser = "com.github.javaparser:javaparser-core:3.28.2"
@@ -51,20 +51,20 @@ jupiterApi = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "ju
 jupiterEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 jupiterParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
 lettuceCore = "io.lettuce:lettuce-core:7.6.0.RELEASE"
-libphonenumber = "com.googlecode.libphonenumber:libphonenumber:9.0.35"
+libphonenumber = "com.googlecode.libphonenumber:libphonenumber:9.0.42"
 log4jJsonTemplate = "org.apache.logging.log4j:log4j-layout-template-json:2.26.1"
 mockitoCore = "org.mockito:mockito-core:5.23.0"
 nimbusJwt = "com.nimbusds:nimbus-jose-jwt:10.9.1"
 nimbusOidc = "com.nimbusds:oauth2-oidc-sdk:11.22.2"
-openTelemetryBom = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.30.0-alpha"
+openTelemetryBom = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.33.1-alpha"
 openTelemetryAwsSdk = { module = "io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2-autoconfigure" }
 openTelemetryJavaHttpClient = { module = "io.opentelemetry.instrumentation:opentelemetry-java-http-client" }
 pactConsumer = { module = "au.com.dius.pact.consumer:junit5", version.ref = "pact" }
 pactProvider = { module = "au.com.dius.pact.provider:junit5", version.ref = "pact" }
 reflections = "org.reflections:reflections:0.10.2"
-sl4jNop = "org.slf4j:slf4j-nop:2.0.18"
+sl4jNop = "org.slf4j:slf4j-nop:2.0.20"
 webcompere = "uk.org.webcompere:system-stubs-jupiter:2.1.8"
-webauthnServer = "com.yubico:webauthn-server-core:2.8.1"
+webauthnServer = "com.yubico:webauthn-server-core:2.10.1"
 wiremock = "org.wiremock:wiremock-jetty12:3.13.2"
 xrayBom = { module = "com.amazonaws:aws-xray-recorder-sdk-bom", version.ref = "xray" }
 xrayCore = { module = "com.amazonaws:aws-xray-recorder-sdk-core", version.ref = "xray" }
@@ -111,5 +111,5 @@ xray = [
 dockerCompose = "com.avast.gradle.docker-compose:0.17.21"
 pact = "au.com.dius.pact:4.7.0"
 sonar = "org.sonarqube:7.3.1.8318"
-spotbugs = "com.github.spotbugs:6.5.11"
-spotless = "com.diffplug.spotless:8.9.0"
+spotbugs = "com.github.spotbugs:6.5.13"
+spotless = "com.diffplug.spotless:8.10.4"

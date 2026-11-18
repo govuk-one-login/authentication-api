@@ -51,7 +51,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_FAILED;
-import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_OUTCOME;
+import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_AMC_SCOPE;
 import static uk.gov.di.authentication.shared.domain.AuditableEvent.AUDIT_EVENT_EXTENSIONS_JOURNEY_TYPE;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.AMC_AUTHORISATION_OVERALL_SUCCESS;
@@ -79,7 +79,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
     }
 
     public AMCCallbackHandler(ConfigurationService configurationService) {
-        super(AMCCallbackRequest.class, configurationService, true);
+        super(AMCCallbackRequest.class, configurationService);
         this.amcService =
                 new AMCService(
                         configurationService,
@@ -151,13 +151,13 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
 
         var additionalAmcHeaders = new HashMap<String, String>();
         additionalAmcHeaders.put("di-persistent-session-id", persistentSessionId);
-        additionalAmcHeaders.put("session-id", userContext.getAuthSession().getSessionId());
-        additionalAmcHeaders.put("client-session-id", userContext.getClientSessionId());
+        additionalAmcHeaders.put("session-id", userContext.authSessionItem().getSessionId());
+        additionalAmcHeaders.put("client-session-id", userContext.clientSessionId());
         additionalAmcHeaders.put("x-forwarded-for", IpAddressHelper.extractIpAddress(input));
-        additionalAmcHeaders.put("user-language", userContext.getUserLanguage().getLanguage());
+        additionalAmcHeaders.put("user-language", userContext.userLanguage().getLanguage());
 
-        if (!userContext.getTxmaAuditEncoded().isEmpty()) {
-            additionalAmcHeaders.put("txma-audit-encoded", userContext.getTxmaAuditEncoded());
+        if (!userContext.txmaAuditEncoded().isEmpty()) {
+            additionalAmcHeaders.put("txma-audit-encoded", userContext.txmaAuditEncoded());
         } else {
             LOG.warn("No txma audit header included");
         }
@@ -268,19 +268,19 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
             }
         }
 
-        AuthSessionItem authSessionItem = userContext.getAuthSession();
+        AuthSessionItem authSessionItem = userContext.authSessionItem();
 
         var auditContext =
                 new AuditContext(
                         authSessionItem.getClientId(),
-                        userContext.getClientSessionId(),
+                        userContext.clientSessionId(),
                         authSessionItem.getSessionId(),
                         authSessionItem.getInternalCommonSubjectId(),
                         authSessionItem.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        userContext.getTxmaAuditEncoded());
+                        userContext.txmaAuditEncoded());
 
         Object journeyType =
                 AMCScope.fromValue(journeyOutcome.scope())
@@ -305,7 +305,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                 FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_RECEIVED,
                 auditContext,
                 pair(
-                        AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_OUTCOME,
+                        AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTION_OVERALL_SUCCESS,
                         journeyOutcome.success()),
                 pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS, allActions),
                 pair(AUDIT_EVENT_EXTENSIONS_ACCOUNT_ACTIONS_ERRORS, actionErrors),
@@ -346,7 +346,7 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         }
 
         var amcState = amcStateMaybe.get();
-        if (!amcState.getClientSessionId().equals(userContext.getClientSessionId())) {
+        if (!amcState.getClientSessionId().equals(userContext.clientSessionId())) {
             LOG.error("Received state belongs to a different session");
             return Result.failure(generateApiGatewayProxyErrorResponse(400, AMC_STATE_MISMATCH));
         }

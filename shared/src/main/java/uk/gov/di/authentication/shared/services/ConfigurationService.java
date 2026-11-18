@@ -786,8 +786,8 @@ public class ConfigurationService
         return System.getenv().getOrDefault("AUTH_TO_AMC_PRIVATE_AUDIENCE", "");
     }
 
-    public String getAMCSfadRedirectURI() {
-        return System.getenv().getOrDefault("AMC_SFAD_REDIRECT_URI", "");
+    public String getAMCSsadRedirectURI() {
+        return System.getenv().getOrDefault("AMC_SSAD_REDIRECT_URI", "");
     }
 
     public String getAMCCreatePasskeyRedirectURI() {
@@ -904,12 +904,6 @@ public class ConfigurationService
     public boolean isTestSigningKeyEnabled() {
         return System.getenv()
                 .getOrDefault("TEST_SIGNING_KEY_ENABLED", FEATURE_SWITCH_OFF)
-                .equals(FEATURE_SWITCH_ON);
-    }
-
-    public boolean isAccountDeletionDataApiEnabled() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_DELETION_DATA_API_ENABLED", FEATURE_SWITCH_OFF)
                 .equals(FEATURE_SWITCH_ON);
     }
 

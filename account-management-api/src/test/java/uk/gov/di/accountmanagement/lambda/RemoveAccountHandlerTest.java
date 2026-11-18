@@ -5,11 +5,11 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.accountmanagement.entity.AccountDeletionReason;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.services.AccountDeletionService;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.auditevents.services.StructuredAuditService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -35,6 +37,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -49,6 +52,7 @@ class RemoveAccountHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
     private static final String TXMA_ENCODED_HEADER_VALUE = "txma-test-value";
+    private static final String ADAPI_ACCESS_TOKEN = "some-access-token";
 
     private RemoveAccountHandler handler;
     private final Context context = mock(Context.class);
@@ -57,9 +61,12 @@ class RemoveAccountHandlerTest {
     private final StructuredAuditService structuredAuditService =
             mock(StructuredAuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final DynamoDeleteService dynamoDeleteService = mock(DynamoDeleteService.class);
     private final AccountDeletionService accountDeletionService =
             mock(AccountDeletionService.class);
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(RemoveAccountHandler.class);
 
     @BeforeEach
     public void setUp() {
@@ -69,7 +76,6 @@ class RemoveAccountHandlerTest {
                         sqsClient,
                         structuredAuditService,
                         configurationService,
-                        dynamoDeleteService,
                         accountDeletionService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -86,6 +92,9 @@ class RemoveAccountHandlerTest {
                 .thenReturn(Optional.of(userProfile));
 
         var event = generateApiGatewayEvent(expectedCommonSubject);
+        var headers = new HashMap<>(event.getHeaders());
+        headers.put("X-ADAPI-AccessToken", ADAPI_ACCESS_TOKEN);
+        event.setHeaders(headers);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -95,7 +104,8 @@ class RemoveAccountHandlerTest {
                         userProfile,
                         TXMA_ENCODED_HEADER_VALUE,
                         AccountDeletionReason.USER_INITIATED,
-                        true);
+                        true,
+                        ADAPI_ACCESS_TOKEN);
     }
 
     @Test
@@ -125,6 +135,46 @@ class RemoveAccountHandlerTest {
     }
 
     @Test
+    void shouldReturn400AndNotDeleteWhenTokenHeaderMissing() {
+        var userProfile =
+                new UserProfile()
+                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_SUBJECT.getValue());
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+
+        var event = generateApiGatewayEvent(expectedCommonSubject);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+        verifyNoInteractions(accountDeletionService);
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("X-ADAPI-AccessToken header is missing")));
+    }
+
+    @Test
+    void shouldReturn400AndNotDeleteWhenTokenHeaderIsEmpty() {
+        var userProfile =
+                new UserProfile()
+                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_SUBJECT.getValue());
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+
+        var event = generateApiGatewayEvent(expectedCommonSubject);
+        var headers = new HashMap<>(event.getHeaders());
+        headers.put("X-ADAPI-AccessToken", "");
+        event.setHeaders(headers);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.REQUEST_MISSING_PARAMS));
+        verifyNoInteractions(accountDeletionService);
+    }
+
+    @Test
     void shouldNotSendEncodedAuditDataIfHeaderNotPresent() throws Json.JsonException {
         var userProfile =
                 new UserProfile()
@@ -134,7 +184,12 @@ class RemoveAccountHandlerTest {
                 .thenReturn(Optional.of(userProfile));
 
         var event = generateApiGatewayEvent(expectedCommonSubject);
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_ID,
+                        "X-ADAPI-AccessToken",
+                        ADAPI_ACCESS_TOKEN));
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -144,7 +199,8 @@ class RemoveAccountHandlerTest {
                         userProfile,
                         StructuredAuditService.UNKNOWN,
                         AccountDeletionReason.USER_INITIATED,
-                        true);
+                        true,
+                        ADAPI_ACCESS_TOKEN);
     }
 
     @Test
@@ -178,7 +234,7 @@ class RemoveAccountHandlerTest {
         var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
         var result = handler.handleRequest(event, context);
 
-        verifyNoInteractions(dynamoDeleteService);
+        verifyNoInteractions(accountDeletionService);
         verifyNoInteractions(structuredAuditService);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ACCT_DOES_NOT_EXIST));

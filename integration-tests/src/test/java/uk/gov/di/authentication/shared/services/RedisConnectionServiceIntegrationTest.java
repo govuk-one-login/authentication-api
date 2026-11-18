@@ -117,6 +117,61 @@ class RedisConnectionServiceIntegrationTest {
     }
 
     @Test
+    void incrementWithExpiryShouldReturnOneWhenKeyDoesNotYetExist() {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+            assertThat(redis.incrementWithExpiry(testKey, 60), is(1L));
+            assertThat(redis.getValue(testKey), equalTo("1"));
+        }
+    }
+
+    @Test
+    void incrementWithExpiryShouldIncrementSequentiallyOnRepeatedCalls() {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+            assertThat(redis.incrementWithExpiry(testKey, 60), is(1L));
+            assertThat(redis.incrementWithExpiry(testKey, 60), is(2L));
+            assertThat(redis.incrementWithExpiry(testKey, 60), is(3L));
+
+            assertThat(redis.getValue(testKey), equalTo("3"));
+        }
+    }
+
+    @Test
+    void incrementWithExpiryShouldSetTimeToLiveOnTheKey() {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+            redis.incrementWithExpiry(testKey, 60);
+
+            long ttl = redis.getTimeToLive(testKey);
+            assertThat(ttl > 0 && ttl <= 60, is(true));
+        }
+    }
+
+    @Test
+    void incrementWithExpiryShouldRefreshTimeToLiveOnEachCall() {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+            redis.incrementWithExpiry(testKey, 10);
+            redis.incrementWithExpiry(testKey, 60);
+
+            long ttl = redis.getTimeToLive(testKey);
+            assertThat(ttl > 10 && ttl <= 60, is(true));
+        }
+    }
+
+    @Test
+    void incrementWithExpiryShouldCauseKeyToExpire() {
+        try (RedisConnectionService redis =
+                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
+            redis.incrementWithExpiry(testKey, 1);
+
+            await().atMost(2, SECONDS)
+                    .untilAsserted(() -> assertThat(redis.keyExists(testKey), is(false)));
+        }
+    }
+
+    @Test
     void shouldThrowRedisConnectionExceptionIfRedisUnavailable() {
         try (RedisConnectionService redis =
                 new RedisConnectionService("bad-host-name", 6379, false, REDIS_PASSWORD, false)) {

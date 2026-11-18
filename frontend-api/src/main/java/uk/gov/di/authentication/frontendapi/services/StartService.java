@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
+import uk.gov.di.authentication.frontendapi.entity.UserDetails;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.entity.AuthSessionItem;
@@ -13,7 +14,6 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.util.Collection;
@@ -35,21 +35,19 @@ public class StartService {
         this.dynamoService = dynamoService;
     }
 
-    public UserContext buildUserContext(AuthSessionItem authSession) {
-        var builder = UserContext.builder(authSession);
-        UserContext userContext;
-        Optional.of(authSession)
+    public UserDetails getUserDetails(AuthSessionItem authSession) {
+        return Optional.of(authSession)
                 .map(AuthSessionItem::getEmailAddress)
                 .flatMap(dynamoService::getUserProfileByEmailMaybe)
-                .ifPresent(
-                        t ->
-                                builder.withUserProfile(t)
-                                        .withUserCredentials(
-                                                Optional.of(
-                                                        dynamoService.getUserCredentialsFromEmail(
-                                                                authSession.getEmailAddress()))));
-        userContext = builder.build();
-        return userContext;
+                .map(
+                        userProfile -> {
+                            var userCredentials =
+                                    Optional.ofNullable(
+                                            dynamoService.getUserCredentialsFromEmail(
+                                                    authSession.getEmailAddress()));
+                            return new UserDetails(Optional.of(userProfile), userCredentials);
+                        })
+                .orElse(new UserDetails(Optional.empty(), Optional.empty()));
     }
 
     public ClientStartInfo buildClientStartInfo(
@@ -79,7 +77,7 @@ public class StartService {
     }
 
     public UserStartInfo buildUserStartInfo(
-            UserContext userContext,
+            UserDetails userDetails,
             String cookieConsent,
             String gaTrackingId,
             boolean identityRequired,
@@ -107,13 +105,13 @@ public class StartService {
                 userIsAuthenticated,
                 cookieConsent,
                 gaTrackingId,
-                getMfaMethodType(userContext),
+                getMfaMethodType(userDetails),
                 isBlockedForReauth,
                 isMfaRequired);
     }
 
-    private boolean authApp(UserContext userContext) {
-        return userContext.getUserCredentials().stream()
+    private boolean authApp(UserDetails userDetails) {
+        return userDetails.maybeUserCredentials().stream()
                 .map(UserCredentials::getMfaMethods)
                 .filter(Objects::nonNull)
                 .filter(not(List::isEmpty))
@@ -146,37 +144,45 @@ public class StartService {
         return currentCredentialStrength.isLowerThan(requestedCredentialStrength);
     }
 
-    public MFAMethodType getMfaMethodType(UserContext userContext) {
-        var maybeUserProfile = userContext.getUserProfile();
+    public MFAMethodType getMfaMethodType(UserDetails userDetails) {
+        var maybeUserProfile = userDetails.maybeUserProfile();
         if (maybeUserProfile.isEmpty()) {
             return null;
         }
-
         var userProfile = maybeUserProfile.get();
+
         if (userProfile.isMfaMethodsMigrated()) {
-            var maybeUserCredentials = userContext.getUserCredentials();
-            if (maybeUserCredentials.isPresent()) {
-                var userCredentials = maybeUserCredentials.get();
-                var defaultMfaMethod =
-                        MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
-                if (defaultMfaMethod.isPresent()) {
-                    return MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType());
-                } else {
-                    LOG.error(
-                            "Unexpected error getting default mfa method for user: no default method exists");
-                    return MFAMethodType.NONE;
-                }
-            } else {
-                LOG.error(
-                        "Attempted to get default mfa method for migrated user without user credentials");
-                return MFAMethodType.NONE;
-            }
+            return getMfaMethodForMigratedUser(userDetails);
+        } else {
+            return getMfaMethodForNonMigratedUser(userDetails);
         }
-        if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
+    }
+
+    private MFAMethodType getMfaMethodForNonMigratedUser(UserDetails userDetails) {
+        if (userDetails.maybeUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
             return MFAMethodType.SMS;
-        } else if (authApp(userContext)) {
+        } else if (authApp(userDetails)) {
             return MFAMethodType.AUTH_APP;
         } else return null;
+    }
+
+    private MFAMethodType getMfaMethodForMigratedUser(UserDetails userDetails) {
+        var maybeUserCredentials = userDetails.maybeUserCredentials();
+        if (maybeUserCredentials.isPresent()) {
+            var userCredentials = maybeUserCredentials.get();
+            var defaultMfaMethod = MfaHelper.getDefaultMfaMethodForMigratedUser(userCredentials);
+            if (defaultMfaMethod.isPresent()) {
+                return MFAMethodType.valueOf(defaultMfaMethod.get().getMfaMethodType());
+            } else {
+                LOG.error(
+                        "Unexpected error getting default mfa method for user: no default method exists");
+                return MFAMethodType.NONE;
+            }
+        } else {
+            LOG.error(
+                    "Attempted to get default mfa method for migrated user without user credentials");
+            return MFAMethodType.NONE;
+        }
     }
 
     private boolean validCookieConsentValueIsPresent(String cookieConsent) {

@@ -40,7 +40,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
-import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 @ExtendWith(SystemStubsExtension.class)
 class MfaResetStorageTokenJwkHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {

@@ -7,7 +7,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.lambda.NotificationHandler;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
@@ -36,8 +35,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidEmailRequestIsAddedToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE, SupportedLanguage.EN, false, null);
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE, false, null);
 
         handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
 
@@ -59,13 +57,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidPhoneNumberRequestIsAddedToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_PHONE_NUMBER,
-                        VERIFY_PHONE_NUMBER,
-                        CODE,
-                        SupportedLanguage.EN,
-                        false,
-                        null);
+                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE, false, null);
 
         handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
 
@@ -85,26 +77,14 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
 
         for (int i = 0; i < limit; i++) {
             NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            phoneNumber,
-                            VERIFY_PHONE_NUMBER,
-                            CODE,
-                            SupportedLanguage.EN,
-                            false,
-                            null);
+                    new NotifyRequest(phoneNumber, VERIFY_PHONE_NUMBER, CODE, false, null);
 
             handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
         }
 
         for (int i = 0; i < 2; i++) {
             NotifyRequest beyondLimitRequest =
-                    new NotifyRequest(
-                            phoneNumber,
-                            VERIFY_PHONE_NUMBER,
-                            CODE,
-                            SupportedLanguage.EN,
-                            false,
-                            null);
+                    new NotifyRequest(phoneNumber, VERIFY_PHONE_NUMBER, CODE, false, null);
 
             handler.handleRequest(createSqsEvent(beyondLimitRequest), mock(Context.class));
         }

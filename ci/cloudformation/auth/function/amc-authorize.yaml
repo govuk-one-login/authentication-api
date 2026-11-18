@@ -45,11 +45,11 @@ Resources:
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               amcClientId,
             ]
-          AMC_SFAD_REDIRECT_URI:
+          AMC_SSAD_REDIRECT_URI:
             !FindInMap [
               EnvironmentConfiguration,
               !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
-              amcSfadRedirectUri,
+              amcSsadRedirectUri,
             ]
           AMC_CREATE_PASSKEY_REDIRECT_URI:
             !FindInMap [

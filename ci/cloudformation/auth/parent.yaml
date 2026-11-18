@@ -10,6 +10,7 @@ Metadata:
         - W1028
         - W8003
         - E1011
+        - E1051
         - W2531
         - E2531
 
@@ -196,18 +197,6 @@ Conditions:
       !Equals [!Ref Environment, "staging"],
     ]
 
-  UseOrchdataAccess:
-    !Or [
-      !And [
-        !Condition UseSubEnvironment,
-        !Equals [!Ref SubEnvironment, "authdev3"],
-      ],
-      !Equals [!Ref Environment, "build"],
-      !Equals [!Ref Environment, "staging"],
-      !Equals [!Ref Environment, "integration"],
-      !Equals [!Ref Environment, "production"],
-    ]
-
   IsLowerEnv:
     !Not [
       !Or [
@@ -260,7 +249,7 @@ Mappings:
       amcPublicAudience: https://manage.authdev1.dev.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.authdev1.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.authdev1.dev.account.gov.uk/sfad-callback
+      amcSsadRedirectUri: https://signin.authdev1.dev.account.gov.uk/ssad-callback
       amcTokenUri: https://amcstub.signin.authdev1.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev1.dev.account.gov.uk/journeyoutcome
       amcClientId: auth
@@ -280,6 +269,7 @@ Mappings:
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev1.dev.account.gov.uk
       passkeyPromptSuppressionInMinutes: 5
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev1/notify_api_key::::19341490-ca86-4d60-8f37-31076882c6bb}}"
     authdev2:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ff8d97e6-69d6-4ea1-81c0-0de8d8bcac85
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/a99e39a4-0a63-4816-b222-6e7c6c318b32
@@ -321,7 +311,7 @@ Mappings:
       amcPublicAudience: https://manage.authdev2.dev.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.authdev2.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.authdev2.dev.account.gov.uk/sfad-callback
+      amcSsadRedirectUri: https://signin.authdev2.dev.account.gov.uk/ssad-callback
       amcTokenUri: https://amcstub.signin.authdev2.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev2.dev.account.gov.uk/journeyoutcome
       amcClientId: auth
@@ -340,6 +330,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev2.dev.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 5
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
@@ -386,7 +377,7 @@ Mappings:
       amcPublicAudience: https://manage.authdev3.dev.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.authdev3.dev.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.authdev3.dev.account.gov.uk/sfad-callback
+      amcSsadRedirectUri: https://signin.authdev3.dev.account.gov.uk/ssad-callback
       amcTokenUri: https://amcstub.signin.authdev3.dev.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.authdev3.dev.account.gov.uk/journeyoutcome
       amcClientId: auth
@@ -405,6 +396,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev3.dev.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 5
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
@@ -462,7 +454,7 @@ Mappings:
       amcJourneyOutcomeUri: https://amcstub.signin.dev.account.gov.uk/journeyoutcome
       amcClientId: auth
       accountDataApiId: 0aqzty84lj
-      amcSfadRedirectUri: https://signin.dev.account.gov.uk/sfad-callback
+      amcSsadRedirectUri: https://signin.dev.account.gov.uk/ssad-callback
       enhancedAuthCodeProtectionEnabled: true
       amcCreatePasskeyRedirectUri: https://signin.dev.account.gov.uk/create-passkey-callback
       supportPasskeys: true
@@ -475,6 +467,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: dev.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 5
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
@@ -533,7 +526,7 @@ Mappings:
       amcPublicAudience: https://manage.build.account.gov.uk/authorize
       amcPrivateAudience: https://api.manage.build.account.gov.uk/token
       amcAuthorizeUri: https://amcstub.signin.build.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.build.account.gov.uk/sfad-callback
+      amcSsadRedirectUri: https://signin.build.account.gov.uk/ssad-callback
       amcTokenUri: https://amcstub.signin.build.account.gov.uk/token
       amcJourneyOutcomeUri: https://amcstub.signin.build.account.gov.uk/journeyoutcome
       amcClientId: auth
@@ -550,6 +543,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "false"
       relyingPartyId: build.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/build/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 10080
     staging:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:758531536632:key/35cfcec1-e8f1-4ffc-950d-80e836c594ca
@@ -610,7 +604,7 @@ Mappings:
       amcPublicAudience: https://manage.staging.account.gov.uk/authorize
       amcPrivateAudience: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/token
       amcAuthorizeUri: https://manage.staging.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.staging.account.gov.uk/sfad-callback
+      amcSsadRedirectUri: https://signin.staging.account.gov.uk/ssad-callback
       amcTokenUri: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/token
       amcJourneyOutcomeUri: https://2hdyiuvtug.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
       amcClientId: auth
@@ -625,6 +619,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: staging.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/staging/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 5
     integration:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/11fdf47e-ce54-4d47-a9cf-7544489a112a
@@ -685,7 +680,7 @@ Mappings:
       amcPublicAudience: https://manage.integration.account.gov.uk/authorize
       amcPrivateAudience: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/token
       amcAuthorizeUri: https://manage.integration.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.integration.account.gov.uk/sfad-callback
+      amcSsadRedirectUri: https://signin.integration.account.gov.uk/ssad-callback
       amcTokenUri: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/token
       amcJourneyOutcomeUri: https://votf1tvl36.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
       amcClientId: auth
@@ -700,6 +695,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "false"
       relyingPartyId: integration.account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/integration/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 10080
     production:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/730472f0-c7ba-4bda-a411-08cdaa65fe8a
@@ -760,7 +756,7 @@ Mappings:
       amcPublicAudience: https://manage.account.gov.uk/authorize
       amcPrivateAudience: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/token
       amcAuthorizeUri: https://manage.account.gov.uk/authorize
-      amcSfadRedirectUri: https://signin.account.gov.uk/sfad-callback
+      amcSsadRedirectUri: https://signin.account.gov.uk/ssad-callback
       amcTokenUri: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/token
       amcJourneyOutcomeUri: https://h06vqhfzgi.execute-api.eu-west-2.amazonaws.com/v1/journeyoutcome
       amcClientId: auth
@@ -775,6 +771,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "false"
       relyingPartyId: account.gov.uk
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/production/notify_api_key}}"
       passkeyPromptSuppressionInMinutes: 10080
   LambdaConfiguration:
     account-recovery:
@@ -2560,163 +2557,6 @@ Resources:
             Effect: Allow
             Action: kms:Decrypt
             Resource: !GetAtt MainKmsKey.Arn
-
-  DynamoOrchCombinedAccessPolicy:
-    Condition: UseOrchdataAccess
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: "Combined IAM policy for orchestration session, client session, and identity credentials cross-account access"
-      Path: !Sub
-        - /${Env}/oidc-shared/
-        - Env: !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment]
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          # Orch Session Encryption Key
-          - Sid: AllowOrchSessionEncryptionKeyCrossAccountEncryptDecryptAccess
-            Effect: Allow
-            Action:
-              - kms:Encrypt
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    OrchSessionTableEncryptionkey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    OrchSessionTableEncryptionkey,
-                  ]
-          # Orch Session Table - Read/Write/Delete
-          - Sid: AllowOrchSessionCrossAccountReadWriteDeleteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:PutItem
-              - dynamodb:UpdateItem
-              - dynamodb:DeleteItem
-            Resource:
-              - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${OrchEnv}-Orch-Session"
-                - OrchAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      OrchAccountID,
-                    ]
-                  OrchEnv: !Ref Environment
-
-          # Orch Client Session Encryption Key - Decrypt
-          - Sid: AllowOrchClientSessionEncryptionKeyCrossAccountDecryptAccess
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    OrchClientSessionTableEncryptionkey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    OrchClientSessionTableEncryptionkey,
-                  ]
-
-          # Orch Client Session Table - Read/Delete
-          - Sid: AllowOrchClientSessionCrossAccountReadAndDeleteAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:DeleteItem
-            Resource:
-              - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${OrchEnv}-Client-Session"
-                - OrchAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      OrchAccountID,
-                    ]
-                  OrchEnv: !Ref Environment
-
-          # Orch Identity Credentials Encryption Key - Decrypt
-          - Sid: AllowOrchIdentityCredentialsEncryptionKeyCrossAccountDecryptAccess
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    OrchIdentityCredentialsTableEncryptionkey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    OrchIdentityCredentialsTableEncryptionkey,
-                  ]
-
-          # Orch Identity Credentials Table - Read
-          - Sid: AllowOrchIdentityCredentialsCrossAccountReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-            Resource:
-              - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${OrchEnv}-Orch-Identity-Credentials"
-                - OrchAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      OrchAccountID,
-                    ]
-                  OrchEnv: !Ref Environment
-          # Orch Client Registry Encryption Key - Decrypt
-          - Sid: AllowOrchClientRegistryEncryptionKeyCrossAccountDecryptAccess
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-            Resource:
-              - !If
-                - UseSubEnvironment
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref SubEnvironment,
-                    OrchClientRegistryTableEncryptionkey,
-                  ]
-                - !FindInMap [
-                    EnvironmentConfiguration,
-                    !Ref Environment,
-                    OrchClientRegistryTableEncryptionkey,
-                  ]
-          # Orch Identity Credentials Table - Read
-          - Sid: AllowOrchClientRegistryCrossAccountReadAccess
-            Effect: Allow
-            Action:
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-            Resource:
-              - !Sub
-                - "arn:aws:dynamodb:eu-west-2:${OrchAccountId}:table/${OrchEnv}-client-registry"
-                - OrchAccountId:
-                    !FindInMap [
-                      EnvironmentConfiguration,
-                      !Ref Environment,
-                      OrchAccountID,
-                    ]
-                  OrchEnv: !Ref Environment
 
   S3SmokeTestPolicy:
     Type: AWS::IAM::ManagedPolicy

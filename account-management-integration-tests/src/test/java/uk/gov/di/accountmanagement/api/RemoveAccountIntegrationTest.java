@@ -17,7 +17,6 @@ import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.lambda.RemoveAccountHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -33,7 +32,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.AUTH_DELETE_ACCOUNT;
@@ -57,29 +55,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldRemoveAccountAndAccountModifiersEntryAndReturn204WhenUserExists() {
-        var internalCommonSubjectId = setupUserAndRetrieveInternalCommonSubId();
-        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
-
-        var response =
-                makeRequest(
-                        Optional.of(new RemoveAccountRequest(EMAIL)),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("principalId", internalCommonSubjectId));
-
-        assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
-
-        assertFalse(userStore.userExists(EMAIL));
-        assertFalse(accountModifiersStore.isEntryForSubjectIdPresent(internalCommonSubjectId));
-
-        assertTxmaAuditEventsSubmittedWithMatchingNames(
-                txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
-    }
-
-    @Test
-    void shouldRemoveAccountAndReturn204WhenUserExists() {
+    void shouldReturn400WhenAdapiAccessTokenHeaderIsMissing() throws Json.JsonException {
         var internalCommonSubjectId = setupUserAndRetrieveInternalCommonSubId();
 
         var response =
@@ -90,13 +66,14 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Collections.emptyMap(),
                         Map.of("principalId", internalCommonSubjectId));
 
-        assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+        assertThat(
+                response,
+                hasBody(objectMapper.writeValueAsString(ErrorResponse.REQUEST_MISSING_PARAMS)));
 
-        assertFalse(userStore.userExists(EMAIL));
-        assertFalse(accountModifiersStore.isEntryForSubjectIdPresent(internalCommonSubjectId));
-
-        assertTxmaAuditEventsSubmittedWithMatchingNames(
-                txmaAuditQueue, List.of(AUTH_DELETE_ACCOUNT));
+        assertTrue(userStore.userExists(EMAIL));
+        assertNoNotificationsReceived(notificationsQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -198,11 +175,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    EMAIL,
-                                    NotificationType.DELETE_ACCOUNT,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(EMAIL, NotificationType.DELETE_ACCOUNT)));
         }
 
         @ParameterizedTest
