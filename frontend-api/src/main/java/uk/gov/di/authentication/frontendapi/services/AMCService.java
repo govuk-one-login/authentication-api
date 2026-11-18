@@ -152,14 +152,13 @@ public class AMCService {
             String encryptionKeyId,
             State state) {
         Date issueTime = nowClock.now();
-        Date expiryDate = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
+        Date transportJwtExpiry = nowClock.nowPlus(CLIENT_ASSERTION_LIFETIME, ChronoUnit.MINUTES);
 
         return createAccessTokenClaimsMap(
                         accessTokenConfigs,
                         publicSubjectId,
                         authSessionItem.getSessionId(),
-                        issueTime,
-                        expiryDate)
+                        issueTime)
                 .flatMap(
                         accessTokenMap -> {
                             var claimsBuilder =
@@ -178,7 +177,7 @@ public class AMCService {
                                             .jwtID(UUID.randomUUID().toString())
                                             .issueTime(issueTime)
                                             .notBeforeTime(issueTime)
-                                            .expirationTime(expiryDate)
+                                            .expirationTime(transportJwtExpiry)
                                             .subject(internalPairwiseSubject)
                                             .claim("email", authSessionItem.getEmailAddress())
                                             .claim("public_sub", publicSubjectId);
@@ -211,11 +210,11 @@ public class AMCService {
             List<AccessTokenConfig> configs,
             String publicSubjectId,
             String sessionId,
-            Date issueTime,
-            Date expiryDate) {
+            Date issueTime) {
         var accessTokens = new HashMap<String, BearerAccessToken>();
 
         for (AccessTokenConfig config : configs) {
+            var expiryDate = nowClock.nowPlus(config.lifetime(), ChronoUnit.MINUTES);
             var result =
                     accessTokenConstructorService
                             .createSignedAccessToken(
