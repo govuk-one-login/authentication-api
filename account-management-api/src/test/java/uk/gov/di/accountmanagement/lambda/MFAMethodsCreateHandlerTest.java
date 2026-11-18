@@ -32,7 +32,6 @@ import uk.gov.di.authentication.shared.entity.mfa.request.MfaMethodCreateRequest
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestAuthAppMfaDetail;
 import uk.gov.di.authentication.shared.entity.mfa.request.RequestSmsMfaDetail;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -264,9 +263,7 @@ class MFAMethodsCreateHandlerTest {
                     .send(
                             objectMapper.writeValueAsString(
                                     new NotifyRequest(
-                                            TEST_EMAIL,
-                                            NotificationType.BACKUP_METHOD_ADDED,
-                                            LocaleHelper.SupportedLanguage.EN)));
+                                            TEST_EMAIL, NotificationType.BACKUP_METHOD_ADDED)));
 
             assertThat(result, hasStatus(200));
             var expectedResponse =
@@ -379,9 +376,7 @@ class MFAMethodsCreateHandlerTest {
                     .send(
                             objectMapper.writeValueAsString(
                                     new NotifyRequest(
-                                            TEST_EMAIL,
-                                            NotificationType.BACKUP_METHOD_ADDED,
-                                            LocaleHelper.SupportedLanguage.EN)));
+                                            TEST_EMAIL, NotificationType.BACKUP_METHOD_ADDED)));
 
             verify(auditService, never())
                     .submitAuditEvent(
