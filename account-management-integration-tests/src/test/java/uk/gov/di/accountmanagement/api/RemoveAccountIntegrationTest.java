@@ -17,7 +17,6 @@ import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.lambda.RemoveAccountHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -176,11 +175,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
             assertNotificationsReceived(
                     notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    EMAIL,
-                                    NotificationType.DELETE_ACCOUNT,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    List.of(new NotifyRequest(EMAIL, NotificationType.DELETE_ACCOUNT)));
         }
 
         @ParameterizedTest

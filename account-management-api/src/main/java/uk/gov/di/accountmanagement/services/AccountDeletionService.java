@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountDataApiResp
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -126,10 +125,7 @@ public class AccountDeletionService {
         try {
             LOG.info("User account removed. Adding notification message to SQS queue");
             NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            userProfile.getEmail(),
-                            NotificationType.DELETE_ACCOUNT,
-                            LocaleHelper.SupportedLanguage.EN);
+                    new NotifyRequest(userProfile.getEmail(), NotificationType.DELETE_ACCOUNT);
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
         } catch (Exception e) {
             LOG.error("Failed to send account deletion email: ", e);
