@@ -18,7 +18,8 @@ public enum AMCJourneyType {
                                     AccountDataScope.ACCOUNT_DELETE,
                                     AccountDataScope.VERIFY_PASSWORD),
                             config.getAuthToAccountDataApiAudience(),
-                            config.getAuthToAccountDataSigningKey()));
+                            config.getAuthToAccountDataSigningKey(),
+                            30L));
             case PASSKEY_CREATE -> List.of(
                     new AccessTokenConfig(
                             "account_data_api_access_token",
@@ -26,7 +27,8 @@ public enum AMCJourneyType {
                                     AccountDataScope.PASSKEY_CREATE,
                                     AccountDataScope.PASSKEY_RETRIEVE),
                             config.getAuthToAccountDataApiAudience(),
-                            config.getAuthToAccountDataSigningKey()));
+                            config.getAuthToAccountDataSigningKey(),
+                            5L));
         };
     }
 

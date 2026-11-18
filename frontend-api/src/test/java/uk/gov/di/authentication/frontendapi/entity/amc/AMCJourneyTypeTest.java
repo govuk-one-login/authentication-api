@@ -27,7 +27,7 @@ class AMCJourneyTypeTest {
     }
 
     @Test
-    void shouldSendOnlyAnAccountDataApiAccessTokenForSsad() {
+    void shouldSendAnAccountDataApiAccessTokenForSsad() {
         var accessTokenConfigs = AMCJourneyType.SSAD.getAccessTokenConfigs(configurationService);
 
         assertEquals(
@@ -38,7 +38,8 @@ class AMCJourneyTypeTest {
                                         AccountDataScope.ACCOUNT_DELETE,
                                         AccountDataScope.VERIFY_PASSWORD),
                                 ACCOUNT_DATA_API_AUDIENCE,
-                                ACCOUNT_DATA_SIGNING_KEY)),
+                                ACCOUNT_DATA_SIGNING_KEY,
+                                30L)),
                 accessTokenConfigs);
     }
 
@@ -55,7 +56,8 @@ class AMCJourneyTypeTest {
                                         AccountDataScope.PASSKEY_CREATE,
                                         AccountDataScope.PASSKEY_RETRIEVE),
                                 ACCOUNT_DATA_API_AUDIENCE,
-                                ACCOUNT_DATA_SIGNING_KEY)),
+                                ACCOUNT_DATA_SIGNING_KEY,
+                                5L)),
                 accessTokenConfigs);
     }
 }
