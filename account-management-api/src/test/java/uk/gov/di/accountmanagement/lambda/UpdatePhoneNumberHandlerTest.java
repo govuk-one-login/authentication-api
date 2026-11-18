@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSessionIdHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TxmaAuditHelper;
@@ -103,10 +102,7 @@ class UpdatePhoneNumberHandlerTest {
         verify(sqsClient)
                 .send(
                         objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        EMAIL_ADDRESS,
-                                        PHONE_NUMBER_UPDATED,
-                                        SupportedLanguage.EN)));
+                                new NotifyRequest(EMAIL_ADDRESS, PHONE_NUMBER_UPDATED)));
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.AUTH_UPDATE_PHONE_NUMBER,
