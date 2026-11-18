@@ -287,12 +287,8 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
                         .<Object>map(
                                 scope ->
                                         switch (scope) {
-                                            case PASSKEY_CREATE -> JourneyType.SIGN_IN;
-                                                // This may not be the right journey type for
-                                                // ACCOUNT_DELETE,
-                                                // this needs to be clarified as part of the SFAD
-                                                // initiative
-                                            case ACCOUNT_DELETE -> JourneyType.ACCOUNT_RECOVERY;
+                                            case PASSKEY_CREATE, ACCOUNT_DELETE -> JourneyType
+                                                    .SIGN_IN;
                                         })
                         .orElseGet(
                                 () -> {

@@ -158,7 +158,7 @@ class AMCCallbackHandlerTest {
 
     private static Stream<Arguments> scopeAndExpectedJourneyType() {
         return Stream.of(
-                Arguments.of(AMCScope.ACCOUNT_DELETE, JourneyType.ACCOUNT_RECOVERY),
+                Arguments.of(AMCScope.ACCOUNT_DELETE, JourneyType.SIGN_IN),
                 Arguments.of(AMCScope.PASSKEY_CREATE, JourneyType.SIGN_IN));
     }
 

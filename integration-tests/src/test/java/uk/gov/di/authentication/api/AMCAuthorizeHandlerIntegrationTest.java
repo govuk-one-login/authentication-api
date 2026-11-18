@@ -289,7 +289,7 @@ class AMCAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     private static Stream<Arguments> journeyTypesToAmcScopesInAuditEvent() {
         return Stream.of(
-                Arguments.of(AMCJourneyType.SSAD, "sfad"),
+                Arguments.of(AMCJourneyType.SSAD, "account-delete"),
                 Arguments.of(AMCJourneyType.PASSKEY_CREATE, "passkey-create"));
     }
 
