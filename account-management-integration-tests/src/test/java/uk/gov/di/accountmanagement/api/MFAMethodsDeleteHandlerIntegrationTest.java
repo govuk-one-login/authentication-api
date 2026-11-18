@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditEventExpectation;
 
@@ -130,12 +129,7 @@ class MFAMethodsDeleteHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
             assertEquals(defaultMethod.getMfaIdentifier(), mfaMethod.getMfaIdentifier());
 
             assertNotificationsReceived(
-                    notificationsQueue,
-                    List.of(
-                            new NotifyRequest(
-                                    EMAIL,
-                                    BACKUP_METHOD_REMOVED,
-                                    LocaleHelper.SupportedLanguage.EN)));
+                    notificationsQueue, List.of(new NotifyRequest(EMAIL, BACKUP_METHOD_REMOVED)));
 
             List<AuditableEvent> expectedEvents = List.of(AUTH_MFA_METHOD_DELETE_COMPLETED);
 
