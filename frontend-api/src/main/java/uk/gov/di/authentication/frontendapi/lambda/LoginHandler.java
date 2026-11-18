@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.entity.PasswordHashParametersOutcome
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorHttpMapper;
 import uk.gov.di.authentication.frontendapi.errormapper.DecisionErrorMapper;
 import uk.gov.di.authentication.frontendapi.errormapper.ForbiddenReasonErrorMapper;
+import uk.gov.di.authentication.frontendapi.helpers.PasswordHashParametersExtensionHelper;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
@@ -310,7 +311,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             JourneyType journeyType,
             PermissionContext permissionContext) {
 
-        rehashPasswordIfRequired(request.getEmail(), request.getPassword(), userCredentials);
+        var passwordHashParametersOutcome =
+                rehashPasswordIfRequired(
+                        request.getEmail(), request.getPassword(), userCredentials);
 
         var userMfaDetail = getUserMFADetail(userCredentials, userProfile);
         var isMfaRequired = MfaHelper.mfaRequired(authSessionItem.getRequestedCredentialStrength());
@@ -324,6 +327,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         if (isPasswordChangeRequired) {
             pairs.add(pair(PASSWORD_RESET_TYPE, PasswordResetType.FORCED_WEAK_PASSWORD));
         }
+
+        passwordHashParametersOutcome.ifPresent(
+                outcome ->
+                        pairs.add(
+                                pair(
+                                        PasswordHashParametersExtensionHelper
+                                                .PASSWORD_HASH_PARAMETERS_KEY,
+                                        PasswordHashParametersExtensionHelper.create(
+                                                outcome.currentParameters(),
+                                                outcome.rehashed(),
+                                                outcome.updatedParameters()))));
 
         LOG.info(
                 "User has submitted a correct password. They have a default MFAType of {}, MFAVerified: {}.",

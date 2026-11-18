@@ -7,6 +7,7 @@ import java.util.Map;
 
 public class PasswordHashParametersExtensionHelper {
 
+    public static final String PASSWORD_HASH_PARAMETERS_KEY = "password_hash_parameters";
     public static final String CURRENT_KEY = "password_hash_parameters_current";
     public static final String REHASHED_KEY = "password_hash_parameters_rehashed";
     public static final String UPDATED_KEY = "password_hash_parameters_updated";
