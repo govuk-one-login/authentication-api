@@ -47,10 +47,9 @@ public class NotifyRequest {
             String destination,
             NotificationType notificationType,
             String code,
-            SupportedLanguage language,
             String sessionId,
             String clientSessionId) {
-        this(destination, notificationType, code, language, false, null);
+        this(destination, notificationType, code, null, false, null);
         this.sessionId = sessionId;
         this.clientSessionId = clientSessionId;
     }

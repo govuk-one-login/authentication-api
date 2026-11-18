@@ -759,7 +759,6 @@ class NotificationHandlerTest {
                         CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         "123456",
-                        SupportedLanguage.EN,
                         "session-id",
                         "client-session-id");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -787,7 +786,6 @@ class NotificationHandlerTest {
                         CommonTestVariables.INTERNATIONAL_MOBILE_NUMBER,
                         VERIFY_PHONE_NUMBER,
                         "123456",
-                        SupportedLanguage.EN,
                         "session-id",
                         "client-session-id");
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
