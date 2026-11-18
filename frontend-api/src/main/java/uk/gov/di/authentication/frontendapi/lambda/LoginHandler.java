@@ -313,7 +313,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
         var passwordHashParametersOutcome =
                 rehashPasswordIfRequired(
-                        request.getEmail(), request.getPassword(), userCredentials);
+                        request.getEmail(), request.getPassword(), userCredentials, userProfile);
 
         var userMfaDetail = getUserMFADetail(userCredentials, userProfile);
         var isMfaRequired = MfaHelper.mfaRequired(authSessionItem.getRequestedCredentialStrength());
@@ -600,10 +600,19 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     }
 
     private Optional<PasswordHashParametersOutcome> rehashPasswordIfRequired(
-            String email, String password, UserCredentials userCredentials) {
+            String email,
+            String password,
+            UserCredentials userCredentials,
+            UserProfile userProfile) {
         try {
             if (!configurationService.isPasswordRehashOnLoginEnabled()) {
                 return Optional.empty();
+            }
+
+            if (userHasBeenPartlyMigrated(userProfile.getLegacySubjectID(), userCredentials)) {
+                return Optional.of(
+                        PasswordHashParametersOutcome.notRehashed(
+                                Argon2HashParameters.fromConfiguration(configurationService)));
             }
 
             var storedParameters =

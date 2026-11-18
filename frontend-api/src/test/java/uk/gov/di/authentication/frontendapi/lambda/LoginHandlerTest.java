@@ -1103,6 +1103,35 @@ class LoginHandlerTest {
         }
 
         @Test
+        void shouldReportConfiguredParametersAsNotRehashedForUserMigratedDuringThisRequest() {
+            when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
+            when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(15360);
+            when(configurationService.getArgon2Iterations()).thenReturn(2);
+            when(configurationService.getArgon2Parallelism()).thenReturn(1);
+            var userProfile = generateUserProfile(new Subject().getValue());
+            setupUserInDatabase(EMAIL, userProfile);
+            var userCredentials = usingApplicableUserCredentialsWithLogin(SMS, false);
+            userCredentials.withPassword(null);
+            when(userMigrationService.processMigratedUser(
+                            userCredentials, CommonTestVariables.PASSWORD))
+                    .thenReturn(true);
+            usingValidAuthSession();
+
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
+            verify(authenticationService, never()).updatePassword(anyString(), anyString());
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
+            verifyLoginSuccessAuditEventWithPasswordHashParameters(
+                    Map.ofEntries(
+                            Map.entry("password_hash_parameters_current", hashParametersMap(15360)),
+                            Map.entry("password_hash_parameters_rehashed", false)));
+        }
+
+        @Test
         void shouldNotRehashPasswordWhenStoredHashCannotBeParsed() {
             when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
             setupUserWhoCanSuccessfullyLoginWithPassword("not-a-valid-hash");
