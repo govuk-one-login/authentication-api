@@ -351,7 +351,6 @@ public class SendOtpNotificationHandler
                         destination,
                         notificationType,
                         code,
-                        language,
                         isTestUserRequest,
                         sendNotificationRequest.email());
 

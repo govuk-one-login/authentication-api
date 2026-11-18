@@ -32,13 +32,12 @@ public class NotifyRequest {
             String destination,
             NotificationType notificationType,
             String code,
-            SupportedLanguage language,
             boolean isTestClient,
             String email) {
         this.destination = destination;
         this.notificationType = notificationType;
         this.code = code;
-        this.language = language;
+        this.language = null;
         this.isTestClient = isTestClient;
         this.email = email;
     }
@@ -49,13 +48,13 @@ public class NotifyRequest {
             String code,
             String sessionId,
             String clientSessionId) {
-        this(destination, notificationType, code, null, false, null);
+        this(destination, notificationType, code, false, null);
         this.sessionId = sessionId;
         this.clientSessionId = clientSessionId;
     }
 
     public NotifyRequest(String destination, NotificationType notificationType) {
-        this(destination, notificationType, null, null, false, null);
+        this(destination, notificationType, null, false, null);
     }
 
     public String getEmail() {
