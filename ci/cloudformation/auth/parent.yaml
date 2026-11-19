@@ -498,7 +498,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "No"
       IPVApiEnabled: true
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       lambdaMinConcurrency: 0
       EvcsApiVpcEndpointId: vpce-078a9d6aa4e30ef6d
       IpvApiVpcEndpointId: ""
@@ -574,7 +574,7 @@ Mappings:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
       EnforceLambdaDeploymentOrder: "No"
       IPVApiEnabled: true
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       lambdaMinConcurrency: 3
       lambdaMaxConcurrency: 10
       EvcsApiVpcEndpointId: vpce-0db9a336254d281b6
@@ -648,7 +648,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0fd64c49-cd23-4e0b-9061-8c8cf65954d5
       amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/0d7dd107-1937-4573-ac38-1abb8f58cc0c
       IPVApiEnabled: true
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 3
       lockoutCountTtl: 900
@@ -724,7 +724,7 @@ Mappings:
       idReverificationStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/c9ebf851-6ee0-437f-a11c-51e5e01ae38e
       amcStateTableEncryptionKey: arn:aws:kms:eu-west-2:172348255554:key/102bf244-2608-49f8-94f7-5faffa346c9e
       IPVApiEnabled: true
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       lambdaMaxConcurrency: 10
       lambdaMinConcurrency: 3
       lockoutCountTtl: 900

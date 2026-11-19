@@ -11,7 +11,7 @@ access_token_jwks_url = "https://oidc.staging.account.gov.uk/.well-known/jwks.js
 openapi_spec_filename = "openapi_v2.yaml"
 
 # Logging
-logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
+logging_endpoint_arns = []
 
 # Sizing
 redis_node_size = "cache.t2.small"

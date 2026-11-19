@@ -114,7 +114,7 @@ evcs_audience              = "https://credential-store.build.account.gov.uk"
 auth_issuer_claim_for_evcs = "https://signin.build.account.gov.uk"
 
 # Logging
-logging_endpoint_arns = ["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]
+logging_endpoint_arns = []
 
 # Sizing
 performance_tuning = {
