@@ -208,8 +208,4 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
     public static String buildSortKey(JourneyType journeyType, CountType countType) {
         return journeyType.getValue() + "#" + countType.getValue() + "#" + "Count";
     }
-
-    private boolean isTTLExpired(long ttl) {
-        return (NowHelper.now().toInstant().getEpochSecond() > ttl);
-    }
 }
