@@ -28,15 +28,11 @@ public class NotifyRequest {
 
     public NotifyRequest() {}
 
-    private NotifyRequest(
-            String destination,
-            NotificationType notificationType,
-            String code,
-            SupportedLanguage language) {
+    private NotifyRequest(String destination, NotificationType notificationType, String code) {
         this.destination = destination;
         this.notificationType = notificationType;
         this.code = code;
-        this.language = language;
+        this.language = null;
     }
 
     public NotifyRequest(
@@ -45,7 +41,7 @@ public class NotifyRequest {
             String code,
             String sessionId,
             String clientSessionId) {
-        this(destination, notificationType, code, null);
+        this(destination, notificationType, code);
         this.sessionId = sessionId;
         this.clientSessionId = clientSessionId;
     }
@@ -56,7 +52,7 @@ public class NotifyRequest {
             SupportedLanguage language,
             String sessionId,
             String clientSessionId) {
-        this(destination, notificationType, null, language);
+        this(destination, notificationType, null);
         this.sessionId = sessionId;
         this.clientSessionId = clientSessionId;
     }
