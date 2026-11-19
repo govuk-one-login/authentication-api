@@ -8,7 +8,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.lambda.NotificationHandler;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
@@ -49,7 +48,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                                 TEST_EMAIL_ADDRESS,
                                 VERIFY_EMAIL,
                                 CODE,
-                                SupportedLanguage.EN,
                                 SESSION_ID,
                                 CLIENT_SESSION_ID)),
                 mock(Context.class));
@@ -77,7 +75,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                                 TEST_PHONE_NUMBER,
                                 VERIFY_PHONE_NUMBER,
                                 CODE,
-                                SupportedLanguage.EN,
                                 SESSION_ID,
                                 CLIENT_SESSION_ID)),
                 mock(Context.class));
@@ -99,12 +96,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         handler.handleRequest(
                 createSqsEvent(
                         new NotifyRequest(
-                                TEST_PHONE_NUMBER,
-                                MFA_SMS,
-                                CODE,
-                                SupportedLanguage.EN,
-                                SESSION_ID,
-                                CLIENT_SESSION_ID)),
+                                TEST_PHONE_NUMBER, MFA_SMS, CODE, SESSION_ID, CLIENT_SESSION_ID)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -135,7 +127,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                         new NotifyRequest(
                                 TEST_EMAIL_ADDRESS,
                                 notificationType,
-                                SupportedLanguage.EN,
                                 SESSION_ID,
                                 CLIENT_SESSION_ID)),
                 mock(Context.class));
@@ -164,12 +155,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
             handler.handleRequest(
                     createSqsEvent(
                             new NotifyRequest(
-                                    phoneNumber,
-                                    MFA_SMS,
-                                    CODE,
-                                    SupportedLanguage.EN,
-                                    SESSION_ID,
-                                    CLIENT_SESSION_ID)),
+                                    phoneNumber, MFA_SMS, CODE, SESSION_ID, CLIENT_SESSION_ID)),
                     mock(Context.class));
         }
 
@@ -177,12 +163,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
             handler.handleRequest(
                     createSqsEvent(
                             new NotifyRequest(
-                                    phoneNumber,
-                                    MFA_SMS,
-                                    CODE,
-                                    SupportedLanguage.EN,
-                                    SESSION_ID,
-                                    CLIENT_SESSION_ID)),
+                                    phoneNumber, MFA_SMS, CODE, SESSION_ID, CLIENT_SESSION_ID)),
                     mock(Context.class));
         }
 

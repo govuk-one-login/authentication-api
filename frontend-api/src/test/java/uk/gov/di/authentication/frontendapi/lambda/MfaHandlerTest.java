@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -172,13 +171,7 @@ class MfaHandlerTest {
                     .withClientId(TEST_CLIENT_ID);
 
     private static final NotifyRequest notifyRequest =
-            new NotifyRequest(
-                    UK_MOBILE_NUMBER,
-                    MFA_SMS,
-                    CODE,
-                    SupportedLanguage.EN,
-                    SESSION_ID,
-                    CLIENT_SESSION_ID);
+            new NotifyRequest(UK_MOBILE_NUMBER, MFA_SMS, CODE, SESSION_ID, CLIENT_SESSION_ID);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(MfaHandler.class);
@@ -277,7 +270,6 @@ class MfaHandlerTest {
                         defaultSmsMethod.getDestination(),
                         MFA_SMS,
                         CODE,
-                        SupportedLanguage.EN,
                         SESSION_ID,
                         CLIENT_SESSION_ID);
 
@@ -353,7 +345,6 @@ class MfaHandlerTest {
                         backupSmsMethod.getDestination(),
                         MFA_SMS,
                         CODE,
-                        SupportedLanguage.EN,
                         SESSION_ID,
                         CLIENT_SESSION_ID);
         verify(sqsClient)
@@ -431,12 +422,7 @@ class MfaHandlerTest {
                 .thenReturn(Optional.of(CODE));
         NotifyRequest verifyPhoneNumberNotifyRequest =
                 new NotifyRequest(
-                        UK_MOBILE_NUMBER,
-                        VERIFY_PHONE_NUMBER,
-                        CODE,
-                        SupportedLanguage.EN,
-                        SESSION_ID,
-                        CLIENT_SESSION_ID);
+                        UK_MOBILE_NUMBER, VERIFY_PHONE_NUMBER, CODE, SESSION_ID, CLIENT_SESSION_ID);
         var body = format("{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}", EMAIL, "true");
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
@@ -476,7 +462,7 @@ class MfaHandlerTest {
         var event = apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
 
         MfaRequest test = new MfaRequest(EMAIL, false, JourneyType.PASSWORD_RESET);
-        var userContext = new UserContext(authSession, null, null, null, null);
+        var userContext = new UserContext(authSession, null, null, null);
         APIGatewayProxyResponseEvent result =
                 handler.handleRequestWithUserContext(event, context, test, userContext);
 

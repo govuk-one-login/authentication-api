@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.Result;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthSessionService;
@@ -148,7 +147,6 @@ class AMCCallbackHandlerTest {
         when(USER_CONTEXT.authSessionItem()).thenReturn(authSession);
         when(USER_CONTEXT.clientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(USER_CONTEXT.txmaAuditEncoded()).thenReturn(ENCODED_DEVICE_DETAILS);
-        when(USER_CONTEXT.userLanguage()).thenReturn(LocaleHelper.SupportedLanguage.EN);
     }
 
     @AfterEach

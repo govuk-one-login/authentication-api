@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
@@ -112,14 +111,12 @@ class ResetPasswordHandlerTest {
             new NotifyRequest(
                     CommonTestVariables.UK_MOBILE_NUMBER,
                     NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
-                    SupportedLanguage.EN,
                     SESSION_ID,
                     CLIENT_SESSION_ID);
     private static final NotifyRequest EXPECTED_EMAIL_NOTIFY_REQUEST =
             new NotifyRequest(
                     EMAIL,
                     NotificationType.PASSWORD_RESET_CONFIRMATION,
-                    SupportedLanguage.EN,
                     SESSION_ID,
                     CLIENT_SESSION_ID);
     private final String expectedCommonSubject =

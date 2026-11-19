@@ -63,6 +63,8 @@ import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AMC_FAILU
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.AMC_STATE_MISMATCH;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
@@ -154,7 +156,12 @@ public class AMCCallbackHandler extends BaseFrontendHandler<AMCCallbackRequest>
         additionalAmcHeaders.put("session-id", userContext.authSessionItem().getSessionId());
         additionalAmcHeaders.put("client-session-id", userContext.clientSessionId());
         additionalAmcHeaders.put("x-forwarded-for", IpAddressHelper.extractIpAddress(input));
-        additionalAmcHeaders.put("user-language", userContext.userLanguage().getLanguage());
+        var userLanguage =
+                matchSupportedLanguage(
+                                getUserLanguageFromRequestHeaders(
+                                        input.getHeaders(), configurationService))
+                        .getLanguage();
+        additionalAmcHeaders.put("user-language", userLanguage);
 
         if (!userContext.txmaAuditEncoded().isEmpty()) {
             additionalAmcHeaders.put("txma-audit-encoded", userContext.txmaAuditEncoded());

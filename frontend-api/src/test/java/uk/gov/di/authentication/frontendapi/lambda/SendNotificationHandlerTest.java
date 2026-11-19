@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
@@ -314,7 +313,6 @@ class SendNotificationHandlerTest {
                                                     EMAIL,
                                                     notificationType,
                                                     TEST_SIX_DIGIT_CODE,
-                                                    SupportedLanguage.EN,
                                                     SESSION_ID,
                                                     CLIENT_SESSION_ID)));
                     if (notificationType == NotificationType.VERIFY_EMAIL
@@ -434,7 +432,6 @@ class SendNotificationHandlerTest {
                                                             EMAIL,
                                                             notificationType,
                                                             TEST_SIX_DIGIT_CODE,
-                                                            SupportedLanguage.EN,
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
@@ -482,7 +479,6 @@ class SendNotificationHandlerTest {
                                                             CommonTestVariables.UK_MOBILE_NUMBER,
                                                             VERIFY_PHONE_NUMBER,
                                                             TEST_SIX_DIGIT_CODE,
-                                                            SupportedLanguage.EN,
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
@@ -598,7 +594,6 @@ class SendNotificationHandlerTest {
                                                             phoneNumber,
                                                             VERIFY_PHONE_NUMBER,
                                                             TEST_SIX_DIGIT_CODE,
-                                                            SupportedLanguage.EN,
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
@@ -634,12 +629,7 @@ class SendNotificationHandlerTest {
             var result = handler.handleRequest(event, context);
 
             var notifyRequest =
-                    new NotifyRequest(
-                            EMAIL,
-                            notificationType,
-                            SupportedLanguage.EN,
-                            SESSION_ID,
-                            CLIENT_SESSION_ID);
+                    new NotifyRequest(EMAIL, notificationType, SESSION_ID, CLIENT_SESSION_ID);
             verify(emailSqsClient)
                     .send(
                             argThat(
@@ -817,7 +807,6 @@ class SendNotificationHandlerTest {
                                                             newPhoneNumber,
                                                             VERIFY_PHONE_NUMBER,
                                                             TEST_SIX_DIGIT_CODE,
-                                                            SupportedLanguage.EN,
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
@@ -892,7 +881,6 @@ class SendNotificationHandlerTest {
                                                             EMAIL,
                                                             notificationType,
                                                             TEST_SIX_DIGIT_CODE,
-                                                            SupportedLanguage.EN,
                                                             SESSION_ID,
                                                             CLIENT_SESSION_ID)),
                                             "unique_notification_reference")));
