@@ -51,7 +51,11 @@ public class Argon2MatcherHelper {
             Argon2Parameters params = decoded.getParameters();
             return Optional.of(
                     new Argon2HashParameters(
-                            params.getMemory(), params.getIterations(), params.getLanes()));
+                            Argon2HashParameters.ARGON2_ALGORITHM,
+                            params.getVersion(),
+                            params.getMemory(),
+                            params.getIterations(),
+                            params.getLanes()));
         } catch (IllegalArgumentException ex) {
             LOG.warn("Unable to parse password hash for parameter extraction");
             return Optional.empty();
