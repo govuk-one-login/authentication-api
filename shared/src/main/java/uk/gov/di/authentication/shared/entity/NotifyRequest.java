@@ -49,7 +49,6 @@ public class NotifyRequest {
     public NotifyRequest(
             String destination,
             NotificationType notificationType,
-            SupportedLanguage language,
             String sessionId,
             String clientSessionId) {
         this(destination, notificationType, null);

@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
@@ -630,12 +629,7 @@ class SendNotificationHandlerTest {
             var result = handler.handleRequest(event, context);
 
             var notifyRequest =
-                    new NotifyRequest(
-                            EMAIL,
-                            notificationType,
-                            SupportedLanguage.EN,
-                            SESSION_ID,
-                            CLIENT_SESSION_ID);
+                    new NotifyRequest(EMAIL, notificationType, SESSION_ID, CLIENT_SESSION_ID);
             verify(emailSqsClient)
                     .send(
                             argThat(

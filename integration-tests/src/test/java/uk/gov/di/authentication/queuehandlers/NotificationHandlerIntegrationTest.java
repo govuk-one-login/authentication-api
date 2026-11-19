@@ -8,7 +8,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.lambda.NotificationHandler;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.CommonTestVariables;
@@ -128,7 +127,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                         new NotifyRequest(
                                 TEST_EMAIL_ADDRESS,
                                 notificationType,
-                                SupportedLanguage.EN,
                                 SESSION_ID,
                                 CLIENT_SESSION_ID)),
                 mock(Context.class));
