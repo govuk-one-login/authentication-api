@@ -9,6 +9,9 @@ import uk.gov.di.authentication.shared.validation.Required;
 @DynamoDbBean
 public class AuthenticationAttempts {
 
+    public static final String ATTRIBUTE_AUTH_ATTEMPTS_INTERNAL_SUBJECT_ID = "InternalSubjectId";
+    public static final String ATTRIBUTE_AUTH_ATTEMPTS_SORT_KEY = "SK";
+
     @Required private String internalSubjectId;
     @Required private String countType;
     @Required private Integer count;
@@ -20,7 +23,7 @@ public class AuthenticationAttempts {
     private long timeToLive;
 
     @DynamoDbPartitionKey
-    @DynamoDbAttribute("InternalSubjectId")
+    @DynamoDbAttribute(ATTRIBUTE_AUTH_ATTEMPTS_INTERNAL_SUBJECT_ID)
     public String getInternalSubjectId() {
         return internalSubjectId;
     }
@@ -55,7 +58,7 @@ public class AuthenticationAttempts {
     }
 
     @DynamoDbSortKey
-    @DynamoDbAttribute("SK")
+    @DynamoDbAttribute(ATTRIBUTE_AUTH_ATTEMPTS_SORT_KEY)
     public String getSortKey() {
         return sortKey != null ? sortKey : buildSortKey();
     }

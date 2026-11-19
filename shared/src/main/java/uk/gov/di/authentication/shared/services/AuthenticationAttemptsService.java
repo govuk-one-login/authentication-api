@@ -1,8 +1,16 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.exceptions.AuthenticationAttemptsException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.util.Arrays;
@@ -10,36 +18,116 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.entity.AuthenticationAttempts.ATTRIBUTE_AUTH_ATTEMPTS_INTERNAL_SUBJECT_ID;
+import static uk.gov.di.authentication.shared.entity.AuthenticationAttempts.ATTRIBUTE_AUTH_ATTEMPTS_SORT_KEY;
 
 public class AuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
+    private static final Logger LOG = LogManager.getLogger(AuthenticationAttemptsService.class);
+
     public AuthenticationAttemptsService(ConfigurationService configurationService) {
         super(AuthenticationAttempts.class, "authentication-attempt", configurationService);
     }
 
+    public AuthenticationAttemptsService(
+            DynamoDbClient dynamoDbClient, DynamoDbTable<AuthenticationAttempts> dynamoDbTable) {
+        super(dynamoDbTable, dynamoDbClient);
+    }
+
+    private static final int MAX_ATTEMPTS = 3;
+
     public void createOrIncrementCount(
             String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
-        Optional<AuthenticationAttempts> authenticationAttempt =
-                get(internalSubjectId, buildSortKey(journeyType, countType));
-        if (authenticationAttempt.isPresent()) {
-            if (isTTLExpired(authenticationAttempt.get().getTimeToLive())) {
-                authenticationAttempt.get().setTimeToLive(ttl);
-                authenticationAttempt.get().setCount(1);
-            } else {
-                authenticationAttempt.get().setCount(authenticationAttempt.get().getCount() + 1);
+        for (int attempt = 1; ; attempt++) {
+            try {
+                incrementOrCreateCount(internalSubjectId, ttl, journeyType, countType);
+                return;
+            } catch (ConditionalCheckFailedException e) {
+                // Another request changed the record between our two writes
+                if (attempt == MAX_ATTEMPTS) {
+                    LOG.error(
+                            "Failed to create or increment authentication attempt count after {} attempts. Journey type: {}. Count type: {}",
+                            MAX_ATTEMPTS,
+                            journeyType,
+                            countType);
+                    throw new AuthenticationAttemptsException(
+                            "Failed to create or increment authentication attempt count", e);
+                }
+                if (attempt > 1) {
+                    LOG.warn(
+                            "Retrying authentication attempt count update after {} failed attempts. Journey type: {}. Count type: {}",
+                            attempt,
+                            journeyType,
+                            countType);
+                }
             }
-
-        } else {
-            authenticationAttempt =
-                    Optional.ofNullable(
-                            new AuthenticationAttempts()
-                                    .withInternalSubjectId(internalSubjectId)
-                                    .withCount(1)
-                                    .withCountType(countType)
-                                    .withJourneyType(journeyType)
-                                    .withTimeToLive(ttl));
         }
-        authenticationAttempt.ifPresent(this::update);
+    }
+
+    private void incrementOrCreateCount(
+            String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
+        try {
+            incrementCountIfLive(internalSubjectId, journeyType, countType);
+        } catch (ConditionalCheckFailedException e) {
+            // The record is missing or expired so we create a fresh one
+            createOrResetCountIfMissingOrExpired(internalSubjectId, ttl, journeyType, countType);
+        }
+    }
+
+    private void createOrResetCountIfMissingOrExpired(
+            String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
+        var now = NowHelper.now().toInstant().getEpochSecond();
+        var sortKey = buildSortKey(journeyType, countType);
+        var updateItemRequest =
+                UpdateItemRequest.builder()
+                        .tableName(dynamoTable.tableName())
+                        .key(
+                                Map.ofEntries(
+                                        Map.entry(
+                                                ATTRIBUTE_AUTH_ATTEMPTS_INTERNAL_SUBJECT_ID,
+                                                AttributeValue.fromS(internalSubjectId)),
+                                        Map.entry(
+                                                ATTRIBUTE_AUTH_ATTEMPTS_SORT_KEY,
+                                                AttributeValue.fromS(sortKey))))
+                        .conditionExpression("attribute_not_exists(#count) OR #ttl < :now")
+                        .updateExpression("SET #count = :one, #ttl = :ttl")
+                        .expressionAttributeNames(Map.of("#count", "Count", "#ttl", "TimeToLive"))
+                        .expressionAttributeValues(
+                                Map.ofEntries(
+                                        Map.entry(":one", AttributeValue.fromN("1")),
+                                        Map.entry(
+                                                ":ttl", AttributeValue.fromN(String.valueOf(ttl))),
+                                        Map.entry(
+                                                ":now", AttributeValue.fromN(String.valueOf(now)))))
+                        .build();
+        update(updateItemRequest);
+    }
+
+    private void incrementCountIfLive(
+            String internalSubjectId, JourneyType journeyType, CountType countType) {
+        var now = NowHelper.now().toInstant().getEpochSecond();
+        var sortKey = buildSortKey(journeyType, countType);
+        var updateItemRequest =
+                UpdateItemRequest.builder()
+                        .tableName(dynamoTable.tableName())
+                        .key(
+                                Map.ofEntries(
+                                        Map.entry(
+                                                ATTRIBUTE_AUTH_ATTEMPTS_INTERNAL_SUBJECT_ID,
+                                                AttributeValue.fromS(internalSubjectId)),
+                                        Map.entry(
+                                                ATTRIBUTE_AUTH_ATTEMPTS_SORT_KEY,
+                                                AttributeValue.fromS(sortKey))))
+                        .conditionExpression("attribute_exists(#count) AND #ttl >= :now")
+                        .updateExpression("SET #count = #count + :one")
+                        .expressionAttributeNames(Map.of("#count", "Count", "#ttl", "TimeToLive"))
+                        .expressionAttributeValues(
+                                Map.ofEntries(
+                                        Map.entry(":one", AttributeValue.fromN("1")),
+                                        Map.entry(
+                                                ":now", AttributeValue.fromN(String.valueOf(now)))))
+                        .build();
+        update(updateItemRequest);
     }
 
     public int getCount(String internalSubjectId, JourneyType journeyType, CountType countType) {
@@ -119,9 +207,5 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
 
     public static String buildSortKey(JourneyType journeyType, CountType countType) {
         return journeyType.getValue() + "#" + countType.getValue() + "#" + "Count";
-    }
-
-    private boolean isTTLExpired(long ttl) {
-        return (NowHelper.now().toInstant().getEpochSecond() > ttl);
     }
 }
