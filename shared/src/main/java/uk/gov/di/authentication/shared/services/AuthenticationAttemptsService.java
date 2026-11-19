@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.entity.AuthenticationAttempts.ATTRIBUTE_AUTH_ATTEMPTS_INTERNAL_SUBJECT_ID;
+import static uk.gov.di.authentication.shared.entity.AuthenticationAttempts.ATTRIBUTE_AUTH_ATTEMPTS_SORT_KEY;
+
 public class AuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
     private static final Logger LOG = LogManager.getLogger(AuthenticationAttemptsService.class);
 
@@ -81,9 +84,11 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                         .key(
                                 Map.ofEntries(
                                         Map.entry(
-                                                "InternalSubjectId",
+                                                ATTRIBUTE_AUTH_ATTEMPTS_INTERNAL_SUBJECT_ID,
                                                 AttributeValue.fromS(internalSubjectId)),
-                                        Map.entry("SK", AttributeValue.fromS(sortKey))))
+                                        Map.entry(
+                                                ATTRIBUTE_AUTH_ATTEMPTS_SORT_KEY,
+                                                AttributeValue.fromS(sortKey))))
                         .conditionExpression("attribute_not_exists(#count) OR #ttl < :now")
                         .updateExpression("SET #count = :one, #ttl = :ttl")
                         .expressionAttributeNames(Map.of("#count", "Count", "#ttl", "TimeToLive"))
@@ -108,9 +113,11 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                         .key(
                                 Map.ofEntries(
                                         Map.entry(
-                                                "InternalSubjectId",
+                                                ATTRIBUTE_AUTH_ATTEMPTS_INTERNAL_SUBJECT_ID,
                                                 AttributeValue.fromS(internalSubjectId)),
-                                        Map.entry("SK", AttributeValue.fromS(sortKey))))
+                                        Map.entry(
+                                                ATTRIBUTE_AUTH_ATTEMPTS_SORT_KEY,
+                                                AttributeValue.fromS(sortKey))))
                         .conditionExpression("attribute_exists(#count) AND #ttl >= :now")
                         .updateExpression("SET #count = #count + :one")
                         .expressionAttributeNames(Map.of("#count", "Count", "#ttl", "TimeToLive"))
