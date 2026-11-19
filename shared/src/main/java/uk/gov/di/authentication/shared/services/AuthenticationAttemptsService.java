@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
@@ -19,7 +21,29 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
         super(AuthenticationAttempts.class, "authentication-attempt", configurationService);
     }
 
+    public AuthenticationAttemptsService(
+            DynamoDbClient dynamoDbClient, DynamoDbTable<AuthenticationAttempts> dynamoDbTable) {
+        super(dynamoDbTable, dynamoDbClient);
+    }
+
+    private static final int MAX_ATTEMPTS = 3;
+
     public void createOrIncrementCount(
+            String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                incrementOrCreateCount(internalSubjectId, ttl, journeyType, countType);
+                return;
+            } catch (ConditionalCheckFailedException e) {
+                // Another request changed the record between our two writes
+                if (attempt == MAX_ATTEMPTS) {
+                    throw e;
+                }
+            }
+        }
+    }
+
+    private void incrementOrCreateCount(
             String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
         try {
             incrementCountIfLive(internalSubjectId, journeyType, countType);
