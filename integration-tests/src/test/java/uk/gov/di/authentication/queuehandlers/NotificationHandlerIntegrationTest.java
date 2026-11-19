@@ -49,7 +49,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                                 TEST_EMAIL_ADDRESS,
                                 VERIFY_EMAIL,
                                 CODE,
-                                SupportedLanguage.EN,
                                 SESSION_ID,
                                 CLIENT_SESSION_ID)),
                 mock(Context.class));
@@ -77,7 +76,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                                 TEST_PHONE_NUMBER,
                                 VERIFY_PHONE_NUMBER,
                                 CODE,
-                                SupportedLanguage.EN,
                                 SESSION_ID,
                                 CLIENT_SESSION_ID)),
                 mock(Context.class));
@@ -99,12 +97,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         handler.handleRequest(
                 createSqsEvent(
                         new NotifyRequest(
-                                TEST_PHONE_NUMBER,
-                                MFA_SMS,
-                                CODE,
-                                SupportedLanguage.EN,
-                                SESSION_ID,
-                                CLIENT_SESSION_ID)),
+                                TEST_PHONE_NUMBER, MFA_SMS, CODE, SESSION_ID, CLIENT_SESSION_ID)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -164,12 +157,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
             handler.handleRequest(
                     createSqsEvent(
                             new NotifyRequest(
-                                    phoneNumber,
-                                    MFA_SMS,
-                                    CODE,
-                                    SupportedLanguage.EN,
-                                    SESSION_ID,
-                                    CLIENT_SESSION_ID)),
+                                    phoneNumber, MFA_SMS, CODE, SESSION_ID, CLIENT_SESSION_ID)),
                     mock(Context.class));
         }
 
@@ -177,12 +165,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
             handler.handleRequest(
                     createSqsEvent(
                             new NotifyRequest(
-                                    phoneNumber,
-                                    MFA_SMS,
-                                    CODE,
-                                    SupportedLanguage.EN,
-                                    SESSION_ID,
-                                    CLIENT_SESSION_ID)),
+                                    phoneNumber, MFA_SMS, CODE, SESSION_ID, CLIENT_SESSION_ID)),
                     mock(Context.class));
         }
 

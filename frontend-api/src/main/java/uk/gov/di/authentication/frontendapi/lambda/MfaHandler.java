@@ -307,7 +307,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 phoneNumber,
                                 notificationType,
                                 code,
-                                userContext.userLanguage(),
                                 userContext.authSessionItem().getSessionId(),
                                 userContext.clientSessionId());
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));

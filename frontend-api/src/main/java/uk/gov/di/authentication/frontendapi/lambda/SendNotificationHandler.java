@@ -413,7 +413,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             destination,
                             notificationType,
                             code,
-                            userContext.userLanguage(),
                             sessionId,
                             userContext.clientSessionId());
             emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
