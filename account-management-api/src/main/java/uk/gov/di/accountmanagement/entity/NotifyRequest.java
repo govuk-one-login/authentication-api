@@ -2,7 +2,6 @@ package uk.gov.di.accountmanagement.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public class NotifyRequest {
@@ -15,8 +14,6 @@ public class NotifyRequest {
     @Expose @Required private String destination;
 
     @Expose private String code;
-
-    @Expose private SupportedLanguage language;
 
     @Expose private String sessionId;
 
@@ -37,7 +34,6 @@ public class NotifyRequest {
         this.destination = destination;
         this.notificationType = notificationType;
         this.code = code;
-        this.language = null;
         this.isTestClient = isTestClient;
         this.email = email;
     }
@@ -99,8 +95,6 @@ public class NotifyRequest {
                 + ", code='"
                 + code
                 + '\''
-                + ", language="
-                + language
                 + ", sessionId='"
                 + sessionId
                 + '\''

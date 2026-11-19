@@ -141,7 +141,6 @@ class NotificationHandlerTest {
                       "notificationType": "VERIFY_PHONE_NUMBER",
                       "destination": "01234567890",
                       "code": "654321",
-                      "language": "EN",
                       "session_id": null,
                       "client_session_id": null
                     }
@@ -175,7 +174,6 @@ class NotificationHandlerTest {
                       "notificationType": "VERIFY_PHONE_NUMBER",
                       "destination": "01234567890",
                       "code": "654321",
-                      "language": "EN",
                       "session_id": null,
                       "client_session_id": null,
                       "somethingNew": "and unexpected"
