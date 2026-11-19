@@ -104,10 +104,6 @@ public enum NotificationType implements TemplateAware, NotifiableType {
         return configurationService.getNotifyTemplateId(templateName);
     }
 
-    String getTemplateName(SupportedLanguage language) {
-        return languageSpecificTemplates.getOrDefault(language, templateName);
-    }
-
     public MFAMethodType getMfaMethodType() {
         return mfaMethodType;
     }

@@ -15,34 +15,6 @@ class NotificationTypeTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     @Test
-    void shouldReturnDefaultTemplateForVerifyEmailWithLanguageEN() {
-        assertThat(
-                VERIFY_EMAIL.getTemplateName(SupportedLanguage.EN),
-                equalTo("VERIFY_EMAIL_TEMPLATE_ID"));
-    }
-
-    @Test
-    void shouldReturnWelshTemplateForVerifyEmailWithLanguageCY() {
-        assertThat(
-                VERIFY_EMAIL.getTemplateName(SupportedLanguage.CY),
-                equalTo("VERIFY_EMAIL_TEMPLATE_ID_CY"));
-    }
-
-    @Test
-    void shouldReturnDefaultTemplateForVerifyPhoneNumberWithLanguageEN() {
-        assertThat(
-                NotificationType.VERIFY_PHONE_NUMBER.getTemplateName(SupportedLanguage.EN),
-                equalTo("VERIFY_PHONE_NUMBER_TEMPLATE_ID"));
-    }
-
-    @Test
-    void shouldReturnWelshTemplateForVerifyPhoneNumberWithLanguageCY() {
-        assertThat(
-                NotificationType.VERIFY_PHONE_NUMBER.getTemplateName(SupportedLanguage.CY),
-                equalTo("VERIFY_PHONE_NUMBER_TEMPLATE_ID_CY"));
-    }
-
-    @Test
     void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageEN() {
         when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID_CY"))
                 .thenReturn("67890");
