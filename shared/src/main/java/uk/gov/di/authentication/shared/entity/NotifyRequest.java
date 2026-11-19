@@ -68,10 +68,6 @@ public class NotifyRequest {
         return code;
     }
 
-    public SupportedLanguage getLanguage() {
-        return language;
-    }
-
     public String getSessionId() {
         return sessionId;
     }
