@@ -50,6 +50,13 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                     throw new AuthenticationAttemptsException(
                             "Failed to create or increment authentication attempt count", e);
                 }
+                if (attempt > 1) {
+                    LOG.warn(
+                            "Retrying authentication attempt count update after {} failed attempts. Journey type: {}. Count type: {}",
+                            attempt,
+                            journeyType,
+                            countType);
+                }
             }
         }
     }
