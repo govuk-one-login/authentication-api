@@ -132,6 +132,22 @@ class AuthenticationAttemptsServiceIntegrationTest {
     }
 
     @Test
+    void shouldResetCountWhenExistingRecordHasExpired() {
+        var expiredTTL = Instant.now().getEpochSecond() - 1L;
+        var newTTL = Instant.now().getEpochSecond() + 1000000L;
+
+        authenticationAttemptsService.createOrIncrementCount(
+                INTERNAL_SUBJECT_ID, expiredTTL, JOURNEY_TYPE, COUNT_TYPE);
+        authenticationAttemptsService.createOrIncrementCount(
+                INTERNAL_SUBJECT_ID, newTTL, JOURNEY_TYPE, COUNT_TYPE);
+
+        var count =
+                authenticationAttemptsService.getCount(
+                        INTERNAL_SUBJECT_ID, JOURNEY_TYPE, COUNT_TYPE);
+        assertEquals(1, count);
+    }
+
+    @Test
     void shouldReadAndDeleteCounts() {
 
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {

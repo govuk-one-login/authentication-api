@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
 import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.entity.CountType;
@@ -25,24 +26,49 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                 get(internalSubjectId, buildSortKey(journeyType, countType));
         if (authenticationAttempt.isPresent()) {
             if (isTTLExpired(authenticationAttempt.get().getTimeToLive())) {
-                authenticationAttempt.get().setTimeToLive(ttl);
-                authenticationAttempt.get().setCount(1);
+                resetExpiredCountAtomically(internalSubjectId, ttl, journeyType, countType);
             } else {
                 incrementCountAtomically(internalSubjectId, journeyType, countType);
-                return;
             }
-
-        } else {
-            authenticationAttempt =
-                    Optional.ofNullable(
-                            new AuthenticationAttempts()
-                                    .withInternalSubjectId(internalSubjectId)
-                                    .withCount(1)
-                                    .withCountType(countType)
-                                    .withJourneyType(journeyType)
-                                    .withTimeToLive(ttl));
+            return;
         }
+        authenticationAttempt =
+                Optional.of(
+                        new AuthenticationAttempts()
+                                .withInternalSubjectId(internalSubjectId)
+                                .withCount(1)
+                                .withCountType(countType)
+                                .withJourneyType(journeyType)
+                                .withTimeToLive(ttl));
         authenticationAttempt.ifPresent(this::update);
+    }
+
+    private void resetExpiredCountAtomically(
+            String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
+        var now = NowHelper.now().toInstant().getEpochSecond();
+        var sortKey = buildSortKey(journeyType, countType);
+        var updateItemRequest =
+                UpdateItemRequest.builder()
+                        .tableName(dynamoTable.tableName())
+                        .key(
+                                Map.ofEntries(
+                                        Map.entry("InternalSubjectId", AttributeValue.fromS(internalSubjectId)),
+                                        Map.entry("SK", AttributeValue.fromS(sortKey))))
+                        .conditionExpression("#ttl < :now")
+                        .updateExpression("SET #count = :one, #ttl = :ttl")
+                        .expressionAttributeNames(Map.of("#count", "Count", "#ttl", "TimeToLive"))
+                        .expressionAttributeValues(
+                                Map.ofEntries(
+                                        Map.entry(":one", AttributeValue.fromN("1")),
+                                        Map.entry(":ttl", AttributeValue.fromN(String.valueOf(ttl))),
+                                        Map.entry(":now", AttributeValue.fromN(String.valueOf(now)))))
+                        .build();
+        try {
+            update(updateItemRequest);
+        } catch (ConditionalCheckFailedException e) {
+            // Another request has already reset this expired record, so it is now live
+            incrementCountAtomically(internalSubjectId, journeyType, countType);
+        }
     }
 
     private void incrementCountAtomically(
