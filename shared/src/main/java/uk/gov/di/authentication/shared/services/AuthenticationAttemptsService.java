@@ -21,15 +21,15 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
 
     public void createOrIncrementCount(
             String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
-        var existingAttempt = get(internalSubjectId, buildSortKey(journeyType, countType));
-        if (existingAttempt.isPresent() && !isTTLExpired(existingAttempt.get().getTimeToLive())) {
-            incrementCountAtomically(internalSubjectId, journeyType, countType);
-        } else {
-            createOrResetCountAtomically(internalSubjectId, ttl, journeyType, countType);
+        try {
+            incrementCountIfLive(internalSubjectId, journeyType, countType);
+        } catch (ConditionalCheckFailedException e) {
+            // The record is missing or expired so we create a fresh one
+            createOrResetCountIfMissingOrExpired(internalSubjectId, ttl, journeyType, countType);
         }
     }
 
-    private void createOrResetCountAtomically(
+    private void createOrResetCountIfMissingOrExpired(
             String internalSubjectId, long ttl, JourneyType journeyType, CountType countType) {
         var now = NowHelper.now().toInstant().getEpochSecond();
         var sortKey = buildSortKey(journeyType, countType);
@@ -53,16 +53,12 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                                         Map.entry(
                                                 ":now", AttributeValue.fromN(String.valueOf(now)))))
                         .build();
-        try {
-            update(updateItemRequest);
-        } catch (ConditionalCheckFailedException e) {
-            // Another request has already created or reset this record, so it is now live
-            incrementCountAtomically(internalSubjectId, journeyType, countType);
-        }
+        update(updateItemRequest);
     }
 
-    private void incrementCountAtomically(
+    private void incrementCountIfLive(
             String internalSubjectId, JourneyType journeyType, CountType countType) {
+        var now = NowHelper.now().toInstant().getEpochSecond();
         var sortKey = buildSortKey(journeyType, countType);
         var updateItemRequest =
                 UpdateItemRequest.builder()
@@ -73,9 +69,14 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                                                 "InternalSubjectId",
                                                 AttributeValue.fromS(internalSubjectId)),
                                         Map.entry("SK", AttributeValue.fromS(sortKey))))
+                        .conditionExpression("attribute_exists(#count) AND #ttl >= :now")
                         .updateExpression("SET #count = #count + :one")
-                        .expressionAttributeNames(Map.of("#count", "Count"))
-                        .expressionAttributeValues(Map.of(":one", AttributeValue.fromN("1")))
+                        .expressionAttributeNames(Map.of("#count", "Count", "#ttl", "TimeToLive"))
+                        .expressionAttributeValues(
+                                Map.ofEntries(
+                                        Map.entry(":one", AttributeValue.fromN("1")),
+                                        Map.entry(
+                                                ":now", AttributeValue.fromN(String.valueOf(now)))))
                         .build();
         update(updateItemRequest);
     }
