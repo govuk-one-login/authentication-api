@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -26,7 +28,8 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                 authenticationAttempt.get().setTimeToLive(ttl);
                 authenticationAttempt.get().setCount(1);
             } else {
-                authenticationAttempt.get().setCount(authenticationAttempt.get().getCount() + 1);
+                incrementCountAtomically(internalSubjectId, journeyType, countType);
+                return;
             }
 
         } else {
@@ -40,6 +43,25 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
                                     .withTimeToLive(ttl));
         }
         authenticationAttempt.ifPresent(this::update);
+    }
+
+    private void incrementCountAtomically(
+            String internalSubjectId, JourneyType journeyType, CountType countType) {
+        var sortKey = buildSortKey(journeyType, countType);
+        var updateItemRequest =
+                UpdateItemRequest.builder()
+                        .tableName(dynamoTable.tableName())
+                        .key(
+                                Map.ofEntries(
+                                        Map.entry(
+                                                "InternalSubjectId",
+                                                AttributeValue.fromS(internalSubjectId)),
+                                        Map.entry("SK", AttributeValue.fromS(sortKey))))
+                        .updateExpression("SET #count = #count + :one")
+                        .expressionAttributeNames(Map.of("#count", "Count"))
+                        .expressionAttributeValues(Map.of(":one", AttributeValue.fromN("1")))
+                        .build();
+        update(updateItemRequest);
     }
 
     public int getCount(String internalSubjectId, JourneyType journeyType, CountType countType) {
