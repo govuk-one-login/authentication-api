@@ -45,7 +45,6 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage.EN;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.DI_PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.SESSION_ID;
@@ -96,7 +95,6 @@ class CheckEmailFraudBlockHandlerTest {
                 new UserContext(
                         authSession,
                         Optional.of(userProfile),
-                        EN,
                         CLIENT_SESSION_ID,
                         ENCODED_DEVICE_DETAILS);
         when(configurationServiceMock.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
