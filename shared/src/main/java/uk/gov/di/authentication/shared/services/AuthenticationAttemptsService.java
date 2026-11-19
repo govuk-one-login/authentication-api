@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -8,6 +10,7 @@ import software.amazon.awssdk.services.dynamodb.model.UpdateItemRequest;
 import uk.gov.di.authentication.shared.entity.AuthenticationAttempts;
 import uk.gov.di.authentication.shared.entity.CountType;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.exceptions.AuthenticationAttemptsException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.util.Arrays;
@@ -17,6 +20,8 @@ import java.util.Map;
 import java.util.Objects;
 
 public class AuthenticationAttemptsService extends BaseDynamoService<AuthenticationAttempts> {
+    private static final Logger LOG = LogManager.getLogger(AuthenticationAttemptsService.class);
+
     public AuthenticationAttemptsService(ConfigurationService configurationService) {
         super(AuthenticationAttempts.class, "authentication-attempt", configurationService);
     }
@@ -37,7 +42,13 @@ public class AuthenticationAttemptsService extends BaseDynamoService<Authenticat
             } catch (ConditionalCheckFailedException e) {
                 // Another request changed the record between our two writes
                 if (attempt == MAX_ATTEMPTS) {
-                    throw e;
+                    LOG.error(
+                            "Failed to create or increment authentication attempt count after {} attempts. Journey type: {}. Count type: {}",
+                            MAX_ATTEMPTS,
+                            journeyType,
+                            countType);
+                    throw new AuthenticationAttemptsException(
+                            "Failed to create or increment authentication attempt count", e);
                 }
             }
         }
