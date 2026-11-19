@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.entity;
 
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import static org.hamcrest.MatcherAssert.assertThat;
