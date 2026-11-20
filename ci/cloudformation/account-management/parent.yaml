@@ -398,7 +398,7 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
-      accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
+      accessTokenJwksUrl: https://oidc.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 5ctgxqnq37
       inactiveAccountDeletionClientId: inactive-account-deletion
       inactiveAccountDeletionMinDurationPerMessageMs: 3000
