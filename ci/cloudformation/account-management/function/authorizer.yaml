@@ -43,7 +43,7 @@ Resources:
           ACCESS_TOKEN_JWKS_URL:
             !FindInMap [
               EnvironmentConfiguration,
-              !Ref Environment,
+              !If [UseSubEnvironment, !Ref SubEnvironment, !Ref Environment],
               accessTokenJwksUrl,
             ]
       LoggingConfig:
