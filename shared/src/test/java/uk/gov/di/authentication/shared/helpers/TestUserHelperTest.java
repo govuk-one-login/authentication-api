@@ -281,7 +281,6 @@ class TestUserHelperTest {
 
     private UserContext buildUserContext() {
         var authSession = new AuthSessionItem().withEmailAddress(TEST_EMAIL_ADDRESS);
-        return new UserContext(
-                authSession, Optional.empty(), LocaleHelper.SupportedLanguage.EN, "", "");
+        return new UserContext(authSession, Optional.empty(), "", "");
     }
 }

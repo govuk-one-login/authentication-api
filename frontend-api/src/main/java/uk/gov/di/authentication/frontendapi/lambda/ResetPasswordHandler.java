@@ -255,7 +255,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     new NotifyRequest(
                             userCredentials.getEmail(),
                             NotificationType.PASSWORD_RESET_CONFIRMATION,
-                            userContext.userLanguage(),
                             userContext.authSessionItem().getSessionId(),
                             userContext.clientSessionId());
             auditableEvent = FrontendAuditableEvent.AUTH_PASSWORD_RESET_SUCCESSFUL;
@@ -270,7 +269,6 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                         new NotifyRequest(
                                 userProfile.getPhoneNumber(),
                                 NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
-                                userContext.userLanguage(),
                                 userContext.authSessionItem().getSessionId(),
                                 userContext.clientSessionId());
                 sqsClient.send(serialiseRequest(smsNotifyRequest));
