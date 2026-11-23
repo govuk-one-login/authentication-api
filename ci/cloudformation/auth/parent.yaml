@@ -396,7 +396,7 @@ Mappings:
       argon2Parallelism: "1"
       passwordRehashOnLoginEnabled: "true"
       relyingPartyId: authdev3.dev.account.gov.uk
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key::::2291cbb2-ea4f-4eab-8b22-de08d17f6612}}"
       passkeyPromptSuppressionInMinutes: 5
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
