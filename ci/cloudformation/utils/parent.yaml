@@ -263,7 +263,7 @@ Mappings:
       lastSignedInBackfillMaxItemsPerSegment: "25"
       lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
       lastSignedInBackfillMaxInvocations: "40"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key::::bf116738-4410-4c0d-8717-d26d133b5bd4}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key::::a7e9e658-242a-4605-a062-4e1b800a3bf1}}"
 
     authdev3:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
