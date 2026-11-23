@@ -1029,6 +1029,12 @@ class LoginHandlerTest {
                                     "NewMemory", "32768",
                                     "NewIterations", "2",
                                     "NewParallelism", "1"));
+            verifyLoginSuccessAuditEventWithPasswordHashParameters(
+                    Map.ofEntries(
+                            Map.entry("password_hash_parameters_current", hashParametersMap(15360)),
+                            Map.entry("password_hash_parameters_rehashed", true),
+                            Map.entry(
+                                    "password_hash_parameters_updated", hashParametersMap(32768))));
         }
 
         @Test
@@ -1048,6 +1054,10 @@ class LoginHandlerTest {
             verify(authenticationService, never()).updatePassword(anyString(), anyString());
             verify(cloudwatchMetricsService, never())
                     .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
+            verifyLoginSuccessAuditEventWithPasswordHashParameters(
+                    Map.ofEntries(
+                            Map.entry("password_hash_parameters_current", hashParametersMap(15360)),
+                            Map.entry("password_hash_parameters_rehashed", false)));
         }
 
         @Test
@@ -1069,21 +1079,101 @@ class LoginHandlerTest {
             var result = handler.handleRequest(event, context);
 
             assertThat(result, hasStatus(200));
+            verifyLoginSuccessAuditEventWithPasswordHashParameters(
+                    Map.ofEntries(
+                            Map.entry("password_hash_parameters_current", hashParametersMap(15360)),
+                            Map.entry("password_hash_parameters_rehashed", false)));
         }
 
         @Test
         void shouldNotRehashPasswordWhenFlagDisabled() {
             when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(false);
-
-            usingApplicableUserCredentialsWithLogin(SMS, true);
+            var password = "$argon2id$v=19$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw";
+            setupUserWhoCanSuccessfullyLoginWithPassword(password);
 
             var event =
                     apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
-            handler.handleRequest(event, context);
+            var result = handler.handleRequest(event, context);
 
+            assertThat(result, hasStatus(200));
             verify(authenticationService, never()).updatePassword(anyString(), anyString());
             verify(cloudwatchMetricsService, never())
                     .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
+            verifyLoginSuccessAuditEventWithoutPasswordHashParameters();
+        }
+
+        @Test
+        void shouldReportConfiguredParametersAsNotRehashedForUserMigratedDuringThisRequest() {
+            when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
+            when(configurationService.getArgon2MemoryInKibibytes()).thenReturn(15360);
+            when(configurationService.getArgon2Iterations()).thenReturn(2);
+            when(configurationService.getArgon2Parallelism()).thenReturn(1);
+            var userProfile = generateUserProfile(new Subject().getValue());
+            setupUserInDatabase(EMAIL, userProfile);
+            var userCredentials = usingApplicableUserCredentialsWithLogin(SMS, false);
+            userCredentials.withPassword(null);
+            when(userMigrationService.processMigratedUser(
+                            userCredentials, CommonTestVariables.PASSWORD))
+                    .thenReturn(true);
+            usingValidAuthSession();
+
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
+            verify(authenticationService, never()).updatePassword(anyString(), anyString());
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
+            verifyLoginSuccessAuditEventWithPasswordHashParameters(
+                    Map.ofEntries(
+                            Map.entry("password_hash_parameters_current", hashParametersMap(15360)),
+                            Map.entry("password_hash_parameters_rehashed", false)));
+        }
+
+        @Test
+        void shouldNotRehashPasswordWhenStoredHashCannotBeParsed() {
+            when(configurationService.isPasswordRehashOnLoginEnabled()).thenReturn(true);
+            setupUserWhoCanSuccessfullyLoginWithPassword("not-a-valid-hash");
+
+            var event =
+                    apiRequestEventWithHeadersAndBody(VALID_HEADERS, validBodyWithEmailAndPassword);
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
+            verify(authenticationService, never()).updatePassword(anyString(), anyString());
+            verify(cloudwatchMetricsService, never())
+                    .incrementCounter(eq("PasswordRehashCompleted"), anyMap());
+            verifyLoginSuccessAuditEventWithoutPasswordHashParameters();
+        }
+
+        private Map<String, Object> hashParametersMap(int memory) {
+            return Map.ofEntries(
+                    Map.entry("password_hash_parameters_algorithm", "argon2id"),
+                    Map.entry("password_hash_parameters_algorithm_version", "19"),
+                    Map.entry("password_hash_parameters_memory", memory),
+                    Map.entry("password_hash_parameters_iterations", 2),
+                    Map.entry("password_hash_parameters_parallelism", 1));
+        }
+
+        private void verifyLoginSuccessAuditEventWithPasswordHashParameters(
+                Map<String, Object> passwordHashParameters) {
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
+                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                    ENCODED_DEVICE_DETAILS),
+                            pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
+                            pair("password_hash_parameters", passwordHashParameters));
+        }
+
+        private void verifyLoginSuccessAuditEventWithoutPasswordHashParameters() {
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.AUTH_LOG_IN_SUCCESS,
+                            auditContextWithAllUserInfo.withTxmaAuditEncoded(
+                                    ENCODED_DEVICE_DETAILS),
+                            pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         }
 
         private void setupUserWhoCanSuccessfullyLoginWithPassword(String password) {

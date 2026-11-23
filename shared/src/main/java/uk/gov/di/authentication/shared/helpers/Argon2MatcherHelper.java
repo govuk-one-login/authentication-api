@@ -31,18 +31,9 @@ public class Argon2MatcherHelper {
     }
 
     public static boolean needsRehash(
-            String encodedPassword, ConfigurationService configurationService) {
-        try {
-            Argon2Hash decoded = decode(encodedPassword);
-            Argon2Parameters params = decoded.getParameters();
-            return params.getVersion() != Argon2Parameters.ARGON2_VERSION_13
-                    || params.getMemory() != configurationService.getArgon2MemoryInKibibytes()
-                    || params.getIterations() != configurationService.getArgon2Iterations()
-                    || params.getLanes() != configurationService.getArgon2Parallelism();
-        } catch (IllegalArgumentException ex) {
-            LOG.warn("Unable to parse password hash for rehash check");
-            return false;
-        }
+            Argon2HashParameters currentParameters, ConfigurationService configurationService) {
+        return !currentParameters.equals(
+                Argon2HashParameters.fromConfiguration(configurationService));
     }
 
     public static Optional<Argon2HashParameters> extractParameters(String encodedPassword) {
@@ -51,7 +42,11 @@ public class Argon2MatcherHelper {
             Argon2Parameters params = decoded.getParameters();
             return Optional.of(
                     new Argon2HashParameters(
-                            params.getMemory(), params.getIterations(), params.getLanes()));
+                            Argon2HashParameters.ARGON2_ALGORITHM,
+                            params.getVersion(),
+                            params.getMemory(),
+                            params.getIterations(),
+                            params.getLanes()));
         } catch (IllegalArgumentException ex) {
             LOG.warn("Unable to parse password hash for parameter extraction");
             return Optional.empty();

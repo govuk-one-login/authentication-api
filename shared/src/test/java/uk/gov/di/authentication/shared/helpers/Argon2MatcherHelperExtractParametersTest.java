@@ -39,6 +39,37 @@ class Argon2MatcherHelperExtractParametersTest {
         assertEquals(4, result.get().parallelism());
     }
 
+    @Test
+    void shouldExtractAlgorithmAndVersionFromValidHash() {
+        Optional<Argon2HashParameters> result =
+                Argon2MatcherHelper.extractParameters(HASH_M15360_T2_P1);
+
+        assertTrue(result.isPresent());
+        assertEquals("argon2id", result.get().algorithm());
+        assertEquals(19, result.get().algorithmVersion());
+    }
+
+    @Test
+    void shouldExtractExplicitNonDefaultVersionFromHash() {
+        Optional<Argon2HashParameters> result =
+                Argon2MatcherHelper.extractParameters(
+                        "$argon2id$v=16$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw");
+
+        assertTrue(result.isPresent());
+        assertEquals(16, result.get().algorithmVersion());
+    }
+
+    @Test
+    void shouldDefaultToVersion19WhenHashHasNoVersionSegment() {
+        Optional<Argon2HashParameters> result =
+                Argon2MatcherHelper.extractParameters(
+                        "$argon2id$m=15360,t=2,p=1$c29tZXNhbHRieXRlcw$dGVzdGhhc2hieXRlcw");
+
+        assertTrue(result.isPresent());
+        assertEquals("argon2id", result.get().algorithm());
+        assertEquals(19, result.get().algorithmVersion());
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"not-a-valid-hash", "", "$$$"})
     void shouldReturnEmptyForInvalidInput(String invalidHash) {
