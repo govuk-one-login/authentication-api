@@ -458,7 +458,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key::::49060c88-a9b1-4dd0-9e1e-03848e55fd60}}"
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574

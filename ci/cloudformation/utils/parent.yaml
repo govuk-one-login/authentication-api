@@ -362,7 +362,7 @@ Mappings:
       lastSignedInBackfillMaxItemsPerSegment: "25"
       lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
       lastSignedInBackfillMaxInvocations: "40"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key::::49060c88-a9b1-4dd0-9e1e-03848e55fd60}}"
 
     build:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354
