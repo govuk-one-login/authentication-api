@@ -50,6 +50,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -361,6 +362,12 @@ class StartHandlerTest {
                     .incrementCounter(
                             eq(CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue()), any());
             verify(authSessionService, never()).updateSession(any());
+            verify(authSessionService)
+                    .updateSessionAttribute(
+                            authSession.getSessionId(),
+                            AuthSessionItem.ATTRIBUTE_LOGIN_TYPE,
+                            AuthSessionItem.LoginType.SILENT.name());
+            assertEquals(AuthSessionItem.LoginType.SILENT, authSession.getLoginType());
             assertTrue(authSession.getHasVerifiedWithPassword());
             assertTrue(authSession.getHasVerifiedWithMfa());
             assertTrue(authSession.getHasVerifiedWithPasskey());
@@ -373,6 +380,12 @@ class StartHandlerTest {
                             CloudwatchMetrics.AUTH_CODE_PROTECTION_OVERRIDE.getValue(),
                             Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
             verify(authSessionService).updateSession(authSession);
+            verify(authSessionService)
+                    .updateSessionAttribute(
+                            authSession.getSessionId(),
+                            AuthSessionItem.ATTRIBUTE_LOGIN_TYPE,
+                            AuthSessionItem.LoginType.STANDARD.name());
+            assertEquals(AuthSessionItem.LoginType.STANDARD, authSession.getLoginType());
             assertFalse(authSession.getHasVerifiedWithPassword());
             assertFalse(authSession.getHasVerifiedWithMfa());
             assertFalse(authSession.getHasVerifiedWithPasskey());
@@ -952,6 +965,37 @@ class StartHandlerTest {
         assertFalse(authSession.getHasVerifiedWithPassword());
         assertFalse(authSession.getHasVerifiedWithMfa());
         assertFalse(authSession.getHasVerifiedWithPasskey());
+        // The cleared verified state must not be persisted on reauth (multi-tab silent login
+        // relies on it); only the LoginType attribute is written.
+        verify(authSessionService, never()).updateSession(any());
+        verify(authSessionService)
+                .updateSessionAttribute(
+                        SESSION_ID,
+                        AuthSessionItem.ATTRIBUTE_LOGIN_TYPE,
+                        AuthSessionItem.LoginType.REAUTHENTICATION.name());
+        assertEquals(AuthSessionItem.LoginType.REAUTHENTICATION, authSession.getLoginType());
+    }
+
+    @Test
+    void shouldSetLoginTypeToUpliftWhenUpliftRequired() throws Json.JsonException {
+        withUserProfilePresent();
+        var userStartInfo = new UserStartInfo(true, false, true, null, null, null, false, false);
+        usingStartServiceThatReturns(emptyUserDetails, getClientStartInfo(), userStartInfo);
+        when(startService.isUpliftRequired(any(), any())).thenReturn(true);
+        var authSession = useValidSession();
+        var event =
+                apiRequestEventWithHeadersAndBody(
+                        VALID_HEADERS, makeRequestBodyWithAuthenticatedField(true));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        verify(authSessionService)
+                .updateSessionAttribute(
+                        authSession.getSessionId(),
+                        AuthSessionItem.ATTRIBUTE_LOGIN_TYPE,
+                        AuthSessionItem.LoginType.UPLIFT.name());
+        assertEquals(AuthSessionItem.LoginType.UPLIFT, authSession.getLoginType());
     }
 
     private static Stream<Arguments> credentialTrustLevelToMfaRequired() {
