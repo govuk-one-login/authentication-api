@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -178,7 +179,39 @@ class AuthenticationAuthCodeHandlerTest {
             verify(cloudwatchMetricsService)
                     .incrementCounter(
                             CloudwatchMetrics.AUTH_CODE_ISSUED,
-                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+                            Map.ofEntries(
+                                    Map.entry(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment()),
+                                    Map.entry(
+                                            "LoginType",
+                                            AuthSessionItem.LoginType.UNKNOWN.name())));
+        }
+
+        @ParameterizedTest
+        @EnumSource(AuthSessionItem.LoginType.class)
+        void shouldEmitLoginTypeOnSuccessMetric(AuthSessionItem.LoginType loginType)
+                throws URISyntaxException {
+            authSession.setLoginType(loginType);
+
+            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+            var userProfile = new UserProfile().withSubjectID(TEST_SUBJECT_ID).withEmail(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            var event = validAuthCodeRequest();
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
+
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AUTH_CODE_ISSUED,
+                            Map.ofEntries(
+                                    Map.entry(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment()),
+                                    Map.entry("LoginType", loginType.name())));
         }
 
         @Test
@@ -236,9 +269,13 @@ class AuthenticationAuthCodeHandlerTest {
                 verify(cloudwatchMetricsService)
                         .incrementCounter(
                                 CloudwatchMetrics.AUTH_CODE_ISSUED,
-                                Map.of(
-                                        ENVIRONMENT.getValue(),
-                                        configurationService.getEnvironment()));
+                                Map.ofEntries(
+                                        Map.entry(
+                                                ENVIRONMENT.getValue(),
+                                                configurationService.getEnvironment()),
+                                        Map.entry(
+                                                "LoginType",
+                                                AuthSessionItem.LoginType.UNKNOWN.name())));
                 verify(authSessionService, atLeastOnce())
                         .updateSession(
                                 argThat(
@@ -315,7 +352,13 @@ class AuthenticationAuthCodeHandlerTest {
             verify(cloudwatchMetricsService)
                     .incrementCounter(
                             CloudwatchMetrics.AUTH_CODE_ISSUED,
-                            Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+                            Map.ofEntries(
+                                    Map.entry(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment()),
+                                    Map.entry(
+                                            "LoginType",
+                                            AuthSessionItem.LoginType.UNKNOWN.name())));
         }
 
         @Test
