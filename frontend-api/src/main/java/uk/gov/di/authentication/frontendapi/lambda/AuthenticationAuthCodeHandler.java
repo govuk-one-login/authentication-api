@@ -181,9 +181,19 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             var response =
                     generateApiGatewayProxyResponse(
                             200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
-            var loginType =
-                    Optional.ofNullable(authSession.getLoginType())
-                            .orElse(AuthSessionItem.LoginType.UNKNOWN);
+
+            AuthSessionItem.LoginType loginType;
+            if (authCodeRequest.isNewAccount()) {
+                loginType = AuthSessionItem.LoginType.NEW_ACCOUNT;
+                authSessionService.updateSessionAttribute(
+                        authSession.getSessionId(),
+                        AuthSessionItem.ATTRIBUTE_LOGIN_TYPE,
+                        loginType.name());
+            } else {
+                loginType =
+                        Optional.ofNullable(authSession.getLoginType())
+                                .orElse(AuthSessionItem.LoginType.UNKNOWN);
+            }
             cloudwatchMetricsService.incrementCounter(
                     CloudwatchMetrics.AUTH_CODE_ISSUED,
                     Map.ofEntries(
