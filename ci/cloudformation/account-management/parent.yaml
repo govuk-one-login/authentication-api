@@ -278,6 +278,19 @@ Conditions:
     - !Equals [!Ref Environment, integration]
     - !Equals [!Ref Environment, staging]
 
+  SwitchToSpokeVpc:
+    !Or [
+      !And [
+        !Condition UseSubEnvironment,
+        !Or [
+          !Equals [!Ref SubEnvironment, "authdev1"],
+          !Equals [!Ref SubEnvironment, "authdev2"],
+          !Equals [!Ref SubEnvironment, "authdev3"],
+        ],
+      ],
+      !Equals [!Ref Environment, "dev"],
+    ]
+
 Mappings:
   EnvironmentConfiguration:
     authdev1:
@@ -840,6 +853,47 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Allow egress to external services
+      VpcId: !ImportValue "vpc-VpcId" # Hardcoded VPC name for legacy VPC
+      SecurityGroupEgress:
+        - Description: Allow all outgoing HTTPS requests from security group
+          CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Lambda Security Group permissions ruleset
+      VpcId: !ImportValue "vpc-VpcId" # Hardcoded VPC name for legacy VPC
+      SecurityGroupEgress:
+        - Description: Allow outbound traffic to vpc endpoints
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          DestinationSecurityGroupId: !ImportValue "vpc-AWSServicesEndpointSecurityGroupId" # Hardcoded VPC name for legacy VPC
+        - Description: Allow outbound traffic to elasticache
+          IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          CidrIp: 10.0.0.0/16
+        - DestinationPrefixListId: pl-b3a742da # See https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html
+          Description: Allow outgoing HTTPS requests to AWS DynamoDB route from security group
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+        - DestinationPrefixListId: pl-7ca54015 # See https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html
+          Description: Allow outgoing HTTPS requests to AWS S3 route from security group
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+
+  # Below SG are used by Lambda functions deployed in Spoke VPC
+
+  HttpsEgressSecurityGroupSpokeVpc:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow egress to external services
       VpcId:
         Fn::ImportValue: !Sub ${VpcStackName}-VpcId
       SecurityGroupEgress:
@@ -849,7 +903,7 @@ Resources:
           FromPort: 443
           ToPort: 443
 
-  LambdaSecurityGroup:
+  LambdaSecurityGroupSpokeVpc:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Lambda Security Group permissions ruleset
