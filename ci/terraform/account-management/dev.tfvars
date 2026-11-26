@@ -30,3 +30,7 @@ home_vpc_endpoint_id = ["vpce-087ac48f23f28a39b", "vpce-0a7dad1503be13796"]
 # CIDR blocks
 new_auth_privatesub_cidr_blocks   = ["10.6.10.0/23", "10.6.12.0/23", "10.6.14.0/23"]
 new_auth_protectedsub_cidr_blocks = ["10.6.4.0/23", "10.6.6.0/23", "10.6.8.0/23"]
+
+# CIDR blocks Spoke Vpc
+new_auth_spoke_privatesub_cidr_blocks   = ["10.4.166.0/23", "10.4.168.0/23", "10.4.170.0/23"]
+new_auth_spoke_protectedsub_cidr_blocks = ["10.4.172.0/23", "10.4.174.0/23", "10.4.176.0/23"]
