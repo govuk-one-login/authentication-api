@@ -81,6 +81,7 @@ public class AuthSessionItem {
         UPLIFT,
         STANDARD,
         UNKNOWN,
+        NEW_ACCOUNT,
     }
 
     private String sessionId;
