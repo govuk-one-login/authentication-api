@@ -214,6 +214,64 @@ class AuthenticationAuthCodeHandlerTest {
                                     Map.entry("LoginType", loginType.name())));
         }
 
+        @ParameterizedTest
+        @EnumSource(AuthSessionItem.LoginType.class)
+        void shouldEmitNewAccountLoginTypeAndPersistItToSessionForNewAccount(
+                AuthSessionItem.LoginType existingLoginType) {
+            authSession.setLoginType(existingLoginType);
+            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+            var userProfile = new UserProfile().withSubjectID(TEST_SUBJECT_ID).withEmail(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            var event = authCodeRequestForAccountType(true);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
+            verify(authSessionService)
+                    .updateSessionAttribute(
+                            SESSION_ID,
+                            AuthSessionItem.ATTRIBUTE_LOGIN_TYPE,
+                            AuthSessionItem.LoginType.NEW_ACCOUNT.name());
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AUTH_CODE_ISSUED,
+                            Map.ofEntries(
+                                    Map.entry(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment()),
+                                    Map.entry(
+                                            "LoginType",
+                                            AuthSessionItem.LoginType.NEW_ACCOUNT.name())));
+        }
+
+        @Test
+        void shouldNotPersistLoginTypeToSessionForExistingAccount() {
+            authSession.setLoginType(AuthSessionItem.LoginType.STANDARD);
+            when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
+            var userProfile = new UserProfile().withSubjectID(TEST_SUBJECT_ID).withEmail(EMAIL);
+            when(authenticationService.getUserProfileByEmailMaybe(CommonTestVariables.EMAIL))
+                    .thenReturn(Optional.of(userProfile));
+            var event = authCodeRequestForAccountType(false);
+
+            var result = handler.handleRequest(event, context);
+
+            assertThat(result, hasStatus(200));
+            verify(authSessionService, never())
+                    .updateSessionAttribute(
+                            anyString(), eq(AuthSessionItem.ATTRIBUTE_LOGIN_TYPE), anyString());
+            verify(cloudwatchMetricsService)
+                    .incrementCounter(
+                            CloudwatchMetrics.AUTH_CODE_ISSUED,
+                            Map.ofEntries(
+                                    Map.entry(
+                                            ENVIRONMENT.getValue(),
+                                            configurationService.getEnvironment()),
+                                    Map.entry(
+                                            "LoginType",
+                                            AuthSessionItem.LoginType.STANDARD.name())));
+        }
+
         @Test
         void shouldSubmitReauthSuccessfulEventAndCleanUpSessionCountsForSuccessfulReauthJourney() {
             try (MockedStatic<ClientSubjectHelper> mockedClientSubjectHelperClass =
@@ -515,6 +573,10 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent validAuthCodeRequest() {
+        return authCodeRequestForAccountType(false);
+    }
+
+    private APIGatewayProxyRequestEvent authCodeRequestForAccountType(boolean isNewAccount) {
         var body =
                 format(
                         "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\" }",
@@ -522,7 +584,7 @@ class AuthenticationAuthCodeHandlerTest {
                         TEST_STATE,
                         List.of("email-verified", "email"),
                         TEST_SECTOR_IDENTIFIER,
-                        false);
+                        isNewAccount);
         return apiRequestEventWithHeadersAndBody(VALID_HEADERS, body);
     }
 
