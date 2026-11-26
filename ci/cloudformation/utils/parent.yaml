@@ -263,7 +263,7 @@ Mappings:
       lastSignedInBackfillMaxItemsPerSegment: "25"
       lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
       lastSignedInBackfillMaxInvocations: "40"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key::::a7e9e658-242a-4605-a062-4e1b800a3bf1}}"
 
     authdev3:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/754cd07e-794e-4ea2-9c8a-333a03792aa0
@@ -312,7 +312,7 @@ Mappings:
       lastSignedInBackfillMaxItemsPerSegment: "25"
       lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
       lastSignedInBackfillMaxInvocations: "40"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key::::5c55f5ed-ca00-4a90-913d-b045ecf3600e}}"
 
     dev:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/311cb3c3-97fc-465b-8d53-575386fce181
@@ -362,7 +362,7 @@ Mappings:
       lastSignedInBackfillMaxItemsPerSegment: "25"
       lastSignedInBackfillPauseBetweenInvocationsMs: "15000"
       lastSignedInBackfillMaxInvocations: "40"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key::::a12612fd-673a-46c1-a841-a97bcf686d40}}"
 
     build:
       userProfileTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/12f40ae0-84a0-4840-a497-129366eef354

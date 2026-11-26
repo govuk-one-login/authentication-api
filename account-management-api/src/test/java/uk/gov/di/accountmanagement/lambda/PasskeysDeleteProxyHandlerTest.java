@@ -39,7 +39,6 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -175,7 +174,6 @@ class PasskeysDeleteProxyHandlerTest {
                             .readValue(sqsMessageCaptor.getValue(), NotifyRequest.class);
             assertThat(sentNotifyRequest.getDestination(), equalTo(TEST_EMAIL_ADDRESS));
             assertThat(sentNotifyRequest.getNotificationType(), equalTo(expectedNotificationType));
-            assertNull(sentNotifyRequest.getLanguage());
         }
 
         static Stream<Arguments> successAuditEventValues() {

@@ -365,7 +365,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev2/notify_api_key::::a7e9e658-242a-4605-a062-4e1b800a3bf1}}"
     authdev3:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/8a67ba56-4eb2-4bfb-8254-5cc1c92a5db5
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/ce9680d3-953a-4b6a-9098-a0380d0afc70
@@ -398,7 +398,7 @@ Mappings:
       accountManagementInternationalSmsEnabled: false
       internationalSmsSendingEnabled: false
       testSigningKeyEnabled: true
-      accessTokenJwksUrl: https://oidc.authdev3.dev.account.gov.uk/.well-known/jwks.json
+      accessTokenJwksUrl: https://oidc.dev.account.gov.uk/.well-known/jwks.json
       accountDataApiId: 5ctgxqnq37
       inactiveAccountDeletionClientId: inactive-account-deletion
       inactiveAccountDeletionMinDurationPerMessageMs: 3000
@@ -408,7 +408,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/authdev3/notify_api_key::::5c55f5ed-ca00-4a90-913d-b045ecf3600e}}"
     dev:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/f5e5d059-1581-4c5c-8d60-e168fd8a9a84
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:653994557586:key/4b475855-e71a-43a5-a836-c6cb37e9cb22
@@ -458,7 +458,7 @@ Mappings:
       argon2MemoryInKibibytes: "32768"
       argon2Iterations: "2"
       argon2Parallelism: "1"
-      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key}}"
+      notifyApiKey: "{{resolve:secretsmanager:/deploy/dev/notify_api_key::::a12612fd-673a-46c1-a841-a97bcf686d40}}"
     build:
       accessTokenStoreTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/e8fdebb6-2d33-4d0c-825c-2b5c874522d8
       accountModifiersTableEncryptionKey: arn:aws:kms:eu-west-2:761723964695:key/4932c4d3-bf86-4f39-a32c-b82faf9a2574

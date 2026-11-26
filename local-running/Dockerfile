@@ -18,14 +18,11 @@ COPY auth-external-api ./auth-external-api
 COPY frontend-api ./frontend-api
 COPY audit-events ./audit-events
 COPY account-data-api ./account-data-api
-COPY orchestration-shared ./orchestration-shared
 COPY deprecation-checker ./deprecation-checker
 COPY interventions-api-stub ./interventions-api-stub
 COPY account-data-api-integration-tests ./account-data-api-integration-tests
 COPY test-services-api ./test-services-api
 COPY utils ./utils
-COPY orchestration-shared-test ./orchestration-shared-test
-COPY ipv-api ./ipv-api
 COPY account-management-api ./account-management-api
 COPY shared-test ./shared-test
 COPY delivery-receipts-api ./delivery-receipts-api

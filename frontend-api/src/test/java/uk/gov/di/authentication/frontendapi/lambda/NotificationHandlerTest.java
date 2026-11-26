@@ -17,7 +17,6 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -579,7 +578,6 @@ public class NotificationHandlerTest {
                         destination,
                         template,
                         code,
-                        SupportedLanguage.EN,
                         CommonTestVariables.SESSION_ID,
                         CommonTestVariables.CLIENT_SESSION_ID);
 

@@ -13,6 +13,7 @@ import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
 import uk.gov.di.authentication.frontendapi.helpers.ReauthMetadataBuilder;
 import uk.gov.di.authentication.shared.domain.CloudwatchMetrics;
+import uk.gov.di.authentication.shared.entity.AuthSessionItem;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -30,9 +31,11 @@ import uk.gov.di.authentication.userpermissions.PermissionDecisionManager;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_REAUTH_SUCCESS;
 import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.LOGIN_TYPE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
@@ -178,9 +181,15 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             var response =
                     generateApiGatewayProxyResponse(
                             200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
+            var loginType =
+                    Optional.ofNullable(authSession.getLoginType())
+                            .orElse(AuthSessionItem.LoginType.UNKNOWN);
             cloudwatchMetricsService.incrementCounter(
                     CloudwatchMetrics.AUTH_CODE_ISSUED,
-                    Map.of(ENVIRONMENT.getValue(), configurationService.getEnvironment()));
+                    Map.ofEntries(
+                            Map.entry(
+                                    ENVIRONMENT.getValue(), configurationService.getEnvironment()),
+                            Map.entry(LOGIN_TYPE.getValue(), loginType.name())));
             return response;
         } catch (JsonException ex) {
             LOG.warn("Exception generating authcode. Returning 1001: ", ex);

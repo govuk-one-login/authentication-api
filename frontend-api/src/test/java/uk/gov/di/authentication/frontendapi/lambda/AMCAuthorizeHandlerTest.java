@@ -62,7 +62,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.AUTH_AMC_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.helpers.ApiGatewayProxyRequestHelper.apiRequestEventWithHeadersAndBody;
 import static uk.gov.di.authentication.shared.entity.JourneyType.SIGN_IN;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage.EN;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_ID;
 import static uk.gov.di.authentication.sharedtest.helper.CommonTestVariables.CLIENT_SESSION_ID;
@@ -133,8 +132,7 @@ class AMCAuthorizeHandlerTest {
                 .thenReturn("https://example.com/redirectUri");
         when(authSessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(authSession));
-        userContext =
-                new UserContext(authSession, Optional.of(userProfile), EN, CLIENT_SESSION_ID, "");
+        userContext = new UserContext(authSession, Optional.of(userProfile), CLIENT_SESSION_ID, "");
     }
 
     @Nested
@@ -260,7 +258,7 @@ class AMCAuthorizeHandlerTest {
 
         private static Stream<Arguments> amcJourneyTypeAndExpectedScopeInAudtEvent() {
             return Stream.of(
-                    Arguments.of(AMCJourneyType.SSAD, "sfad"),
+                    Arguments.of(AMCJourneyType.SSAD, "account-delete"),
                     Arguments.of(AMCJourneyType.PASSKEY_CREATE, "passkey-create"));
         }
     }

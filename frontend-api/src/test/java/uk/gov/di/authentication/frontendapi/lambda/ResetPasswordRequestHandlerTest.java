@@ -22,7 +22,6 @@ import uk.gov.di.authentication.shared.entity.PasswordResetType;
 import uk.gov.di.authentication.shared.entity.PriorityIdentifier;
 import uk.gov.di.authentication.shared.entity.Result;
 import uk.gov.di.authentication.shared.entity.mfa.MFAMethod;
-import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.TestUserHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -179,7 +178,6 @@ class ResetPasswordRequestHandlerTest {
                         CommonTestVariables.EMAIL,
                         RESET_PASSWORD_WITH_CODE,
                         TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN,
                         SESSION_ID,
                         CLIENT_SESSION_ID);
 

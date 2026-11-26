@@ -27,8 +27,6 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
-import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -128,9 +126,6 @@ public abstract class BaseFrontendHandler<T>
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.REQUEST_MISSING_PARAMS);
         }
 
-        var maybeUserLanguage =
-                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
-
         var maybeUserProfile =
                 authSession
                         .map(AuthSessionItem::getEmailAddress)
@@ -149,11 +144,7 @@ public abstract class BaseFrontendHandler<T>
 
         var userContext =
                 new UserContext(
-                        authSession.get(),
-                        maybeUserProfile,
-                        matchSupportedLanguage(maybeUserLanguage),
-                        clientSessionId,
-                        txmaAuditEncoded);
+                        authSession.get(), maybeUserProfile, clientSessionId, txmaAuditEncoded);
 
         return handleRequestWithUserContext(input, context, request, userContext);
     }

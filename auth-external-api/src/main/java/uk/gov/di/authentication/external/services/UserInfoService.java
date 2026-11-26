@@ -26,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class UserInfoService {
 
@@ -183,6 +184,22 @@ public class UserInfoService {
                     AuthUserInfoClaims.VERIFIED_MFA_METHOD_TYPE.getValue(),
                     authSession.getVerifiedMfaMethodType());
             LOG.info("verified_mfa value: {}", authSession.getVerifiedMfaMethodType());
+        }
+
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.VERIFIED_PASSKEY.getValue())) {
+            userInfo.setClaim(
+                    AuthUserInfoClaims.VERIFIED_PASSKEY.getValue(),
+                    authSession.getHasVerifiedWithPasskey());
+            LOG.info("verified_passkey value: {}", authSession.getHasVerifiedWithPasskey());
+        }
+
+        if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.LOGIN_TYPE.getValue())) {
+            var loginType =
+                    Optional.ofNullable(authSession.getLoginType())
+                            .orElse(AuthSessionItem.LoginType.UNKNOWN)
+                            .name();
+            userInfo.setClaim(AuthUserInfoClaims.LOGIN_TYPE.getValue(), loginType);
+            LOG.info("login_type value: {}", loginType);
         }
 
         if (accessTokenInfo.getClaims().contains(AuthUserInfoClaims.UPLIFT_REQUIRED.getValue())) {
