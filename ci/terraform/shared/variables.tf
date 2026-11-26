@@ -175,3 +175,15 @@ variable "provision_test_client_secret" {
   type    = bool
   default = false
 }
+
+variable "new_auth_spoke_privatesub_cidr_blocks" {
+  type        = list(string)
+  default     = []
+  description = "New Auth equivalent environment private subnets"
+}
+
+variable "new_auth_spoke_protectedsub_cidr_blocks" {
+  type        = list(string)
+  default     = []
+  description = "New Auth equivalent environment protected subnets"
+}
