@@ -19,3 +19,7 @@ orch_stub_deployed                   = false
 redis_node_size              = "cache.t2.small"
 provision_dynamo             = false
 provision_test_client_secret = true
+
+# CIDR blocks Spoke Vpc
+new_auth_spoke_privatesub_cidr_blocks   = ["10.2.38.0/23", "10.2.40.0/23", "10.2.42.0/23"]
+new_auth_spoke_protectedsub_cidr_blocks = ["10.2.44.0/23", "10.2.46.0/23", "10.2.48.0/23"]
