@@ -196,7 +196,7 @@ Mappings:
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       UseAlarmActions: "No"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -245,7 +245,7 @@ Mappings:
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       UseAlarmActions: "No"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -294,7 +294,7 @@ Mappings:
       bulkEmailSenderType: INTERNATIONAL_NUMBERS_FORCED_MFA_RESET
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       UseAlarmActions: "No"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -394,7 +394,7 @@ Mappings:
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -444,7 +444,7 @@ Mappings:
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -496,7 +496,7 @@ Mappings:
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "true"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
@@ -548,7 +548,7 @@ Mappings:
       bulkEmailIncludedTermsAndConditions: "1.13"
       allowBulkTestUsers: "false"
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
-      IsSplunkEnabled: "Yes"
+      IsSplunkEnabled: "No"
       UseAlarmActions: "Yes"
       termsConditionsVersion: "1.13"
       frontendApiFMSTagValue: "authenticationfrontend"
