@@ -60,7 +60,10 @@ Resources:
         ApplyOn: None
       VpcConfig:
         SecurityGroupIds:
-          - !Ref LambdaSecurityGroup
+          - !If
+            - SwitchToSpokeVpc
+            - !Ref LambdaSecurityGroupSpokeVpc
+            - !Ref LambdaSecurityGroup
         SubnetIds:
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-PrivateSubnetIdB

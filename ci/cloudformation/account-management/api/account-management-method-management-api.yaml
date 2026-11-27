@@ -27,7 +27,11 @@ Resources:
       EndpointConfiguration:
         Type: PRIVATE
         VpcEndpointIds:
-          - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+          - Fn::ImportValue: vpc-ExecuteApiGatewayEndpointId # Hardcoded VPC name for legacy VPC
+          - Fn::If:
+              - SwitchToSpokeVpc
+              - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+              - !Ref AWS::NoValue
           - Fn::If:
               - AddHomeApiVpcEndpointId
               - Fn::Select:
@@ -66,7 +70,11 @@ Resources:
               Condition:
                 StringNotEquals:
                   aws:SourceVpce:
-                    - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                    - Fn::ImportValue: vpc-ExecuteApiGatewayEndpointId # Hardcoded VPC name for legacy VPC
+                    - Fn::If:
+                        - SwitchToSpokeVpc
+                        - Fn::ImportValue: !Sub "${VpcStackName}-ExecuteApiGatewayEndpointId"
+                        - !Ref AWS::NoValue
                     - Fn::If:
                         - AddHomeApiVpcEndpointId
                         - Fn::Select:

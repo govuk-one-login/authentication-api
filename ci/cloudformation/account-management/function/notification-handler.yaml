@@ -230,7 +230,10 @@ Resources:
         ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
-          - !Ref HttpsEgressSecurityGroup
+          - !If
+            - SwitchToSpokeVpc
+            - !Ref HttpsEgressSecurityGroupSpokeVpc
+            - !Ref HttpsEgressSecurityGroup
         SubnetIds:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB

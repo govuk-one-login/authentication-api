@@ -63,8 +63,14 @@ Resources:
         ApplyOn: PublishedVersions
       VpcConfig:
         SecurityGroupIds:
-          - !Ref LambdaSecurityGroup
-          - !Ref HttpsEgressSecurityGroup
+          - !If
+            - SwitchToSpokeVpc
+            - !Ref LambdaSecurityGroupSpokeVpc
+            - !Ref LambdaSecurityGroup
+          - !If
+            - SwitchToSpokeVpc
+            - !Ref HttpsEgressSecurityGroupSpokeVpc
+            - !Ref HttpsEgressSecurityGroup
         SubnetIds:
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdA
           - Fn::ImportValue: !Sub ${VpcStackName}-ProtectedSubnetIdB
